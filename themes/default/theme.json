@@ -1,0 +1,9 @@
+{
+    "slug": "default",
+    "name": "Default",
+    "version": "1.0.0",
+    "description": "Тестова Bootstrap 5 тема з повним функціоналом CMS",
+    "author": "Landing CMS",
+    "supports_customization": true
+}
+

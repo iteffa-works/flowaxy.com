@@ -4,13 +4,56 @@
  * Возвращает массив пунктов меню
  */
 
-function getMenuItems() {
-    // Кешируем меню в статической переменной, чтобы не загружать модули каждый раз
-    static $cachedMenu = null;
-    
-    if ($cachedMenu !== null) {
-        return $cachedMenu;
+/**
+ * Проверка поддержки кастоматизации активной темой
+ */
+function themeSupportsCustomization() {
+    $activeTheme = themeManager()->getActiveTheme();
+    if (!$activeTheme) {
+        return false;
     }
+    
+    $themePath = themeManager()->getThemePath($activeTheme['slug']);
+    $customizerFile = $themePath . 'customizer.php';
+    
+    return file_exists($customizerFile);
+}
+
+function getMenuItems() {
+    $supportsCustomization = themeSupportsCustomization();
+    $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0');
+    
+    // Очищаем противоположный вариант кеша
+    cache_forget('admin_menu_items_' . ($supportsCustomization ? '0' : '1'));
+    
+    return cache_remember($cacheKey, function() use ($supportsCustomization) {
+    
+    // Формируем подменю "Дизайн"
+    $designSubmenu = [
+        [
+            'href' => adminUrl('themes'),
+            'text' => 'Теми оформлення',
+            'page' => 'themes',
+            'order' => 1
+        ]
+    ];
+    
+    // Добавляем пункт кастоматизации только если тема поддерживает
+    if ($supportsCustomization) {
+        $designSubmenu[] = [
+            'href' => adminUrl('customizer'),
+            'text' => 'Кастомізація',
+            'page' => 'customizer',
+            'order' => 2
+        ];
+    }
+    
+    $designSubmenu[] = [
+        'href' => adminUrl('menus'),
+        'text' => 'Навігація',
+        'page' => 'menus',
+        'order' => 3
+    ];
     
     $menu = [
         [
@@ -26,26 +69,7 @@ function getMenuItems() {
             'text' => 'Дизайн',
             'page' => 'themes',
             'order' => 30,
-            'submenu' => [
-                [
-                    'href' => adminUrl('themes'),
-                    'text' => 'Теми оформлення',
-                    'page' => 'themes',
-                    'order' => 1
-                ],
-                [
-                    'href' => adminUrl('customizer'),
-                    'text' => 'Кастомізація',
-                    'page' => 'customizer',
-                    'order' => 2
-                ],
-                [
-                    'href' => adminUrl('menus'),
-                    'text' => 'Навігація',
-                    'page' => 'menus',
-                    'order' => 3
-                ]
-            ]
+            'submenu' => $designSubmenu
         ],
         [
             'href' => adminUrl('plugins'),
@@ -88,10 +112,9 @@ function getMenuItems() {
         return $orderA - $orderB;
     });
     
-    // Кешируем результат
-    $cachedMenu = $menu;
-    
-    return $menu;
+        // Возвращаем меню
+        return $menu;
+    }, 60); // Кешируем на 1 минуту (короткое время для быстрого обновления при смене темы)
 }
 
 /**

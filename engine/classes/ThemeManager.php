@@ -24,6 +24,7 @@ class ThemeManager {
     
     /**
      * Загрузка активной темы с кешированием
+     * Получает активную тему из БД, затем загружает данные из файловой системы
      * 
      * @return void
      */
@@ -35,28 +36,32 @@ class ThemeManager {
         // Используем кеширование для активной темы
         $cacheKey = 'active_theme';
         $db = $this->db;
-        $theme = cache_remember($cacheKey, function() use ($db) {
+        $activeSlug = cache_remember($cacheKey . '_slug', function() use ($db) {
             if ($db === null) {
                 return null;
             }
             
             try {
-                $stmt = $db->query("SELECT * FROM themes WHERE is_active = 1 LIMIT 1");
+                $stmt = $db->query("SELECT slug FROM themes WHERE is_active = 1 LIMIT 1");
                 if ($stmt === false) {
                     return null;
                 }
                 
-                $theme = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $theme ?: null;
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $result ? ($result['slug'] ?? null) : null;
             } catch (PDOException $e) {
                 error_log("ThemeManager loadActiveTheme error: " . $e->getMessage());
                 return null;
             }
         }, 3600); // Кешируем на 1 час
         
-        if ($theme !== null && is_array($theme)) {
-            $this->activeTheme = $theme;
-            $this->loadThemeSettings($theme['slug']);
+        if ($activeSlug) {
+            // Загружаем тему из файловой системы
+            $theme = $this->getTheme($activeSlug);
+            if ($theme !== null && is_array($theme)) {
+                $this->activeTheme = $theme;
+                $this->loadThemeSettings($theme['slug']);
+            }
         }
     }
     
@@ -112,42 +117,170 @@ class ThemeManager {
     }
     
     /**
-     * Получение всех тем с кешированием
+     * Получение всех тем (из файловой системы)
+     * Автоматически обнаруживает темы по наличию theme.json
      * 
      * @return array
      */
     public function getAllThemes(): array {
-        if ($this->db === null) {
+        $themesDir = dirname(__DIR__, 2) . '/themes/';
+        
+        if (!is_dir($themesDir)) {
             return [];
         }
         
-        $db = $this->db;
-        return cache_remember('all_themes', function() use ($db): array {
-            if ($db === null) {
-                return [];
+        return cache_remember('all_themes_filesystem', function() use ($themesDir): array {
+            $themes = [];
+            $directories = glob($themesDir . '*', GLOB_ONLYDIR);
+            
+            foreach ($directories as $dir) {
+                $themeSlug = basename($dir);
+                $configFile = $dir . '/theme.json';
+                
+                if (file_exists($configFile) && is_readable($configFile)) {
+                    $configContent = @file_get_contents($configFile);
+                    if ($configContent === false) {
+                        error_log("ThemeManager: Cannot read theme.json for theme: {$themeSlug}");
+                        continue;
+                    }
+                    
+                    $config = json_decode($configContent, true);
+                    if ($config && is_array($config)) {
+                        if (empty($config['slug'])) {
+                            $config['slug'] = $themeSlug;
+                        }
+                        
+                        // Проверяем активность темы из БД
+                        $isActive = $this->isThemeActiveInDB($themeSlug);
+                        
+                        // Формируем массив темы в формате БД для совместимости
+                        $theme = [
+                            'slug' => $config['slug'],
+                            'name' => $config['name'] ?? $themeSlug,
+                            'description' => $config['description'] ?? '',
+                            'version' => $config['version'] ?? '1.0.0',
+                            'author' => $config['author'] ?? '',
+                            'is_active' => $isActive ? 1 : 0,
+                            'screenshot' => $this->getThemeScreenshot($themeSlug),
+                            'supports_customization' => $config['supports_customization'] ?? false
+                        ];
+                        
+                        $themes[$themeSlug] = $theme;
+                    } else {
+                        error_log("ThemeManager: Invalid JSON in theme.json for theme: {$themeSlug}");
+                    }
+                }
             }
             
-            try {
-                $stmt = $db->query("SELECT * FROM themes ORDER BY is_active DESC, name ASC");
-                if ($stmt === false) {
-                    return [];
+            // Сортируем: активная тема первая, затем по имени
+            usort($themes, function($a, $b) {
+                if ($a['is_active'] != $b['is_active']) {
+                    return $b['is_active'] - $a['is_active'];
                 }
-                
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (PDOException $e) {
-                error_log("ThemeManager getAllThemes error: " . $e->getMessage());
-                return [];
-            }
-        }, 3600); // Кешируем на 1 час
+                return strcmp($a['name'], $b['name']);
+            });
+            
+            return array_values($themes);
+        }, 300); // Кешируем на 5 минут
     }
     
     /**
-     * Получение темы по slug с кешированием
+     * Проверка активности темы в БД
+     * 
+     * @param string $themeSlug
+     * @return bool
+     */
+    private function isThemeActiveInDB(string $themeSlug): bool {
+        if ($this->db === null) {
+            return false;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT is_active FROM themes WHERE slug = ? LIMIT 1");
+            $stmt->execute([$themeSlug]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result && (int)$result['is_active'] === 1;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Получение пути к скриншоту темы
+     * 
+     * @param string $themeSlug
+     * @return string|null
+     */
+    private function getThemeScreenshot(string $themeSlug): ?string {
+        $themesDir = dirname(__DIR__, 2) . '/themes/';
+        $screenshotPath = $themesDir . $themeSlug . '/screenshot.png';
+        
+        if (file_exists($screenshotPath)) {
+            return SITE_URL . 'themes/' . $themeSlug . '/screenshot.png';
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Убедиться, что тема зарегистрирована в БД (для хранения активности)
+     * 
+     * @param string $slug
+     * @param array $themeData
+     * @return void
+     */
+    private function ensureThemeInDB(string $slug, array $themeData): void {
+        if ($this->db === null) {
+            return;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT id FROM themes WHERE slug = ? LIMIT 1");
+            $stmt->execute([$slug]);
+            $exists = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$exists) {
+                // Регистрируем тему в БД только для хранения активности
+                $stmt = $this->db->prepare("
+                    INSERT INTO themes (slug, name, description, version, author, is_active) 
+                    VALUES (?, ?, ?, ?, ?, 0)
+                ");
+                $stmt->execute([
+                    $slug,
+                    $themeData['name'] ?? $slug,
+                    $themeData['description'] ?? '',
+                    $themeData['version'] ?? '1.0.0',
+                    $themeData['author'] ?? ''
+                ]);
+            }
+        } catch (PDOException $e) {
+            error_log("ThemeManager ensureThemeInDB error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Получение темы по slug (из файловой системы)
      * 
      * @param string $slug Slug темы
      * @return array|null
      */
     public function getTheme(string $slug): ?array {
+        $allThemes = $this->getAllThemes();
+        foreach ($allThemes as $theme) {
+            if ($theme['slug'] === $slug) {
+                return $theme;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Получение темы по slug из БД (устаревший метод, оставлен для совместимости)
+     * 
+     * @param string $slug Slug темы
+     * @return array|null
+     */
+    public function getThemeFromDB(string $slug): ?array {
         if ($this->db === null || empty($slug)) {
             return null;
         }
@@ -195,12 +328,15 @@ class ThemeManager {
             return false;
         }
         
-        // Проверяем существование темы
+        // Проверяем существование темы в файловой системе
         $theme = $this->getTheme($slug);
         if ($theme === null) {
-            error_log("ThemeManager: Theme not found: {$slug}");
+            error_log("ThemeManager: Theme not found in filesystem: {$slug}");
             return false;
         }
+        
+        // Убеждаемся, что тема зарегистрирована в БД (для хранения активности)
+        $this->ensureThemeInDB($slug, $theme);
         
         try {
             Database::getInstance()->transaction(function(PDO $db) use ($slug): void {
@@ -222,7 +358,7 @@ class ThemeManager {
             // Очищаем кеш
             cache_forget('active_theme');
             cache_forget('theme_settings_' . $slug);
-            cache_forget('all_themes');
+            cache_forget('all_themes_filesystem');
             cache_forget('theme_' . $slug);
             
             return true;
@@ -493,6 +629,92 @@ class ThemeManager {
     }
     
     /**
+     * Валидация структуры темы
+     * 
+     * @param string $slug Slug темы
+     * @return array ['valid' => bool, 'errors' => array, 'warnings' => array]
+     */
+    public function validateThemeStructure(string $slug): array {
+        $errors = [];
+        $warnings = [];
+        
+        if (!Validator::validateSlug($slug)) {
+            $errors[] = "Невірний slug теми: {$slug}";
+            return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
+        }
+        
+        $themePath = dirname(__DIR__, 2) . '/themes/' . $slug . '/';
+        
+        if (!is_dir($themePath)) {
+            $errors[] = "Директорія теми не знайдена: {$themePath}";
+            return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
+        }
+        
+        // Обязательные файлы
+        $requiredFiles = [
+            'index.php' => 'Головний шаблон теми',
+            'theme-config.php' => 'Конфігурація теми'
+        ];
+        
+        foreach ($requiredFiles as $file => $description) {
+            if (!file_exists($themePath . $file)) {
+                $errors[] = "Відсутній обов'язковий файл: {$file} ({$description})";
+            }
+        }
+        
+        // Проверка theme-config.php
+        $configFile = $themePath . 'theme-config.php';
+        if (file_exists($configFile)) {
+            try {
+                $config = require $configFile;
+                if (!is_array($config)) {
+                    $errors[] = "theme-config.php повинен повертати масив";
+                } else {
+                    $requiredConfigKeys = ['name', 'version', 'description'];
+                    foreach ($requiredConfigKeys as $key) {
+                        if (!isset($config[$key])) {
+                            $errors[] = "Відсутнє обов'язкове поле в theme-config.php: {$key}";
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                $errors[] = "Помилка завантаження theme-config.php: " . $e->getMessage();
+            }
+        }
+        
+        // Рекомендуемые файлы
+        $recommendedFiles = [
+            'style.css' => 'Стилі теми',
+            'screenshot.png' => 'Скріншот теми'
+        ];
+        
+        foreach ($recommendedFiles as $file => $description) {
+            if (!file_exists($themePath . $file)) {
+                $warnings[] = "Рекомендується додати файл: {$file} ({$description})";
+            }
+        }
+        
+        // Проверка customizer.php (если есть)
+        $customizerFile = $themePath . 'customizer.php';
+        if (file_exists($customizerFile)) {
+            try {
+                $customizerConfig = require $customizerFile;
+                if (!is_array($customizerConfig)) {
+                    $warnings[] = "customizer.php повинен повертати масив";
+                }
+            } catch (Exception $e) {
+                $warnings[] = "Помилка завантаження customizer.php: " . $e->getMessage();
+            }
+        }
+        
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors,
+            'warnings' => $warnings
+        ];
+    }
+    
+    /**
      * Установка темы (регистрация в БД)
      * 
      * @param string $slug Slug темы
@@ -518,6 +740,27 @@ class ThemeManager {
             return false;
         }
         
+        // Валидация структуры темы
+        $validation = $this->validateThemeStructure($slug);
+        if (!$validation['valid']) {
+            error_log("ThemeManager: Theme structure validation failed for {$slug}: " . implode(', ', $validation['errors']));
+            return false;
+        }
+        
+        // Если есть предупреждения, логируем их
+        if (!empty($validation['warnings'])) {
+            error_log("ThemeManager: Theme structure warnings for {$slug}: " . implode(', ', $validation['warnings']));
+        }
+        
+        // Загружаем конфигурацию из theme-config.php для получения актуальных данных
+        $themeConfig = $this->getThemeConfig($slug);
+        if (!empty($themeConfig)) {
+            $name = $themeConfig['name'] ?? $name;
+            $description = $themeConfig['description'] ?? $description;
+            $version = $themeConfig['version'] ?? $version;
+            $author = $themeConfig['author'] ?? $author;
+        }
+        
         try {
             $stmt = $this->db->prepare("
                 INSERT INTO themes (slug, name, description, version, author, is_active) 
@@ -532,8 +775,7 @@ class ThemeManager {
             $result = $stmt->execute([$slug, $name, $description, $version, $author]);
             
             if ($result) {
-                // Очищаем кеш
-                cache_forget('all_themes');
+                cache_forget('all_themes_filesystem');
                 cache_forget('theme_' . $slug);
             }
             

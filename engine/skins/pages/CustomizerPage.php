@@ -7,6 +7,39 @@ require_once __DIR__ . '/../includes/AdminPage.php';
 
 class CustomizerPage extends AdminPage {
     
+    /**
+     * Загрузка конфигурации кастомайзера из темы
+     */
+    private function getCustomizerConfig($themePath) {
+        $customizerFile = $themePath . 'customizer.php';
+        
+        if (file_exists($customizerFile) && is_readable($customizerFile)) {
+            try {
+                $config = require $customizerFile;
+                return is_array($config) ? $config : [];
+            } catch (Exception $e) {
+                error_log("CustomizerPage: Error loading customizer config: " . $e->getMessage());
+                return [];
+            }
+        }
+        
+        return [];
+    }
+    
+    /**
+     * Проверка поддержки кастоматизации
+     */
+    private function checkCustomizationSupport($activeTheme) {
+        if (!$activeTheme) {
+            return [false, null];
+        }
+        
+        $themePath = themeManager()->getThemePath($activeTheme['slug']);
+        $customizerFile = $themePath . 'customizer.php';
+        
+        return [file_exists($customizerFile), $themePath];
+    }
+    
     public function __construct() {
         parent::__construct();
         
@@ -38,17 +71,15 @@ class CustomizerPage extends AdminPage {
             return;
         }
         
-        // Обработка сохранения настроек (обычный POST для обратной совместимости)
-        // Но не показываем сообщение об успехе, так как используется AJAX
         if ($_POST && isset($_POST['save_customizer'])) {
             $this->saveSettings();
-            // После сохранения делаем редирект, чтобы убрать POST данные из URL
             header('Location: ' . adminUrl('customizer'));
             exit;
         }
         
-        // Получение активной темы
+        // Получение активной темы и проверка поддержки кастоматизации
         $activeTheme = themeManager()->getActiveTheme();
+        list($supportsCustomization, $themePath) = $this->checkCustomizationSupport($activeTheme);
         
         if (!$activeTheme) {
             $this->setMessage('Спочатку активуйте тему в розділі "Теми"', 'warning');
@@ -61,22 +92,39 @@ class CustomizerPage extends AdminPage {
             return;
         }
         
-        // Загрузка конфигурации темы
+        if (!$supportsCustomization) {
+            $this->setMessage('Поточна тема "' . htmlspecialchars($activeTheme['name']) . '" не підтримує кастомізацію. Розділ недоступний.', 'warning');
+            $this->render([
+                'activeTheme' => $activeTheme,
+                'themeConfig' => null,
+                'settings' => [],
+                'availableSettings' => []
+            ]);
+            return;
+        }
+        
+        // Загрузка конфигурации темы и кастомайзера
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
+        $customizerConfig = $this->getCustomizerConfig($themePath);
         
         // Получение настроек темы из БД
         $savedSettings = themeManager()->getSettings();
         
-        // Объединяем настройки: значения по умолчанию из конфигурации + сохраненные настройки
         $defaultSettings = $themeConfig['default_settings'] ?? [];
         $settings = array_merge($defaultSettings, $savedSettings);
-        
-        // Рендерим страницу
+        $categories = $customizerConfig['categories'] ?? [
+            'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
+            'fonts' => ['icon' => 'fa-font', 'label' => 'Шрифти'],
+            'sizes' => ['icon' => 'fa-ruler', 'label' => 'Розміри'],
+            'other' => ['icon' => 'fa-cog', 'label' => 'Логотип та інше'],
+        ];
         $this->render([
             'activeTheme' => $activeTheme,
             'themeConfig' => $themeConfig,
+            'customizerConfig' => $customizerConfig,
             'settings' => $settings,
-            'availableSettings' => $themeConfig['available_settings'] ?? []
+            'availableSettings' => $themeConfig['available_settings'] ?? [],
+            'categories' => $categories
         ]);
     }
     
@@ -90,12 +138,9 @@ class CustomizerPage extends AdminPage {
         }
         
         $result = $this->validateAndSaveSettings($_POST['settings'] ?? []);
-        
-        // Показываем только ошибки, успех не показываем (используется AJAX)
         if (!$result['success']) {
             $this->setMessage($result['error'], 'danger');
         }
-        // При успехе не устанавливаем сообщение, так как используется AJAX и статус показывается рядом с кнопкой
     }
     
     /**
@@ -196,14 +241,12 @@ class CustomizerPage extends AdminPage {
             exit;
         }
         
-        // Получаем настройки из POST (может быть JSON строка или массив)
         $settingsRaw = $_POST['settings'] ?? '';
         $settings = [];
         
         if (is_string($settingsRaw) && !empty($settingsRaw)) {
             $settings = json_decode($settingsRaw, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                error_log("Customizer JSON decode error: " . json_last_error_msg() . " | Raw: " . substr($settingsRaw, 0, 200));
                 echo json_encode([
                     'success' => false, 
                     'error' => 'Помилка декодування JSON: ' . json_last_error_msg()
@@ -384,25 +427,17 @@ class CustomizerPage extends AdminPage {
             
             // Сохраняем настройки
             if (empty($validatedSettings)) {
-                error_log("Customizer: No validated settings to save. Input settings: " . print_r($settings, true));
-                return [
+                    return [
                     'success' => false,
-                    'error' => 'Немає валідних налаштувань для збереження. Можливо, налаштування не пройшли валідацію.'
+                    'error' => 'Немає валідних налаштувань для збереження'
                 ];
             }
-            
-            // Логируем настройки перед сохранением
-            error_log("Customizer: Saving " . count($validatedSettings) . " settings: " . implode(', ', array_keys($validatedSettings)));
-            error_log("Customizer: Settings values: " . print_r($validatedSettings, true));
             
             $result = themeManager()->setSettings($validatedSettings);
             
             if ($result) {
-                // Очищаем кеш
                 cache_forget('theme_settings');
                 cache_forget('site_settings');
-                
-                error_log("Customizer: Settings saved successfully");
                 
                 return [
                     'success' => true,
@@ -410,28 +445,19 @@ class CustomizerPage extends AdminPage {
                     'settings' => $validatedSettings
                 ];
             } else {
-                error_log("Customizer: Failed to save settings to database");
-                // Получаем последнюю ошибку из логов
-                $lastError = error_get_last();
-                $errorMsg = 'Помилка при збереженні налаштувань в базу даних.';
-                if ($lastError && isset($lastError['message'])) {
-                    $errorMsg .= ' Деталі: ' . $lastError['message'];
-                }
                 return [
                     'success' => false,
-                    'error' => $errorMsg . ' Перевірте логи сервера для деталей.'
+                    'error' => 'Помилка при збереженні налаштувань в базу даних'
                 ];
             }
         } catch (Exception $e) {
             error_log("Customizer save error: " . $e->getMessage());
-            error_log("Customizer save error trace: " . $e->getTraceAsString());
             return [
                 'success' => false,
                 'error' => 'Помилка: ' . $e->getMessage()
             ];
         } catch (Error $e) {
             error_log("Customizer save fatal error: " . $e->getMessage());
-            error_log("Customizer save fatal error trace: " . $e->getTraceAsString());
             return [
                 'success' => false,
                 'error' => 'Критична помилка: ' . $e->getMessage()

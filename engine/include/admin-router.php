@@ -51,7 +51,13 @@ $router->add('settings', 'SettingsPage');
 $router->add('profile', 'ProfilePage');
 $router->add('plugins', 'PluginsPage');
 $router->add('themes', 'ThemesPage');
-$router->add('customizer', 'CustomizerPage');
+
+// Регистрируем маршрут кастомайзера только если активная тема поддерживает кастоматизацию
+require_once __DIR__ . '/../skins/includes/menu-items.php';
+if (themeSupportsCustomization()) {
+    $router->add('customizer', 'CustomizerPage');
+}
+
 $router->add('menus', 'MenusPage');
 $router->add('system', 'SystemPage');
 

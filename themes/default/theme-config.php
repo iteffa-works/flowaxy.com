@@ -1,0 +1,87 @@
+<?php
+/**
+ * Конфигурация темы Default
+ * Определяет настройки темы и их значения по умолчанию
+ * 
+ * @return array
+ */
+
+return [
+    'name' => 'Default',
+    'version' => '1.0.0',
+    'description' => 'Тестова Bootstrap 5 тема з повним функціоналом CMS',
+    'author' => 'Landing CMS',
+    
+    // Настройки по умолчанию
+    'default_settings' => [
+        'primary_color' => '#0d6efd',
+        'primary_color_hover' => '#0b5ed7',
+        'secondary_color' => '#6c757d',
+        'hero_title' => 'Ласкаво просимо до Landing CMS',
+        'hero_description' => 'Сучасна система управління контентом з потужним функціоналом',
+        'hero_button_text' => 'Дізнатися більше',
+        'hero_button_url' => '#features',
+        'features_title' => 'Наші можливості',
+        'features_description' => 'Всі функції, які вам потрібні для успішного веб-сайту',
+        'content_title' => 'Основний контент'
+    ],
+    
+    // Доступные настройки для кастомайзера (сгруппированы по категориям)
+    'available_settings' => [
+        'colors' => [
+            'primary_color' => [
+                'label' => 'Основний колір',
+                'type' => 'color',
+                'description' => 'Основний колір теми (кнопки, посилання, акценти)'
+            ],
+            'primary_color_hover' => [
+                'label' => 'Колір при наведенні',
+                'type' => 'color',
+                'description' => 'Колір основного елемента при наведенні'
+            ],
+            'secondary_color' => [
+                'label' => 'Додатковий колір',
+                'type' => 'color',
+                'description' => 'Додатковий колір для другорядних елементів'
+            ]
+        ],
+        'other' => [
+            'hero_title' => [
+                'label' => 'Заголовок Hero секції',
+                'type' => 'text',
+                'description' => 'Головний заголовок на початку сторінки'
+            ],
+            'hero_description' => [
+                'label' => 'Опис Hero секції',
+                'type' => 'textarea',
+                'description' => 'Опис під заголовком Hero секції'
+            ],
+            'hero_button_text' => [
+                'label' => 'Текст кнопки Hero',
+                'type' => 'text',
+                'description' => 'Текст на кнопці в Hero секції'
+            ],
+            'hero_button_url' => [
+                'label' => 'URL кнопки Hero',
+                'type' => 'text',
+                'description' => 'Посилання кнопки в Hero секції'
+            ],
+            'features_title' => [
+                'label' => 'Заголовок секції можливостей',
+                'type' => 'text',
+                'description' => 'Заголовок секції з можливостями'
+            ],
+            'features_description' => [
+                'label' => 'Опис секції можливостей',
+                'type' => 'textarea',
+                'description' => 'Опис під заголовком секції можливостей'
+            ],
+            'content_title' => [
+                'label' => 'Заголовок контенту',
+                'type' => 'text',
+                'description' => 'Заголовок основного контенту'
+            ]
+        ]
+    ]
+];
+

@@ -1,0 +1,9 @@
+{
+    "slug": "simple",
+    "name": "Simple",
+    "version": "1.0.0",
+    "description": "Мінімалістична тема без підтримки кастомізації",
+    "author": "Landing CMS",
+    "supports_customization": false
+}
+
