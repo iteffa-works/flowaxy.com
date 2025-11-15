@@ -14,18 +14,6 @@ $currentTab = $currentTab ?? $data['currentTab'] ?? 'modules';
 $tabs = $tabs ?? $data['tabs'] ?? [];
 $tabData = $tabData ?? $data['data'] ?? $data['tabData'] ?? [];
 
-// Временная отладка - всегда показываем информацию
-echo '<div class="alert alert-info mb-3">';
-echo '<strong>Отладка данных:</strong><br>';
-echo 'currentTab = ' . htmlspecialchars(var_export($currentTab, true)) . '<br>';
-echo 'tabs count = ' . count($tabs) . '<br>';
-echo 'tabData keys = ' . implode(', ', array_keys($tabData ?? [])) . '<br>';
-echo 'tabData modules count = ' . (isset($tabData['modules']) ? count($tabData['modules']) : 'N/A') . '<br>';
-echo 'tabData total = ' . ($tabData['total'] ?? 'N/A') . '<br>';
-if (isset($data) && is_array($data)) {
-    echo 'data keys = ' . implode(', ', array_keys($data)) . '<br>';
-}
-echo '</div>';
 ?>
 
 <div class="row">

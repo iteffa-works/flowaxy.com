@@ -28,14 +28,16 @@ $total = $tabData['total'] ?? 0;
                     <div class="card-body">
                         <ul class="list-group">
                             <?php foreach ($methods as $methodName => $methodDescription): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <code><?= htmlspecialchars($methodName) ?></code>
-                                        <br>
-                                        <small class="text-muted"><?= htmlspecialchars($methodDescription) ?></small>
+                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto flex-grow-1">
+                                        <div class="fw-bold">
+                                            <code><?= htmlspecialchars($methodName) ?></code>
+                                        </div>
+                                        <small class="text-muted"><?= htmlspecialchars(is_string($methodDescription) ? $methodDescription : json_encode($methodDescription, JSON_UNESCAPED_UNICODE)) ?></small>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-primary" 
-                                            onclick="testApiMethod('<?= htmlspecialchars($moduleName) ?>', '<?= htmlspecialchars($methodName) ?>')">
+                                    <button class="btn btn-sm btn-outline-primary ms-2" 
+                                            onclick="testApiMethod('<?= htmlspecialchars($moduleName) ?>', '<?= htmlspecialchars($methodName) ?>')"
+                                            title="Тестировать API метод">
                                         <i class="fas fa-vial"></i> Тест
                                     </button>
                                 </li>
@@ -50,8 +52,31 @@ $total = $tabData['total'] ?? 0;
 
 <script>
 function testApiMethod(moduleName, methodName) {
-    alert('Тестирование API метода:\n\nМодуль: ' + moduleName + '\nМетод: ' + methodName);
-    // Здесь можно добавить реальное тестирование API метода
+    fetch('<?= adminUrl('example-test') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'action=test_api_method&module=' + encodeURIComponent(moduleName) + 
+              '&method=' + encodeURIComponent(methodName) + 
+              '&csrf_token=<?= generateCSRFToken() ?>'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('API метод протестирован успешно!\n\n' + 
+                  'Модуль: ' + data.api_method.module + '\n' +
+                  'Метод: ' + data.api_method.method + '\n' +
+                  'Описание: ' + data.api_method.description);
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при тестировании API метода');
+    });
 }
 </script>
 
