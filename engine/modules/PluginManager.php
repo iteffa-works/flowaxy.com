@@ -197,6 +197,14 @@ class PluginManager extends BaseModule {
      * Выполнение хука
      */
     public function doHook(string $hookName, $data = null) {
+        // Для хука admin_menu всегда загружаем все модули (нужны для отображения меню)
+        // Для хука admin_register_routes НЕ загружаем модули - они загружаются по требованию
+        // при обращении к конкретной странице через admin-router.php
+        if ($hookName === 'admin_menu' && class_exists('ModuleLoader')) {
+            $this->loadAdminModules(true); // Всегда загружаем все модули для меню
+        }
+        // Для admin_register_routes модули уже загружены по требованию в admin-router.php
+        
         if (empty($hookName) || !isset($this->hooks[$hookName])) {
             return $data;
         }
@@ -236,6 +244,83 @@ class PluginManager extends BaseModule {
         }
         
         return $preserveOriginalData ? $originalData : $data;
+    }
+    
+    /**
+     * Загрузка модулей, которые регистрируют хуки для админки
+     * 
+     * @param bool $forceLoadAll Если true, загружает все модули независимо от уже загруженных
+     */
+    private function loadAdminModules(bool $forceLoadAll = false): void {
+        static $adminModulesLoaded = false;
+        static $allModulesLoaded = false;
+        
+        // Для admin_menu всегда загружаем все модули (но только один раз)
+        if ($forceLoadAll) {
+            if ($allModulesLoaded) {
+                return; // Уже загружены все модули
+            }
+        } else {
+            // Для admin_register_routes загружаем только если нужно
+            if ($adminModulesLoaded) {
+                return; // Уже загружены
+            }
+            
+            // Определяем, нужна ли загрузка всех модулей
+            // Если уже есть загруженные модули (кроме PluginManager), значит они загружены по требованию
+            $loadedModules = ModuleLoader::getLoadedModules();
+            $hasOtherModules = count($loadedModules) > 1; // Больше чем только PluginManager
+            
+            // Если модули уже загружены по требованию, не загружаем все остальные
+            // Это позволяет загружать только нужные модули для конкретной страницы
+            if ($hasOtherModules) {
+                $adminModulesLoaded = true;
+                return;
+            }
+        }
+        
+        // Загружаем только модули, которые регистрируют хуки для админки
+        $modulesDir = dirname(__DIR__) . '/modules';
+        $modules = glob($modulesDir . '/*.php');
+        
+        if ($modules !== false) {
+            // Временно отключаем логирование загрузки модулей для меню
+            // (чтобы не засорять логи при загрузке модулей для отображения меню)
+            $originalLogDebug = null;
+            if (class_exists('Logger') && ModuleLoader::isModuleLoaded('Logger')) {
+                $logger = logger();
+                $originalLogDebug = $logger->getSetting('log_debug', '0');
+                // Временно отключаем отладку для загрузки модулей меню
+                $logger->setSetting('log_debug', '0');
+            }
+            
+            foreach ($modules as $moduleFile) {
+                $moduleName = basename($moduleFile, '.php');
+                
+                // Пропускаем служебные файлы и уже загруженные модули
+                if ($moduleName === 'loader' || 
+                    $moduleName === 'compatibility' || 
+                    $moduleName === 'PluginManager' ||
+                    ModuleLoader::isModuleLoaded($moduleName)) {
+                    continue;
+                }
+                
+                // Загружаем модуль
+                ModuleLoader::loadModule($moduleName);
+            }
+            
+            // Восстанавливаем настройку отладки
+            if ($originalLogDebug !== null && class_exists('Logger') && ModuleLoader::isModuleLoaded('Logger')) {
+                $logger = logger();
+                $logger->setSetting('log_debug', $originalLogDebug);
+            }
+        }
+        
+        if ($forceLoadAll) {
+            $allModulesLoaded = true;
+        } else {
+            $adminModulesLoaded = true;
+        }
     }
     
     /**
@@ -372,6 +457,8 @@ class PluginManager extends BaseModule {
                 $config['author'] ?? ''
             ])) {
                 cache_forget('active_plugins');
+                // Логируем установку плагина
+                doHook('plugin_installed', $pluginSlug);
                 return true;
             }
             
@@ -409,6 +496,8 @@ class PluginManager extends BaseModule {
             $stmt = $this->db->prepare("DELETE FROM plugins WHERE slug = ?");
             if ($stmt->execute([$pluginSlug])) {
                 cache_forget('active_plugins');
+                // Логируем удаление плагина
+                doHook('plugin_uninstalled', $pluginSlug);
                 return true;
             }
             
@@ -442,6 +531,9 @@ class PluginManager extends BaseModule {
                 }
             }
             
+            // Логируем активацию плагина
+            doHook('plugin_activated', $pluginSlug);
+            
             return true;
         } catch (Exception $e) {
             error_log("Plugin activation error: " . $e->getMessage());
@@ -467,6 +559,10 @@ class PluginManager extends BaseModule {
             
             cache_forget('active_plugins');
             unset($this->plugins[$pluginSlug]);
+            
+            // Логируем деактивацию плагина
+            doHook('plugin_deactivated', $pluginSlug);
+            
             return true;
         } catch (Exception $e) {
             error_log("Plugin deactivation error: " . $e->getMessage());

@@ -8,9 +8,9 @@
 
 require_once __DIR__ . '/../includes/AdminPage.php';
 
-// Убеждаемся, что Logger доступен
-if (!class_exists('Logger')) {
-    require_once dirname(__DIR__, 2) . '/modules/Logger.php';
+// Загружаем модуль Logger по требованию
+if (class_exists('ModuleLoader') && !ModuleLoader::isModuleLoaded('Logger')) {
+    ModuleLoader::loadModule('Logger');
 }
 
 class LogsPage extends AdminPage {

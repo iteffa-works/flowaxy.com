@@ -8,6 +8,26 @@ require_once dirname(__DIR__, 2) . '/config/config.php';
 require_once __DIR__ . '/../skins/includes/SimpleTemplate.php';
 require_once __DIR__ . '/../skins/includes/Router.php';
 
+// Модули загружаются лениво - только когда они нужны для конкретной страницы
+
+// Определяем текущий путь ДО вызова хуков, чтобы загрузить только нужный модуль
+$currentPath = Router::getCurrentPage();
+if (empty($currentPath)) {
+    $currentPath = 'dashboard';
+}
+
+// Маппинг путей к модулям
+$pathToModule = [
+    'logs' => 'Logger',
+    'logs-settings' => 'Logger',
+    'media' => 'Media',
+];
+
+// Загружаем модуль для текущей страницы, если он нужен
+if (isset($pathToModule[$currentPath]) && class_exists('ModuleLoader')) {
+    ModuleLoader::loadModule($pathToModule[$currentPath]);
+}
+
 // Подключаем классы страниц
 require_once __DIR__ . '/../skins/pages/LoginPage.php';
 require_once __DIR__ . '/../skins/pages/LogoutPage.php';
@@ -39,6 +59,7 @@ $router->add('login', 'LoginPage');
 $router->add('logout', 'LogoutPage');
 
 // Регистрация маршрутов модулей
+// Хуки загрузят только те модули, которые еще не загружены
 doHook('admin_register_routes', $router);
 
 // Регистрируем маршруты плагинов

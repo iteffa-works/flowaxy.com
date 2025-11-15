@@ -31,11 +31,22 @@ class Logger extends BaseModule {
         // Определяем директорию для логов
         $this->logsDir = dirname(__DIR__, 2) . '/storage/logs/';
         
+        // Получаем подключение к БД (если не установлено в BaseModule)
+        if ($this->db === null) {
+            $this->db = getDB();
+        }
+        
+        // Загружаем настройки
+        $this->loadSettings();
+        
         // Создаем директорию, если её нет
         $this->ensureLogsDir();
         
         // Регистрируем обработчик ошибок PHP
         $this->registerErrorHandler();
+        
+        // Регистрируем автоматическое логирование
+        $this->registerAutoLogging();
     }
     
     /**
@@ -68,7 +79,21 @@ class Logger extends BaseModule {
             'icon' => 'fas fa-file-alt',
             'text' => 'Логи системы',
             'page' => 'logs',
-            'order' => 100
+            'order' => 100,
+            'submenu' => [
+                [
+                    'href' => adminUrl('logs'),
+                    'text' => 'Просмотр логов',
+                    'page' => 'logs',
+                    'order' => 1
+                ],
+                [
+                    'href' => adminUrl('logs-settings'),
+                    'text' => 'Настройки',
+                    'page' => 'logs-settings',
+                    'order' => 2
+                ]
+            ]
         ];
         return $menu;
     }
@@ -84,7 +109,9 @@ class Logger extends BaseModule {
         }
         
         require_once dirname(__DIR__) . '/skins/pages/LogsPage.php';
+        require_once dirname(__DIR__) . '/skins/pages/LoggerSettingsPage.php';
         $router->add('logs', 'LogsPage');
+        $router->add('logs-settings', 'LoggerSettingsPage');
     }
     
     /**
@@ -115,6 +142,257 @@ class Logger extends BaseModule {
             'clearLogs' => 'Очистить логи (type, days)',
             'getLogStats' => 'Получить статистику логов'
         ];
+    }
+    
+    /**
+     * Загрузка настроек из БД
+     */
+    private function loadSettings(): void {
+        if (!$this->db) {
+            return;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ?");
+            
+            // Максимальный размер файла лога
+            $stmt->execute(['logger_max_file_size']);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                $this->maxLogFileSize = (int)$result['setting_value'];
+            }
+            
+            // Дни хранения логов
+            $stmt->execute(['logger_retention_days']);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                $this->logRetentionDays = (int)$result['setting_value'];
+            }
+        } catch (Exception $e) {
+            // Игнорируем ошибки при загрузке настроек
+        }
+    }
+    
+    /**
+     * Получение настройки
+     */
+    public function getSetting(string $key, $default = null) {
+        if (!$this->db) {
+            return $default;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ?");
+            $stmt->execute(['logger_' . $key]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? $result['setting_value'] : $default;
+        } catch (Exception $e) {
+            return $default;
+        }
+    }
+    
+    /**
+     * Сохранение настройки
+     */
+    public function setSetting(string $key, $value): bool {
+        if (!$this->db) {
+            return false;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO site_settings (setting_key, setting_value) 
+                VALUES (?, ?) 
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+            ");
+            
+            $result = $stmt->execute(['logger_' . $key, $value]);
+            
+            // Обновляем локальные переменные
+            if ($key === 'max_file_size') {
+                $this->maxLogFileSize = (int)$value;
+            } elseif ($key === 'retention_days') {
+                $this->logRetentionDays = (int)$value;
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Получение всех настроек
+     */
+    public function getSettings(): array {
+        return [
+            'max_file_size' => $this->maxLogFileSize,
+            'retention_days' => $this->logRetentionDays,
+            'log_errors' => $this->getSetting('log_errors', '1') === '1',
+            'log_warnings' => $this->getSetting('log_warnings', '1') === '1',
+            'log_info' => $this->getSetting('log_info', '1') === '1',
+            'log_success' => $this->getSetting('log_success', '1') === '1',
+            'log_debug' => $this->getSetting('log_debug', '0') === '1',
+            'log_db_queries' => $this->getSetting('log_db_queries', '0') === '1',
+            'log_file_operations' => $this->getSetting('log_file_operations', '0') === '1',
+            'log_plugin_events' => $this->getSetting('log_plugin_events', '1') === '1',
+            'log_module_events' => $this->getSetting('log_module_events', '1') === '1',
+        ];
+    }
+    
+    /**
+     * Регистрация автоматического логирования системных событий
+     */
+    private function registerAutoLogging(): void {
+        // Логирование ошибок БД
+        if ($this->getSetting('log_db_queries', '0') === '1') {
+            addHook('db_error', [$this, 'handleDbError']);
+            addHook('db_query', [$this, 'handleDbQuery']);
+        }
+        
+        // Логирование операций с файлами
+        if ($this->getSetting('log_file_operations', '0') === '1') {
+            addHook('file_operation', [$this, 'handleFileOperation']);
+        }
+        
+        // Логирование событий плагинов
+        if ($this->getSetting('log_plugin_events', '1') === '1') {
+            addHook('plugin_activated', [$this, 'handlePluginActivated']);
+            addHook('plugin_deactivated', [$this, 'handlePluginDeactivated']);
+            addHook('plugin_installed', [$this, 'handlePluginInstalled']);
+            addHook('plugin_uninstalled', [$this, 'handlePluginUninstalled']);
+        }
+        
+        // Логирование событий модулей
+        if ($this->getSetting('log_module_events', '1') === '1') {
+            addHook('module_loaded', [$this, 'handleModuleLoaded']);
+            addHook('module_error', [$this, 'handleModuleError']);
+        }
+    }
+    
+    /**
+     * Обработчик ошибок БД
+     */
+    public function handleDbError($error): void {
+        if ($this->getSetting('log_errors', '1') === '1') {
+            $this->logError('Database Error: ' . (is_string($error) ? $error : json_encode($error)), [
+                'type' => 'database',
+                'error' => $error
+            ]);
+        }
+    }
+    
+    /**
+     * Обработчик запросов БД
+     */
+    public function handleDbQuery($query): void {
+        if ($this->getSetting('log_debug', '0') === '1') {
+            $this->logDebug('Database Query', [
+                'type' => 'database',
+                'query' => is_string($query) ? $query : json_encode($query)
+            ]);
+        }
+    }
+    
+    /**
+     * Обработчик операций с файлами
+     */
+    public function handleFileOperation($operation): void {
+        if (is_array($operation)) {
+            $type = $operation['type'] ?? 'unknown';
+            $file = $operation['file'] ?? 'unknown';
+            $success = $operation['success'] ?? false;
+            
+            if ($success) {
+                $this->logInfo("File Operation: {$type} - {$file}", [
+                    'type' => 'file_operation',
+                    'operation' => $type,
+                    'file' => $file
+                ]);
+            } else {
+                $this->logError("File Operation Failed: {$type} - {$file}", [
+                    'type' => 'file_operation',
+                    'operation' => $type,
+                    'file' => $file
+                ]);
+            }
+        }
+    }
+    
+    /**
+     * Обработчик активации плагина
+     */
+    public function handlePluginActivated($pluginSlug): void {
+        $this->logSuccess("Plugin Activated: {$pluginSlug}", [
+            'type' => 'plugin',
+            'action' => 'activated',
+            'plugin' => $pluginSlug
+        ]);
+    }
+    
+    /**
+     * Обработчик деактивации плагина
+     */
+    public function handlePluginDeactivated($pluginSlug): void {
+        $this->logInfo("Plugin Deactivated: {$pluginSlug}", [
+            'type' => 'plugin',
+            'action' => 'deactivated',
+            'plugin' => $pluginSlug
+        ]);
+    }
+    
+    /**
+     * Обработчик установки плагина
+     */
+    public function handlePluginInstalled($pluginSlug): void {
+        $this->logSuccess("Plugin Installed: {$pluginSlug}", [
+            'type' => 'plugin',
+            'action' => 'installed',
+            'plugin' => $pluginSlug
+        ]);
+    }
+    
+    /**
+     * Обработчик удаления плагина
+     */
+    public function handlePluginUninstalled($pluginSlug): void {
+        $this->logWarning("Plugin Uninstalled: {$pluginSlug}", [
+            'type' => 'plugin',
+            'action' => 'uninstalled',
+            'plugin' => $pluginSlug
+        ]);
+    }
+    
+    /**
+     * Обработчик загрузки модуля
+     */
+    public function handleModuleLoaded($moduleName): void {
+        // Логируем загрузку модуля только если включена отладка
+        // Это нормальное поведение системы, не требует логирования по умолчанию
+        if ($this->getSetting('log_debug', '0') === '1') {
+            $this->logDebug("Module Loaded: {$moduleName}", [
+                'type' => 'module',
+                'action' => 'loaded',
+                'module' => $moduleName
+            ]);
+        }
+    }
+    
+    /**
+     * Обработчик ошибки модуля
+     */
+    public function handleModuleError($error): void {
+        if (is_array($error)) {
+            $module = $error['module'] ?? 'unknown';
+            $message = $error['message'] ?? 'Unknown error';
+            $this->logError("Module Error: {$module} - {$message}", [
+                'type' => 'module',
+                'action' => 'error',
+                'module' => $module,
+                'error' => $error
+            ]);
+        }
     }
     
     /**
@@ -222,6 +500,9 @@ class Logger extends BaseModule {
      * Запись ошибки
      */
     public function logError(string $message, array $context = []): bool {
+        if ($this->getSetting('log_errors', '1') !== '1') {
+            return false;
+        }
         return $this->log(self::TYPE_ERROR, $message, $context);
     }
     
@@ -229,6 +510,9 @@ class Logger extends BaseModule {
      * Запись предупреждения
      */
     public function logWarning(string $message, array $context = []): bool {
+        if ($this->getSetting('log_warnings', '1') !== '1') {
+            return false;
+        }
         return $this->log(self::TYPE_WARNING, $message, $context);
     }
     
@@ -236,6 +520,9 @@ class Logger extends BaseModule {
      * Запись информации
      */
     public function logInfo(string $message, array $context = []): bool {
+        if ($this->getSetting('log_info', '1') !== '1') {
+            return false;
+        }
         return $this->log(self::TYPE_INFO, $message, $context);
     }
     
@@ -243,6 +530,9 @@ class Logger extends BaseModule {
      * Запись успешного события
      */
     public function logSuccess(string $message, array $context = []): bool {
+        if ($this->getSetting('log_success', '1') !== '1') {
+            return false;
+        }
         return $this->log(self::TYPE_SUCCESS, $message, $context);
     }
     
@@ -250,6 +540,9 @@ class Logger extends BaseModule {
      * Запись отладочной информации
      */
     public function logDebug(string $message, array $context = []): bool {
+        if ($this->getSetting('log_debug', '0') !== '1') {
+            return false;
+        }
         return $this->log(self::TYPE_DEBUG, $message, $context);
     }
     
@@ -483,11 +776,22 @@ class Logger extends BaseModule {
 
 /**
  * Глобальная функция для получения экземпляра Logger
- * 
+ * Загружает модуль по требованию (ленивая загрузка)
+ *
  * @return Logger
  */
 if (!function_exists('logger')) {
     function logger(): Logger {
+        // Загружаем модуль по требованию
+        if (!class_exists('Logger')) {
+            require_once dirname(__DIR__) . '/modules/Logger.php';
+        }
+        
+        // Убеждаемся, что модуль загружен через ModuleLoader
+        if (!ModuleLoader::isModuleLoaded('Logger')) {
+            ModuleLoader::loadModule('Logger');
+        }
+        
         return Logger::getInstance();
     }
 }

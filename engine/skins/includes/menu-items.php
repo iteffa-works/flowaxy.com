@@ -5,6 +5,13 @@
  */
 
 function getMenuItems() {
+    // Кешируем меню в статической переменной, чтобы не загружать модули каждый раз
+    static $cachedMenu = null;
+    
+    if ($cachedMenu !== null) {
+        return $cachedMenu;
+    }
+    
     $menu = [
         [
             'href' => adminUrl('dashboard'),
@@ -71,6 +78,7 @@ function getMenuItems() {
     ];
     
     // Применяем хук для добавления пунктов меню от плагинов
+    // Модули загрузятся только один раз при первом вызове
     $menu = doHook('admin_menu', $menu);
     
     // Сортируем по order
@@ -79,6 +87,9 @@ function getMenuItems() {
         $orderB = $b['order'] ?? 50;
         return $orderA - $orderB;
     });
+    
+    // Кешируем результат
+    $cachedMenu = $menu;
     
     return $menu;
 }

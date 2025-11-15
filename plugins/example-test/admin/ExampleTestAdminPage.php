@@ -147,7 +147,8 @@ class ExampleTestAdminPage extends AdminPage {
             // Сначала пробуем получить модули через ModuleLoader
             if (class_exists('ModuleLoader')) {
                 ModuleLoader::init();
-                $loadedModules = ModuleLoader::getLoadedModules();
+                // Загружаем все модули для отображения в админке
+                $loadedModules = ModuleLoader::getLoadedModules(true);
                 
                 if (!empty($loadedModules)) {
                     foreach ($loadedModules as $name => $module) {
@@ -406,7 +407,8 @@ class ExampleTestAdminPage extends AdminPage {
             // Сначала пробуем получить модули через ModuleLoader
             if (class_exists('ModuleLoader')) {
                 ModuleLoader::init();
-                $loadedModules = ModuleLoader::getLoadedModules();
+                // Загружаем все модули для отображения в админке
+                $loadedModules = ModuleLoader::getLoadedModules(true);
                 
                 if (!empty($loadedModules)) {
                     foreach ($loadedModules as $name => $module) {

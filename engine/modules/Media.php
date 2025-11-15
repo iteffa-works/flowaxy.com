@@ -566,6 +566,16 @@ class Media extends BaseModule {
  * @return Media
  */
 function mediaModule() {
+    // Загружаем модуль по требованию
+    if (!class_exists('Media')) {
+        require_once dirname(__DIR__) . '/modules/Media.php';
+    }
+    
+    // Убеждаемся, что модуль загружен через ModuleLoader
+    if (!ModuleLoader::isModuleLoaded('Media')) {
+        ModuleLoader::loadModule('Media');
+    }
+    
     return Media::getInstance();
 }
 
