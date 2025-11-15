@@ -55,13 +55,16 @@ class SystemPage extends AdminPage {
             
             switch ($action) {
                 case 'clear_all':
-                    $cache->flush();
-                    $this->setMessage('Весь кеш успішно очищено', 'success');
+                    if ($cache->clear()) {
+                        $this->setMessage('Весь кеш успішно очищено', 'success');
+                    } else {
+                        $this->setMessage('Помилка при очищенні кешу', 'danger');
+                    }
                     break;
                     
                 case 'clear_expired':
-                    $this->clearExpiredCache();
-                    $this->setMessage('Прострочений кеш успішно очищено', 'success');
+                    $cleared = $cache->cleanup();
+                    $this->setMessage("Прострочений кеш успішно очищено ({$cleared} файлів)", 'success');
                     break;
                     
                 case 'clear_stats':
@@ -75,40 +78,6 @@ class SystemPage extends AdminPage {
         } catch (Exception $e) {
             $this->setMessage('Помилка при обробці кешу: ' . $e->getMessage(), 'danger');
             error_log("Cache action error: " . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Очистка простроченного кеша
-     */
-    private function clearExpiredCache(): void {
-        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
-        $files = glob($cacheDir . '*.cache');
-        
-        if ($files === false) {
-            return;
-        }
-        
-        $now = time();
-        $cleared = 0;
-        
-        foreach ($files as $file) {
-            $data = @file_get_contents($file);
-            if ($data === false) {
-                continue;
-            }
-            
-            try {
-                $cached = @unserialize($data, ['allowed_classes' => false]);
-                if (is_array($cached) && isset($cached['expires'])) {
-                    if ($cached['expires'] < $now) {
-                        @unlink($file);
-                        $cleared++;
-                    }
-                }
-            } catch (Exception $e) {
-                // Игнорируем ошибки десериализации
-            }
         }
     }
     

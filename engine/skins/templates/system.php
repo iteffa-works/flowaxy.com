@@ -2,6 +2,27 @@
 /**
  * Шаблон страницы системной информации
  */
+
+/**
+ * Форматирование размера в байтах
+ */
+if (!function_exists('formatBytes')) {
+    function formatBytes($bytes, $precision = 2) {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        
+        if ($bytes == 0) {
+            return '0 B';
+        }
+        
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        
+        $bytes /= pow(1024, $pow);
+        
+        return round($bytes, $precision) . ' ' . $units[$pow];
+    }
+}
 ?>
 
 <!-- Уведомления -->
@@ -134,6 +155,82 @@
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="content-section">
+            <div class="content-section-header">
+                <span><i class="fas fa-database me-2"></i>Кешування</span>
+            </div>
+            <div class="content-section-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="mb-3">Інформація про кеш</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span>Статус:</span>
+                                <span>
+                                    <?php if ($cacheInfo['enabled']): ?>
+                                        <span class="badge bg-success">Увімкнено</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-danger">Вимкнено</span>
+                                    <?php endif; ?>
+                                </span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span>Директорія:</span>
+                                <span class="text-muted small"><?= htmlspecialchars($cacheInfo['directory']) ?></span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span>Всього файлів:</span>
+                                <span class="text-muted"><?= number_format($cacheInfo['total_files']) ?></span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span>Розмір кешу:</span>
+                                <span class="text-muted"><?= formatBytes($cacheInfo['total_size']) ?></span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span>Прострочені файли:</span>
+                                <span class="text-muted"><?= number_format($cacheInfo['expired_files']) ?></span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span>Розмір прострочених:</span>
+                                <span class="text-muted"><?= formatBytes($cacheInfo['expired_size']) ?></span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2">
+                                <span>Доступ для запису:</span>
+                                <span>
+                                    <?php if ($cacheInfo['writable']): ?>
+                                        <span class="badge bg-success">Так</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-danger">Ні</span>
+                                    <?php endif; ?>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="mb-3">Управління кешем</h6>
+                        <form method="POST" action="" class="mb-3">
+                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                            <div class="d-grid gap-2">
+                                <button type="submit" name="cache_action" value="clear_all" class="btn btn-danger" onclick="return confirm('Ви впевнені, що хочете очистити весь кеш?');">
+                                    <i class="fas fa-trash-alt me-2"></i>Очистити весь кеш
+                                </button>
+                                <button type="submit" name="cache_action" value="clear_expired" class="btn btn-warning" onclick="return confirm('Ви впевнені, що хочете очистити прострочений кеш?');">
+                                    <i class="fas fa-clock me-2"></i>Очистити прострочений кеш
+                                </button>
+                                <button type="submit" name="cache_action" value="clear_stats" class="btn btn-secondary">
+                                    <i class="fas fa-chart-bar me-2"></i>Очистити статистику
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
