@@ -275,43 +275,6 @@ class ThemeManager {
     }
     
     /**
-     * Получение темы по slug из БД (устаревший метод, оставлен для совместимости)
-     * 
-     * @param string $slug Slug темы
-     * @return array|null
-     */
-    public function getThemeFromDB(string $slug): ?array {
-        if ($this->db === null || empty($slug)) {
-            return null;
-        }
-        
-        // Валидация slug
-        if (!Validator::validateSlug($slug)) {
-            error_log("ThemeManager: Invalid theme slug: {$slug}");
-            return null;
-        }
-        
-        $cacheKey = 'theme_' . $slug;
-        $db = $this->db;
-        return cache_remember($cacheKey, function() use ($slug, $db): ?array {
-            if ($db === null) {
-                return null;
-            }
-            
-            try {
-                $stmt = $db->prepare("SELECT * FROM themes WHERE slug = ? LIMIT 1");
-                $stmt->execute([$slug]);
-                
-                $theme = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $theme ?: null;
-            } catch (PDOException $e) {
-                error_log("ThemeManager getTheme error: " . $e->getMessage());
-                return null;
-            }
-        }, 3600); // Кешируем на 1 час
-    }
-    
-    /**
      * Активация темы
      * 
      * @param string $slug Slug темы

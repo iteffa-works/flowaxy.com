@@ -3,17 +3,6 @@
  * Шаблон страницы логов
  */
 
-// Вспомогательная функция для форматирования размера
-if (!function_exists('formatBytes')) {
-    function formatBytes(int $bytes): string {
-        if ($bytes === 0) return '0 Bytes';
-        $k = 1024;
-        $sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        $i = floor(log($bytes) / log($k));
-        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
-    }
-}
-
 $logs = $logs ?? [];
 $stats = $stats ?? [];
 $currentType = $currentType ?? '';

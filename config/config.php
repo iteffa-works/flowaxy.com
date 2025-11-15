@@ -131,8 +131,6 @@ require_once __DIR__ . '/../engine/modules/loader.php';
 require_once __DIR__ . '/../engine/classes/BaseModule.php';
 ModuleLoader::init();
 
-// Функции обратной совместимости
-require_once __DIR__ . '/../engine/modules/compatibility.php';
 
 // Инициализация менеджеров (ленивая загрузка)
 // Менеджеры будут инициализированы при первом обращении через глобальные функции
@@ -222,6 +220,29 @@ function redirectTo(string $url): void {
         echo '<script>window.location.href = "' . htmlspecialchars($url) . '";</script>';
         echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
         exit;
+    }
+}
+
+/**
+ * Форматирование размера в байтах
+ * 
+ * @param int $bytes Размер в байтах
+ * @param int $precision Количество знаков после запятой
+ * @return string
+ */
+if (!function_exists('formatBytes')) {
+    function formatBytes(int $bytes, int $precision = 2): string {
+        if ($bytes === 0) {
+            return '0 B';
+        }
+        
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }
 
