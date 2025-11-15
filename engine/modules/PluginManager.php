@@ -284,16 +284,6 @@ class PluginManager extends BaseModule {
         $modules = glob($modulesDir . '/*.php');
         
         if ($modules !== false) {
-            // Временно отключаем логирование загрузки модулей для меню
-            // (чтобы не засорять логи при загрузке модулей для отображения меню)
-            $originalLogDebug = null;
-            if (class_exists('Logger') && ModuleLoader::isModuleLoaded('Logger')) {
-                $logger = logger();
-                $originalLogDebug = $logger->getSetting('log_debug', '0');
-                // Временно отключаем отладку для загрузки модулей меню
-                $logger->setSetting('log_debug', '0');
-            }
-            
             foreach ($modules as $moduleFile) {
                 $moduleName = basename($moduleFile, '.php');
                 
@@ -307,12 +297,6 @@ class PluginManager extends BaseModule {
                 
                 // Загружаем модуль
                 ModuleLoader::loadModule($moduleName);
-            }
-            
-            // Восстанавливаем настройку отладки
-            if ($originalLogDebug !== null && class_exists('Logger') && ModuleLoader::isModuleLoaded('Logger')) {
-                $logger = logger();
-                $logger->setSetting('log_debug', $originalLogDebug);
             }
         }
         

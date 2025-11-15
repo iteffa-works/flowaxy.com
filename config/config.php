@@ -64,7 +64,7 @@ define('SITE_URL', $protocol . $host);
 define('ADMIN_URL', SITE_URL . '/admin');
 define('UPLOADS_DIR', __DIR__ . '/../uploads/');
 define('UPLOADS_URL', SITE_URL . '/uploads/');
-define('CACHE_DIR', __DIR__ . '/../cache/');
+define('CACHE_DIR', __DIR__ . '/../storage/cache/');
 
 // Функция для получения протокол-относительного URL (для избежания Mixed Content)
 function getProtocolRelativeUrl($path = '') {

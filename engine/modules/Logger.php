@@ -368,13 +368,14 @@ class Logger extends BaseModule {
      * Обработчик загрузки модуля
      */
     public function handleModuleLoaded($moduleName): void {
-        // Логируем загрузку модуля только если включена отладка
-        // Это нормальное поведение системы, не требует логирования по умолчанию
-        if ($this->getSetting('log_debug', '0') === '1') {
-            $this->logDebug("Module Loaded: {$moduleName}", [
+        // Логируем загрузку модуля как информацию (если включено логирование событий модулей)
+        // Это помогает отслеживать, какие модули загружаются при каждом запросе
+        if ($this->getSetting('log_module_events', '1') === '1') {
+            $this->logInfo("Module Loaded: {$moduleName}", [
                 'type' => 'module',
                 'action' => 'loaded',
-                'module' => $moduleName
+                'module' => $moduleName,
+                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown'
             ]);
         }
     }

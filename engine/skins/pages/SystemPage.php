@@ -21,13 +21,150 @@ class SystemPage extends AdminPage {
     }
     
     public function handle() {
+        // Обработка действий с кешем
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cache_action'])) {
+            $this->handleCacheAction();
+        }
+        
         // Получение системной информации
         $systemInfo = $this->getSystemInfo();
         
+        // Получение информации о кеше
+        $cacheInfo = $this->getCacheInfo();
+        
         // Рендерим страницу
         $this->render([
-            'systemInfo' => $systemInfo
+            'systemInfo' => $systemInfo,
+            'cacheInfo' => $cacheInfo
         ]);
+    }
+    
+    /**
+     * Обработка действий с кешем
+     */
+    private function handleCacheAction(): void {
+        if (!$this->verifyCsrf()) {
+            $this->setMessage('Помилка безпеки', 'danger');
+            return;
+        }
+        
+        $action = sanitizeInput($_POST['cache_action'] ?? '');
+        
+        try {
+            $cache = cache();
+            
+            switch ($action) {
+                case 'clear_all':
+                    $cache->flush();
+                    $this->setMessage('Весь кеш успішно очищено', 'success');
+                    break;
+                    
+                case 'clear_expired':
+                    $this->clearExpiredCache();
+                    $this->setMessage('Прострочений кеш успішно очищено', 'success');
+                    break;
+                    
+                case 'clear_stats':
+                    cache_forget('cache_stats');
+                    $this->setMessage('Статистика кешу очищена', 'success');
+                    break;
+                    
+                default:
+                    $this->setMessage('Невідома дія', 'danger');
+            }
+        } catch (Exception $e) {
+            $this->setMessage('Помилка при обробці кешу: ' . $e->getMessage(), 'danger');
+            error_log("Cache action error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Очистка простроченного кеша
+     */
+    private function clearExpiredCache(): void {
+        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
+        $files = glob($cacheDir . '*.cache');
+        
+        if ($files === false) {
+            return;
+        }
+        
+        $now = time();
+        $cleared = 0;
+        
+        foreach ($files as $file) {
+            $data = @file_get_contents($file);
+            if ($data === false) {
+                continue;
+            }
+            
+            try {
+                $cached = @unserialize($data, ['allowed_classes' => false]);
+                if (is_array($cached) && isset($cached['expires'])) {
+                    if ($cached['expires'] < $now) {
+                        @unlink($file);
+                        $cleared++;
+                    }
+                }
+            } catch (Exception $e) {
+                // Игнорируем ошибки десериализации
+            }
+        }
+    }
+    
+    /**
+     * Получение информации о кеше
+     */
+    private function getCacheInfo(): array {
+        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
+        
+        $info = [
+            'enabled' => true,
+            'directory' => $cacheDir,
+            'total_files' => 0,
+            'total_size' => 0,
+            'expired_files' => 0,
+            'expired_size' => 0,
+            'writable' => is_writable($cacheDir)
+        ];
+        
+        if (!is_dir($cacheDir)) {
+            return $info;
+        }
+        
+        $files = glob($cacheDir . '*.cache');
+        if ($files === false) {
+            return $info;
+        }
+        
+        $now = time();
+        $info['total_files'] = count($files);
+        
+        foreach ($files as $file) {
+            $size = @filesize($file);
+            if ($size !== false) {
+                $info['total_size'] += $size;
+            }
+            
+            $data = @file_get_contents($file);
+            if ($data !== false) {
+                try {
+                    $cached = @unserialize($data, ['allowed_classes' => false]);
+                    if (is_array($cached) && isset($cached['expires'])) {
+                        if ($cached['expires'] < $now) {
+                            $info['expired_files']++;
+                            if ($size !== false) {
+                                $info['expired_size'] += $size;
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    // Игнорируем ошибки
+                }
+            }
+        }
+        
+        return $info;
     }
     
     /**
@@ -79,35 +216,69 @@ class SystemPage extends AdminPage {
      * Проверка прав доступа к папкам
      */
     private function checkFolderPermissions() {
+        $baseDir = dirname(__DIR__, 2);
+        
         $folders = [
-            'uploads' => UPLOADS_DIR,
-            'cache' => __DIR__ . '/../../cache',
-            'plugins' => __DIR__ . '/../../plugins',
-            'themes' => __DIR__ . '/../../themes'
+            'uploads' => defined('UPLOADS_DIR') ? UPLOADS_DIR : $baseDir . '/uploads',
+            'cache' => defined('CACHE_DIR') ? CACHE_DIR : $baseDir . '/storage/cache',
+            'plugins' => $baseDir . '/plugins',
+            'themes' => $baseDir . '/themes'
         ];
         
         $permissions = [];
         foreach ($folders as $name => $path) {
-            if (file_exists($path)) {
-                $perms = substr(sprintf('%o', fileperms($path)), -4);
+            // Нормализуем путь (убираем лишние слеши)
+            $path = str_replace(['\\', '//'], ['/', '/'], $path);
+            $path = rtrim($path, '/');
+            
+            if (file_exists($path) && is_dir($path)) {
+                // Получаем права доступа
+                $perms = @fileperms($path);
+                if ($perms !== false) {
+                    $permsStr = substr(sprintf('%o', $perms), -4);
+                } else {
+                    $permsStr = 'N/A';
+                }
+                
                 $writable = is_writable($path);
                 $readable = is_readable($path);
                 
                 $permissions[$name] = [
                     'path' => $path,
-                    'permissions' => $perms,
+                    'permissions' => $permsStr,
                     'writable' => $writable,
                     'readable' => $readable,
-                    'status' => $writable && $readable ? 'ok' : 'warning'
+                    'status' => $writable && $readable ? 'ok' : ($readable ? 'warning' : 'error')
                 ];
             } else {
-                $permissions[$name] = [
-                    'path' => $path,
-                    'permissions' => 'N/A',
-                    'writable' => false,
-                    'readable' => false,
-                    'status' => 'error'
-                ];
+                // Пытаемся создать директорию, если её нет
+                if (!file_exists($path)) {
+                    @mkdir($path, 0755, true);
+                }
+                
+                // Проверяем снова после попытки создания
+                if (file_exists($path) && is_dir($path)) {
+                    $perms = @fileperms($path);
+                    $permsStr = $perms !== false ? substr(sprintf('%o', $perms), -4) : 'N/A';
+                    $writable = is_writable($path);
+                    $readable = is_readable($path);
+                    
+                    $permissions[$name] = [
+                        'path' => $path,
+                        'permissions' => $permsStr,
+                        'writable' => $writable,
+                        'readable' => $readable,
+                        'status' => $writable && $readable ? 'ok' : ($readable ? 'warning' : 'error')
+                    ];
+                } else {
+                    $permissions[$name] = [
+                        'path' => $path,
+                        'permissions' => 'N/A',
+                        'writable' => false,
+                        'readable' => false,
+                        'status' => 'error'
+                    ];
+                }
             }
         }
         

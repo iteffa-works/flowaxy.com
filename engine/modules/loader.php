@@ -114,9 +114,32 @@ class ModuleLoader {
                 
                 self::$loadedModules[$moduleName] = $module;
                 
-                // Логируем загрузку модуля
-                if (function_exists('doHook')) {
+                // Убеждаемся, что Logger загружен для логирования загрузки модулей
+                // (если он еще не загружен, но нужен для логирования)
+                if ($moduleName !== 'Logger' && function_exists('doHook')) {
+                    // Проверяем, нужно ли логировать события модулей
+                    // Если Logger еще не загружен, но может быть нужен, загружаем его
+                    if (!self::isModuleLoaded('Logger')) {
+                        $loggerFile = self::$modulesDir . '/Logger.php';
+                        if (file_exists($loggerFile)) {
+                            // Пытаемся загрузить Logger, если он существует
+                            try {
+                                self::loadModule('Logger');
+                            } catch (Exception $e) {
+                                // Игнорируем ошибки загрузки Logger
+                            } catch (Error $e) {
+                                // Игнорируем фатальные ошибки загрузки Logger
+                            }
+                        }
+                    }
+                    
+                    // Логируем загрузку модуля
                     doHook('module_loaded', $moduleName);
+                } elseif ($moduleName === 'Logger') {
+                    // Для Logger просто вызываем хук без дополнительной загрузки
+                    if (function_exists('doHook')) {
+                        doHook('module_loaded', $moduleName);
+                    }
                 }
             } else {
                 error_log("Module class {$moduleName} not found after loading file: {$moduleFile}");
