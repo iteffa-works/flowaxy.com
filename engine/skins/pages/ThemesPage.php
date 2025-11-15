@@ -26,6 +26,21 @@ class ThemesPage extends AdminPage {
             $this->activateTheme();
         }
         
+        // Очищаем кеш тем для получения актуальной информации об активности
+        cache_forget('all_themes_filesystem');
+        cache_forget('active_theme');
+        cache_forget('active_theme_slug');
+        
+        // Очищаем кеш проверки активности для всех тем
+        $themesDir = dirname(__DIR__, 3) . '/themes/';
+        if (is_dir($themesDir)) {
+            $directories = glob($themesDir . '*', GLOB_ONLYDIR);
+            foreach ($directories as $dir) {
+                $themeSlug = basename($dir);
+                cache_forget('active_theme_check_' . md5($themeSlug));
+            }
+        }
+        
         // Получение всех тем
         $themes = themeManager()->getAllThemes();
         $activeTheme = themeManager()->getActiveTheme();

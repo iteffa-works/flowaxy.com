@@ -7,18 +7,6 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 
 -- ========================================
--- КЕШИРОВАНИЕ
--- ========================================
-
-CREATE TABLE IF NOT EXISTS `cache` (
-  `key` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `value` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `expiration` int(11) NOT NULL,
-  PRIMARY KEY (`key`),
-  KEY `idx_cache_expiration` (`expiration`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ========================================
 -- МЕДИАФАЙЛЫ
 -- ========================================
 
@@ -134,21 +122,7 @@ CREATE TABLE IF NOT EXISTS `site_settings` (
 -- ========================================
 -- ТЕМЫ
 -- ========================================
-
-CREATE TABLE IF NOT EXISTS `themes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` text COLLATE utf8mb4_unicode_ci,
-  `version` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '1.0.0',
-  `author` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT '0',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `slug` (`slug`),
-  KEY `idx_themes_active` (`is_active`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Теми оформлення (метадані з theme.json, активність зберігається тут)';
+-- Примечание: Метаданные тем хранятся в theme.json, активная тема - в site_settings (ключ 'active_theme')
 
 CREATE TABLE IF NOT EXISTS `theme_settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -214,6 +188,11 @@ INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
 ('logger_log_file_operations', '1'),
 ('logger_log_plugin_events', '1'),
 ('logger_log_module_events', '1')
+ON DUPLICATE KEY UPDATE `setting_key`=`setting_key`;
+
+-- Активная тема (по умолчанию 'default', если тема существует)
+INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
+('active_theme', 'default')
 ON DUPLICATE KEY UPDATE `setting_key`=`setting_key`;
 
 -- Создание главного меню
