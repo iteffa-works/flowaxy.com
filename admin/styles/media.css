@@ -1,0 +1,382 @@
+/* Стилі для медіа-бібліотеки */
+
+/* Основний контейнер */
+.media-grid {
+    min-height: 400px;
+}
+
+/* Елемент медіафайлу */
+.media-item {
+    position: relative;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Картка медіафайлу */
+.media-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.media-card:hover {
+    border-color: #3498db;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Мініатюра */
+.media-thumbnail {
+    position: relative;
+    width: 100%;
+    padding-top: 100%;
+    overflow: hidden;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.media-thumbnail img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Іконки для не-зображень */
+.media-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #6c757d;
+    text-align: center;
+}
+
+.media-icon.video-icon {
+    color: #e74c3c;
+}
+
+.media-icon.audio-icon {
+    color: #3498db;
+}
+
+.media-icon.document-icon {
+    color: #2ecc71;
+}
+
+/* Overlay для відео */
+.media-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.media-card:hover .media-overlay {
+    opacity: 1;
+}
+
+.media-overlay i {
+    color: white;
+    font-size: 2rem;
+}
+
+/* Тіло картки */
+.media-card .card-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.75rem;
+}
+
+/* Назва файлу */
+.media-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+/* Дії з файлом */
+.media-actions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.media-card:hover .media-actions {
+    opacity: 1;
+}
+
+.media-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    flex: 1;
+}
+
+/* Інформація про файл */
+.media-info {
+    padding: 0.5rem;
+    text-align: center;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+    font-size: 0.75rem;
+}
+
+/* Прев'ю файлів при завантаженні */
+#filePreview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.file-preview-item {
+    position: relative;
+    border: 2px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+}
+
+.file-preview-item img {
+    width: 100%;
+    height: auto;
+    border-radius: 0.25rem;
+    display: block;
+}
+
+.file-preview-item .remove-file {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #dc3545;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: background 0.2s ease;
+}
+
+.file-preview-item .remove-file:hover {
+    background: #c82333;
+}
+
+.file-preview-item .file-name {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Модальне вікно перегляду */
+#viewModalBody .media-view-image {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+}
+
+#viewModalBody .media-info-table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+#viewModalBody .media-info-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+}
+
+#viewModalBody .media-info-table td:first-child {
+    font-weight: 600;
+    width: 150px;
+    color: #6c757d;
+}
+
+/* Прогрес завантаження */
+#uploadProgress {
+    margin-top: 1rem;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Статус завантаження */
+.upload-status {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.upload-status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.upload-status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Вигляд списку */
+.media-list-view .media-item {
+    margin-bottom: 1rem;
+}
+
+.media-list-view .media-card {
+    flex-direction: row;
+    height: auto;
+}
+
+.media-list-view .media-thumbnail {
+    width: 150px;
+    padding-top: 0;
+    height: 150px;
+    flex-shrink: 0;
+}
+
+.media-list-view .media-card .card-body {
+    flex-grow: 1;
+    padding: 1rem;
+}
+
+.media-list-view .media-title {
+    font-size: 1rem;
+    white-space: normal;
+    margin-bottom: 0.75rem;
+}
+
+.media-list-view .media-actions {
+    opacity: 1;
+    justify-content: flex-start;
+}
+
+/* Drag and drop зона */
+.upload-dropzone {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+    border-color: #3498db;
+    background: #f0f8ff;
+}
+
+.upload-dropzone:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+.upload-dropzone i {
+    font-size: 3rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.upload-dropzone.drag-over i {
+    color: #3498db;
+}
+
+.upload-dropzone p {
+    margin: 0;
+    color: #6c757d;
+}
+
+/* Анімація */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Адаптивність */
+@media (max-width: 768px) {
+    .media-grid .col-md-2 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    .media-actions {
+        opacity: 1;
+    }
+    
+    .media-list-view .media-thumbnail {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .upload-dropzone {
+        padding: 1.5rem;
+    }
+    
+    .upload-dropzone i {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .media-grid .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .media-actions .btn {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+/* Доступність */
+.media-card:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+.media-actions .btn:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}

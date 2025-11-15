@@ -1,0 +1,40 @@
+# Кеш файлы
+*.cache
+cache/
+*.tmp
+
+# Конфигурация (содержит пароли)
+config/database.php
+
+# Загруженные файлы
+uploads/*
+!uploads/.gitkeep
+
+# Логи
+*.log
+logs/
+
+# Временные файлы
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Composer (если используется)
+vendor/
+composer.lock
+
+# Node modules (если используется)
+node_modules/
+package-lock.json
+
+# Системные файлы
+.htaccess.backup
+*.bak

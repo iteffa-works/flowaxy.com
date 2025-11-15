@@ -1,0 +1,37 @@
+# Минимальная рабочая конфигурация Apache для CMS
+
+# Включаем mod_rewrite
+RewriteEngine On
+
+# Исключаем реальные файлы и директории
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Исключаем системные директории
+RewriteCond %{REQUEST_URI} !^/admin/
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{REQUEST_URI} !^/assets/
+RewriteCond %{REQUEST_URI} !^/uploads/
+RewriteCond %{REQUEST_URI} !^/cache/
+
+# Перенаправляем все остальные запросы на router.php
+RewriteRule ^(.*)$ router.php [QSA,L]
+
+# Базовая безопасность
+<Files ~ "^\.">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files ~ "\.sql$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files ~ "\.log$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Отключаем отображение директорий
+Options -Indexes

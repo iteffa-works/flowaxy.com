@@ -1,0 +1,181 @@
+<?php
+/**
+ * Страница профиля пользователя
+ */
+
+require_once __DIR__ . '/../includes/AdminPage.php';
+
+class ProfilePage extends AdminPage {
+    
+    public function __construct() {
+        parent::__construct();
+        
+        $this->pageTitle = 'Профіль користувача - Landing CMS';
+        $this->templateName = 'profile';
+        
+        $this->setPageHeader(
+            'Профіль користувача',
+            'Зміна логіну, email та пароля',
+            'fas fa-user'
+        );
+    }
+    
+    public function handle() {
+        // Обработка сохранения
+        if ($_POST && isset($_POST['save_profile'])) {
+            $this->saveProfile();
+        }
+        
+        // Получение данных пользователя
+        $user = $this->getCurrentUser();
+        
+        // Рендерим страницу
+        $this->render([
+            'user' => $user
+        ]);
+    }
+    
+    /**
+     * Получение текущего пользователя
+     */
+    private function getCurrentUser() {
+        $userId = $_SESSION['admin_user_id'] ?? null;
+        
+        if (!$userId) {
+            $this->setMessage('Користувач не знайдено', 'danger');
+            return null;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user) {
+                $this->setMessage('Користувач не знайдено', 'danger');
+                return null;
+            }
+            
+            return $user;
+        } catch (Exception $e) {
+            error_log("Error getting user: " . $e->getMessage());
+            $this->setMessage('Помилка завантаження даних користувача', 'danger');
+            return null;
+        }
+    }
+    
+    /**
+     * Сохранение профиля
+     */
+    private function saveProfile() {
+        if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        $userId = $_SESSION['admin_user_id'] ?? null;
+        if (!$userId) {
+            $this->setMessage('Користувач не знайдено', 'danger');
+            return;
+        }
+        
+        $username = sanitizeInput($_POST['username'] ?? '');
+        $email = sanitizeInput($_POST['email'] ?? '');
+        $currentPassword = $_POST['current_password'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+        
+        // Валидация
+        if (empty($username)) {
+            $this->setMessage('Логін не може бути порожнім', 'danger');
+            return;
+        }
+        
+        if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->setMessage('Невірний формат email', 'danger');
+            return;
+        }
+        
+        // Проверка уникальности username
+        try {
+            $stmt = $this->db->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+            $stmt->execute([$username, $userId]);
+            if ($stmt->fetch()) {
+                $this->setMessage('Користувач з таким логіном вже існує', 'danger');
+                return;
+            }
+        } catch (Exception $e) {
+            error_log("Error checking username: " . $e->getMessage());
+            $this->setMessage('Помилка перевірки логіну', 'danger');
+            return;
+        }
+        
+        // Если меняется пароль, проверяем старый
+        if (!empty($newPassword)) {
+            if (empty($currentPassword)) {
+                $this->setMessage('Введіть поточний пароль для зміни', 'danger');
+                return;
+            }
+            
+            // Проверяем текущий пароль
+            try {
+                $stmt = $this->db->prepare("SELECT password FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$user || !password_verify($currentPassword, $user['password'])) {
+                    $this->setMessage('Невірний поточний пароль', 'danger');
+                    return;
+                }
+            } catch (Exception $e) {
+                error_log("Error verifying password: " . $e->getMessage());
+                $this->setMessage('Помилка перевірки пароля', 'danger');
+                return;
+            }
+            
+            // Проверяем длину нового пароля
+            if (strlen($newPassword) < PASSWORD_MIN_LENGTH) {
+                $this->setMessage('Пароль повинен містити мінімум ' . PASSWORD_MIN_LENGTH . ' символів', 'danger');
+                return;
+            }
+            
+            // Проверяем совпадение паролей
+            if ($newPassword !== $confirmPassword) {
+                $this->setMessage('Нові паролі не співпадають', 'danger');
+                return;
+            }
+        }
+        
+        // Сохраняем изменения
+        try {
+            $this->db->beginTransaction();
+            
+            if (!empty($newPassword)) {
+                // Обновляем username, email и password
+                $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+                $stmt = $this->db->prepare("UPDATE users SET username = ?, email = ?, password = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$username, $email, $hashedPassword, $userId]);
+                
+                // Обновляем сессию
+                $_SESSION['admin_username'] = $username;
+            } else {
+                // Обновляем только username и email
+                $stmt = $this->db->prepare("UPDATE users SET username = ?, email = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$username, $email, $userId]);
+                
+                // Обновляем сессию
+                $_SESSION['admin_username'] = $username;
+            }
+            
+            $this->db->commit();
+            $this->setMessage('Профіль успішно оновлено', 'success');
+            
+            // Перезагружаем данные пользователя
+            $user = $this->getCurrentUser();
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Error saving profile: " . $e->getMessage());
+            $this->setMessage('Помилка при збереженні профілю', 'danger');
+        }
+    }
+}
+
