@@ -4,21 +4,21 @@
  */
 
 require_once '../config/config.php';
-require_once 'includes/SimpleTemplate.php';
-require_once 'includes/Router.php';
+require_once '../engine/skins/includes/SimpleTemplate.php';
+require_once '../engine/skins/includes/Router.php';
 
 // Подключаем классы страниц
-require_once 'pages/LoginPage.php';
-require_once 'pages/LogoutPage.php';
-require_once 'pages/DashboardPage.php';
-require_once 'pages/SettingsPage.php';
-require_once 'pages/ProfilePage.php';
-require_once 'pages/PluginsPage.php';
-require_once 'pages/MediaPage.php';
-require_once 'pages/ThemesPage.php';
-require_once 'pages/CustomizerPage.php';
-require_once 'pages/MenusPage.php';
-require_once 'pages/SystemPage.php';
+require_once '../engine/skins/pages/LoginPage.php';
+require_once '../engine/skins/pages/LogoutPage.php';
+require_once '../engine/skins/pages/DashboardPage.php';
+require_once '../engine/skins/pages/SettingsPage.php';
+require_once '../engine/skins/pages/ProfilePage.php';
+require_once '../engine/skins/pages/PluginsPage.php';
+require_once '../engine/skins/pages/MediaPage.php';
+require_once '../engine/skins/pages/ThemesPage.php';
+require_once '../engine/skins/pages/CustomizerPage.php';
+require_once '../engine/skins/pages/MenusPage.php';
+require_once '../engine/skins/pages/SystemPage.php';
 
 // Создаем роутер
 $router = new Router();

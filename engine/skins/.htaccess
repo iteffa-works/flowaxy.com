@@ -3,16 +3,6 @@
     RewriteEngine On
     RewriteBase /admin/
     
-    # Перенаправление запросов к стилям в engine/skins/styles/
-    RewriteCond %{REQUEST_URI} ^/admin/styles/(.*)$
-    RewriteCond %{DOCUMENT_ROOT}/engine/skins/styles/$1 -f
-    RewriteRule ^styles/(.*)$ /engine/skins/styles/$1 [L]
-    
-    # Перенаправление запросов к скриптам в engine/skins/scripts/
-    RewriteCond %{REQUEST_URI} ^/admin/scripts/(.*)$
-    RewriteCond %{DOCUMENT_ROOT}/engine/skins/scripts/$1 -f
-    RewriteRule ^scripts/(.*)$ /engine/skins/scripts/$1 [L]
-    
     # Если файл или директория существует, показываем их
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
