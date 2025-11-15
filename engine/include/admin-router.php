@@ -25,10 +25,9 @@ require_once __DIR__ . '/../skins/pages/SystemPage.php';
 $router = new Router();
 
 // Регистрируем маршруты
-$router->add('login', 'LoginPage');
-$router->add('logout', 'LogoutPage');
-$router->add('dashboard', 'DashboardPage');
 $router->add('', 'DashboardPage'); // Главная страница
+
+$router->add('dashboard', 'DashboardPage');
 $router->add('settings', 'SettingsPage');
 $router->add('profile', 'ProfilePage');
 $router->add('plugins', 'PluginsPage');
@@ -37,6 +36,9 @@ $router->add('themes', 'ThemesPage');
 $router->add('customizer', 'CustomizerPage');
 $router->add('menus', 'MenusPage');
 $router->add('system', 'SystemPage');
+
+$router->add('login', 'LoginPage');
+$router->add('logout', 'LogoutPage');
 
 // Регистрируем маршруты плагинов
 $activePlugins = pluginManager()->getActivePlugins();
@@ -56,39 +58,6 @@ foreach ($activePlugins as $slug => $plugin) {
     if (file_exists($adminPageFile)) {
         require_once $adminPageFile;
         $router->add($slug, $className);
-    }
-    
-    // Додаткові адмін-сторінки для плагінів
-    // UTM Tracker - аналітика
-    if ($slug === 'pb-utm-tracker') {
-        $analyticsPageFile = $pluginDir . '/admin/PbUtmTrackerAnalyticsAdminPage.php';
-        if (file_exists($analyticsPageFile)) {
-            require_once $analyticsPageFile;
-            $router->add('pb-utm-tracker-analytics', 'PbUtmTrackerAnalyticsAdminPage');
-        }
-    }
-    
-    // Каталог - категорії та секція
-    if ($slug === 'pb-catalog') {
-        $categoriesPageFile = $pluginDir . '/admin/PbCatalogCategoriesAdminPage.php';
-        if (file_exists($categoriesPageFile)) {
-            require_once $categoriesPageFile;
-            $router->add('pb-catalog-categories', 'PbCatalogCategoriesAdminPage');
-        }
-        $sectionPageFile = $pluginDir . '/admin/PbCatalogSectionAdminPage.php';
-        if (file_exists($sectionPageFile)) {
-            require_once $sectionPageFile;
-            $router->add('pb-catalog-section', 'PbCatalogSectionAdminPage');
-        }
-    }
-    
-    // Форми - відправки
-    if ($slug === 'pb-form-builder') {
-        $submissionsPageFile = $pluginDir . '/admin/PbFormSubmissionsAdminPage.php';
-        if (file_exists($submissionsPageFile)) {
-            require_once $submissionsPageFile;
-            $router->add('pb-form-submissions', 'PbFormSubmissionsAdminPage');
-        }
     }
 }
 
