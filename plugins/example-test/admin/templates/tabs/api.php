@@ -1,4 +1,5 @@
 <?php
+$tabData = $apiTabData ?? $tabData ?? [];
 $apiMethods = $tabData['api_methods'] ?? [];
 $total = $tabData['total'] ?? 0;
 ?>

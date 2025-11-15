@@ -102,9 +102,8 @@ class AdminPage {
      * Рендеринг кастомного шаблона (для плагинов)
      */
     protected function renderCustomTemplate($templatePath, $data) {
-        // Объединяем данные
-        $this->data = array_merge($this->data ?? [], $data);
-        extract($this->data);
+        // Извлекаем переменные из данных
+        extract($data);
         
         $templateFile = $templatePath . $this->templateName . '.php';
         
@@ -115,7 +114,7 @@ class AdminPage {
         // Сохраняем путь к кастомному шаблону для использования в layout
         $customTemplateFile = $templateFile;
         
-        // Используем стандартный layout админки
+        // Используем стандартный layout админки для плагинов
         include __DIR__ . '/../templates/layout/base-plugin.php';
     }
     

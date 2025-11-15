@@ -21,6 +21,18 @@ class PluginsPage extends AdminPage {
     }
     
     public function handle() {
+        // Автоматическое обнаружение новых плагинов при загрузке страницы
+        if (empty($_POST)) {
+            try {
+                $discovered = pluginManager()->autoDiscoverPlugins();
+                if ($discovered > 0) {
+                    $this->setMessage("Обнаружено и установлено новых плагинов: {$discovered}", 'success');
+                }
+            } catch (Exception $e) {
+                error_log("Auto-discover plugins error: " . $e->getMessage());
+            }
+        }
+        
         // Обработка действий
         if ($_POST) {
             $this->handleAction();
@@ -81,7 +93,7 @@ class PluginsPage extends AdminPage {
      */
     private function getInstalledPlugins() {
         $allPlugins = [];
-        $pluginsDir = __DIR__ . '/../../plugins/';
+        $pluginsDir = dirname(__DIR__, 3) . '/plugins/';
         
         // Получаем плагины из БД
         $dbPlugins = [];
@@ -101,24 +113,35 @@ class PluginsPage extends AdminPage {
                 $slug = basename($dir);
                 $configFile = $dir . '/plugin.json';
                 
-                if (file_exists($configFile)) {
-                    $config = json_decode(file_get_contents($configFile), true);
+                if (file_exists($configFile) && is_readable($configFile)) {
+                    $configContent = @file_get_contents($configFile);
+                    if ($configContent === false) {
+                        error_log("Cannot read plugin.json for plugin: {$slug}");
+                        continue;
+                    }
                     
-                    if ($config) {
+                    $config = json_decode($configContent, true);
+                    
+                    if ($config && is_array($config)) {
+                        // Используем slug из конфига или из имени директории
+                        $pluginSlug = $config['slug'] ?? $slug;
+                        
                         // Проверяем, установлен ли плагин в БД
-                        $isInstalled = isset($dbPlugins[$slug]);
-                        $isActive = $isInstalled && $dbPlugins[$slug]['is_active'];
+                        $isInstalled = isset($dbPlugins[$pluginSlug]);
+                        $isActive = $isInstalled && isset($dbPlugins[$pluginSlug]['is_active']) && $dbPlugins[$pluginSlug]['is_active'];
                         
                         $allPlugins[] = [
-                            'slug' => $slug,
-                            'name' => $config['name'] ?? $slug,
+                            'slug' => $pluginSlug,
+                            'name' => $config['name'] ?? $pluginSlug,
                             'description' => $config['description'] ?? '',
                             'version' => $config['version'] ?? '1.0.0',
                             'author' => $config['author'] ?? '',
                             'is_installed' => $isInstalled,
                             'is_active' => $isActive,
-                            'settings' => $isInstalled ? ($dbPlugins[$slug]['settings'] ?? null) : null
+                            'settings' => $isInstalled && isset($dbPlugins[$pluginSlug]) ? ($dbPlugins[$pluginSlug]['settings'] ?? null) : null
                         ];
+                    } else {
+                        error_log("Invalid JSON in plugin.json for plugin: {$slug}");
                     }
                 }
             }

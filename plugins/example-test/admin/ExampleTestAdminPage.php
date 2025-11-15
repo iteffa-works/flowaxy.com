@@ -8,6 +8,15 @@
 
 require_once dirname(__DIR__, 3) . '/engine/skins/includes/AdminPage.php';
 
+// Убеждаемся, что ModuleLoader доступен и инициализирован
+if (!class_exists('ModuleLoader')) {
+    require_once dirname(__DIR__, 3) . '/engine/classes/BaseModule.php';
+    require_once dirname(__DIR__, 3) . '/engine/modules/loader.php';
+}
+if (class_exists('ModuleLoader') && method_exists('ModuleLoader', 'init')) {
+    ModuleLoader::init();
+}
+
 class ExampleTestAdminPage extends AdminPage {
     
     private $currentTab = 'modules';
@@ -31,7 +40,7 @@ class ExampleTestAdminPage extends AdminPage {
         $this->currentTab = sanitizeInput($_GET['tab'] ?? 'modules');
         
         // Добавляем стили и скрипты
-        $this->additionalCSS[] = 'styles/flowaxy.css?v=' . time();
+        $this->additionalCSS[] = adminUrl('styles/flowaxy.css') . '?v=' . time();
     }
     
     /**
@@ -55,16 +64,13 @@ class ExampleTestAdminPage extends AdminPage {
         // Получаем данные для текущей вкладки
         $data = $this->getTabData();
         
-        // Рендеринг страницы
-        $templateData = array_merge($this->getTemplateData(), [
+        // Рендеринг страницы через стандартный метод render()
+        $this->render([
             'currentTab' => $this->currentTab,
             'tabs' => $this->getTabs(),
             'data' => $data,
             'tabData' => $data
         ]);
-        
-        extract($templateData);
-        include $this->getTemplatePath() . 'example-test.php';
     }
     
     /**
@@ -137,30 +143,129 @@ class ExampleTestAdminPage extends AdminPage {
     private function getModulesData(): array {
         $modules = [];
         
-        // Получаем загруженные модули
-        if (class_exists('ModuleLoader')) {
-            $loadedModules = ModuleLoader::getLoadedModules();
-            
-            foreach ($loadedModules as $name => $module) {
-                $info = $module->getInfo();
-                $apiMethods = $module->getApiMethods();
+        try {
+            // Сначала пробуем получить модули через ModuleLoader
+            if (class_exists('ModuleLoader')) {
+                ModuleLoader::init();
+                $loadedModules = ModuleLoader::getLoadedModules();
                 
-                $modules[] = [
-                    'name' => $name,
-                    'title' => $info['title'] ?? $name,
-                    'description' => $info['description'] ?? '',
-                    'version' => $info['version'] ?? '1.0.0',
-                    'author' => $info['author'] ?? '',
-                    'api_methods' => $apiMethods,
-                    'status' => 'active'
-                ];
+                if (!empty($loadedModules)) {
+                    foreach ($loadedModules as $name => $module) {
+                        if (is_object($module) && method_exists($module, 'getInfo')) {
+                            try {
+                                $info = $module->getInfo();
+                                $apiMethods = method_exists($module, 'getApiMethods') ? $module->getApiMethods() : [];
+                                
+                                $modules[] = [
+                                    'name' => $name,
+                                    'title' => $info['title'] ?? $info['name'] ?? $name,
+                                    'description' => $info['description'] ?? '',
+                                    'version' => $info['version'] ?? '1.0.0',
+                                    'author' => $info['author'] ?? '',
+                                    'api_methods' => $apiMethods,
+                                    'status' => 'active'
+                                ];
+                            } catch (Exception $e) {
+                                error_log("Error getting info for module {$name}: " . $e->getMessage());
+                            }
+                        }
+                    }
+                }
             }
+            
+            // Если через ModuleLoader не получилось, загружаем модули напрямую из директории
+            if (empty($modules)) {
+                $modulesDir = dirname(__DIR__, 3) . '/engine/modules/';
+                
+                // Убеждаемся, что BaseModule загружен
+                if (!class_exists('BaseModule')) {
+                    $baseModuleFile = dirname($modulesDir) . '/classes/BaseModule.php';
+                    if (file_exists($baseModuleFile)) {
+                        require_once $baseModuleFile;
+                    }
+                }
+                
+                // Получаем список файлов модулей
+                $moduleFiles = glob($modulesDir . '*.php');
+                
+                if ($moduleFiles !== false) {
+                    foreach ($moduleFiles as $moduleFile) {
+                        $moduleName = basename($moduleFile, '.php');
+                        
+                        // Пропускаем служебные файлы
+                        if ($moduleName === 'loader' || $moduleName === 'compatibility') {
+                            continue;
+                        }
+                        
+                        try {
+                            // Загружаем файл модуля, если класс еще не загружен
+                            if (!class_exists($moduleName)) {
+                                require_once $moduleFile;
+                            }
+                            
+                            // Проверяем, что класс существует
+                            if (class_exists($moduleName)) {
+                                // Получаем экземпляр модуля (Singleton)
+                                $module = $moduleName::getInstance();
+                                
+                                // Проверяем, что это объект и имеет метод getInfo
+                                if (is_object($module) && method_exists($module, 'getInfo')) {
+                                    try {
+                                        $info = $module->getInfo();
+                                        $apiMethods = method_exists($module, 'getApiMethods') ? $module->getApiMethods() : [];
+                                        
+                                        // Проверяем, что модуль еще не добавлен
+                                        $exists = false;
+                                        foreach ($modules as $existingModule) {
+                                            if ($existingModule['name'] === $moduleName) {
+                                                $exists = true;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (!$exists) {
+                                            $modules[] = [
+                                                'name' => $moduleName,
+                                                'title' => $info['title'] ?? $info['name'] ?? $moduleName,
+                                                'description' => $info['description'] ?? '',
+                                                'version' => $info['version'] ?? '1.0.0',
+                                                'author' => $info['author'] ?? '',
+                                                'api_methods' => $apiMethods,
+                                                'status' => 'active'
+                                            ];
+                                        }
+                                    } catch (Exception $e) {
+                                        error_log("Error getting info for module {$moduleName}: " . $e->getMessage());
+                                    }
+                                }
+                            }
+                        } catch (Exception $e) {
+                            error_log("Error loading module {$moduleName}: " . $e->getMessage());
+                        } catch (Error $e) {
+                            error_log("Fatal error loading module {$moduleName}: " . $e->getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error getting modules data: " . $e->getMessage());
+        } catch (Error $e) {
+            error_log("Fatal error getting modules data: " . $e->getMessage());
         }
         
-        return [
+        $result = [
             'modules' => $modules,
             'total' => count($modules)
         ];
+        
+        // Временная отладка
+        if (empty($modules)) {
+            error_log("getModulesData: No modules found. Result: " . print_r($result, true));
+        } else {
+            error_log("getModulesData: Found " . count($modules) . " modules");
+        }
+        
+        return $result;
     }
     
     /**
@@ -306,16 +411,64 @@ class ExampleTestAdminPage extends AdminPage {
     private function getApiData(): array {
         $apiMethods = [];
         
-        // Получаем API методы модулей
-        if (class_exists('ModuleLoader')) {
-            $loadedModules = ModuleLoader::getLoadedModules();
+        try {
+            // Загружаем модули напрямую из директории (та же логика, что и в getModulesData)
+            $modulesDir = dirname(__DIR__, 3) . '/engine/modules/';
             
-            foreach ($loadedModules as $name => $module) {
-                $methods = $module->getApiMethods();
-                if (!empty($methods)) {
-                    $apiMethods[$name] = $methods;
+            // Убеждаемся, что BaseModule загружен
+            if (!class_exists('BaseModule')) {
+                $baseModuleFile = dirname($modulesDir) . '/classes/BaseModule.php';
+                if (file_exists($baseModuleFile)) {
+                    require_once $baseModuleFile;
                 }
             }
+            
+            // Получаем список файлов модулей
+            $moduleFiles = glob($modulesDir . '*.php');
+            
+            if ($moduleFiles !== false) {
+                foreach ($moduleFiles as $moduleFile) {
+                    $moduleName = basename($moduleFile, '.php');
+                    
+                    // Пропускаем служебные файлы
+                    if ($moduleName === 'loader' || $moduleName === 'compatibility') {
+                        continue;
+                    }
+                    
+                    try {
+                        // Загружаем файл модуля, если класс еще не загружен
+                        if (!class_exists($moduleName)) {
+                            require_once $moduleFile;
+                        }
+                        
+                        // Проверяем, что класс существует
+                        if (class_exists($moduleName)) {
+                            // Проверяем, что класс наследуется от BaseModule
+                            $reflection = new ReflectionClass($moduleName);
+                            if ($reflection->isSubclassOf('BaseModule')) {
+                                // Получаем экземпляр модуля
+                                $module = $moduleName::getInstance();
+                                
+                                // Получаем API методы модуля
+                                if (method_exists($module, 'getApiMethods')) {
+                                    $methods = $module->getApiMethods();
+                                    if (!empty($methods)) {
+                                        $apiMethods[$moduleName] = $methods;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log("Error loading module {$moduleName} for API: " . $e->getMessage());
+                    } catch (Error $e) {
+                        error_log("Fatal error loading module {$moduleName} for API: " . $e->getMessage());
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error getting API data: " . $e->getMessage());
+        } catch (Error $e) {
+            error_log("Fatal error getting API data: " . $e->getMessage());
         }
         
         return [
@@ -357,6 +510,11 @@ class ExampleTestAdminPage extends AdminPage {
         if (empty($moduleName)) {
             echo json_encode(['success' => false, 'error' => 'Модуль не указан'], JSON_UNESCAPED_UNICODE);
             exit;
+        }
+        
+        // Убеждаемся, что ModuleLoader загружен
+        if (!class_exists('ModuleLoader')) {
+            require_once dirname(__DIR__, 3) . '/engine/modules/loader.php';
         }
         
         $module = ModuleLoader::getModule($moduleName);

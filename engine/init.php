@@ -13,7 +13,6 @@ declare(strict_types=1);
 $coreClasses = [
     'Validator',
     'BasePlugin',
-    'PluginManager',
     'Cache',
     'ThemeManager',
     'MenuManager'

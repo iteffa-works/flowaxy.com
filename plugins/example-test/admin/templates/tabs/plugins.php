@@ -1,4 +1,5 @@
 <?php
+$tabData = $pluginsTabData ?? $tabData ?? [];
 $plugins = $tabData['plugins'] ?? [];
 $total = $tabData['total'] ?? 0;
 $active = $tabData['active'] ?? 0;

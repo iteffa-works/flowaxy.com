@@ -1,4 +1,5 @@
 <?php
+$tabData = $componentsTabData ?? $tabData ?? [];
 $components = $tabData['components'] ?? [];
 $total = $tabData['total'] ?? 0;
 ?>

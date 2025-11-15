@@ -1,4 +1,7 @@
 <?php
+// Используем переданную переменную или глобальную
+$tabData = $modulesTabData ?? $tabData ?? [];
+
 $modules = $tabData['modules'] ?? [];
 $total = $tabData['total'] ?? 0;
 ?>

@@ -15,10 +15,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Font Awesome -->
-    <link href="/admin/styles/font-awesome/css/all.min.css" rel="stylesheet">
+    <link href="<?= adminUrl('styles/font-awesome/css/all.min.css') ?>" rel="stylesheet">
     
     <!-- Основные стили админки -->
-    <link href="/admin/styles/flowaxy.css?v=<?= time() ?>" rel="stylesheet">
+    <link href="<?= adminUrl('styles/flowaxy.css') ?>?v=<?= time() ?>" rel="stylesheet">
     
     <?php if (!empty($additionalCSS)): ?>
         <!-- Дополнительные CSS файлы -->
