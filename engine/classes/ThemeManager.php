@@ -424,18 +424,18 @@ class ThemeManager {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
         if ($theme === null || !isset($theme['slug'])) {
-            return __DIR__ . '/../themes/default/';
+            return dirname(__DIR__, 2) . '/themes/default/';
         }
         
         $slug = $theme['slug'];
         // Безопасная проверка пути
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for path: {$slug}");
-            return __DIR__ . '/../themes/default/';
+            return dirname(__DIR__, 2) . '/themes/default/';
         }
         
-        $path = __DIR__ . '/../themes/' . $slug . '/';
-        return file_exists($path) ? $path : __DIR__ . '/../themes/default/';
+        $path = dirname(__DIR__, 2) . '/themes/' . $slug . '/';
+        return file_exists($path) ? $path : dirname(__DIR__, 2) . '/themes/default/';
     }
     
     /**
@@ -578,7 +578,7 @@ class ThemeManager {
             ];
         }
         
-        $configFile = __DIR__ . '/../themes/' . $slug . '/theme-config.php';
+        $configFile = dirname(__DIR__, 2) . '/themes/' . $slug . '/theme-config.php';
         
         if (file_exists($configFile) && is_readable($configFile)) {
             try {

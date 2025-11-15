@@ -7,7 +7,7 @@
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
-require_once __DIR__ . '/../../core/MediaManager.php';
+require_once __DIR__ . '/../../engine/classes/MediaManager.php';
 
 class MediaPage extends AdminPage {
     

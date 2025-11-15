@@ -72,7 +72,7 @@ class PluginManager {
      */
     private function loadPlugin($pluginData) {
         $slug = $pluginData['slug'];
-        $pluginDir = __DIR__ . '/../plugins/' . $slug;
+        $pluginDir = dirname(__DIR__, 2) . '/plugins/' . $slug;
         $className = $this->getPluginClassName($slug);
         $pluginPath = $pluginDir . '/' . $className . '.php';
         
@@ -144,7 +144,7 @@ class PluginManager {
      * Получение всех плагинов (из файловой системы)
      */
     public function getAllPlugins() {
-        $pluginsDir = __DIR__ . '/../plugins/';
+        $pluginsDir = dirname(__DIR__, 2) . '/plugins/';
         $allPlugins = [];
         
         if (is_dir($pluginsDir)) {

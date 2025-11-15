@@ -19,7 +19,7 @@ class Cache {
      * Конструктор (приватный для Singleton)
      */
     private function __construct() {
-        $this->cacheDir = defined('CACHE_DIR') ? CACHE_DIR : __DIR__ . '/../cache/';
+        $this->cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/cache/';
         $this->cacheDir = rtrim($this->cacheDir, '/') . '/';
         $this->ensureCacheDir();
     }

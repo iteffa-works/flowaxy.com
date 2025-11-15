@@ -102,7 +102,7 @@ class CustomizerPage extends AdminPage {
      * Получение изображений из медиагалереи (AJAX)
      */
     private function getMediaImages() {
-        require_once __DIR__ . '/../../core/MediaManager.php';
+        require_once __DIR__ . '/../../engine/classes/MediaManager.php';
         
         $mediaManager = mediaManager();
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -132,7 +132,7 @@ class CustomizerPage extends AdminPage {
      * Обработка загрузки изображения (AJAX)
      */
     private function handleUpload() {
-        require_once __DIR__ . '/../../core/MediaManager.php';
+        require_once __DIR__ . '/../../engine/classes/MediaManager.php';
         
         if (!isset($_FILES['file']) || empty($_FILES['file']['tmp_name'])) {
             echo json_encode(['success' => false, 'error' => 'Файл не завантажено'], JSON_UNESCAPED_UNICODE);

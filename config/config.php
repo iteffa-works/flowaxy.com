@@ -114,7 +114,7 @@ define('PASSWORD_MIN_LENGTH', 8);
 spl_autoload_register(function (string $className): void {
     // Проверяем только классы из нашего пространства имен
     if (strpos($className, '\\') === false) {
-        $classFile = __DIR__ . '/../core/' . $className . '.php';
+        $classFile = __DIR__ . '/../engine/classes/' . $className . '.php';
         if (file_exists($classFile) && is_readable($classFile)) {
             require_once $classFile;
         }
@@ -124,25 +124,8 @@ spl_autoload_register(function (string $className): void {
 // Подключение к базе данных
 require_once __DIR__ . '/database.php';
 
-// Подключение основных классов CMS
-$coreClasses = [
-    'Validator',
-    'BasePlugin',
-    'PluginManager',
-    'Cache',
-    'MediaManager',
-    'ThemeManager',
-    'MenuManager'
-];
-
-foreach ($coreClasses as $class) {
-    $file = __DIR__ . '/../core/' . $class . '.php';
-    if (file_exists($file) && is_readable($file)) {
-        require_once $file;
-    } else {
-        error_log("Core class file not found: {$file}");
-    }
-}
+// Подключение ядра системы
+require_once __DIR__ . '/../engine/init.php';
 
 // Инициализация менеджеров (ленивая загрузка)
 // Менеджеры будут инициализированы при первом обращении через глобальные функции
