@@ -16,11 +16,12 @@ class Router {
     }
     
     /**
-     * Получение текущего пути
+     * Нормализация URI для получения пути
+     * 
+     * @param string $uri Исходный URI
+     * @return string Нормализованный путь
      */
-    private function getCurrentPath() {
-        $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        
+    private static function normalizeUri(string $uri): string {
         // Убираем базовый путь админки
         $adminPath = '/admin/';
         if (strpos($uri, $adminPath) === 0) {
@@ -41,49 +42,30 @@ class Router {
         }
         
         // Убираем слеши
-        $uri = trim($uri, '/');
-        
-        // Возвращаем путь (пустая строка для корня)
-        return $uri;
+        return trim($uri, '/');
+    }
+    
+    /**
+     * Получение текущего пути
+     */
+    private function getCurrentPath(): string {
+        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        return self::normalizeUri($uri);
     }
     
     /**
      * Получение текущего пути (публичный метод)
      */
-    public function getCurrentRoute() {
+    public function getCurrentRoute(): string {
         return $this->getCurrentPath();
     }
     
     /**
      * Статический метод для получения текущего маршрута
      */
-    public static function getCurrentPage() {
+    public static function getCurrentPage(): string {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        
-        // Убираем базовый путь админки
-        $adminPath = '/admin/';
-        if (strpos($uri, $adminPath) === 0) {
-            $uri = substr($uri, strlen($adminPath));
-        }
-        
-        // Убираем query string
-        if (($pos = strpos($uri, '?')) !== false) {
-            $uri = substr($uri, 0, $pos);
-        }
-        
-        // Убираем index.php
-        $uri = str_replace('index.php', '', $uri);
-        
-        // Убираем расширение .php если есть
-        if (preg_match('/^(.+)\.php$/', $uri, $matches)) {
-            $uri = $matches[1];
-        }
-        
-        // Убираем слеши
-        $uri = trim($uri, '/');
-        
-        // Возвращаем путь (пустая строка для корня)
-        return $uri;
+        return self::normalizeUri($uri);
     }
     
     /**

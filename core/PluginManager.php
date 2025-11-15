@@ -53,20 +53,27 @@ class PluginManager {
     }
     
     /**
+     * Получение имени класса плагина из slug
+     * 
+     * @param string $pluginSlug Slug плагина
+     * @return string Имя класса
+     */
+    private function getPluginClassName(string $pluginSlug): string {
+        $parts = explode('-', $pluginSlug);
+        $className = '';
+        foreach ($parts as $part) {
+            $className .= ucfirst($part);
+        }
+        return $className . 'Plugin';
+    }
+    
+    /**
      * Загрузка конкретного плагина
      */
     private function loadPlugin($pluginData) {
         $slug = $pluginData['slug'];
         $pluginDir = __DIR__ . '/../plugins/' . $slug;
-        
-        // Преобразуем slug в имя класса (например: page-builder -> PageBuilderPlugin)
-        $parts = explode('-', $slug);
-        $className = '';
-        foreach ($parts as $part) {
-            $className .= ucfirst($part);
-        }
-        $className .= 'Plugin';
-        
+        $className = $this->getPluginClassName($slug);
         $pluginPath = $pluginDir . '/' . $className . '.php';
         
         if (file_exists($pluginPath)) {
@@ -85,7 +92,11 @@ class PluginManager {
     /**
      * Добавление хука
      */
-    public function addHook($hookName, $callback, $priority = 10) {
+    public function addHook(string $hookName, callable $callback, int $priority = 10): void {
+        if (empty($hookName)) {
+            return;
+        }
+        
         if (!isset($this->hooks[$hookName])) {
             $this->hooks[$hookName] = [];
         }
@@ -104,14 +115,18 @@ class PluginManager {
     /**
      * Выполнение хука
      */
-    public function doHook($hookName, $data = null) {
-        if (!isset($this->hooks[$hookName])) {
+    public function doHook(string $hookName, $data = null) {
+        if (empty($hookName) || !isset($this->hooks[$hookName])) {
             return $data;
         }
         
         foreach ($this->hooks[$hookName] as $hook) {
             if (is_callable($hook['callback'])) {
-                $data = call_user_func($hook['callback'], $data);
+                try {
+                    $data = call_user_func($hook['callback'], $data);
+                } catch (Exception $e) {
+                    error_log("Hook execution error for '{$hookName}': " . $e->getMessage());
+                }
             }
         }
         
@@ -121,8 +136,8 @@ class PluginManager {
     /**
      * Проверка существования хука
      */
-    public function hasHook($hookName) {
-        return isset($this->hooks[$hookName]) && !empty($this->hooks[$hookName]);
+    public function hasHook(string $hookName): bool {
+        return !empty($hookName) && isset($this->hooks[$hookName]) && !empty($this->hooks[$hookName]);
     }
     
     /**
@@ -342,15 +357,7 @@ class PluginManager {
         }
         
         $pluginDir = __DIR__ . '/../plugins/' . $pluginSlug;
-        
-        // Преобразуем slug в имя класса (например: page-builder -> PageBuilderPlugin)
-        $parts = explode('-', $pluginSlug);
-        $className = '';
-        foreach ($parts as $part) {
-            $className .= ucfirst($part);
-        }
-        $className .= 'Plugin';
-        
+        $className = $this->getPluginClassName($pluginSlug);
         $pluginPath = $pluginDir . '/' . $className . '.php';
         
         if (file_exists($pluginPath)) {
@@ -369,19 +376,6 @@ class PluginManager {
         }
         
         return null;
-    }
-    
-    /**
-     * Получение имени класса плагина
-     */
-    private function getPluginClassName($pluginSlug) {
-        // Преобразуем slug в CamelCase + Plugin
-        $parts = explode('-', $pluginSlug);
-        $className = '';
-        foreach ($parts as $part) {
-            $className .= ucfirst($part);
-        }
-        return $className . 'Plugin';
     }
     
     /**
@@ -496,14 +490,14 @@ class PluginManager {
     /**
      * Проверка активности плагина
      */
-    public function isPluginActive($pluginSlug) {
-        return isset($this->plugins[$pluginSlug]);
+    public function isPluginActive(string $pluginSlug): bool {
+        return !empty($pluginSlug) && isset($this->plugins[$pluginSlug]);
     }
     
     /**
      * Получение конкретного плагина
      */
-    public function getPlugin($pluginSlug) {
+    public function getPlugin(string $pluginSlug) {
         return $this->plugins[$pluginSlug] ?? null;
     }
 }

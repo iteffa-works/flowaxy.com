@@ -67,33 +67,44 @@ abstract class BasePlugin {
     }
     
     /**
-     * Получение настроек плагина
+     * Получение настроек плагина с кешированием
      */
-    public function getSettings() {
+    public function getSettings(): array {
         if (!$this->db) {
             return [];
         }
         
-        try {
-            $stmt = $this->db->prepare("SELECT setting_key, setting_value FROM plugin_settings WHERE plugin_slug = ?");
-            $stmt->execute([$this->getSlug()]);
-            
-            $settings = [];
-            while ($row = $stmt->fetch()) {
-                $settings[$row['setting_key']] = $row['setting_value'];
+        $slug = $this->getSlug();
+        $cacheKey = 'plugin_settings_' . $slug;
+        
+        return cache_remember($cacheKey, function() use ($slug) {
+            $db = getDB();
+            if (!$db) {
+                return [];
             }
             
-            return $settings;
-        } catch (Exception $e) {
-            return [];
-        }
+            try {
+                $stmt = $db->prepare("SELECT setting_key, setting_value FROM plugin_settings WHERE plugin_slug = ?");
+                $stmt->execute([$slug]);
+                
+                $settings = [];
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $settings[$row['setting_key']] = $row['setting_value'];
+                }
+                
+                return $settings;
+            } catch (Exception $e) {
+                error_log("BasePlugin getSettings error: " . $e->getMessage());
+                return [];
+            }
+        }, 1800); // Кешируем на 30 минут
     }
     
     /**
      * Сохранение настройки плагина
      */
-    public function setSetting($key, $value) {
-        if (!$this->db) {
+    public function setSetting(string $key, $value): bool {
+        if (!$this->db || empty($key)) {
             return false;
         }
         
@@ -104,8 +115,16 @@ abstract class BasePlugin {
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
             ");
             
-            return $stmt->execute([$this->getSlug(), $key, $value]);
+            $result = $stmt->execute([$this->getSlug(), $key, $value]);
+            
+            if ($result) {
+                // Очищаем кеш настроек
+                cache_forget('plugin_settings_' . $this->getSlug());
+            }
+            
+            return $result;
         } catch (Exception $e) {
+            error_log("BasePlugin setSetting error: " . $e->getMessage());
             return false;
         }
     }
@@ -113,61 +132,50 @@ abstract class BasePlugin {
     /**
      * Получение настройки плагина
      */
-    public function getSetting($key, $default = null) {
-        if (!$this->db) {
-            return $default;
-        }
-        
-        try {
-            $stmt = $this->db->prepare("SELECT setting_value FROM plugin_settings WHERE plugin_slug = ? AND setting_key = ?");
-            $stmt->execute([$this->getSlug(), $key]);
-            
-            $result = $stmt->fetchColumn();
-            return $result !== false ? $result : $default;
-        } catch (Exception $e) {
-            return $default;
-        }
+    public function getSetting(string $key, $default = null) {
+        $settings = $this->getSettings();
+        return $settings[$key] ?? $default;
     }
     
     /**
      * Получение слага плагина
      */
-    public function getSlug() {
+    public function getSlug(): string {
         return $this->config['slug'] ?? strtolower(get_class($this));
     }
     
     /**
      * Получение имени плагина
      */
-    public function getName() {
+    public function getName(): string {
         return $this->config['name'] ?? get_class($this);
     }
     
     /**
      * Получение версии плагина
      */
-    public function getVersion() {
+    public function getVersion(): string {
         return $this->config['version'] ?? '1.0.0';
     }
     
     /**
      * Получение описания плагина
      */
-    public function getDescription() {
+    public function getDescription(): string {
         return $this->config['description'] ?? '';
     }
     
     /**
      * Получение автора плагина
      */
-    public function getAuthor() {
+    public function getAuthor(): string {
         return $this->config['author'] ?? '';
     }
     
     /**
      * Получение URL плагина
      */
-    public function getPluginUrl() {
+    public function getPluginUrl(): string {
         $pluginDir = basename(dirname((new ReflectionClass($this))->getFileName()));
         return SITE_URL . '/plugins/' . $pluginDir . '/';
     }
@@ -175,7 +183,7 @@ abstract class BasePlugin {
     /**
      * Получение пути к плагину
      */
-    public function getPluginPath() {
+    public function getPluginPath(): string {
         return dirname((new ReflectionClass($this))->getFileName()) . '/';
     }
     
@@ -225,40 +233,72 @@ abstract class BasePlugin {
     /**
      * Создание nonce (аналог wp_create_nonce)
      */
-    protected function createNonce($action) {
-        return hash('sha256', $action . session_id() . time());
+    protected function createNonce(string $action): string {
+        if (!isset($_SESSION['plugin_nonces'])) {
+            $_SESSION['plugin_nonces'] = [];
+        }
+        
+        $nonce = bin2hex(random_bytes(32));
+        $_SESSION['plugin_nonces'][$action] = [
+            'nonce' => $nonce,
+            'expires' => time() + 3600 // 1 час
+        ];
+        
+        return $nonce;
     }
     
     /**
      * Проверка nonce (аналог wp_verify_nonce)
      */
-    protected function verifyNonce($nonce, $action) {
-        // Простая проверка - в реальном проекте нужна более сложная логика
-        return !empty($nonce) && strlen($nonce) === 64;
+    protected function verifyNonce(?string $nonce, string $action): bool {
+        if (empty($nonce) || !isset($_SESSION['plugin_nonces'][$action])) {
+            return false;
+        }
+        
+        $stored = $_SESSION['plugin_nonces'][$action];
+        
+        // Проверяем срок действия
+        if (isset($stored['expires']) && $stored['expires'] < time()) {
+            unset($_SESSION['plugin_nonces'][$action]);
+            return false;
+        }
+        
+        // Проверяем nonce
+        if (isset($stored['nonce']) && hash_equals($stored['nonce'], $nonce)) {
+            // Удаляем использованный nonce (одноразовое использование)
+            unset($_SESSION['plugin_nonces'][$action]);
+            return true;
+        }
+        
+        return false;
     }
     
     /**
      * Отправка JSON успеха (аналог wp_send_json_success)
      */
-    protected function sendJsonSuccess($data) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'data' => $data]);
+    protected function sendJsonSuccess($data): void {
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=UTF-8');
+        }
+        echo json_encode(['success' => true, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         exit;
     }
     
     /**
      * Отправка JSON ошибки (аналог wp_send_json_error)
      */
-    protected function sendJsonError($data) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'data' => $data]);
+    protected function sendJsonError($data): void {
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=UTF-8');
+        }
+        echo json_encode(['success' => false, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         exit;
     }
     
     /**
      * Логирование действий плагина
      */
-    public function log($message, $level = 'info') {
+    public function log(string $message, string $level = 'info'): void {
         $logMessage = "[" . date('Y-m-d H:i:s') . "] [{$this->getName()}] [{$level}] {$message}";
         error_log($logMessage);
     }
@@ -266,14 +306,19 @@ abstract class BasePlugin {
     /**
      * Проверка зависимостей плагина
      */
-    public function checkDependencies() {
-        if (!isset($this->config['dependencies'])) {
+    public function checkDependencies(): bool {
+        if (!isset($this->config['dependencies']) || !is_array($this->config['dependencies'])) {
             return true;
         }
         
         try {
+            if (!function_exists('pluginManager')) {
+                return false;
+            }
+            
+            $pluginManager = pluginManager();
             foreach ($this->config['dependencies'] as $dependency) {
-                if (!function_exists('pluginManager') || !pluginManager()->isPluginActive($dependency)) {
+                if (!is_string($dependency) || !$pluginManager->isPluginActive($dependency)) {
                     return false;
                 }
             }
@@ -288,8 +333,8 @@ abstract class BasePlugin {
     /**
      * Получение конфигурации плагина
      */
-    public function getConfig() {
-        return $this->config;
+    public function getConfig(): array {
+        return $this->config ?? [];
     }
 }
 ?>
