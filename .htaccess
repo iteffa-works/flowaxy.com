@@ -3,6 +3,16 @@
 # Включаем mod_rewrite
 RewriteEngine On
 
+# Обработка запросов к админке (должно быть первым)
+# Перенаправление стилей и скриптов админки
+RewriteCond %{REQUEST_URI} ^/admin/(styles|scripts)/(.*)$
+RewriteCond %{DOCUMENT_ROOT}/engine/skins/$1/$2 -f
+RewriteRule ^admin/(styles|scripts)/(.*)$ /engine/skins/$1/$2 [L]
+
+# Обработка всех остальных запросов админки
+RewriteCond %{REQUEST_URI} ^/admin/(.*)$
+RewriteRule ^admin/(.*)$ engine/include/admin-router.php [QSA,L]
+
 # Исключаем реальные файлы и директории
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -13,6 +23,7 @@ RewriteCond %{REQUEST_URI} !^/api/
 RewriteCond %{REQUEST_URI} !^/assets/
 RewriteCond %{REQUEST_URI} !^/uploads/
 RewriteCond %{REQUEST_URI} !^/cache/
+RewriteCond %{REQUEST_URI} !^/engine/
 
 # Перенаправляем все остальные запросы на router.php
 RewriteRule ^(.*)$ router.php [QSA,L]

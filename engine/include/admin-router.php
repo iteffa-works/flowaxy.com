@@ -1,24 +1,25 @@
 <?php
 /**
- * Точка входа админки с роутингом
+ * Роутер админки
+ * Обрабатывает все запросы к /admin/*
  */
 
-require_once '../config/config.php';
-require_once '../engine/skins/includes/SimpleTemplate.php';
-require_once '../engine/skins/includes/Router.php';
+require_once dirname(__DIR__, 2) . '/config/config.php';
+require_once __DIR__ . '/../skins/includes/SimpleTemplate.php';
+require_once __DIR__ . '/../skins/includes/Router.php';
 
 // Подключаем классы страниц
-require_once '../engine/skins/pages/LoginPage.php';
-require_once '../engine/skins/pages/LogoutPage.php';
-require_once '../engine/skins/pages/DashboardPage.php';
-require_once '../engine/skins/pages/SettingsPage.php';
-require_once '../engine/skins/pages/ProfilePage.php';
-require_once '../engine/skins/pages/PluginsPage.php';
-require_once '../engine/skins/pages/MediaPage.php';
-require_once '../engine/skins/pages/ThemesPage.php';
-require_once '../engine/skins/pages/CustomizerPage.php';
-require_once '../engine/skins/pages/MenusPage.php';
-require_once '../engine/skins/pages/SystemPage.php';
+require_once __DIR__ . '/../skins/pages/LoginPage.php';
+require_once __DIR__ . '/../skins/pages/LogoutPage.php';
+require_once __DIR__ . '/../skins/pages/DashboardPage.php';
+require_once __DIR__ . '/../skins/pages/SettingsPage.php';
+require_once __DIR__ . '/../skins/pages/ProfilePage.php';
+require_once __DIR__ . '/../skins/pages/PluginsPage.php';
+require_once __DIR__ . '/../skins/pages/MediaPage.php';
+require_once __DIR__ . '/../skins/pages/ThemesPage.php';
+require_once __DIR__ . '/../skins/pages/CustomizerPage.php';
+require_once __DIR__ . '/../skins/pages/MenusPage.php';
+require_once __DIR__ . '/../skins/pages/SystemPage.php';
 
 // Создаем роутер
 $router = new Router();
@@ -40,7 +41,7 @@ $router->add('system', 'SystemPage');
 // Регистрируем маршруты плагинов
 $activePlugins = pluginManager()->getActivePlugins();
 foreach ($activePlugins as $slug => $plugin) {
-    $pluginDir = __DIR__ . '/../plugins/' . $slug;
+    $pluginDir = dirname(__DIR__, 2) . '/plugins/' . $slug;
     
     // Преобразуем slug в имя класса админ-страницы
     $parts = explode('-', $slug);
@@ -91,6 +92,6 @@ foreach ($activePlugins as $slug => $plugin) {
     }
 }
 
-
 // Обрабатываем запрос
 $router->dispatch();
+
