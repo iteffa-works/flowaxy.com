@@ -3,7 +3,7 @@
     "name": "Default",
     "version": "1.0.0",
     "description": "Тестова Bootstrap 5 тема з повним функціоналом CMS",
-    "author": "Landing CMS",
+    "author": "Flowaxy CMS",
     "supports_customization": true,
     "default_settings": {
         "primary_color": "#0d6efd",

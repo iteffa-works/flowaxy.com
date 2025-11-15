@@ -13,10 +13,15 @@ class ThemesPage extends AdminPage {
         $this->pageTitle = 'Теми - Landing CMS';
         $this->templateName = 'themes';
         
+        $marketplaceButton = '<a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-primary">
+            <i class="fas fa-store me-1"></i>Скачати теми
+        </a>';
+        
         $this->setPageHeader(
             'Теми',
             'Керування темами дизайну сайту',
-            'fas fa-palette'
+            'fas fa-palette',
+            $marketplaceButton
         );
     }
     
@@ -86,11 +91,25 @@ class ThemesPage extends AdminPage {
         }
         
         if (themeManager()->activateTheme($themeSlug)) {
-            $this->setMessage('Тему успішно активовано', 'success');
+            // Очищаем все кеши после успешной активации
             cache_forget('site_settings');
             cache_forget('admin_menu_items_0');
             cache_forget('admin_menu_items_1');
             cache_forget('active_theme');
+            cache_forget('active_theme_slug');
+            cache_forget('all_themes_filesystem');
+            
+            // Очищаем кеш проверки активности для всех тем
+            $themesDir = dirname(__DIR__, 3) . '/themes/';
+            if (is_dir($themesDir)) {
+                $directories = glob($themesDir . '*', GLOB_ONLYDIR);
+                foreach ($directories as $dir) {
+                    $slug = basename($dir);
+                    cache_forget('active_theme_check_' . md5($slug));
+                }
+            }
+            
+            $this->setMessage('Тему успішно активовано', 'success');
             header('Location: ' . adminUrl('themes'));
             exit;
         } else {

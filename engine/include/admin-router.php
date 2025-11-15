@@ -39,6 +39,7 @@ require_once __DIR__ . '/../skins/pages/ThemesPage.php';
 require_once __DIR__ . '/../skins/pages/CustomizerPage.php';
 require_once __DIR__ . '/../skins/pages/MenusPage.php';
 require_once __DIR__ . '/../skins/pages/SystemPage.php';
+require_once __DIR__ . '/../skins/pages/ThemeEditorPage.php';
 
 // Создаем роутер
 $router = new Router();
@@ -60,6 +61,7 @@ if (themeSupportsCustomization()) {
 
 $router->add('menus', 'MenusPage');
 $router->add('system', 'SystemPage');
+$router->add('theme-editor', 'ThemeEditorPage');
 
 $router->add('login', 'LoginPage');
 $router->add('logout', 'LogoutPage');

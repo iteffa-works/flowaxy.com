@@ -34,9 +34,9 @@ class ThemeManager {
         }
         
         // Используем кеширование для активной темы
-        $cacheKey = 'active_theme';
+        $cacheKey = 'active_theme_slug';
         $db = $this->db;
-        $activeSlug = cache_remember($cacheKey . '_slug', function() use ($db) {
+        $activeSlug = cache_remember($cacheKey, function() use ($db) {
             if ($db === null) {
                 return null;
             }
@@ -45,12 +45,20 @@ class ThemeManager {
                 $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'active_theme' LIMIT 1");
                 $stmt->execute();
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $result ? ($result['setting_value'] ?? null) : null;
+                $slug = $result ? ($result['setting_value'] ?? null) : null;
+                
+                // Валидация slug
+                if ($slug && !Validator::validateSlug($slug)) {
+                    error_log("ThemeManager: Invalid active theme slug from database: {$slug}");
+                    return null;
+                }
+                
+                return $slug;
             } catch (PDOException $e) {
                 error_log("ThemeManager loadActiveTheme error: " . $e->getMessage());
                 return null;
             }
-        }, 3600); // Кешируем на 1 час
+        }, 60); // Кешируем на 1 минуту (меньше время для быстрого обновления)
         
         if ($activeSlug) {
             // Загружаем тему из файловой системы
@@ -270,9 +278,12 @@ class ThemeManager {
             return false;
         }
         
-        // Проверяем существование темы в файловой системе
-        $theme = $this->getTheme($slug);
-        if ($theme === null) {
+        // Проверяем существование темы в файловой системе напрямую (без кеша)
+        $themesDir = dirname(__DIR__, 2) . '/themes/';
+        $themePath = $themesDir . $slug . '/';
+        $themeJsonFile = $themePath . 'theme.json';
+        
+        if (!is_dir($themePath) || !file_exists($themeJsonFile)) {
             error_log("ThemeManager: Theme not found in filesystem: {$slug}");
             return false;
         }
@@ -284,18 +295,22 @@ class ThemeManager {
                 VALUES ('active_theme', ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
             ");
-            $stmt->execute([$slug]);
+            $result = $stmt->execute([$slug]);
             
-            // Очищаем кеш перед перезагрузкой
+            if (!$result) {
+                error_log("ThemeManager: Failed to save active theme to database");
+                return false;
+            }
+            
+            // Очищаем весь кеш тем перед перезагрузкой
             cache_forget('active_theme');
             cache_forget('active_theme_slug');
             cache_forget('theme_settings_' . $slug);
             cache_forget('all_themes_filesystem');
             cache_forget('theme_' . $slug);
+            cache_forget('site_settings');
             
             // Очищаем кеш проверки активности для всех возможных тем
-            // Получаем список тем из файловой системы напрямую
-            $themesDir = dirname(__DIR__, 2) . '/themes/';
             if (is_dir($themesDir)) {
                 $directories = glob($themesDir . '*', GLOB_ONLYDIR);
                 foreach ($directories as $dir) {
