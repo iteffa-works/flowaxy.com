@@ -1,15 +1,16 @@
 <?php
 /**
- * Менеджер медіафайлів
- * Керування завантаженням, зберіганням та видаленням медіафайлів
+ * Модуль управления медиафайлами
  * 
- * @package Core
+ * @package Engine\Modules
  * @version 1.0.0
  */
 
-class MediaManager {
-    private static $instance = null;
-    private $db;
+declare(strict_types=1);
+
+require_once dirname(__DIR__) . '/classes/BaseModule.php';
+
+class Media extends BaseModule {
     private $uploadsDir;
     private $uploadsUrl;
     
@@ -30,33 +31,88 @@ class MediaManager {
     private $maxFileSize = 10485760;
     
     /**
-     * Конструктор (приватний для Singleton)
+     * Инициализация модуля
      */
-    private function __construct() {
-        $this->db = getDB();
+    protected function init(): void {
         $this->uploadsDir = rtrim(UPLOADS_DIR, '/') . '/';
-        // Используем протокол-относительный URL для избежания Mixed Content
         $host = $_SERVER['HTTP_HOST'] ?? 'spokinoki.local';
         $this->uploadsUrl = '//' . $host . '/uploads/';
         $this->ensureUploadsDir();
     }
     
     /**
-     * Отримання екземпляру менеджера (Singleton)
-     * 
-     * @return MediaManager
+     * Регистрация хуков модуля
      */
-    public static function getInstance() {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
+    public function registerHooks(): void {
+        // Регистрация пункта меню в админке
+        addHook('admin_menu', [$this, 'addAdminMenuItem']);
+        
+        // Регистрация страницы админки
+        addHook('admin_register_routes', [$this, 'registerAdminRoute']);
+    }
+    
+    /**
+     * Добавление пункта меню в админку
+     * 
+     * @param array $menu Текущее меню
+     * @return array Обновленное меню
+     */
+    public function addAdminMenuItem(array $menu): array {
+        $menu[] = [
+            'href' => adminUrl('media'),
+            'icon' => 'fas fa-images',
+            'text' => 'Медіа-бібліотека',
+            'page' => 'media',
+            'order' => 20
+        ];
+        return $menu;
+    }
+    
+    /**
+     * Регистрация маршрута админки
+     * 
+     * @param Router $router Роутер админки
+     */
+    public function registerAdminRoute($router): void {
+        require_once dirname(__DIR__) . '/skins/pages/MediaPage.php';
+        $router->add('media', 'MediaPage');
+    }
+    
+    /**
+     * Получение информации о модуле
+     * 
+     * @return array
+     */
+    public function getInfo(): array {
+        return [
+            'name' => 'Media',
+            'title' => 'Медиафайлы',
+            'description' => 'Управление медиафайлами системы',
+            'version' => '1.0.0',
+            'author' => 'Flowaxy CMS'
+        ];
+    }
+    
+    /**
+     * Получение API методов модуля
+     * 
+     * @return array
+     */
+    public function getApiMethods(): array {
+        return [
+            'uploadFile' => 'Загрузка файла',
+            'deleteFile' => 'Удаление файла',
+            'getFile' => 'Получение файла по ID',
+            'getFiles' => 'Получение списка файлов с фильтрацией',
+            'updateFile' => 'Обновление информации о файле',
+            'getStats' => 'Получение статистики медиа'
+        ];
     }
     
     /**
      * Створення директорій для завантаження
      */
-    private function ensureUploadsDir() {
+    private function ensureUploadsDir(): void {
         $year = date('Y');
         $month = date('m');
         
@@ -133,7 +189,6 @@ class MediaManager {
             if ($imageInfo) {
                 $width = $imageInfo[0];
                 $height = $imageInfo[1];
-                // Оновлюємо MIME тип з реальних даних
                 if (isset($imageInfo['mime'])) {
                     $mimeType = $imageInfo['mime'];
                 }
@@ -184,7 +239,6 @@ class MediaManager {
                 'file_size' => $fileSize
             ];
         } catch (Exception $e) {
-            // Видаляємо файл при помилці БД
             @unlink($fullPath);
             error_log("Media upload DB error: " . $e->getMessage());
             return ['success' => false, 'error' => 'Помилка збереження інформації про файл'];
@@ -203,7 +257,6 @@ class MediaManager {
         }
         
         try {
-            // Отримуємо інформацію про файл
             $stmt = $this->db->prepare("SELECT file_path FROM media_files WHERE id = ?");
             $stmt->execute([$mediaId]);
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -212,13 +265,11 @@ class MediaManager {
                 return ['success' => false, 'error' => 'Файл не знайдено'];
             }
             
-            // Видаляємо файл з диска
             $fullPath = $this->uploadsDir . $file['file_path'];
             if (file_exists($fullPath)) {
                 @unlink($fullPath);
             }
             
-            // Видаляємо запис з БД
             $stmt = $this->db->prepare("DELETE FROM media_files WHERE id = ?");
             $stmt->execute([$mediaId]);
             
@@ -245,7 +296,6 @@ class MediaManager {
             $stmt->execute([$mediaId]);
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // Конвертируем file_url в протокол-относительный URL
             if ($file && !empty($file['file_url'])) {
                 $file['file_url'] = toProtocolRelativeUrl($file['file_url']);
             }
@@ -270,13 +320,11 @@ class MediaManager {
             $where = [];
             $params = [];
             
-            // Фільтр по типу медіа
             if (!empty($filters['media_type']) && isset($this->allowedTypes[$filters['media_type']])) {
                 $where[] = "media_type = ?";
                 $params[] = $filters['media_type'];
             }
             
-            // Пошук по назві
             if (!empty($filters['search'])) {
                 $where[] = "(title LIKE ? OR original_name LIKE ? OR description LIKE ?)";
                 $search = '%' . sanitizeInput($filters['search']) . '%';
@@ -285,13 +333,11 @@ class MediaManager {
                 $params[] = $search;
             }
             
-            // Дата від
             if (!empty($filters['date_from'])) {
                 $where[] = "uploaded_at >= ?";
                 $params[] = $filters['date_from'];
             }
             
-            // Дата до
             if (!empty($filters['date_to'])) {
                 $where[] = "uploaded_at <= ?";
                 $params[] = $filters['date_to'];
@@ -299,17 +345,14 @@ class MediaManager {
             
             $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
             
-            // Підрахунок загальної кількості
             $countStmt = $this->db->prepare("SELECT COUNT(*) FROM media_files $whereClause");
             $countStmt->execute($params);
             $total = (int)$countStmt->fetchColumn();
             
-            // Отримання файлів з пагінацією
             $page = max(1, (int)$page);
-            $perPage = max(1, min(100, (int)$perPage)); // Обмеження від 1 до 100
+            $perPage = max(1, min(100, (int)$perPage));
             $offset = ($page - 1) * $perPage;
             
-            // Безпечна валідація order_by
             $allowedOrderBy = ['uploaded_at', 'title', 'file_size', 'media_type'];
             $orderBy = in_array($filters['order_by'] ?? 'uploaded_at', $allowedOrderBy) 
                 ? $filters['order_by'] 
@@ -326,7 +369,6 @@ class MediaManager {
             $stmt->execute(array_merge($params, [$perPage, $offset]));
             $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Конвертируем file_url в протокол-относительные URL
             foreach ($files as &$file) {
                 if (!empty($file['file_url'])) {
                     $file['file_url'] = toProtocolRelativeUrl($file['file_url']);
@@ -394,104 +436,6 @@ class MediaManager {
     }
     
     /**
-     * Перевірка дозволеного типу файлу
-     * 
-     * @param string $extension Розширення файлу
-     * @return bool
-     */
-    private function isAllowedType($extension) {
-        foreach ($this->allowedTypes as $types) {
-            if (in_array($extension, $types, true)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * Визначення типу медіа
-     * 
-     * @param string $extension Розширення файлу
-     * @return string Тип медіа
-     */
-    private function getMediaType($extension) {
-        foreach ($this->allowedTypes as $type => $extensions) {
-            if (in_array($extension, $extensions, true)) {
-                return $type;
-            }
-        }
-        return 'other';
-    }
-    
-    /**
-     * Генерація унікального імені файлу
-     * 
-     * @param string $originalName Оригінальне ім'я
-     * @param string $extension Розширення
-     * @return string Унікальне ім'я файлу
-     */
-    private function generateFileName($originalName, $extension) {
-        $name = $this->sanitizeFileName($originalName);
-        $fileName = $name . '-' . time() . '-' . substr(md5(uniqid(rand(), true)), 0, 8) . '.' . $extension;
-        return $fileName;
-    }
-    
-    /**
-     * Очищення імені файлу
-     * 
-     * @param string $fileName Ім'я файлу
-     * @return string Очищене ім'я
-     */
-    private function sanitizeFileName($fileName) {
-        $fileName = transliterate($fileName);
-        $fileName = preg_replace('/[^a-zA-Z0-9_-]/', '-', $fileName);
-        $fileName = preg_replace('/-+/', '-', $fileName);
-        $fileName = trim($fileName, '-');
-        return $fileName ?: 'file';
-    }
-    
-    /**
-     * Отримання тексту помилки завантаження
-     * 
-     * @param int $errorCode Код помилки
-     * @return string Текст помилки
-     */
-    private function getUploadError($errorCode) {
-        $errors = [
-            UPLOAD_ERR_INI_SIZE => 'Файл перевищує максимальний розмір, встановлений в php.ini',
-            UPLOAD_ERR_FORM_SIZE => 'Файл перевищує максимальний розмір, встановлений в формі',
-            UPLOAD_ERR_PARTIAL => 'Файл було завантажено частково',
-            UPLOAD_ERR_NO_FILE => 'Файл не було завантажено',
-            UPLOAD_ERR_NO_TMP_DIR => 'Відсутня тимчасова папка',
-            UPLOAD_ERR_CANT_WRITE => 'Не вдалося записати файл на диск',
-            UPLOAD_ERR_EXTENSION => 'Завантаження файлу було зупинено розширенням'
-        ];
-        
-        return $errors[$errorCode] ?? 'Невідома помилка завантаження';
-    }
-    
-    /**
-     * Форматування розміру файлу
-     * 
-     * @param int $bytes Розмір в байтах
-     * @return string Відформатований розмір
-     */
-    private function formatFileSize($bytes) {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max(0, (int)$bytes);
-        
-        if ($bytes === 0) {
-            return '0 B';
-        }
-        
-        $pow = floor(log($bytes) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= pow(1024, $pow);
-        
-        return round($bytes, 2) . ' ' . $units[$pow];
-    }
-    
-    /**
      * Отримання статистики медіа
      * 
      * @return array Статистика
@@ -531,22 +475,98 @@ class MediaManager {
             ];
         }
     }
+    
+    /**
+     * Перевірка дозволеного типу файлу
+     */
+    private function isAllowedType($extension) {
+        foreach ($this->allowedTypes as $types) {
+            if (in_array($extension, $types, true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Визначення типу медіа
+     */
+    private function getMediaType($extension) {
+        foreach ($this->allowedTypes as $type => $extensions) {
+            if (in_array($extension, $extensions, true)) {
+                return $type;
+            }
+        }
+        return 'other';
+    }
+    
+    /**
+     * Генерація унікального імені файлу
+     */
+    private function generateFileName($originalName, $extension) {
+        $name = $this->sanitizeFileName($originalName);
+        $fileName = $name . '-' . time() . '-' . substr(md5(uniqid(rand(), true)), 0, 8) . '.' . $extension;
+        return $fileName;
+    }
+    
+    /**
+     * Очищення імені файлу
+     */
+    private function sanitizeFileName($fileName) {
+        $fileName = transliterate($fileName);
+        $fileName = preg_replace('/[^a-zA-Z0-9_-]/', '-', $fileName);
+        $fileName = preg_replace('/-+/', '-', $fileName);
+        $fileName = trim($fileName, '-');
+        return $fileName ?: 'file';
+    }
+    
+    /**
+     * Отримання тексту помилки завантаження
+     */
+    private function getUploadError($errorCode) {
+        $errors = [
+            UPLOAD_ERR_INI_SIZE => 'Файл перевищує максимальний розмір, встановлений в php.ini',
+            UPLOAD_ERR_FORM_SIZE => 'Файл перевищує максимальний розмір, встановлений в формі',
+            UPLOAD_ERR_PARTIAL => 'Файл було завантажено частково',
+            UPLOAD_ERR_NO_FILE => 'Файл не було завантажено',
+            UPLOAD_ERR_NO_TMP_DIR => 'Відсутня тимчасова папка',
+            UPLOAD_ERR_CANT_WRITE => 'Не вдалося записати файл на диск',
+            UPLOAD_ERR_EXTENSION => 'Завантаження файлу було зупинено розширенням'
+        ];
+        
+        return $errors[$errorCode] ?? 'Невідома помилка завантаження';
+    }
+    
+    /**
+     * Форматування розміру файлу
+     */
+    private function formatFileSize($bytes) {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max(0, (int)$bytes);
+        
+        if ($bytes === 0) {
+            return '0 B';
+        }
+        
+        $pow = floor(log($bytes) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        
+        return round($bytes, 2) . ' ' . $units[$pow];
+    }
 }
 
 /**
- * Глобальна функція для отримання екземпляру MediaManager
+ * Глобальна функція для отримання екземпляру модуля Media
  * 
- * @return MediaManager
+ * @return Media
  */
-function mediaManager() {
-    return MediaManager::getInstance();
+function mediaModule() {
+    return Media::getInstance();
 }
 
 /**
  * Функція транслитерації
- * 
- * @param string $text Текст для транслитерації
- * @return string Транслитерований текст
  */
 if (!function_exists('transliterate')) {
     function transliterate($text) {
@@ -571,3 +591,4 @@ if (!function_exists('transliterate')) {
         return strtr($text, $translit);
     }
 }
+

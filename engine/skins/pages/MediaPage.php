@@ -7,11 +7,10 @@
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
-require_once dirname(__DIR__, 2) . '/classes/MediaManager.php';
 
 class MediaPage extends AdminPage {
     
-    private $mediaManager;
+    private $mediaModule;
     
     /**
      * Конструктор
@@ -28,7 +27,7 @@ class MediaPage extends AdminPage {
             'fas fa-images'
         );
         
-        $this->mediaManager = mediaManager();
+        $this->mediaModule = mediaModule();
         
         // Додаємо CSS та JS для медіа
         $this->additionalCSS[] = 'styles/media.css?v=' . time();
@@ -65,10 +64,10 @@ class MediaPage extends AdminPage {
         $perPage = 24;
         
         // Отримання файлів
-        $result = $this->mediaManager->getFiles($filters, $page, $perPage);
+        $result = $this->mediaModule->getFiles($filters, $page, $perPage);
         
         // Отримання статистики
-        $stats = $this->mediaManager->getStats();
+        $stats = $this->mediaModule->getStats();
         
         // Рендеринг сторінки
         $this->render([
@@ -125,7 +124,7 @@ class MediaPage extends AdminPage {
         $description = sanitizeInput($_POST['description'] ?? '');
         $alt = sanitizeInput($_POST['alt_text'] ?? '');
         
-        $result = $this->mediaManager->uploadFile($_FILES['file'], $title, $description, $alt);
+        $result = $this->mediaModule->uploadFile($_FILES['file'], $title, $description, $alt);
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -146,7 +145,7 @@ class MediaPage extends AdminPage {
             exit;
         }
         
-        $result = $this->mediaManager->deleteFile($mediaId);
+        $result = $this->mediaModule->deleteFile($mediaId);
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -172,7 +171,7 @@ class MediaPage extends AdminPage {
             exit;
         }
         
-        $result = $this->mediaManager->updateFile($mediaId, $data);
+        $result = $this->mediaModule->updateFile($mediaId, $data);
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -188,7 +187,7 @@ class MediaPage extends AdminPage {
             exit;
         }
         
-        $file = $this->mediaManager->getFile($mediaId);
+        $file = $this->mediaModule->getFile($mediaId);
         
         if ($file) {
             echo json_encode(['success' => true, 'file' => $file], JSON_UNESCAPED_UNICODE);
@@ -211,7 +210,7 @@ class MediaPage extends AdminPage {
         if ($action === 'delete') {
             $mediaId = isset($_POST['media_id']) ? (int)$_POST['media_id'] : 0;
             if ($mediaId) {
-                $result = $this->mediaManager->deleteFile($mediaId);
+                $result = $this->mediaModule->deleteFile($mediaId);
                 if ($result['success']) {
                     $this->setMessage('Файл видалено', 'success');
                 } else {

@@ -15,7 +15,6 @@ require_once __DIR__ . '/../skins/pages/DashboardPage.php';
 require_once __DIR__ . '/../skins/pages/SettingsPage.php';
 require_once __DIR__ . '/../skins/pages/ProfilePage.php';
 require_once __DIR__ . '/../skins/pages/PluginsPage.php';
-require_once __DIR__ . '/../skins/pages/MediaPage.php';
 require_once __DIR__ . '/../skins/pages/ThemesPage.php';
 require_once __DIR__ . '/../skins/pages/CustomizerPage.php';
 require_once __DIR__ . '/../skins/pages/MenusPage.php';
@@ -31,7 +30,6 @@ $router->add('dashboard', 'DashboardPage');
 $router->add('settings', 'SettingsPage');
 $router->add('profile', 'ProfilePage');
 $router->add('plugins', 'PluginsPage');
-$router->add('media', 'MediaPage');
 $router->add('themes', 'ThemesPage');
 $router->add('customizer', 'CustomizerPage');
 $router->add('menus', 'MenusPage');
@@ -39,6 +37,9 @@ $router->add('system', 'SystemPage');
 
 $router->add('login', 'LoginPage');
 $router->add('logout', 'LogoutPage');
+
+// Регистрация маршрутов модулей
+doHook('admin_register_routes', $router);
 
 // Регистрируем маршруты плагинов
 $activePlugins = pluginManager()->getActivePlugins();

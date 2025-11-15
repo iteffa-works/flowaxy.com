@@ -102,9 +102,7 @@ class CustomizerPage extends AdminPage {
      * Получение изображений из медиагалереи (AJAX)
      */
     private function getMediaImages() {
-        require_once dirname(__DIR__, 2) . '/classes/MediaManager.php';
-        
-        $mediaManager = mediaManager();
+        $mediaModule = mediaModule();
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $perPage = isset($_GET['per_page']) ? max(1, min(100, (int)$_GET['per_page'])) : 24;
         $search = sanitizeInput($_GET['search'] ?? '');
@@ -116,7 +114,7 @@ class CustomizerPage extends AdminPage {
             'order_dir' => 'DESC'
         ];
         
-        $result = $mediaManager->getFiles($filters, $page, $perPage);
+        $result = $mediaModule->getFiles($filters, $page, $perPage);
         
         echo json_encode([
             'success' => true,
@@ -132,19 +130,17 @@ class CustomizerPage extends AdminPage {
      * Обработка загрузки изображения (AJAX)
      */
     private function handleUpload() {
-        require_once dirname(__DIR__, 2) . '/classes/MediaManager.php';
-        
         if (!isset($_FILES['file']) || empty($_FILES['file']['tmp_name'])) {
             echo json_encode(['success' => false, 'error' => 'Файл не завантажено'], JSON_UNESCAPED_UNICODE);
             exit;
         }
         
-        $mediaManager = mediaManager();
+        $mediaModule = mediaModule();
         $title = !empty($_POST['title']) ? sanitizeInput($_POST['title']) : null;
         $description = sanitizeInput($_POST['description'] ?? '');
         $alt = sanitizeInput($_POST['alt_text'] ?? '');
         
-        $result = $mediaManager->uploadFile($_FILES['file'], $title, $description, $alt);
+        $result = $mediaModule->uploadFile($_FILES['file'], $title, $description, $alt);
         
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         exit;

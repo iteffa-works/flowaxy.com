@@ -127,6 +127,14 @@ require_once __DIR__ . '/database.php';
 // Подключение ядра системы
 require_once __DIR__ . '/../engine/init.php';
 
+// Загрузка системных модулей
+require_once __DIR__ . '/../engine/modules/loader.php';
+require_once __DIR__ . '/../engine/classes/BaseModule.php';
+ModuleLoader::init();
+
+// Функции обратной совместимости
+require_once __DIR__ . '/../engine/modules/compatibility.php';
+
 // Инициализация менеджеров (ленивая загрузка)
 // Менеджеры будут инициализированы при первом обращении через глобальные функции
 

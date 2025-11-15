@@ -14,13 +14,6 @@ function getMenuItems() {
             'order' => 10
         ],
         [
-            'href' => adminUrl('media'),
-            'icon' => 'fas fa-images',
-            'text' => 'Медіа-бібліотека',
-            'page' => 'media',
-            'order' => 20
-        ],
-        [
             'href' => '#',
             'icon' => 'fas fa-paint-brush',
             'text' => 'Дизайн',

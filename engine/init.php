@@ -15,7 +15,6 @@ $coreClasses = [
     'BasePlugin',
     'PluginManager',
     'Cache',
-    'MediaManager',
     'ThemeManager',
     'MenuManager'
 ];
