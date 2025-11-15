@@ -18,7 +18,6 @@ if (version_compare(PHP_VERSION, '8.3.0', '<')) {
     die('Эта CMS требует PHP 8.3 или выше. Текущая версия: ' . PHP_VERSION . PHP_EOL);
 }
 
-
 // Безопасная функция для htmlspecialchars
 if (!function_exists('safe_html')) {
     /**
@@ -292,14 +291,3 @@ foreach ($directories as $dir) {
         @file_put_contents($htaccessFile, "Deny from all\n");
     }
 }
-
-// Инициализация плагинов (вызов хуков init)
-if (function_exists('pluginManager')) {
-    try {
-        pluginManager()->initializePlugins();
-    } catch (Exception $e) {
-        error_log("Plugin initialization error: " . $e->getMessage());
-    }
-}
-?>
-

@@ -46,6 +46,11 @@ class ModuleLoader {
             return self::$loadedModules[$moduleName];
         }
         
+        // Пропускаем служебные файлы
+        if ($moduleName === 'loader' || $moduleName === 'compatibility') {
+            return null;
+        }
+        
         // Проверяем, что директория модулей определена
         if (empty(self::$modulesDir)) {
             self::$modulesDir = __DIR__;
@@ -56,11 +61,6 @@ class ModuleLoader {
         // Проверяем существование файла модуля
         if (!file_exists($moduleFile)) {
             error_log("Module file not found: {$moduleFile}");
-            return null;
-        }
-        
-        // Пропускаем служебные файлы
-        if ($moduleName === 'loader' || $moduleName === 'compatibility') {
             return null;
         }
         
@@ -91,7 +91,7 @@ class ModuleLoader {
     /**
      * Загрузка файла модуля
      */
-    private static function loadModuleFile(string $moduleFile, string $moduleName): void {
+    private static function loadModuleFile(string $moduleFile, string $moduleName): ?BaseModule {
         try {
             // Убеждаемся, что BaseModule загружен
             if (!class_exists('BaseModule')) {
@@ -104,49 +104,28 @@ class ModuleLoader {
             require_once $moduleFile;
             
             // Проверяем, что класс существует
-            if (class_exists($moduleName)) {
-                $module = $moduleName::getInstance();
-                
-                // Регистрируем хуки модуля
-                if (method_exists($module, 'registerHooks')) {
-                    $module->registerHooks();
-                }
-                
-                self::$loadedModules[$moduleName] = $module;
-                
-                // Убеждаемся, что Logger загружен для логирования загрузки модулей
-                // (если он еще не загружен, но нужен для логирования)
-                if ($moduleName !== 'Logger' && function_exists('doHook')) {
-                    // Проверяем, нужно ли логировать события модулей
-                    // Если Logger еще не загружен, но может быть нужен, загружаем его
-                    if (!self::isModuleLoaded('Logger')) {
-                        $loggerFile = self::$modulesDir . '/Logger.php';
-                        if (file_exists($loggerFile)) {
-                            // Пытаемся загрузить Logger, если он существует
-                            try {
-                                self::loadModule('Logger');
-                            } catch (Exception $e) {
-                                // Игнорируем ошибки загрузки Logger
-                            } catch (Error $e) {
-                                // Игнорируем фатальные ошибки загрузки Logger
-                            }
-                        }
-                    }
-                    
-                    // Логируем загрузку модуля
-                    doHook('module_loaded', $moduleName);
-                } elseif ($moduleName === 'Logger') {
-                    // Для Logger просто вызываем хук без дополнительной загрузки
-                    if (function_exists('doHook')) {
-                        doHook('module_loaded', $moduleName);
-                    }
-                }
-            } else {
+            if (!class_exists($moduleName)) {
                 error_log("Module class {$moduleName} not found after loading file: {$moduleFile}");
+                return null;
             }
-        } catch (Exception $e) {
+            
+            $module = $moduleName::getInstance();
+            
+            // Регистрируем хуки модуля
+            if (method_exists($module, 'registerHooks')) {
+                $module->registerHooks();
+            }
+            
+            self::$loadedModules[$moduleName] = $module;
+            
+            // Логируем загрузку модуля через хук (если доступен)
+            if (function_exists('doHook')) {
+                doHook('module_loaded', $moduleName);
+            }
+            
+            return $module;
+        } catch (Exception | Error $e) {
             error_log("Error loading module {$moduleName}: " . $e->getMessage());
-            // Логируем ошибку модуля
             if (function_exists('doHook')) {
                 doHook('module_error', [
                     'module' => $moduleName,
@@ -154,16 +133,7 @@ class ModuleLoader {
                     'file' => $moduleFile
                 ]);
             }
-        } catch (Error $e) {
-            error_log("Fatal error loading module {$moduleName}: " . $e->getMessage());
-            // Логируем ошибку модуля
-            if (function_exists('doHook')) {
-                doHook('module_error', [
-                    'module' => $moduleName,
-                    'message' => $e->getMessage(),
-                    'file' => $moduleFile
-                ]);
-            }
+            return null;
         }
     }
     

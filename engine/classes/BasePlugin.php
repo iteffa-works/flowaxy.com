@@ -274,25 +274,28 @@ abstract class BasePlugin {
     }
     
     /**
-     * Отправка JSON успеха (аналог wp_send_json_success)
+     * Отправка JSON ответа
      */
-    protected function sendJsonSuccess($data): void {
+    private function sendJsonResponse(bool $success, $data): void {
         if (!headers_sent()) {
             header('Content-Type: application/json; charset=UTF-8');
         }
-        echo json_encode(['success' => true, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        echo json_encode(['success' => $success, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         exit;
+    }
+    
+    /**
+     * Отправка JSON успеха (аналог wp_send_json_success)
+     */
+    protected function sendJsonSuccess($data): void {
+        $this->sendJsonResponse(true, $data);
     }
     
     /**
      * Отправка JSON ошибки (аналог wp_send_json_error)
      */
     protected function sendJsonError($data): void {
-        if (!headers_sent()) {
-            header('Content-Type: application/json; charset=UTF-8');
-        }
-        echo json_encode(['success' => false, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        exit;
+        $this->sendJsonResponse(false, $data);
     }
     
     /**
@@ -337,4 +340,3 @@ abstract class BasePlugin {
         return $this->config ?? [];
     }
 }
-?>

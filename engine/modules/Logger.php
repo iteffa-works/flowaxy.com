@@ -153,20 +153,16 @@ class Logger extends BaseModule {
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ?");
+            $stmt = $this->db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)");
+            $stmt->execute(['logger_max_file_size', 'logger_retention_days']);
+            $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
             
-            // Максимальный размер файла лога
-            $stmt->execute(['logger_max_file_size']);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($result) {
-                $this->maxLogFileSize = (int)$result['setting_value'];
+            if (isset($settings['logger_max_file_size'])) {
+                $this->maxLogFileSize = (int)$settings['logger_max_file_size'];
             }
             
-            // Дни хранения логов
-            $stmt->execute(['logger_retention_days']);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($result) {
-                $this->logRetentionDays = (int)$result['setting_value'];
+            if (isset($settings['logger_retention_days'])) {
+                $this->logRetentionDays = (int)$settings['logger_retention_days'];
             }
         } catch (Exception $e) {
             // Игнорируем ошибки при загрузке настроек
