@@ -277,7 +277,8 @@ function getSetting(string $key, string $default = ''): string {
 // Создание необходимых директорий если не существуют
 $directories = [
     UPLOADS_DIR,
-    CACHE_DIR
+    CACHE_DIR,
+    dirname(__DIR__) . '/storage/logs/'
 ];
 
 foreach ($directories as $dir) {
@@ -287,7 +288,7 @@ foreach ($directories as $dir) {
     
     // Создаем .htaccess для защиты директорий
     $htaccessFile = rtrim($dir, '/') . '/.htaccess';
-    if (!file_exists($htaccessFile) && strpos($dir, 'cache') !== false) {
+    if (!file_exists($htaccessFile) && (strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false)) {
         @file_put_contents($htaccessFile, "Deny from all\n");
     }
 }

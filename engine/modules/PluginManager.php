@@ -201,17 +201,41 @@ class PluginManager extends BaseModule {
             return $data;
         }
         
+        // Для хука admin_register_routes всегда передаем исходный объект $router каждому хуку
+        // (хуки не должны возвращать измененные данные, они работают с одним объектом)
+        // Для хука admin_menu каждый хук получает текущее меню и возвращает обновленное
+        $preserveOriginalData = ($hookName === 'admin_register_routes');
+        $originalData = $data;
+        
+        // Проверяем, что для хуков, требующих сохранения данных, данные не null
+        if ($preserveOriginalData && $originalData === null) {
+            error_log("Warning: Hook '{$hookName}' received null data but requires preserved data");
+            return $data;
+        }
+        
         foreach ($this->hooks[$hookName] as $hook) {
             if (is_callable($hook['callback'])) {
                 try {
-                    $data = call_user_func($hook['callback'], $data);
+                    // Для хуков, которые сохраняют исходные данные (admin_register_routes),
+                    // всегда передаем оригинальный объект
+                    // Для других хуков (admin_menu) передаем текущие данные
+                    $hookData = $preserveOriginalData ? $originalData : $data;
+                    $result = call_user_func($hook['callback'], $hookData);
+                    
+                    // Для admin_register_routes игнорируем результат (работаем с одним объектом)
+                    // Для admin_menu используем результат как обновленные данные
+                    if (!$preserveOriginalData && $result !== null) {
+                        $data = $result;
+                    }
                 } catch (Exception $e) {
                     error_log("Hook execution error for '{$hookName}': " . $e->getMessage());
+                } catch (Error $e) {
+                    error_log("Fatal error in hook '{$hookName}': " . $e->getMessage());
                 }
             }
         }
         
-        return $data;
+        return $preserveOriginalData ? $originalData : $data;
     }
     
     /**

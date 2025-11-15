@@ -71,9 +71,13 @@ class Media extends BaseModule {
     /**
      * Регистрация маршрута админки
      * 
-     * @param Router $router Роутер админки
+     * @param Router|null $router Роутер админки
      */
     public function registerAdminRoute($router): void {
+        if ($router === null) {
+            return; // Роутер еще не создан
+        }
+        
         require_once dirname(__DIR__) . '/skins/pages/MediaPage.php';
         $router->add('media', 'MediaPage');
     }
