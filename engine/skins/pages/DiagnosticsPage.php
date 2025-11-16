@@ -21,22 +21,151 @@ class DiagnosticsPage extends AdminPage {
     }
     
     public function handle() {
+        // Обробка дій з кешем (якщо є POST запит)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cache_action'])) {
+            $this->handleCacheAction();
+        }
+        
         // Отримуємо результати діагностики
         $diagnostics = $this->runDiagnostics();
         
+        // Отримуємо системну інформацію
+        $systemInfo = $this->getSystemInfo();
+        
+        // Отримуємо інформацію про кеш
+        $cacheInfo = $this->getCacheInfo();
+        
         // Рендеримо сторінку
         $this->render([
-            'diagnostics' => $diagnostics
+            'diagnostics' => $diagnostics,
+            'systemInfo' => $systemInfo,
+            'cacheInfo' => $cacheInfo
         ]);
+    }
+    
+    /**
+     * Обробка дій з кешем
+     */
+    private function handleCacheAction(): void {
+        if (!$this->verifyCsrf()) {
+            $this->setMessage('Помилка безпеки', 'danger');
+            return;
+        }
+        
+        $action = sanitizeInput($_POST['cache_action'] ?? '');
+        
+        try {
+            $cache = cache();
+            
+            switch ($action) {
+                case 'clear_all':
+                    if ($cache->clear()) {
+                        $this->setMessage('Весь кеш успішно очищено', 'success');
+                    } else {
+                        $this->setMessage('Помилка при очищенні кешу', 'danger');
+                    }
+                    break;
+                    
+                case 'clear_expired':
+                    $cleared = $cache->cleanup();
+                    $this->setMessage("Прострочений кеш успішно очищено ({$cleared} файлів)", 'success');
+                    break;
+                    
+                default:
+                    $this->setMessage('Невідома дія', 'danger');
+            }
+        } catch (Exception $e) {
+            $this->setMessage('Помилка при обробці кешу: ' . $e->getMessage(), 'danger');
+            error_log("Cache action error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Отримання інформації про кеш
+     */
+    private function getCacheInfo(): array {
+        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
+        
+        $info = [
+            'enabled' => true,
+            'directory' => $cacheDir,
+            'total_files' => 0,
+            'total_size' => 0,
+            'expired_files' => 0,
+            'expired_size' => 0,
+            'writable' => is_writable($cacheDir)
+        ];
+        
+        if (!is_dir($cacheDir)) {
+            return $info;
+        }
+        
+        $files = glob($cacheDir . '*.cache');
+        if ($files === false) {
+            return $info;
+        }
+        
+        $now = time();
+        $info['total_files'] = count($files);
+        
+        foreach ($files as $file) {
+            $size = @filesize($file);
+            if ($size !== false) {
+                $info['total_size'] += $size;
+            }
+            
+            $data = @file_get_contents($file);
+            if ($data !== false) {
+                try {
+                    $cached = @unserialize($data, ['allowed_classes' => false]);
+                    if (is_array($cached) && isset($cached['expires'])) {
+                        if ($cached['expires'] < $now) {
+                            $info['expired_files']++;
+                            if ($size !== false) {
+                                $info['expired_size'] += $size;
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    // Ігноруємо помилки
+                }
+            }
+        }
+        
+        return $info;
+    }
+    
+    /**
+     * Отримання системної інформації
+     */
+    private function getSystemInfo() {
+        $info = [];
+        
+        // Версія CMS
+        $info['cms_version'] = '1.0.0';
+        
+        // Сервер
+        $info['server_software'] = $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
+        $info['server_name'] = $_SERVER['SERVER_NAME'] ?? 'Unknown';
+        
+        // Час сервера
+        $info['server_time'] = date('d.m.Y H:i:s');
+        $info['timezone'] = date_default_timezone_get();
+        
+        return $info;
     }
     
     /**
      * Запуск діагностики системи
      */
     private function runDiagnostics() {
+        $cacheInfo = $this->getCacheInfo();
+        
         $diagnostics = [
+            'system' => $this->formatSystemInfo(),
             'php' => $this->checkPhp(),
             'database' => $this->checkDatabase(),
+            'cache' => $this->formatCacheInfo($cacheInfo),
             'permissions' => $this->checkPermissions(),
             'extensions' => $this->checkExtensions(),
             'configuration' => $this->checkConfiguration(),
@@ -45,6 +174,95 @@ class DiagnosticsPage extends AdminPage {
         ];
         
         return $diagnostics;
+    }
+    
+    /**
+     * Форматування системної інформації для таблиці
+     */
+    private function formatSystemInfo() {
+        $info = $this->getSystemInfo();
+        $checks = [];
+        
+        $checks['cms_version'] = [
+            'name' => 'Версія CMS',
+            'value' => $info['cms_version'] ?? 'Unknown',
+            'status' => 'info',
+            'message' => 'Версія системи управління контентом'
+        ];
+        
+        $checks['server_software'] = [
+            'name' => 'Сервер',
+            'value' => $info['server_software'] ?? 'Unknown',
+            'status' => 'info',
+            'message' => 'Програмне забезпечення сервера'
+        ];
+        
+        $checks['server_name'] = [
+            'name' => 'Ім\'я сервера',
+            'value' => $info['server_name'] ?? 'Unknown',
+            'status' => 'info',
+            'message' => 'Домен сервера'
+        ];
+        
+        $checks['timezone'] = [
+            'name' => 'Часова зона',
+            'value' => $info['timezone'] ?? 'Unknown',
+            'status' => 'info',
+            'message' => 'Налаштування часової зони'
+        ];
+        
+        $checks['server_time'] = [
+            'name' => 'Час сервера',
+            'value' => $info['server_time'] ?? 'Unknown',
+            'status' => 'info',
+            'message' => 'Поточний час на сервері'
+        ];
+        
+        return $checks;
+    }
+    
+    /**
+     * Форматування інформації про кеш для таблиці
+     */
+    private function formatCacheInfo($cacheInfo) {
+        $checks = [];
+        
+        $checks['enabled'] = [
+            'name' => 'Статус кешу',
+            'value' => $cacheInfo['enabled'] ? 'Увімкнено' : 'Вимкнено',
+            'status' => $cacheInfo['enabled'] ? 'success' : 'error',
+            'message' => $cacheInfo['enabled'] ? 'Кеш активний' : 'Кеш неактивний'
+        ];
+        
+        $checks['total_files'] = [
+            'name' => 'Всього файлів',
+            'value' => $cacheInfo['total_files'] . ' файлів',
+            'status' => 'info',
+            'message' => 'Кількість файлів кешу'
+        ];
+        
+        $checks['total_size'] = [
+            'name' => 'Загальний розмір',
+            'value' => round($cacheInfo['total_size'] / 1024 / 1024, 2) . ' MB',
+            'status' => 'info',
+            'message' => 'Загальний розмір файлів кешу'
+        ];
+        
+        $checks['expired_files'] = [
+            'name' => 'Прострочених файлів',
+            'value' => $cacheInfo['expired_files'] . ' (' . round($cacheInfo['expired_size'] / 1024 / 1024, 2) . ' MB)',
+            'status' => $cacheInfo['expired_files'] > 0 ? 'warning' : 'success',
+            'message' => 'Кількість прострочених файлів кешу'
+        ];
+        
+        $checks['writable'] = [
+            'name' => 'Доступ до запису',
+            'value' => $cacheInfo['writable'] ? 'Доступно' : 'Недоступно',
+            'status' => $cacheInfo['writable'] ? 'success' : 'error',
+            'message' => $cacheInfo['writable'] ? 'Можна записувати в директорію кешу' : 'Немає доступу до запису'
+        ];
+        
+        return $checks;
     }
     
     /**

@@ -111,28 +111,16 @@ function getMenuItems() {
             'order' => 999,
             'submenu' => [
                 [
-                    'href' => adminUrl('system'),
-                    'text' => 'Системна інформація',
-                    'page' => 'system',
-                    'order' => 1
-                ],
-                [
-                    'href' => adminUrl('api'),
-                    'text' => 'API методів модулів',
-                    'page' => 'api',
-                    'order' => 2
-                ],
-                [
                     'href' => adminUrl('diagnostics'),
                     'text' => 'Діагностика системи',
                     'page' => 'diagnostics',
-                    'order' => 3
+                    'order' => 1
                 ],
                 [
                     'href' => adminUrl('documentation'),
                     'text' => 'Документація движка',
                     'page' => 'documentation',
-                    'order' => 4
+                    'order' => 2
                 ]
             ]
         ]

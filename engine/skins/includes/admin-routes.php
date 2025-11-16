@@ -17,9 +17,7 @@ $router->add(['GET', 'POST'], 'settings', 'SettingsPage');
 $router->add(['GET', 'POST'], 'profile', 'ProfilePage');
 $router->add(['GET', 'POST'], 'plugins', 'PluginsPage');
 $router->add(['GET', 'POST'], 'themes', 'ThemesPage');
-$router->add(['GET', 'POST'], 'system', 'SystemPage');
 $router->add(['GET', 'POST'], 'theme-editor', 'ThemeEditorPage');
-$router->add(['GET', 'POST'], 'api', 'ApiPage');
 $router->add(['GET', 'POST'], 'diagnostics', 'DiagnosticsPage');
 $router->add(['GET', 'POST'], 'documentation', 'DocumentationPage');
 
