@@ -268,11 +268,18 @@ class PluginManager extends BaseModule {
         }
         
         try {
+            // При активации плагин уже активен в БД, но кеш может быть старым
+            // Поэтому не используем кеш и загружаем напрямую из БД
             $stmt = $db->prepare("SELECT * FROM plugins WHERE slug = ?");
             $stmt->execute([$pluginSlug]);
             $pluginData = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($pluginData) {
+                // Очищаем кеш метаданных плагина перед загрузкой
+                if (function_exists('cache_forget')) {
+                    cache_forget('plugin_data_' . $pluginSlug);
+                }
+                
                 $this->loadPlugin($pluginData);
                 return $this->plugins[$pluginSlug] ?? null;
             }
@@ -620,9 +627,31 @@ class PluginManager extends BaseModule {
     
     /**
      * Отримання активних плагінів
+     * Возвращает только активные плагины из БД (не из памяти)
      */
     public function getActivePlugins(): array {
-        return $this->plugins;
+        $db = $this->getDB();
+        if (!$db) {
+            return [];
+        }
+        
+        try {
+            // Получаем активные плагины напрямую из БД, чтобы избежать проблем с кешированием
+            $stmt = $db->query("SELECT slug FROM plugins WHERE is_active = 1");
+            $activeSlugs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            $activePlugins = [];
+            foreach ($activeSlugs as $slug) {
+                if (isset($this->plugins[$slug])) {
+                    $activePlugins[$slug] = $this->plugins[$slug];
+                }
+            }
+            
+            return $activePlugins;
+        } catch (Exception $e) {
+            error_log("Error getting active plugins: " . $e->getMessage());
+            return [];
+        }
     }
     
     /**
@@ -797,6 +826,9 @@ class PluginManager extends BaseModule {
                 cache_forget('plugin_data_' . $pluginSlug);
             }
             
+            // Очищаємо кеш конкретного плагина ПЕРЕД загрузкой
+            $this->clearPluginCache($pluginSlug);
+            
             // Завантажуємо та активуємо плагін
             $plugin = $this->getPluginInstance($pluginSlug);
             if ($plugin) {
@@ -804,14 +836,32 @@ class PluginManager extends BaseModule {
                 if (method_exists($plugin, 'activate')) {
                     $plugin->activate();
                 }
-                // init() вже викликається в loadPlugin(), не потрібно викликати повторно
+                
+                // ВАЖЛИВО: Явно вызываем init() после активации, чтобы зарегистрировать хуки
+                // Это нужно, потому что initializePlugins() может не вызваться для только что активированного плагина
+                if (method_exists($plugin, 'init')) {
+                    try {
+                        $plugin->init();
+                    } catch (Exception $e) {
+                        error_log("Plugin init error for {$pluginSlug} after activation: " . $e->getMessage());
+                    }
+                }
             }
             
             // Очищаємо кеш конкретного плагина
             $this->clearPluginCache($pluginSlug);
             
             // Очищаємо кеш меню після активації плагіна (включая файловый кеш)
+            // ВАЖЛИВО: очищаем хеш ПЕРЕД clearAllMenuCache, чтобы он пересчитался
+            if (function_exists('cache_forget')) {
+                cache_forget('active_plugins_hash');
+            }
             $this->clearAllMenuCache();
+            
+            // Принудительно очищаем хеш еще раз после очистки кеша меню
+            if (function_exists('cache_forget')) {
+                cache_forget('active_plugins_hash');
+            }
             
             doHook('plugin_activated', $pluginSlug);
             
@@ -851,6 +901,9 @@ class PluginManager extends BaseModule {
                 cache_forget('plugin_data_' . $pluginSlug);
             }
             
+            // Видаляємо хуки плагина перед удалением из памяти
+            $this->removePluginHooks($pluginSlug);
+            
             // Видаляємо плагін з пам'яті
             if (isset($this->plugins[$pluginSlug])) {
                 unset($this->plugins[$pluginSlug]);
@@ -860,7 +913,19 @@ class PluginManager extends BaseModule {
             $this->clearPluginCache($pluginSlug);
             
             // Очищаємо кеш меню після деактивації плагіна (включая файловый кеш)
+            // ВАЖЛИВО: очищаем хеш ПЕРЕД clearAllMenuCache, чтобы он пересчитался
+            if (function_exists('cache_forget')) {
+                cache_forget('active_plugins_hash');
+            }
+            
+            // Очищаем все варианты кеша меню
             $this->clearAllMenuCache();
+            
+            // Принудительно очищаем хеш еще раз после очистки кеша меню
+            // Это гарантирует, что хеш будет пересчитан при следующем запросе
+            if (function_exists('cache_forget')) {
+                cache_forget('active_plugins_hash');
+            }
             
             doHook('plugin_deactivated', $pluginSlug);
             
@@ -1097,6 +1162,48 @@ class PluginManager extends BaseModule {
         
         // Также вызываем clearMenuFileCache для полной очистки
         $this->clearMenuFileCache();
+    }
+    
+    /**
+     * Видалення хуків плагіна
+     * 
+     * @param string $pluginSlug Slug плагіна
+     */
+    private function removePluginHooks(string $pluginSlug): void {
+        if (empty($pluginSlug)) {
+            return;
+        }
+        
+        // Получаем имя класса плагина
+        $className = $this->getPluginClassName($pluginSlug);
+        
+        // Удаляем хуки плагина из всех зарегистрированных хуков
+        foreach ($this->hooks as $hookName => $hooks) {
+            $filteredHooks = array_filter($hooks, function($hook) use ($className, $pluginSlug) {
+                // Проверяем, является ли callback методом этого плагина
+                if (is_array($hook['callback'])) {
+                    if (isset($hook['callback'][0])) {
+                        $object = $hook['callback'][0];
+                        if (is_object($object)) {
+                            $objectClass = get_class($object);
+                            // Если это экземпляр класса плагина, удаляем хук
+                            if ($objectClass === $className || strpos($objectClass, $pluginSlug) !== false) {
+                                return false; // Удаляем этот хук
+                            }
+                        }
+                    }
+                }
+                return true; // Оставляем хук
+            });
+            
+            // Пересоздаем массив с правильными индексами
+            $this->hooks[$hookName] = array_values($filteredHooks);
+            
+            // Если хуков не осталось, удаляем ключ
+            if (empty($this->hooks[$hookName])) {
+                unset($this->hooks[$hookName]);
+            }
+        }
     }
     
     /**
