@@ -1,0 +1,10 @@
+{
+    "slug": "creative-agency",
+    "name": "Creative Agency",
+    "version": "1.0.0",
+    "description": "Студійний шаблон для веб-студії з повною інформацією про студію.",
+    "author": "Flowaxy CMS",
+    "supports_customization": false,
+    "supports_navigation": false,
+    "default_settings": {}
+}
