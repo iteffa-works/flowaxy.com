@@ -1,0 +1,10 @@
+{
+    "slug": "mailer",
+    "name": "Mailer",
+    "version": "1.0.0",
+    "description": "Професійний плагін для роботи з електронною поштою. Підтримка SMTP (відправка), POP3 та IMAP (отримання). Повна інтеграція з Flowaxy CMS.",
+    "author": "Flowaxy CMS",
+    "requires": "1.0.0",
+    "tested": "1.0.0"
+}
+

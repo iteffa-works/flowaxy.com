@@ -1,0 +1,9 @@
+{
+    "slug": "minimal-scss",
+    "name": "Minimal SCSS",
+    "version": "1.0.0",
+    "description": "Мінімалістична тема-приклад з підтримкою SCSS",
+    "author": "Flowaxy CMS",
+    "supports_customization": true,
+    "supports_navigation": true
+}

@@ -6,6 +6,17 @@
 
 require_once __DIR__ . '/../includes/AdminPage.php';
 
+// Убеждаемся, что функция menuManager() доступна
+if (!function_exists('menuManager')) {
+    // Загружаем класс MenuManager, который определит функцию menuManager()
+    if (!class_exists('MenuManager')) {
+        $menuManagerFile = dirname(__DIR__, 2) . '/classes/managers/MenuManager.php';
+        if (file_exists($menuManagerFile)) {
+            require_once $menuManagerFile;
+        }
+    }
+}
+
 class MenusPage extends AdminPage {
     
     public function __construct() {
