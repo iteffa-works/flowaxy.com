@@ -58,19 +58,23 @@ class ThemesPage extends AdminPage {
         // Перевіряємо підтримку кастомізації для кожної теми (з theme.json або customizer.php)
         $themesWithCustomization = [];
         $themesWithSettings = [];
+        $themesFeatures = [];
         foreach ($themes as $theme) {
+            $themePath = themeManager()->getThemePath($theme['slug']);
+            
             // Використовуємо supports_customization з theme.json, якщо є
             if (isset($theme['supports_customization'])) {
                 $themesWithCustomization[$theme['slug']] = (bool)$theme['supports_customization'];
             } else {
                 // Fallback: перевіряємо наявність customizer.php
-                $themePath = themeManager()->getThemePath($theme['slug']);
                 $themesWithCustomization[$theme['slug']] = file_exists($themePath . 'customizer.php');
             }
             
             // Перевіряємо наявність налаштувань теми
-            $themePath = themeManager()->getThemePath($theme['slug']);
             $themesWithSettings[$theme['slug']] = $this->themeHasSettings($theme['slug'], $themePath);
+            
+            // Перевіряємо підтримку функцій теми
+            $themesFeatures[$theme['slug']] = $this->getThemeFeatures($theme, $themePath);
         }
         
         // Перевіряємо підтримку кастомізації активної теми
@@ -82,6 +86,7 @@ class ThemesPage extends AdminPage {
             'activeTheme' => $activeTheme,
             'themesWithCustomization' => $themesWithCustomization,
             'themesWithSettings' => $themesWithSettings,
+            'themesFeatures' => $themesFeatures,
             'activeThemeSupportsCustomization' => $activeThemeSupportsCustomization
         ]);
     }
@@ -503,6 +508,90 @@ class ThemesPage extends AdminPage {
         }
         
         return false;
+    }
+    
+    /**
+     * Получение поддерживаемых функций темы
+     */
+    private function getThemeFeatures(array $theme, string $themePath): array {
+        $features = [
+            'header' => false,
+            'parameters' => false,
+            'customization' => false,
+            'logo' => false,
+            'favicon' => false
+        ];
+        
+        // Проверяем theme.json
+        $themeJsonFile = $themePath . 'theme.json';
+        if (file_exists($themeJsonFile)) {
+            $content = @file_get_contents($themeJsonFile);
+            if ($content) {
+                $config = json_decode($content, true);
+                if ($config) {
+                    $features['header'] = isset($config['supports_header']) ? (bool)$config['supports_header'] : false;
+                    $features['parameters'] = isset($config['supports_parameters']) ? (bool)$config['supports_parameters'] : false;
+                    $features['customization'] = isset($config['supports_customization']) ? (bool)$config['supports_customization'] : false;
+                    $features['logo'] = isset($config['supports_logo']) ? (bool)$config['supports_logo'] : false;
+                    $features['favicon'] = isset($config['supports_favicon']) ? (bool)$config['supports_favicon'] : false;
+                }
+            }
+        }
+        
+        // Fallback: проверяем наличие файлов
+        if (!$features['customization']) {
+            $features['customization'] = file_exists($themePath . 'customizer.php');
+        }
+        
+        if (!$features['parameters']) {
+            $features['parameters'] = file_exists($themePath . 'admin/SettingsPage.php') || 
+                                      file_exists($themePath . 'SettingsPage.php');
+        }
+        
+        // Проверяем наличие header в index.php
+        if (!$features['header']) {
+            $indexFile = $themePath . 'index.php';
+            if (file_exists($indexFile)) {
+                $content = @file_get_contents($indexFile);
+                if ($content && (stripos($content, '<header') !== false || stripos($content, 'header') !== false)) {
+                    $features['header'] = true;
+                }
+            }
+        }
+        
+        // Проверяем наличие логотипа и фавикона (обычно в assets или корне)
+        if (!$features['logo']) {
+            $logoFiles = [
+                $themePath . 'assets/images/logo.png',
+                $themePath . 'assets/images/logo.jpg',
+                $themePath . 'assets/images/logo.svg',
+                $themePath . 'logo.png',
+                $themePath . 'logo.jpg',
+                $themePath . 'logo.svg'
+            ];
+            foreach ($logoFiles as $logoFile) {
+                if (file_exists($logoFile)) {
+                    $features['logo'] = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!$features['favicon']) {
+            $faviconFiles = [
+                $themePath . 'assets/images/favicon.ico',
+                $themePath . 'favicon.ico',
+                $themePath . 'assets/favicon.ico'
+            ];
+            foreach ($faviconFiles as $faviconFile) {
+                if (file_exists($faviconFile)) {
+                    $features['favicon'] = true;
+                    break;
+                }
+            }
+        }
+        
+        return $features;
     }
     
     /**

@@ -40,6 +40,7 @@
                         $isActive = ($theme['is_active'] == 1);
                         $supportsCustomization = isset($themesWithCustomization[$theme['slug']]) && $themesWithCustomization[$theme['slug']];
                         $hasSettings = isset($themesWithSettings[$theme['slug']]) && $themesWithSettings[$theme['slug']];
+                        $features = isset($themesFeatures[$theme['slug']]) ? $themesFeatures[$theme['slug']] : [];
                         ?>
                         <div class="col-lg-6 mb-3 theme-item-wrapper" data-status="<?= $isActive ? 'active' : 'inactive' ?>" data-name="<?= strtolower($theme['name'] ?? '') ?>">
                             <div class="theme-card <?= $isActive ? 'theme-active' : '' ?>">
@@ -60,6 +61,36 @@
                                 <p class="theme-description">
                                     <?= htmlspecialchars($theme['description'] ?? 'Опис відсутній') ?>
                                 </p>
+                                
+                                <?php if (!empty($features) && (($features['header'] ?? false) || ($features['parameters'] ?? false) || ($features['customization'] ?? false) || ($features['logo'] ?? false) || ($features['favicon'] ?? false))): ?>
+                                    <div class="theme-features">
+                                        <?php if ($features['header'] ?? false): ?>
+                                            <span class="theme-feature-badge" title="Підтримка хедера">
+                                                <i class="fas fa-header"></i>Header
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($features['parameters'] ?? false): ?>
+                                            <span class="theme-feature-badge" title="Параметри налаштувань">
+                                                <i class="fas fa-sliders-h"></i>Параметри
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($features['customization'] ?? false): ?>
+                                            <span class="theme-feature-badge" title="Кастомізація теми">
+                                                <i class="fas fa-paint-brush"></i>Кастомізація
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($features['logo'] ?? false): ?>
+                                            <span class="theme-feature-badge" title="Логотип">
+                                                <i class="fas fa-image"></i>Логотип
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($features['favicon'] ?? false): ?>
+                                            <span class="theme-feature-badge" title="Фавікон">
+                                                <i class="fas fa-star"></i>Фавікон
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                                 
                                 <div class="theme-actions">
                                     <?php if (!$isActive): ?>
@@ -284,9 +315,32 @@
 .theme-description {
     color: #6c757d;
     font-size: 0.9rem;
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     line-height: 1.5;
-    flex-grow: 1;
+}
+
+.theme-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.theme-feature-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    font-weight: 500;
+}
+
+.theme-feature-badge i {
+    font-size: 0.7rem;
+    color: #adb5bd;
 }
 
 .theme-actions {
