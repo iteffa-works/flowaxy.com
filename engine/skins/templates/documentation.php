@@ -40,6 +40,16 @@
                 <i class="fas fa-book me-2"></i>API
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-plugins" data-bs-toggle="tab" data-bs-target="#content-plugins" type="button" role="tab">
+                <i class="fas fa-puzzle-piece me-2"></i>Плагіни
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-themes" data-bs-toggle="tab" data-bs-target="#content-themes" type="button" role="tab">
+                <i class="fas fa-palette me-2"></i>Теми
+            </button>
+        </li>
         <?php if (!empty($modulesApi)): ?>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="tab-modules-api" data-bs-toggle="tab" data-bs-target="#content-modules-api" type="button" role="tab">
@@ -194,6 +204,84 @@
                                 <?php foreach ($section['items'] as $item): ?>
                                     <div class="doc-item">
                                         <code><?= htmlspecialchars($item) ?></code>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    
+    <!-- Створення плагінів -->
+    <div class="tab-pane fade" id="content-plugins" role="tabpanel">
+        <div class="doc-intro mb-4">
+            <h4 class="mb-2"><?= htmlspecialchars($documentation['plugins']['title']) ?></h4>
+        </div>
+        
+        <div class="doc-section-list">
+            <?php foreach ($documentation['plugins']['sections'] as $section): ?>
+                <div class="doc-section-item">
+                    <div class="doc-section-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-puzzle-piece text-primary me-2"></i>
+                            <?= htmlspecialchars($section['title']) ?>
+                        </h5>
+                    </div>
+                    <div class="doc-section-body">
+                        <p class="text-muted mb-3"><?= htmlspecialchars($section['description']) ?></p>
+                        
+                        <?php if (!empty($section['code'])): ?>
+                            <div class="doc-code">
+                                <pre><code><?= htmlspecialchars($section['code']) ?></code></pre>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($section['items'])): ?>
+                            <div class="doc-items">
+                                <?php foreach ($section['items'] as $item): ?>
+                                    <div class="doc-item">
+                                        <?= htmlspecialchars($item) ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    
+    <!-- Створення тем -->
+    <div class="tab-pane fade" id="content-themes" role="tabpanel">
+        <div class="doc-intro mb-4">
+            <h4 class="mb-2"><?= htmlspecialchars($documentation['themes']['title']) ?></h4>
+        </div>
+        
+        <div class="doc-section-list">
+            <?php foreach ($documentation['themes']['sections'] as $section): ?>
+                <div class="doc-section-item">
+                    <div class="doc-section-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-palette text-primary me-2"></i>
+                            <?= htmlspecialchars($section['title']) ?>
+                        </h5>
+                    </div>
+                    <div class="doc-section-body">
+                        <p class="text-muted mb-3"><?= htmlspecialchars($section['description']) ?></p>
+                        
+                        <?php if (!empty($section['code'])): ?>
+                            <div class="doc-code">
+                                <pre><code><?= htmlspecialchars($section['code']) ?></code></pre>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($section['items'])): ?>
+                            <div class="doc-items">
+                                <?php foreach ($section['items'] as $item): ?>
+                                    <div class="doc-item">
+                                        <?= htmlspecialchars($item) ?>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
