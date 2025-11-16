@@ -1830,22 +1830,20 @@ html[dir="rtl"] {
 
 	}
 
-	&.side-header {
-		#header.side-header {
-			.header-nav-main {
-				nav > ul > {
-					li.dropdown {
-						&.open > .dropdown-menu,
-						&:hover > .dropdown-menu {
-							border-left-color: var(--primary);
-						}
+	#header.side-header {
+		.header-nav-main {
+			nav > ul > {
+				li.dropdown {
+					&.open > .dropdown-menu,
+					&:hover > .dropdown-menu {
+						border-left-color: var(--primary);
 					}
 				}
 			}
 		}
 	}
 
-	&.side-header-right {
+	#header.side-header-right {
 		#header.side-header {
 			.header-nav-main {
 				nav > ul > {
@@ -2132,7 +2130,7 @@ html[dir="rtl"] {
 
 	}
 
-	&.side-header-hamburguer-sidebar {
+	#header.side-header-hamburguer-sidebar {
 		#header.side-header {
 			.header-nav {
 
