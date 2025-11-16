@@ -43,6 +43,11 @@ class ThemesPage extends AdminPage {
             $this->activateTheme();
         }
         
+        // Обробка видалення теми
+        if ($_POST && isset($_POST['action']) && $_POST['action'] === 'delete_theme') {
+            $this->deleteTheme();
+        }
+        
         // Очищаємо кеш тем для отримання актуальної інформації про активність
         themeManager()->clearThemeCache();
         
@@ -52,6 +57,7 @@ class ThemesPage extends AdminPage {
         
         // Перевіряємо підтримку кастомізації для кожної теми (з theme.json або customizer.php)
         $themesWithCustomization = [];
+        $themesWithSettings = [];
         foreach ($themes as $theme) {
             // Використовуємо supports_customization з theme.json, якщо є
             if (isset($theme['supports_customization'])) {
@@ -61,6 +67,10 @@ class ThemesPage extends AdminPage {
                 $themePath = themeManager()->getThemePath($theme['slug']);
                 $themesWithCustomization[$theme['slug']] = file_exists($themePath . 'customizer.php');
             }
+            
+            // Перевіряємо наявність налаштувань теми
+            $themePath = themeManager()->getThemePath($theme['slug']);
+            $themesWithSettings[$theme['slug']] = $this->themeHasSettings($theme['slug'], $themePath);
         }
         
         // Перевіряємо підтримку кастомізації активної теми
@@ -71,6 +81,7 @@ class ThemesPage extends AdminPage {
             'themes' => $themes,
             'activeTheme' => $activeTheme,
             'themesWithCustomization' => $themesWithCustomization,
+            'themesWithSettings' => $themesWithSettings,
             'activeThemeSupportsCustomization' => $activeThemeSupportsCustomization
         ]);
     }
@@ -460,6 +471,106 @@ class ThemesPage extends AdminPage {
         }
         
         exit;
+    }
+    
+    /**
+     * Проверка наличия настроек у темы
+     */
+    private function themeHasSettings(string $themeSlug, string $themePath): bool {
+        // Проверяем наличие файла страницы настроек
+        $settingsFiles = [
+            $themePath . 'admin/SettingsPage.php',
+            $themePath . 'admin/' . ucfirst($themeSlug) . 'SettingsPage.php',
+            $themePath . 'SettingsPage.php'
+        ];
+        
+        foreach ($settingsFiles as $file) {
+            if (file_exists($file)) {
+                return true;
+            }
+        }
+        
+        // Проверяем наличие theme.json с настройками
+        $themeJsonFile = $themePath . 'theme.json';
+        if (file_exists($themeJsonFile)) {
+            $content = @file_get_contents($themeJsonFile);
+            if ($content) {
+                $config = json_decode($content, true);
+                if ($config && (isset($config['has_settings']) || isset($config['settings_page']))) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Видалення теми
+     */
+    private function deleteTheme() {
+        if (!$this->verifyCsrf()) {
+            $this->setMessage('Помилка безпеки', 'danger');
+            return;
+        }
+        
+        $themeSlug = sanitizeInput($_POST['theme_slug'] ?? '');
+        
+        if (empty($themeSlug)) {
+            $this->setMessage('Тему не вибрано', 'danger');
+            return;
+        }
+        
+        // Перевіряємо, чи тема активна
+        $activeTheme = themeManager()->getActiveTheme();
+        if ($activeTheme && $activeTheme['slug'] === $themeSlug) {
+            $this->setMessage('Неможливо видалити активну тему. Спочатку активуйте іншу тему.', 'danger');
+            return;
+        }
+        
+        // Отримуємо шлях до теми
+        $themePath = themeManager()->getThemePath($themeSlug);
+        
+        if (!is_dir($themePath)) {
+            $this->setMessage('Тему не знайдено', 'danger');
+            return;
+        }
+        
+        // Видаляємо папку теми
+        try {
+            $this->deleteDirectory($themePath);
+            
+            // Очищаємо кеш тем
+            themeManager()->clearThemeCache();
+            
+            $this->setMessage('Тему успішно видалено', 'success');
+            Response::redirectStatic(adminUrl('themes'));
+        } catch (Exception $e) {
+            error_log("Theme delete error: " . $e->getMessage());
+            $this->setMessage('Помилка при видаленні теми: ' . $e->getMessage(), 'danger');
+        }
+    }
+    
+    /**
+     * Рекурсивне видалення директорії
+     */
+    private function deleteDirectory(string $dir): bool {
+        if (!is_dir($dir)) {
+            return false;
+        }
+        
+        $files = array_diff(scandir($dir), ['.', '..']);
+        
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            if (is_dir($path)) {
+                $this->deleteDirectory($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        
+        return @rmdir($dir);
     }
 }
 

@@ -34,106 +34,84 @@
             </div>
         <?php else: ?>
             <div class="themes-list">
-                <?php foreach ($themes as $theme): ?>
-                    <?php 
-                    $isActive = ($theme['is_active'] == 1);
-                    $supportsCustomization = isset($themesWithCustomization[$theme['slug']]) && $themesWithCustomization[$theme['slug']];
-                    ?>
-                    <div class="theme-item <?= $isActive ? 'theme-active' : '' ?>">
-                        <div class="theme-item-preview">
-                            <?php if ($theme['screenshot']): ?>
-                                <img src="<?= htmlspecialchars($theme['screenshot']) ?>" 
-                                     class="theme-preview-img" 
-                                     alt="<?= htmlspecialchars($theme['name']) ?>">
-                            <?php else: ?>
-                                <div class="theme-preview-placeholder">
-                                    <i class="fas fa-palette"></i>
-                                </div>
-                            <?php endif; ?>
-                            <?php if ($isActive): ?>
-                                <div class="theme-active-indicator">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="theme-item-info">
-                            <div class="theme-item-header">
-                                <h5 class="theme-item-name">
-                                    <?= htmlspecialchars($theme['name']) ?>
-                                    <?php if ($isActive): ?>
-                                        <span class="theme-active-badge">
-                                            <i class="fas fa-check-circle me-1"></i>Активна
-                                        </span>
-                                    <?php endif; ?>
-                                </h5>
-                                <?php if (!empty($theme['description'])): ?>
-                                    <p class="theme-item-description"><?= htmlspecialchars($theme['description']) ?></p>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="theme-item-meta">
-                                <span class="theme-meta-item">
-                                    <i class="fas fa-tag"></i>
-                                    <span>v<?= htmlspecialchars($theme['version'] ?? '1.0.0') ?></span>
-                                </span>
-                                <?php if (!empty($theme['author'])): ?>
-                                    <span class="theme-meta-item">
-                                        <i class="fas fa-user"></i>
-                                        <span><?= htmlspecialchars($theme['author']) ?></span>
-                                    </span>
-                                <?php endif; ?>
-                                <?php if ($supportsCustomization): ?>
-                                    <span class="theme-meta-item theme-customization-badge">
-                                        <i class="fas fa-paint-brush"></i>
-                                        <span>Підтримка кастомізації</span>
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        
-                        <div class="theme-item-actions">
-                            <?php if (!$isActive): ?>
-                                <?php
-                                $hasScssSupport = themeManager()->hasScssSupport($theme['slug']);
-                                $themePath = themeManager()->getThemePath($theme['slug']);
-                                $cssFile = $themePath . 'assets/css/style.css';
-                                $cssExists = file_exists($cssFile);
-                                ?>
-                                <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= htmlspecialchars($theme['slug']) ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
-                                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-                                    <input type="hidden" name="theme_slug" value="<?= htmlspecialchars($theme['slug']) ?>">
-                                    <input type="hidden" name="activate_theme" value="1">
-                                    <button type="submit" class="btn btn-primary btn-sm theme-activate-btn">
-                                        <i class="fas fa-check me-1"></i>
-                                        <span class="btn-text">Активувати</span>
-                                        <?php if ($hasScssSupport): ?>
-                                            <span class="btn-spinner ms-2" style="display: none;">
-                                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                            </span>
+                <div class="row">
+                    <?php foreach ($themes as $theme): ?>
+                        <?php 
+                        $isActive = ($theme['is_active'] == 1);
+                        $supportsCustomization = isset($themesWithCustomization[$theme['slug']]) && $themesWithCustomization[$theme['slug']];
+                        $hasSettings = isset($themesWithSettings[$theme['slug']]) && $themesWithSettings[$theme['slug']];
+                        ?>
+                        <div class="col-lg-6 mb-3 theme-item-wrapper" data-status="<?= $isActive ? 'active' : 'inactive' ?>" data-name="<?= strtolower($theme['name'] ?? '') ?>">
+                            <div class="theme-card <?= $isActive ? 'theme-active' : '' ?>">
+                                <div class="theme-header">
+                                    <h6 class="theme-name">
+                                        <?= htmlspecialchars($theme['name']) ?>
+                                    </h6>
+                                    <div class="theme-badges">
+                                        <?php if ($isActive): ?>
+                                            <span class="badge badge-active">Активна</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-inactive">Неактивна</span>
                                         <?php endif; ?>
-                                    </button>
-                                </form>
-                            <?php else: ?>
-                                <div class="theme-actions-group">
-                                    <?php if ($supportsCustomization): ?>
-                                        <a href="<?= adminUrl('customizer') ?>" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-paint-brush me-1"></i>Налаштувати
-                                        </a>
+                                        <span class="theme-version">v<?= htmlspecialchars($theme['version'] ?? '1.0.0') ?></span>
+                                    </div>
+                                </div>
+                                
+                                <p class="theme-description">
+                                    <?= htmlspecialchars($theme['description'] ?? 'Опис відсутній') ?>
+                                </p>
+                                
+                                <div class="theme-actions">
+                                    <?php if (!$isActive): ?>
+                                        <?php
+                                        $hasScssSupport = themeManager()->hasScssSupport($theme['slug']);
+                                        ?>
+                                        <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= htmlspecialchars($theme['slug']) ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
+                                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                                            <input type="hidden" name="theme_slug" value="<?= htmlspecialchars($theme['slug']) ?>">
+                                            <input type="hidden" name="activate_theme" value="1">
+                                            <button type="submit" class="btn btn-primary theme-activate-btn">
+                                                <i class="fas fa-check me-1"></i>
+                                                <span class="btn-text">Активувати</span>
+                                                <?php if ($hasScssSupport): ?>
+                                                    <span class="btn-spinner ms-2" style="display: none;">
+                                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </button>
+                                        </form>
                                     <?php else: ?>
-                                        <button type="button" class="btn btn-primary btn-sm" disabled title="Ця тема не підтримує кастомізацію">
-                                            <i class="fas fa-paint-brush me-1"></i>Налаштувати
+                                        <?php if ($supportsCustomization): ?>
+                                            <a href="<?= adminUrl('customizer') ?>" class="btn btn-primary">
+                                                <i class="fas fa-paint-brush me-1"></i>Налаштувати
+                                            </a>
+                                        <?php else: ?>
+                                            <button type="button" class="btn btn-primary" disabled title="Ця тема не підтримує кастомізацію">
+                                                <i class="fas fa-paint-brush me-1"></i>Налаштувати
+                                            </button>
+                                        <?php endif; ?>
+                                        
+                                        <?php if ($hasSettings): ?>
+                                            <a href="<?= adminUrl($theme['slug'] . '-theme-settings') ?>" class="btn btn-secondary" title="Налаштування теми">
+                                                <i class="fas fa-cog"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        
+                                        <button type="button" class="btn btn-danger" disabled title="Спочатку деактивуйте тему перед видаленням">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     <?php endif; ?>
                                     
-                                    <a href="<?= adminUrl('theme-editor?theme=' . urlencode($theme['slug'])) ?>" class="btn btn-primary btn-sm" title="Редактор теми">
-                                        <i class="fas fa-code me-1"></i>Редактор
-                                    </a>
+                                    <?php if (!$isActive): ?>
+                                        <button type="button" class="btn btn-danger" onclick="deleteTheme('<?= htmlspecialchars($theme['slug'] ?? '') ?>')" title="Видалити тему">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
-                            <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
     </div>
@@ -232,192 +210,126 @@
 }
 
 .themes-list {
+    padding: 0;
+}
+
+.themes-list .row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.themes-list .theme-item-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 20px;
 }
 
-.theme-item {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 20px;
+.theme-card {
     background: #fff;
     border: 1px solid #e0e0e0;
-    position: relative;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
-.theme-item.theme-active {
+.theme-card.theme-active {
     border-left: 4px solid #0d6efd;
 }
 
-.theme-item-preview {
-    flex: 0 0 140px;
-    height: 90px;
-    overflow: hidden;
-    background: #f8f9fa;
-    position: relative;
-    border: 1px solid #e0e0e0;
-}
-
-.theme-preview-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.theme-preview-placeholder {
-    width: 100%;
-    height: 100%;
+.theme-header {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #adb5bd;
-    background: #f8f9fa;
-}
-
-.theme-preview-placeholder i {
-    font-size: 3rem;
-    opacity: 0.5;
-}
-
-.theme-active-indicator {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
-    background: #0d6efd;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 0.875rem;
-    border: 2px solid #fff;
-}
-
-.theme-item-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.theme-item-header {
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 12px;
 }
 
-.theme-item-name {
+.theme-name {
     font-size: 1.1rem;
     font-weight: 600;
     color: #212529;
-    margin: 0 0 8px 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    margin: 0;
 }
 
-.theme-active-badge {
-    display: inline-flex;
+.theme-badges {
+    display: flex;
+    gap: 8px;
     align-items: center;
+}
+
+.badge {
     padding: 4px 10px;
-    background: #0d6efd;
-    color: #fff;
     font-size: 0.75rem;
     font-weight: 600;
+    border-radius: 0;
     text-transform: uppercase;
 }
 
-.theme-active-badge i {
-    font-size: 0.7rem;
+.badge-active {
+    background: #28a745;
+    color: #fff;
 }
 
-.theme-item-description {
+.badge-inactive {
+    background: #6c757d;
+    color: #fff;
+}
+
+.theme-version {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.theme-description {
+    color: #6c757d;
     font-size: 0.9rem;
-    color: #6c757d;
-    margin: 0;
+    margin: 0 0 16px 0;
     line-height: 1.5;
+    flex-grow: 1;
 }
 
-.theme-item-meta {
+.theme-actions {
     display: flex;
+    gap: 8px;
     align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-top: 12px;
+    margin-top: auto;
 }
 
-.theme-meta-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.875rem;
-    color: #6c757d;
-    font-weight: 500;
-    padding: 4px 10px;
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
-}
-
-.theme-meta-item i {
-    color: #adb5bd;
-    font-size: 0.8rem;
-}
-
-.theme-customization-badge {
-    color: #0d6efd;
-    font-weight: 600;
-    background: rgba(13, 110, 253, 0.1) !important;
-    border-color: rgba(13, 110, 253, 0.2) !important;
-}
-
-.theme-customization-badge i {
-    color: #0d6efd;
-}
-
-.theme-item-actions {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-}
-
-.theme-actions-group {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.theme-actions-group .btn {
-    white-space: nowrap;
-    font-size: 0.875rem;
-    padding: 8px 16px;
+.theme-actions .btn {
     border-radius: 0;
-    font-weight: 500;
     border: 1px solid #dee2e6;
+    padding: 8px 16px;
+    font-weight: 500;
+    font-size: 0.875rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    line-height: 1.5;
-    vertical-align: middle;
+    gap: 6px;
+    white-space: nowrap;
+    height: 38px;
+    min-height: 38px;
+    box-sizing: border-box;
 }
 
-.theme-actions-group .btn i {
+.theme-actions .btn i {
     display: inline-flex;
     align-items: center;
     line-height: 1;
 }
 
-.theme-actions-group .btn-primary {
+.theme-actions .btn-primary {
     background: #0d6efd;
     border-color: #0d6efd;
     color: #fff;
 }
 
-.theme-actions-group .btn-primary:hover:not(:disabled) {
+.theme-actions .btn-primary:hover:not(:disabled) {
     background: #0b5ed7;
     border-color: #0b5ed7;
 }
 
-.theme-actions-group .btn-primary:disabled {
+.theme-actions .btn-primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
@@ -425,62 +337,49 @@
     border-color: #6c757d !important;
 }
 
-.theme-item .btn-primary:not(.theme-actions-group .btn-primary) {
-    background: #0d6efd;
-    border-color: #0d6efd;
+.theme-actions .btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
     color: #fff;
-    padding: 8px 16px;
-    border-radius: 0;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.5;
-    vertical-align: middle;
-    border: 1px solid;
 }
 
-.theme-item .btn-primary:not(.theme-actions-group .btn-primary) i {
-    display: inline-flex;
-    align-items: center;
-    line-height: 1;
+.theme-actions .btn-secondary:hover {
+    background: #5a6268;
+    border-color: #5a6268;
 }
 
-.theme-item .btn-primary:not(.theme-actions-group .btn-primary):hover {
-    background: #0b5ed7;
-    border-color: #0b5ed7;
+.theme-actions .btn-danger {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
+.theme-actions .btn-danger:hover:not(:disabled) {
+    background: #c82333;
+    border-color: #c82333;
+}
+
+.theme-actions .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-    .theme-item {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 20px;
-    }
-    
-    .theme-item-preview {
-        width: 100%;
-        height: 180px;
-    }
-    
-    .theme-item-actions {
-        width: 100%;
-        margin-top: 16px;
-    }
-    
-    .theme-actions-group {
-        width: 100%;
-        flex-direction: column;
-    }
-    
-    .theme-actions-group .btn {
+    .themes-list .theme-item-wrapper {
         width: 100%;
     }
     
-    .theme-item-meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+    .theme-card {
+        margin-bottom: 16px;
+    }
+    
+    .theme-actions {
+        flex-wrap: wrap;
+    }
+    
+    .theme-actions .btn {
+        flex: 1;
+        min-width: 120px;
     }
 }
 
@@ -632,6 +531,20 @@
             
             document.body.appendChild(hiddenForm);
             hiddenForm.submit();
+        }
+    }
+    
+    function deleteTheme(slug) {
+        if (confirm('Ви впевнені, що хочете видалити цю тему? Всі файли теми будуть видалені.')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="action" value="delete_theme">
+                <input type="hidden" name="theme_slug" value="${slug}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
         }
     }
 })();

@@ -104,6 +104,14 @@ function getMenuItems() {
         ],
         [
             'href' => '#',
+            'icon' => 'fas fa-palette',
+            'text' => 'Налаштування тем',
+            'page' => 'theme-settings',
+            'order' => 56,
+            'submenu' => []
+        ],
+        [
+            'href' => '#',
             'icon' => 'fas fa-code',
             'text' => 'Для розробника',
             'page' => 'developer',
@@ -159,10 +167,10 @@ function getMenuItems() {
         }
     }
     
-    // Видаляємо меню "Налаштування плагінів" якщо підменю порожнє або немає пунктів
+    // Видаляємо меню "Налаштування плагінів" та "Налаштування тем" якщо підменю порожнє
     $menuKeysToRemove = [];
     foreach ($menu as $key => $item) {
-        if (isset($item['page']) && $item['page'] === 'plugin-settings') {
+        if (isset($item['page']) && ($item['page'] === 'plugin-settings' || $item['page'] === 'theme-settings')) {
             $submenuCount = 0;
             if (isset($item['submenu']) && is_array($item['submenu'])) {
                 $submenuCount = count($item['submenu']);
