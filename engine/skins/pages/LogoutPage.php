@@ -16,19 +16,18 @@ class LogoutPage {
     }
     
     /**
-     * Выход из системы
+     * Вихід з системи (використовуємо Session та Response класи)
      */
     private function logout() {
-        // Удаляем данные сессии
-        unset($_SESSION[ADMIN_SESSION_NAME]);
-        unset($_SESSION['admin_user_id']);
-        unset($_SESSION['admin_username']);
+        // Видаляємо дані сесії (використовуємо Session клас)
+        Session::remove(ADMIN_SESSION_NAME);
+        Session::remove('admin_user_id');
+        Session::remove('admin_username');
         
-        // Уничтожаем сессию
-        session_destroy();
+        // Знищуємо сесію
+        Session::destroy();
         
-        // Перенаправляем на страницу входа
-        header('Location: ' . adminUrl('login'));
-        exit;
+        // Перенаправляємо на сторінку входу (використовуємо Response клас)
+        Response::redirectStatic(adminUrl('login'));
     }
 }

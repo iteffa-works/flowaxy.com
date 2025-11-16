@@ -103,8 +103,7 @@ class ThemesPage extends AdminPage {
             }
             
             $this->setMessage('Тему успішно активовано', 'success');
-            header('Location: ' . adminUrl('themes'));
-            exit;
+            Response::redirectStatic(adminUrl('themes'));
         } else {
             $this->setMessage('Помилка при активації теми', 'danger');
         }
@@ -114,7 +113,8 @@ class ThemesPage extends AdminPage {
      * Обработка AJAX запросов
      */
     private function handleAjax() {
-        header('Content-Type: application/json');
+        // Використовуємо Response клас для встановлення заголовків
+        Response::setHeader('Content-Type', 'application/json');
         
         $action = sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         

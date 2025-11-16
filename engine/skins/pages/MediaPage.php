@@ -84,7 +84,8 @@ class MediaPage extends AdminPage {
      * Обробка AJAX запитів
      */
     private function handleAjax() {
-        header('Content-Type: application/json; charset=utf-8');
+        // Використовуємо Response клас для встановлення заголовків
+        Response::setHeader('Content-Type', 'application/json; charset=utf-8');
         
         $action = sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
         

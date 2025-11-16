@@ -91,7 +91,8 @@ class Response {
      */
     public function redirect(string $url, int $statusCode = 302): void {
         if (headers_sent()) {
-            echo '<script>window.location.href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '";</script>';
+            // Використовуємо Security клас для екранування
+            echo '<script>window.location.href="' . Security::clean($url) . '";</script>';
             return;
         }
         
@@ -127,24 +128,38 @@ class Response {
     }
     
     /**
+     * Статичний метод: Встановлення заголовка
+     * 
+     * @param string $name Ім'я заголовка
+     * @param string $value Значення
+     * @return void
+     */
+    public static function setHeader(string $name, string $value): void {
+        if (!headers_sent()) {
+            header("{$name}: {$value}");
+        }
+    }
+    
+    /**
      * Статичний метод: Швидка JSON відповідь
      * 
      * @param mixed $data Дані
      * @param int $statusCode Код статусу
      * @return void
      */
-    public static function json($data, int $statusCode = 200): void {
+    public static function jsonResponse($data, int $statusCode = 200): void {
         (new self())->json($data, $statusCode);
     }
     
     /**
      * Статичний метод: Швидкий редірект
+     * Використовується через функцію redirectTo() з init.php
      * 
      * @param string $url URL
      * @param int $statusCode Код статусу
      * @return void
      */
-    public static function redirect(string $url, int $statusCode = 302): void {
+    public static function redirectStatic(string $url, int $statusCode = 302): void {
         (new self())->redirect($url, $statusCode);
     }
 }

@@ -16,7 +16,8 @@ if (version_compare(PHP_VERSION, '8.3.0', '<')) {
             http_response_code(500);
             header('Content-Type: text/html; charset=UTF-8');
         }
-        die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Помилка версії PHP</title></head><body><h1>Потрібно PHP 8.3+</h1><p>Поточна версія: ' . htmlspecialchars(PHP_VERSION) . '</p></body></html>');
+        $phpVersion = htmlspecialchars(PHP_VERSION, ENT_QUOTES, 'UTF-8');
+        die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Помилка версії PHP</title></head><body><h1>Потрібно PHP 8.3+</h1><p>Поточна версія: ' . $phpVersion . '</p></body></html>');
     }
     die('Ця CMS потребує PHP 8.3 або вище. Поточна версія: ' . PHP_VERSION . PHP_EOL);
 }
@@ -27,38 +28,13 @@ require_once __DIR__ . '/data/config.php';
 // Підключаємо конфігурацію бази даних
 require_once __DIR__ . '/data/database.php';
 
-// Безпечна функція для htmlspecialchars
-if (!function_exists('safe_html')) {
-    /**
-     * Безпечний вивід HTML
-     * 
-     * @param mixed $value Значення для виводу
-     * @param string $default Значення за замовчуванням
-     * @return string
-     */
-    function safe_html($value, string $default = ''): string {
-        if (is_array($value) || is_object($value)) {
-            return htmlspecialchars(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), ENT_QUOTES, 'UTF-8');
-        }
-        return htmlspecialchars((string)($value ?: $default), ENT_QUOTES, 'UTF-8');
-    }
-}
-
 // Вмикаємо буферизацію виводу для запобігання проблем з headers
 if (!ob_get_level()) {
     ob_start();
 }
 
-// Запуск сесії (тільки якщо заголовки ще не відправлені)
-if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-    // Налаштування безпеки сесії
-    ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? '1' : '0');
-    ini_set('session.use_strict_mode', '1');
-    session_start();
-}
-
 // Автозавантаження класів (сучасний підхід з перевірками та підтримкою підкаталогів)
+// Класи завантажуються автоматично перед використанням
 spl_autoload_register(function (string $className): void {
     // Перевіряємо тільки класи з нашого простору імен
     if (strpos($className, '\\') === false) {
@@ -268,7 +244,7 @@ function showDatabaseError(array $errorDetails = []): void {
                 <h1>⚠ Помилка підключення до бази даних</h1>
                 <p>Не вдалося підключитися до бази даних. Будь ласка, перевірте налаштування підключення.</p>
                 <?php if (!empty($errorDetails) && defined('DEBUG_MODE') && DEBUG_MODE): ?>
-                    <p><strong>Помилка:</strong> <?= htmlspecialchars($errorDetails['error'] ?? 'Unknown error') ?></p>
+                    <p><strong>Помилка:</strong> <?= Security::clean($errorDetails['error'] ?? 'Unknown error') ?></p>
                 <?php endif; ?>
                 <p><a href="javascript:location.reload()">Оновити сторінку</a></p>
             </div>
@@ -282,60 +258,82 @@ function showDatabaseError(array $errorDetails = []): void {
 require_once __DIR__ . '/modules/loader.php';
 ModuleLoader::init();
 
-// Функції безпеки з типізацією
+// Ініціалізація сесії через клас Session
+Session::start([
+    'name' => 'PHPSESSID',
+    'lifetime' => 7200,
+    'domain' => '',
+    'path' => '/',
+    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
+// Функції безпеки з типізацією (використовують класи)
 /**
- * Генерація CSRF токена
+ * Генерація CSRF токена (використовує Security клас)
  * 
  * @return string
  */
 function generateCSRFToken(): string {
-    if (!isset($_SESSION[CSRF_TOKEN_NAME]) || empty($_SESSION[CSRF_TOKEN_NAME])) {
-        $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION[CSRF_TOKEN_NAME];
+    return Security::csrfToken();
 }
 
 /**
- * Перевірка CSRF токена
+ * Перевірка CSRF токена (використовує Security клас)
  * 
  * @param string|null $token Токен для перевірки
  * @return bool
  */
 function verifyCSRFToken(?string $token): bool {
-    if ($token === null || !isset($_SESSION[CSRF_TOKEN_NAME])) {
-        return false;
-    }
-    
-    return hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
+    return Security::verifyCsrfToken($token);
 }
 
+/**
+ * Перевірка, чи адмін залогінений (використовує Session клас)
+ * 
+ * @return bool
+ */
 function isAdminLoggedIn(): bool {
-    return isset($_SESSION[ADMIN_SESSION_NAME]) && $_SESSION[ADMIN_SESSION_NAME] === true;
+    return Session::has(ADMIN_SESSION_NAME) && Session::get(ADMIN_SESSION_NAME) === true;
 }
 
+/**
+ * Вимагає авторизації адміна
+ * 
+ * @return void
+ */
 function requireAdmin(): void {
     if (!isAdminLoggedIn()) {
-        if (!headers_sent()) {
-            header('Location: ' . ADMIN_URL . '/login');
-            exit;
-        } else {
-            // Якщо headers вже відправлені, використовуємо JavaScript редірект
-            echo '<script>window.location.href = "' . ADMIN_URL . '/login";</script>';
-            echo '<noscript><meta http-equiv="refresh" content="0;url=' . ADMIN_URL . '/login"></noscript>';
-            exit;
-        }
+        Response::redirectStatic(ADMIN_URL . '/login');
     }
 }
 
 /**
- * Санітизація вхідних даних
+ * Безпечний вивід HTML (використовує Security клас)
+ * 
+ * @param mixed $value Значення для виводу
+ * @param string $default Значення за замовчуванням
+ * @return string
+ */
+if (!function_exists('safe_html')) {
+    function safe_html($value, string $default = ''): string {
+        if (is_array($value) || is_object($value)) {
+            return Security::clean(Json::stringify($value));
+        }
+        return Security::clean((string)($value ?: $default));
+    }
+}
+
+/**
+ * Санітизація вхідних даних (використовує Security клас)
  * 
  * @param mixed $input Вхідні дані
  * @return string
  */
 function sanitizeInput($input): string {
     if (is_string($input)) {
-        return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+        return Security::clean(trim($input), true);
     }
     
     if (is_numeric($input)) {
@@ -344,8 +342,8 @@ function sanitizeInput($input): string {
     
     if (is_array($input)) {
         try {
-            return json_encode($input, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
+            return Json::stringify($input);
+        } catch (Exception $e) {
             error_log("JSON encoding error: " . $e->getMessage());
             return '';
         }
@@ -358,16 +356,14 @@ function sanitizeInput($input): string {
     return '';
 }
 
+/**
+ * Редірект на URL (використовує Response клас)
+ * 
+ * @param string $url URL
+ * @return void
+ */
 function redirectTo(string $url): void {
-    if (!headers_sent()) {
-        header('Location: ' . $url);
-        exit;
-    } else {
-        // Якщо headers вже відправлені, використовуємо JavaScript редірект
-        echo '<script>window.location.href = "' . htmlspecialchars($url) . '";</script>';
-        echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
-        exit;
-    }
+    Response::redirectStatic($url);
 }
 
 /**
@@ -496,7 +492,7 @@ function getSetting(string $key, string $default = ''): string {
     return $settings[$key] ?? $default;
 }
 
-// Створення необхідних директорій якщо не існують
+// Створення необхідних директорій якщо не існують (використовує Directory клас)
 $directories = [
     UPLOADS_DIR,
     CACHE_DIR,
@@ -504,13 +500,17 @@ $directories = [
 ];
 
 foreach ($directories as $dir) {
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
+    $directory = new Directory($dir);
+    if (!$directory->exists()) {
+        $directory->create(0755, true);
     }
     
     // Створюємо .htaccess для захисту директорій
-    $htaccessFile = rtrim($dir, '/') . '/.htaccess';
-    if (!file_exists($htaccessFile) && (strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false)) {
-        @file_put_contents($htaccessFile, "Deny from all\n");
+    if (strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false) {
+        $htaccessFile = rtrim($dir, '/') . '/.htaccess';
+        $file = new File($htaccessFile);
+        if (!$file->exists()) {
+            $file->write("Deny from all\n");
+        }
     }
 }

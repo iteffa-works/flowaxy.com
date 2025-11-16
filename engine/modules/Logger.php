@@ -288,7 +288,8 @@ class Logger extends BaseModule {
      */
     public function handleDbError($error): void {
         if ($this->getSetting('log_errors', '1') === '1') {
-            $this->logError('Database Error: ' . (is_string($error) ? $error : json_encode($error)), [
+            $errorMsg = is_string($error) ? $error : Json::stringify($error);
+            $this->logError('Database Error: ' . $errorMsg, [
                 'type' => 'database',
                 'error' => $error
             ]);
@@ -533,10 +534,17 @@ class Logger extends BaseModule {
                 'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown'
             ];
             
-            $logLine = json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+            // Використовуємо Json клас для кодування
+            $logLine = Json::stringify($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
             
-            // Записываем в файл
-            file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
+            // Записуємо в файл (використовуємо File клас)
+            $file = new File($logFile);
+            try {
+                $file->write($logLine, true); // true = append
+            } catch (Exception $e) {
+                error_log("Logger log error: " . $e->getMessage());
+                return false;
+            }
             
             // Проверяем размер файла и ротируем при необходимости
             $this->rotateLogIfNeeded($logFile);
@@ -645,8 +653,13 @@ class Logger extends BaseModule {
                     break 2;
                 }
                 
-                $logEntry = json_decode($line, true);
-                if ($logEntry === null) {
+                try {
+                    $logEntry = Json::decode($line, true);
+                } catch (Exception $e) {
+                    continue; // Пропускаємо невалідні записи
+                }
+                
+                if (!is_array($logEntry)) {
                     continue;
                 }
                 
@@ -696,8 +709,13 @@ class Logger extends BaseModule {
                     $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
                     if ($lines !== false) {
                         foreach ($lines as $line) {
-                            $logEntry = json_decode($line, true);
-                            if ($logEntry !== null && ($logEntry['type'] ?? '') === $type) {
+                        try {
+                            $logEntry = Json::decode($line, true);
+                        } catch (Exception $e) {
+                            continue;
+                        }
+                        
+                        if (is_array($logEntry) && ($logEntry['type'] ?? '') === $type) {
                                 $hasType = true;
                                 break;
                             }
@@ -716,10 +734,21 @@ class Logger extends BaseModule {
                             $newLines[] = $line;
                         }
                     }
-                    file_put_contents($file, implode("\n", $newLines) . "\n");
+                    // Використовуємо File клас для запису
+                    $logFile = new File($file);
+                    try {
+                        $logFile->write(implode("\n", $newLines) . "\n");
+                    } catch (Exception $e) {
+                        error_log("Logger deleteLogsByType error: " . $e->getMessage());
+                    }
                 } else {
-                    // Удаляем весь файл
-                    unlink($file);
+                    // Видаляємо весь файл (використовуємо File клас)
+                    $logFile = new File($file);
+                    try {
+                        $logFile->delete();
+                    } catch (Exception $e) {
+                        error_log("Logger deleteLogsByType error: " . $e->getMessage());
+                    }
                 }
                 
                 $deleted++;
@@ -771,8 +800,13 @@ class Logger extends BaseModule {
             }
             
             foreach ($lines as $line) {
-                $logEntry = json_decode($line, true);
-                if ($logEntry === null) {
+                try {
+                    $logEntry = Json::decode($line, true);
+                } catch (Exception $e) {
+                    continue; // Пропускаємо невалідні записи
+                }
+                
+                if (!is_array($logEntry)) {
                     continue;
                 }
                 

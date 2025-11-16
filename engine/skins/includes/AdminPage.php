@@ -38,7 +38,7 @@ class AdminPage {
                     'code' => $e->getCode()
                 ]);
             } else {
-                die('Database connection error: ' . htmlspecialchars($e->getMessage()));
+                die('Database connection error: ' . Security::clean($e->getMessage()));
             }
             exit;
         }

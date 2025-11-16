@@ -74,8 +74,7 @@ class CustomizerPage extends AdminPage {
         
         if ($_POST && isset($_POST['save_customizer'])) {
             $this->saveSettings();
-            header('Location: ' . adminUrl('customizer'));
-            exit;
+            Response::redirectStatic(adminUrl('customizer'));
         }
         
         // Получение активной темы и проверка поддержки кастоматизации
@@ -199,7 +198,8 @@ class CustomizerPage extends AdminPage {
      * Обработка AJAX запросов
      */
     private function handleAjax() {
-        header('Content-Type: application/json');
+        // Використовуємо Response клас для встановлення заголовків
+        Response::setHeader('Content-Type', 'application/json');
         
         $action = sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         

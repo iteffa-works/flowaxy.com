@@ -48,16 +48,26 @@ class Config {
             @mkdir($this->configDir, 0755, true);
         }
         
-        // Создаем .htaccess для защиты
+        // Создаем .htaccess для защиты (використовуємо File клас)
         $htaccessFile = $this->configDir . '.htaccess';
-        if (!file_exists($htaccessFile)) {
-            @file_put_contents($htaccessFile, "Deny from all\n");
+        $file = new File($htaccessFile);
+        if (!$file->exists()) {
+            try {
+                $file->write("Deny from all\n");
+            } catch (Exception $e) {
+                error_log("Config ensureConfigDir error: " . $e->getMessage());
+            }
         }
         
-        // Создаем .gitkeep для git
+        // Создаем .gitkeep для git (використовуємо File клас)
         $gitkeepFile = $this->configDir . '.gitkeep';
-        if (!file_exists($gitkeepFile)) {
-            @file_put_contents($gitkeepFile, '');
+        $gitkeep = new File($gitkeepFile);
+        if (!$gitkeep->exists()) {
+            try {
+                $gitkeep->write('');
+            } catch (Exception $e) {
+                error_log("Config ensureConfigDir error: " . $e->getMessage());
+            }
         }
     }
     
@@ -602,9 +612,15 @@ class Config {
         // Удаляем из памяти
         unset($this->loadedConfigs[$configName]);
         
-        // Удаляем файл
-        if (file_exists($filePath)) {
-            return @unlink($filePath);
+        // Удаляем файл (використовуємо File клас)
+        $file = new File($filePath);
+        if ($file->exists()) {
+            try {
+                return $file->delete();
+            } catch (Exception $e) {
+                error_log("Config deleteFile error: " . $e->getMessage());
+                return false;
+            }
         }
         
         return true;
@@ -620,7 +636,8 @@ class Config {
     public function fileExists(string $configName, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         $filePath = $this->getConfigPath($configName, $extension);
-        return file_exists($filePath);
+        $file = new File($filePath);
+        return $file->exists();
     }
     
     /**
@@ -628,14 +645,15 @@ class Config {
      * 
      * @param string $configName Имя конфигурации
      * @param string|null $extension Расширение файла
-     * @return int Размер файла в байтах, или -1 если файл не существует
+     * @return int Размер файла в байтах, або -1 якщо файл не існує
      */
     public function getFileSize(string $configName, ?string $extension = null): int {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         $filePath = $this->getConfigPath($configName, $extension);
+        $file = new File($filePath);
         
-        if (file_exists($filePath)) {
-            return filesize($filePath);
+        if ($file->exists()) {
+            return $file->getSize();
         }
         
         return -1;
@@ -646,14 +664,15 @@ class Config {
      * 
      * @param string $configName Имя конфигурации
      * @param string|null $extension Расширение файла
-     * @return int|false Unix timestamp или false если файл не существует
+     * @return int|false Unix timestamp або false якщо файл не існує
      */
     public function getFileMTime(string $configName, ?string $extension = null) {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         $filePath = $this->getConfigPath($configName, $extension);
+        $file = new File($filePath);
         
-        if (file_exists($filePath)) {
-            return filemtime($filePath);
+        if ($file->exists()) {
+            return $file->getMTime();
         }
         
         return false;
@@ -698,17 +717,26 @@ class Config {
             $backupPath = $this->configDir . $backupName;
         }
         
-        // Создаем директорию, если её нет
+        // Создаем директорию, если её нет (використовуємо Directory клас)
         $dir = dirname($backupPath);
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true)) {
+        $directory = new Directory($dir);
+        if (!$directory->exists()) {
+            if (!$directory->create(0755, true)) {
                 return false;
             }
         }
         
-        if (@copy($filePath, $backupPath)) {
-            @chmod($backupPath, 0644);
-            return $backupPath;
+        // Копіюємо файл (використовуємо File клас)
+        $sourceFile = new File($filePath);
+        if ($sourceFile->exists()) {
+            try {
+                if ($sourceFile->copy($backupPath)) {
+                    return $backupPath;
+                }
+            } catch (Exception $e) {
+                error_log("Config backup error: " . $e->getMessage());
+                return false;
+            }
         }
         
         return false;
@@ -733,9 +761,17 @@ class Config {
         // Удаляем из памяти
         unset($this->loadedConfigs[$configName]);
         
-        if (@copy($backupPath, $filePath)) {
-            @chmod($filePath, 0644);
-            return true;
+        // Копіюємо файл (використовуємо File клас)
+        $backupFile = new File($backupPath);
+        if ($backupFile->exists()) {
+            try {
+                if ($backupFile->copy($filePath)) {
+                    return true;
+                }
+            } catch (Exception $e) {
+                error_log("Config restore error: " . $e->getMessage());
+                return false;
+            }
         }
         
         return false;

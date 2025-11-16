@@ -26,17 +26,24 @@ class SimpleTemplate {
     }
     
     /**
-     * Получает контент шаблона
+     * Получает контент шаблона (використовує View клас)
      */
     public function getContent($templateName, $data = []) {
         $templateData = array_merge($this->data, $data);
-        extract($templateData);
         
-        $templateFile = $this->templateDir . $templateName . '.php';
-        if (file_exists($templateFile)) {
-            ob_start();
-            include $templateFile;
-            return ob_get_clean();
+        try {
+            // Використовуємо View клас для рендерингу
+            $viewPath = str_replace('.php', '', $templateName);
+            return View::render($viewPath, $templateData);
+        } catch (Exception $e) {
+            // Fallback на старий метод
+            extract($templateData);
+            $templateFile = $this->templateDir . $templateName . '.php';
+            if (file_exists($templateFile)) {
+                ob_start();
+                include $templateFile;
+                return ob_get_clean();
+            }
         }
         
         return '';
@@ -64,10 +71,10 @@ class SimpleTemplate {
     }
     
     /**
-     * Экранирует HTML
+     * Экранирует HTML (використовує Security клас)
      */
     public function escape($string) {
-        return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+        return Security::clean($string);
     }
     
     /**

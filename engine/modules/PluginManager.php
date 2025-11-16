@@ -387,23 +387,26 @@ class PluginManager extends BaseModule {
             $pluginSlug = basename($dir);
             $configFile = $dir . '/plugin.json';
             
-            if (file_exists($configFile) && is_readable($configFile)) {
-                $configContent = @file_get_contents($configFile);
-                if ($configContent === false) {
-                    error_log("Cannot read plugin.json for plugin: {$pluginSlug}");
-                    continue;
-                }
-                
-                $config = json_decode($configContent, true);
-                if ($config && is_array($config)) {
-                    if (empty($config['slug'])) {
-                        $config['slug'] = $pluginSlug;
-                    }
+            // Використовуємо Json клас для читання конфігурації
+            $json = new Json($configFile);
+            if ($json->getFilePath() && file_exists($json->getFilePath())) {
+                try {
+                    $json->load(true);
+                    $config = $json->get([]);
                     
-                    $config['has_plugin_file'] = file_exists($this->getPluginPath($pluginSlug));
-                    $allPlugins[$pluginSlug] = $config;
-                } else {
-                    error_log("Invalid JSON in plugin.json for plugin: {$pluginSlug}");
+                    if (is_array($config) && !empty($config)) {
+                        if (empty($config['slug'])) {
+                            $config['slug'] = $pluginSlug;
+                        }
+                        
+                        $pluginFile = new File($this->getPluginPath($pluginSlug));
+                        $config['has_plugin_file'] = $pluginFile->exists();
+                        $allPlugins[$pluginSlug] = $config;
+                    } else {
+                        error_log("Invalid JSON in plugin.json for plugin: {$pluginSlug}");
+                    }
+                } catch (Exception $e) {
+                    error_log("Cannot read plugin.json for plugin {$pluginSlug}: " . $e->getMessage());
                 }
             }
         }
@@ -460,15 +463,18 @@ class PluginManager extends BaseModule {
                 return false;
             }
             
-            $configContent = file_get_contents($configFile);
-            if ($configContent === false) {
-                error_log("Cannot read plugin.json: {$configFile}");
-                return false;
-            }
-            
-            $config = json_decode($configContent, true);
-            if (!$config || !is_array($config)) {
-                error_log("Invalid JSON in plugin.json: {$configFile}");
+            // Використовуємо Json клас для читання конфігурації
+            $json = new Json($configFile);
+            try {
+                $json->load(true);
+                $config = $json->get([]);
+                
+                if (!is_array($config) || empty($config)) {
+                    error_log("Invalid JSON in plugin.json: {$configFile}");
+                    return false;
+                }
+            } catch (Exception $e) {
+                error_log("Cannot read plugin.json: {$configFile} - " . $e->getMessage());
                 return false;
             }
             
@@ -697,12 +703,18 @@ class PluginManager extends BaseModule {
      * Выполнение SQL файла
      */
     private function executeSqlFile(string $sqlFile): bool {
-        if (!file_exists($sqlFile) || !$this->db) {
+        if (!$this->db) {
+            return false;
+        }
+        
+        // Використовуємо File клас для читання SQL файлу
+        $file = new File($sqlFile);
+        if (!$file->exists()) {
             return false;
         }
         
         try {
-            $sql = file_get_contents($sqlFile);
+            $sql = $file->read();
             $queries = explode(';', $sql);
             
             foreach ($queries as $query) {

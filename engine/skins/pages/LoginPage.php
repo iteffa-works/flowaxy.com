@@ -8,10 +8,9 @@ class LoginPage {
     private $error = '';
     
     public function __construct() {
-        // Если уже авторизован, перенаправляем
+        // Якщо вже авторизований, перенаправляємо (використовуємо Response клас)
         if (isAdminLoggedIn()) {
-            header('Location: ' . adminUrl('dashboard'));
-            exit;
+            Response::redirectStatic(adminUrl('dashboard'));
         }
         
         $this->db = getDB();
@@ -50,13 +49,15 @@ class LoginPage {
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Успешный вход
-                $_SESSION[ADMIN_SESSION_NAME] = true;
-                $_SESSION['admin_user_id'] = $user['id'];
-                $_SESSION['admin_username'] = $user['username'];
+                // Успішний вхід (використовуємо Session клас)
+                Session::set(ADMIN_SESSION_NAME, true);
+                Session::set('admin_user_id', $user['id']);
+                Session::set('admin_username', $user['username']);
                 
-                header('Location: ' . adminUrl('dashboard'));
-                exit;
+                // Регенеруємо ID сесії для безпеки
+                Session::regenerate();
+                
+                Response::redirectStatic(adminUrl('dashboard'));
             } else {
                 $this->error = 'Невірний логін або пароль';
             }

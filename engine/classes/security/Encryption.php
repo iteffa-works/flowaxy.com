@@ -114,7 +114,7 @@ class Encryption {
      * @param string|null $key Ключ
      * @return string
      */
-    public static function encrypt(string $data, ?string $key = null): string {
+    public static function quickEncrypt(string $data, ?string $key = null): string {
         return (new self($key))->encrypt($data);
     }
     
@@ -125,7 +125,7 @@ class Encryption {
      * @param string|null $key Ключ
      * @return string
      */
-    public static function decrypt(string $encryptedData, ?string $key = null): string {
+    public static function quickDecrypt(string $encryptedData, ?string $key = null): string {
         return (new self($key))->decrypt($encryptedData);
     }
 }
