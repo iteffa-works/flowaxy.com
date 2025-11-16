@@ -40,5 +40,4 @@ package-lock.json
 *.bak
 
 # SCSS файлы
-themes/creative-agency/assets/css/style.css
-themes/flowaxy-agency/assets/css/style.css
+themes/minimal-scss/assets/css/style.css

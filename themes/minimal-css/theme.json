@@ -1,0 +1,9 @@
+{
+    "slug": "minimal-css",
+    "name": "Minimal CSS",
+    "version": "1.0.0",
+    "description": "Мінімалістична тема-приклад з підтримкою CSS файлів",
+    "author": "Flowaxy CMS",
+    "supports_customization": false,
+    "supports_navigation": false
+}
