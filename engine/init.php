@@ -80,6 +80,7 @@ spl_autoload_register(function (string $className): void {
             'Cookie' => 'http',
             'Response' => 'http',
             'Request' => 'http',
+            'Router' => 'http',
             'View' => 'view',
             'Mail' => 'mail',
         ];

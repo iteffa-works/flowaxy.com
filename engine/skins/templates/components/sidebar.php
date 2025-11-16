@@ -8,9 +8,7 @@
         <ul class="nav flex-column wp-menu">
             <?php
             require_once __DIR__ . '/../../includes/menu-items.php';
-            if (!class_exists('Router')) {
-                require_once __DIR__ . '/../../includes/Router.php';
-            }
+            // Router завантажується автоматично через автозавантажувач
             $currentPage = Router::getCurrentPage();
             $menuItems = getMenuItems();
             foreach ($menuItems as $item) {
