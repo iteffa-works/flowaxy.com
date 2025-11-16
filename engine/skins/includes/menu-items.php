@@ -35,15 +35,8 @@ function getMenuItems() {
     
     return cache_remember($cacheKey, function() use ($supportsCustomization, $supportsNavigation) {
     
-    // Формуємо підменю "Дизайн"
-    $designSubmenu = [
-        [
-            'href' => adminUrl('themes'),
-            'text' => 'Теми оформлення',
-            'page' => 'themes',
-            'order' => 1
-        ]
-    ];
+    // Формуємо підменю "Дизайн" (тільки для кастомізації та навігації)
+    $designSubmenu = [];
     
     // Додаємо пункт кастомізації тільки якщо тема підтримує
     if ($supportsCustomization) {
@@ -51,7 +44,7 @@ function getMenuItems() {
             'href' => adminUrl('customizer'),
             'text' => 'Кастомізація',
             'page' => 'customizer',
-            'order' => 2
+            'order' => 1
         ];
     }
     
@@ -61,7 +54,7 @@ function getMenuItems() {
             'href' => adminUrl('menus'),
             'text' => 'Навігація',
             'page' => 'menus',
-            'order' => 3
+            'order' => 2
         ];
     }
     
@@ -74,41 +67,39 @@ function getMenuItems() {
             'order' => 10
         ],
         [
-            'href' => '#',
-            'icon' => 'fas fa-paint-brush',
-            'text' => 'Дизайн',
-            'page' => 'themes',
-            'order' => 30,
-            'submenu' => $designSubmenu
+            'href' => adminUrl('media'),
+            'icon' => 'fas fa-images',
+            'text' => 'Медіа-бібліотека',
+            'page' => 'media',
+            'order' => 20
         ],
         [
             'href' => adminUrl('plugins'),
             'icon' => 'fas fa-puzzle-piece',
             'text' => 'Плагіни',
             'page' => 'plugins',
-            'order' => 90
+            'order' => 30
         ],
         [
-            'href' => '#',
+            'href' => adminUrl('themes'),
+            'icon' => 'fas fa-palette',
+            'text' => 'Теми оформлення',
+            'page' => 'themes',
+            'order' => 40
+        ],
+        [
+            'href' => adminUrl('settings'),
             'icon' => 'fas fa-cog',
-            'text' => 'Налаштування',
+            'text' => 'Загальні налаштування',
             'page' => 'settings',
-            'order' => 100,
-            'submenu' => [
-                [
-                    'href' => adminUrl('settings'),
-                    'text' => 'Загальні налаштування',
-                    'page' => 'settings',
-                    'order' => 1
-                ]
-            ]
+            'order' => 50
         ],
         [
             'href' => '#',
             'icon' => 'fas fa-code',
             'text' => 'Для розробника',
             'page' => 'developer',
-            'order' => 999,
+            'order' => 60,
             'submenu' => [
                 [
                     'href' => adminUrl('diagnostics'),
@@ -125,6 +116,18 @@ function getMenuItems() {
             ]
         ]
     ];
+    
+    // Додаємо меню "Дизайн" тільки якщо є підменю (кастомізація або навігація)
+    if (!empty($designSubmenu)) {
+        $menu[] = [
+            'href' => '#',
+            'icon' => 'fas fa-paint-brush',
+            'text' => 'Дизайн',
+            'page' => 'design',
+            'order' => 45,
+            'submenu' => $designSubmenu
+        ];
+    }
     
     // Застосовуємо хук для додавання пунктів меню від плагінів
     // Модулі завантажаться тільки один раз при першому виклику

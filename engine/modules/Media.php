@@ -44,28 +44,9 @@ class Media extends BaseModule {
      * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Реєстрація пункту меню в адмінці
-        addHook('admin_menu', [$this, 'addAdminMenuItem']);
-        
+        // Пункт меню тепер додається в базовому меню (menu-items.php)
         // Реєстрація сторінки адмінки
         addHook('admin_register_routes', [$this, 'registerAdminRoute']);
-    }
-    
-    /**
-     * Додавання пункту меню в адмінку
-     * 
-     * @param array $menu Поточне меню
-     * @return array Оновлене меню
-     */
-    public function addAdminMenuItem(array $menu): array {
-        $menu[] = [
-            'href' => adminUrl('media'),
-            'icon' => 'fas fa-images',
-            'text' => 'Медіа-бібліотека',
-            'page' => 'media',
-            'order' => 20
-        ];
-        return $menu;
     }
     
     /**
