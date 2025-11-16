@@ -50,6 +50,18 @@ $siteDescription = getSetting('site_description', 'Сучасна CMS систе
 $mainMenu = $menuManager->getMenu('primary');
 $menuItems = $mainMenu ? $menuManager->getMenuItems($mainMenu['id']) : [];
 
+// Проверяем поддержку навигации темой
+$themeSupportsNavigation = false;
+if (class_exists('ModuleLoader')) {
+    if (!ModuleLoader::isModuleLoaded('Menu')) {
+        ModuleLoader::loadModule('Menu');
+    }
+    if (ModuleLoader::isModuleLoaded('Menu') && function_exists('menuModule')) {
+        $menuModule = menuModule();
+        $themeSupportsNavigation = $menuModule->themeSupportsNavigation();
+    }
+}
+
 // Хук для модификации данных перед рендерингом
 $themeData = doHook('theme_before_render', [
     'title' => $siteTitle,
@@ -441,7 +453,10 @@ $themeData = doHook('theme_before_render', [
                             <div class="card-body p-5">
                                 <h2 class="mb-4"><?= safe_html($themeManager->getSetting('content_title', 'Основний контент')) ?></h2>
                                 <div class="content">
-                                    <?= doHook('theme_content', '<p class="lead">Це тестова тема Bootstrap для демонстрації функціоналу CMS.</p>') ?>
+                                    <?php
+                                    // Хук theme_content автоматически обрабатывает шорткоды через модуль Menu
+                                    echo doHook('theme_content', '<p class="lead">Це тестова тема Bootstrap для демонстрації функціоналу CMS.</p>');
+                                    ?>
                                 </div>
                             </div>
                         </div>
@@ -494,8 +509,23 @@ $themeData = doHook('theme_before_render', [
                 <?php if ($footerCols >= 2): ?>
                 <div class="<?= $colClass ?> mb-4">
                     <h5>Швидкі посилання</h5>
-                    <ul class="list-unstyled">
-                        <?php if (!empty($menuItems)): ?>
+                    <?php
+                    // Получаем меню футера
+                    $footerMenu = $menuManager->getMenu('footer');
+                    $footerMenuItems = $footerMenu ? $menuManager->getMenuItems($footerMenu['id']) : [];
+                    ?>
+                    <?php if (!empty($footerMenuItems)): ?>
+                        <ul class="list-unstyled">
+                            <?php foreach (array_slice($footerMenuItems, 0, 5) as $item): ?>
+                                <li class="mb-2">
+                                    <a href="<?= safe_html($item['url']) ?>" class="text-decoration-none">
+                                        <?= safe_html($item['title']) ?>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php elseif (!empty($menuItems)): ?>
+                        <ul class="list-unstyled">
                             <?php foreach (array_slice($menuItems, 0, 5) as $item): ?>
                                 <li class="mb-2">
                                     <a href="<?= safe_html($item['url']) ?>" class="text-decoration-none">
@@ -503,8 +533,8 @@ $themeData = doHook('theme_before_render', [
                                     </a>
                                 </li>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                    </ul>
+                        </ul>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
                 

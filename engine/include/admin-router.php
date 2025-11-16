@@ -21,6 +21,7 @@ $pathToModule = [
     'logs' => 'Logger',
     'logs-settings' => 'Logger',
     'media' => 'Media',
+    'menus' => 'Menu',
 ];
 
 // Загружаем модуль для текущей страницы, если он нужен
@@ -59,7 +60,11 @@ if (themeSupportsCustomization()) {
     $router->add('customizer', 'CustomizerPage');
 }
 
-$router->add('menus', 'MenusPage');
+// Регистрируем маршрут меню только если активная тема поддерживает навигацию
+if (themeSupportsNavigation()) {
+    $router->add('menus', 'MenusPage');
+}
+
 $router->add('system', 'SystemPage');
 $router->add('theme-editor', 'ThemeEditorPage');
 

@@ -93,11 +93,17 @@ class ThemesPage extends AdminPage {
         if (themeManager()->activateTheme($themeSlug)) {
             // Очищаем все кеши после успешной активации
             cache_forget('site_settings');
-            cache_forget('admin_menu_items_0');
-            cache_forget('admin_menu_items_1');
             cache_forget('active_theme');
             cache_forget('active_theme_slug');
             cache_forget('all_themes_filesystem');
+            
+            // Очищаем все варианты кеша меню админки
+            cache_forget('admin_menu_items_0');
+            cache_forget('admin_menu_items_1');
+            cache_forget('admin_menu_items_0_0');
+            cache_forget('admin_menu_items_0_1');
+            cache_forget('admin_menu_items_1_0');
+            cache_forget('admin_menu_items_1_1');
             
             // Очищаем кеш проверки активности для всех тем
             $themesDir = dirname(__DIR__, 3) . '/themes/';

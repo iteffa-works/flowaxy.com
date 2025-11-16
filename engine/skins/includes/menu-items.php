@@ -13,20 +13,47 @@ function themeSupportsCustomization() {
         return false;
     }
     
+    $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
+    if (isset($themeConfig['supports_customization'])) {
+        return (bool)$themeConfig['supports_customization'];
+    }
+    
+    // Fallback: проверяем наличие customizer.php
     $themePath = themeManager()->getThemePath($activeTheme['slug']);
     $customizerFile = $themePath . 'customizer.php';
     
     return file_exists($customizerFile);
 }
 
+/**
+ * Проверка поддержки навигации активной темой
+ */
+function themeSupportsNavigation() {
+    $activeTheme = themeManager()->getActiveTheme();
+    if (!$activeTheme) {
+        return false;
+    }
+    
+    $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
+    return (bool)($themeConfig['supports_navigation'] ?? false);
+}
+
 function getMenuItems() {
     $supportsCustomization = themeSupportsCustomization();
-    $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0');
+    $supportsNavigation = themeSupportsNavigation();
     
-    // Очищаем противоположный вариант кеша
-    cache_forget('admin_menu_items_' . ($supportsCustomization ? '0' : '1'));
+    // Создаем уникальный ключ кеша на основе поддержки функций темы
+    $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0') . '_' . ($supportsNavigation ? '1' : '0');
     
-    return cache_remember($cacheKey, function() use ($supportsCustomization) {
+    // Очищаем старые варианты кеша
+    cache_forget('admin_menu_items_0');
+    cache_forget('admin_menu_items_1');
+    cache_forget('admin_menu_items_0_0');
+    cache_forget('admin_menu_items_0_1');
+    cache_forget('admin_menu_items_1_0');
+    cache_forget('admin_menu_items_1_1');
+    
+    return cache_remember($cacheKey, function() use ($supportsCustomization, $supportsNavigation) {
     
     // Формируем подменю "Дизайн"
     $designSubmenu = [
@@ -48,12 +75,15 @@ function getMenuItems() {
         ];
     }
     
-    $designSubmenu[] = [
-        'href' => adminUrl('menus'),
-        'text' => 'Навігація',
-        'page' => 'menus',
-        'order' => 3
-    ];
+    // Добавляем пункт навигации только если тема поддерживает
+    if ($supportsNavigation) {
+        $designSubmenu[] = [
+            'href' => adminUrl('menus'),
+            'text' => 'Навігація',
+            'page' => 'menus',
+            'order' => 3
+        ];
+    }
     
     $menu = [
         [

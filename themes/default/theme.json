@@ -5,6 +5,25 @@
     "description": "Тестова Bootstrap 5 тема з повним функціоналом CMS",
     "author": "Flowaxy CMS",
     "supports_customization": true,
+    "supports_navigation": true,
+    "menu_locations": {
+        "primary": {
+            "label": "Основне меню",
+            "description": "Основне меню навігації в шапці сайту"
+        },
+        "footer": {
+            "label": "Меню футера",
+            "description": "Меню в підвалі сайту"
+        },
+        "sidebar": {
+            "label": "Бічне меню",
+            "description": "Бічне меню навігації"
+        },
+        "custom": {
+            "label": "Произвольне меню",
+            "description": "Меню для використання через шорткоди [menu slug=\"menu-slug\"]"
+        }
+    },
     "default_settings": {
         "primary_color": "#0d6efd",
         "primary_color_hover": "#0b5ed7",

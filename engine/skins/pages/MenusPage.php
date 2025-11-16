@@ -43,9 +43,34 @@ class MenusPage extends AdminPage {
         // Получение списка меню
         $menus = menuManager()->getAllMenus();
         
+        // Получение доступных расположений из активной темы
+        $menuLocations = [];
+        if (class_exists('ModuleLoader')) {
+            // Загружаем модуль Menu если не загружен
+            if (!ModuleLoader::isModuleLoaded('Menu')) {
+                ModuleLoader::loadModule('Menu');
+            }
+            
+            if (ModuleLoader::isModuleLoaded('Menu') && function_exists('menuModule')) {
+                $menuModule = menuModule();
+                $menuLocations = $menuModule->getMenuLocations();
+            }
+        }
+        
+        // Если тема не поддерживает навигацию, используем стандартные расположения
+        if (empty($menuLocations)) {
+            $menuLocations = [
+                'primary' => ['label' => 'Основне меню (primary)', 'description' => 'Основне меню навігації'],
+                'footer' => ['label' => 'Меню футера (footer)', 'description' => 'Меню в підвалі сайту'],
+                'sidebar' => ['label' => 'Бічне меню (sidebar)', 'description' => 'Бічне меню навігації'],
+                'custom' => ['label' => 'Произвольне меню (custom)', 'description' => 'Меню для використання через шорткоди']
+            ];
+        }
+        
         // Рендерим страницу
         $this->render([
-            'menus' => $menus
+            'menus' => $menus,
+            'menuLocations' => $menuLocations
         ]);
     }
     

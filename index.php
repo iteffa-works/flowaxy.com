@@ -13,6 +13,11 @@ require_once __DIR__ . '/config/config.php';
 // Инициализация плагинов (для регистрации хуков)
 pluginManager()->initializePlugins();
 
+// Загрузка модуля Menu для обработки шорткодов
+if (class_exists('ModuleLoader')) {
+    ModuleLoader::loadModule('Menu');
+}
+
 // Хук для обработки ранних запросов (до загрузки темы)
 // Плагины могут использовать этот хук для обработки AJAX запросов и других ранних действий
 $handled = doHook('handle_early_request', false);

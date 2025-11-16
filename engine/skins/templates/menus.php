@@ -561,10 +561,21 @@
                     <div class="mb-3">
                         <label for="menuLocation" class="form-label">Розташування</label>
                         <select class="form-select" id="menuLocation" name="location">
-                            <option value="primary">Основне меню (primary)</option>
-                            <option value="footer">Меню футера (footer)</option>
-                            <option value="sidebar">Бічне меню (sidebar)</option>
+                            <?php if (!empty($menuLocations)): ?>
+                                <?php foreach ($menuLocations as $locationKey => $locationInfo): ?>
+                                    <option value="<?= htmlspecialchars($locationKey) ?>" 
+                                            data-description="<?= htmlspecialchars($locationInfo['description'] ?? '') ?>">
+                                        <?= htmlspecialchars($locationInfo['label'] ?? $locationKey) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="primary">Основне меню (primary)</option>
+                                <option value="footer">Меню футера (footer)</option>
+                                <option value="sidebar">Бічне меню (sidebar)</option>
+                                <option value="custom">Произвольне меню (custom)</option>
+                            <?php endif; ?>
                         </select>
+                        <div class="form-text" id="locationDescription"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1187,6 +1198,21 @@ function showCreateMenuModal() {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     MenusApp.init();
+    
+    // Обновление описания расположения при выборе
+    const locationSelect = document.getElementById('menuLocation');
+    const locationDescription = document.getElementById('locationDescription');
+    
+    if (locationSelect && locationDescription) {
+        function updateLocationDescription() {
+            const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+            const description = selectedOption ? selectedOption.dataset.description : '';
+            locationDescription.textContent = description || '';
+        }
+        
+        locationSelect.addEventListener('change', updateLocationDescription);
+        updateLocationDescription(); // Инициализация при загрузке
+    }
     
     // Автоматически загружаем первое меню, если есть
     const firstMenu = document.querySelector('.menu-list-item[data-menu-id]');

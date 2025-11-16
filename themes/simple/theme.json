@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Мінімалістична тема без підтримки кастомізації",
     "author": "Flowaxy CMS",
-    "supports_customization": false
+    "supports_customization": false,
+    "supports_navigation": false
 }
 
