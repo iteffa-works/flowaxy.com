@@ -268,3 +268,140 @@ function resetFilters() {
     filterPlugins();
 }
 </script>
+
+<!-- Модальне вікно завантаження плагіна -->
+<div class="modal fade" id="uploadPluginModal" tabindex="-1" aria-labelledby="uploadPluginModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadPluginModalLabel">
+                    <i class="fas fa-upload me-2"></i>Завантажити плагін
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="uploadPluginForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                    <input type="hidden" name="action" value="upload_plugin">
+                    
+                    <div class="mb-3">
+                        <label for="pluginFile" class="form-label">Виберіть ZIP архів з плагіном</label>
+                        <input type="file" class="form-control" id="pluginFile" name="plugin_file" accept=".zip" required>
+                        <div class="form-text">
+                            Максимальний розмір: 50 MB. Архів повинен містити файл plugin.json
+                        </div>
+                    </div>
+                    
+                    <div id="uploadProgress" class="progress d-none mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div id="uploadResult" class="alert d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button type="submit" class="btn btn-primary" id="uploadPluginBtn">
+                        <i class="fas fa-upload me-1"></i>Завантажити
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadPluginForm');
+    const uploadBtn = document.getElementById('uploadPluginBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadResult = document.getElementById('uploadResult');
+    const progressBar = uploadProgress.querySelector('.progress-bar');
+    
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const fileInput = document.getElementById('pluginFile');
+            
+            if (!fileInput.files.length) {
+                showUploadResult('Будь ласка, виберіть файл', 'danger');
+                return;
+            }
+            
+            // Показуємо прогрес
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Завантаження...';
+            uploadProgress.classList.remove('d-none');
+            uploadResult.classList.add('d-none');
+            progressBar.style.width = '0%';
+            
+            // Симулюємо прогрес
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                if (progress <= 90) {
+                    progressBar.style.width = progress + '%';
+                }
+            }, 200);
+            
+            fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                
+                setTimeout(() => {
+                    if (data.success) {
+                        showUploadResult(data.message || 'Плагін успішно завантажено', 'success');
+                        uploadBtn.disabled = false;
+                        uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Завантажити';
+                        
+                        // Перезавантажуємо сторінку через 2 секунди
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showUploadResult(data.error || 'Помилка завантаження', 'danger');
+                        uploadBtn.disabled = false;
+                        uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Завантажити';
+                        progressBar.style.width = '0%';
+                    }
+                }, 500);
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                showUploadResult('Помилка підключення до сервера: ' + error.message, 'danger');
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Завантажити';
+                progressBar.style.width = '0%';
+            });
+        });
+    }
+    
+    function showUploadResult(message, type) {
+        uploadResult.textContent = message;
+        uploadResult.className = 'alert alert-' + type;
+        uploadResult.classList.remove('d-none');
+    }
+    
+    // Очищаємо форму при закритті модального вікна
+    const modal = document.getElementById('uploadPluginModal');
+    if (modal) {
+        modal.addEventListener('hidden.bs.modal', function() {
+            uploadForm.reset();
+            uploadResult.classList.add('d-none');
+            uploadProgress.classList.add('d-none');
+            progressBar.style.width = '0%';
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Завантажити';
+        });
+    }
+});
+</script>

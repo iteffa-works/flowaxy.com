@@ -13,15 +13,20 @@ class ThemesPage extends AdminPage {
         $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
-        $marketplaceButton = '<a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-primary">
-            <i class="fas fa-store me-1"></i>Скачати теми
-        </a>';
+        $headerButtons = '<div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadThemeModal">
+                <i class="fas fa-upload me-1"></i>Завантажити тему
+            </button>
+            <a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-outline-primary">
+                <i class="fas fa-store me-1"></i>Скачати теми
+            </a>
+        </div>';
         
         $this->setPageHeader(
             'Теми',
             'Керування темами дизайну сайту',
             'fas fa-palette',
-            $marketplaceButton
+            $headerButtons
         );
     }
     
@@ -127,6 +132,10 @@ class ThemesPage extends AdminPage {
                 $this->ajaxCheckCompilation();
                 break;
                 
+            case 'upload_theme':
+                $this->ajaxUploadTheme();
+                break;
+                
             default:
                 echo json_encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE);
                 exit;
@@ -216,6 +225,212 @@ class ThemesPage extends AdminPage {
             'css_exists' => $cssExists,
             'css_file' => $cssExists ? 'assets/css/style.css' : null
         ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    
+    /**
+     * AJAX завантаження теми з ZIP архіву
+     */
+    private function ajaxUploadTheme(): void {
+        if (!$this->verifyCsrf()) {
+            echo json_encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        if (!isset($_FILES['theme_file']) || $_FILES['theme_file']['error'] !== UPLOAD_ERR_OK) {
+            $errorMsg = 'Помилка завантаження файлу';
+            if (isset($_FILES['theme_file']['error'])) {
+                switch ($_FILES['theme_file']['error']) {
+                    case UPLOAD_ERR_INI_SIZE:
+                    case UPLOAD_ERR_FORM_SIZE:
+                        $errorMsg = 'Файл занадто великий';
+                        break;
+                    case UPLOAD_ERR_PARTIAL:
+                        $errorMsg = 'Файл завантажено частково';
+                        break;
+                    case UPLOAD_ERR_NO_FILE:
+                        $errorMsg = 'Файл не вибрано';
+                        break;
+                }
+            }
+            echo json_encode(['success' => false, 'error' => $errorMsg], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        $file = $_FILES['theme_file'];
+        $fileName = $file['name'];
+        $tmpPath = $file['tmp_name'];
+        
+        // Перевірка розширення
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if ($extension !== 'zip') {
+            echo json_encode(['success' => false, 'error' => 'Файл повинен бути ZIP архівом'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        // Перевірка розміру (максимум 50 MB)
+        $maxSize = 50 * 1024 * 1024; // 50 MB
+        if ($file['size'] > $maxSize) {
+            echo json_encode(['success' => false, 'error' => 'Розмір файлу перевищує 50 MB'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        try {
+            // Перевіряємо наявність ZipArchive
+            if (!class_exists('ZipArchive')) {
+                echo json_encode(['success' => false, 'error' => 'Розширення ZipArchive не встановлено'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Відкриваємо ZIP архів
+            $zip = new ZipArchive();
+            $result = $zip->open($tmpPath);
+            
+            if ($result !== true) {
+                echo json_encode(['success' => false, 'error' => 'Помилка відкриття ZIP архіву'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Перевіряємо наявність theme.json
+            $hasThemeJson = false;
+            $themeSlug = null;
+            
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entryName = $zip->getNameIndex($i);
+                if (basename($entryName) === 'theme.json') {
+                    $hasThemeJson = true;
+                    // Спробуємо визначити slug з шляху
+                    $pathParts = explode('/', trim($entryName, '/'));
+                    if (count($pathParts) >= 2) {
+                        $themeSlug = $pathParts[0];
+                    }
+                    break;
+                }
+            }
+            
+            if (!$hasThemeJson) {
+                $zip->close();
+                echo json_encode(['success' => false, 'error' => 'Архів не містить theme.json'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Якщо slug не визначено, спробуємо прочитати theme.json
+            if (!$themeSlug) {
+                $themeJsonContent = $zip->getFromName('theme.json');
+                if ($themeJsonContent) {
+                    $config = json_decode($themeJsonContent, true);
+                    if ($config && isset($config['slug'])) {
+                        $themeSlug = $config['slug'];
+                    }
+                }
+            }
+            
+            // Якщо все ще немає slug, використовуємо ім'я файлу без розширення
+            if (!$themeSlug) {
+                $themeSlug = pathinfo($fileName, PATHINFO_FILENAME);
+            }
+            
+            // Очищаємо slug від небезпечних символів
+            $themeSlug = preg_replace('/[^a-z0-9\-_]/i', '', $themeSlug);
+            if (empty($themeSlug)) {
+                $zip->close();
+                echo json_encode(['success' => false, 'error' => 'Неможливо визначити slug теми'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Шлях до папки тем
+            $themesDir = dirname(__DIR__, 3) . '/themes/';
+            $themePath = $themesDir . $themeSlug . '/';
+            
+            // Перевіряємо, чи не існує вже тема з таким slug
+            if (is_dir($themePath)) {
+                $zip->close();
+                echo json_encode(['success' => false, 'error' => 'Тема з таким slug вже існує: ' . $themeSlug], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Створюємо папку для теми
+            if (!mkdir($themePath, 0755, true)) {
+                $zip->close();
+                echo json_encode(['success' => false, 'error' => 'Помилка створення папки теми'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Розпаковуємо архів
+            // Визначаємо кореневу папку в архіві
+            $rootPath = null;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entryName = $zip->getNameIndex($i);
+                if (basename($entryName) === 'theme.json') {
+                    $rootPath = dirname($entryName);
+                    break;
+                }
+            }
+            
+            // Якщо theme.json в корені, rootPath буде '.'
+            if ($rootPath === '.' || $rootPath === '') {
+                $rootPath = null;
+            }
+            
+            // Розпаковуємо файли
+            $extracted = 0;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entryName = $zip->getNameIndex($i);
+                
+                // Пропускаємо папки
+                if (substr($entryName, -1) === '/') {
+                    continue;
+                }
+                
+                // Визначаємо шлях для витягування
+                if ($rootPath) {
+                    // Якщо є коренева папка, видаляємо її з шляху
+                    if (strpos($entryName, $rootPath . '/') === 0) {
+                        $relativePath = substr($entryName, strlen($rootPath) + 1);
+                    } else {
+                        continue; // Пропускаємо файли поза кореневою папкою
+                    }
+                } else {
+                    $relativePath = $entryName;
+                }
+                
+                // Пропускаємо небезпечні шляхи
+                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                    continue;
+                }
+                
+                $targetPath = $themePath . $relativePath;
+                $targetDir = dirname($targetPath);
+                
+                // Створюємо папки якщо потрібно
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
+                
+                // Витягуємо файл
+                $content = $zip->getFromIndex($i);
+                if ($content !== false) {
+                    file_put_contents($targetPath, $content);
+                    $extracted++;
+                }
+            }
+            
+            $zip->close();
+            
+            // Очищаємо кеш тем
+            themeManager()->clearThemeCache();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Тему успішно завантажено',
+                'theme_slug' => $themeSlug,
+                'extracted_files' => $extracted
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            error_log("Theme upload error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        }
+        
         exit;
     }
 }
