@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница настройки дизайна (Customizer)
+ * Сторінка налаштування дизайну (Customizer)
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -8,7 +8,7 @@ require_once __DIR__ . '/../includes/AdminPage.php';
 class CustomizerPage extends AdminPage {
     
     /**
-     * Загрузка конфигурации кастомайзера из темы
+     * Завантаження конфігурації кастомізера з теми
      */
     private function getCustomizerConfig($themePath) {
         $customizerFile = $themePath . 'customizer.php';
@@ -27,8 +27,8 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * Проверка поддержки кастоматизации
-     * Использует оптимизированный метод ThemeManager
+     * Перевірка підтримки кастомізації
+     * Використовує оптимізований метод ThemeManager
      */
     private function checkCustomizationSupport($activeTheme) {
         if (!$activeTheme) {
@@ -50,7 +50,7 @@ class CustomizerPage extends AdminPage {
         $activeTheme = themeManager()->getActiveTheme();
         $themeName = $activeTheme ? $activeTheme['name'] : 'теми';
         
-        // Формируем кнопки для заголовка
+        // Формуємо кнопки для заголовка
         $buttons = '<button type="button" class="btn btn-outline-secondary btn-sm" id="resetSettingsBtn">' .
                    '<i class="fas fa-undo me-2"></i>Скинути до значень за замовчуванням</button>' .
                    '<a href="' . SITE_URL . '" class="btn btn-outline-primary btn-sm ms-2" target="_blank">' .
@@ -65,7 +65,7 @@ class CustomizerPage extends AdminPage {
     }
     
     public function handle() {
-        // Обработка AJAX запросов
+        // Обробка AJAX запитів
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             $this->handleAjax();
@@ -77,7 +77,7 @@ class CustomizerPage extends AdminPage {
             Response::redirectStatic(adminUrl('customizer'));
         }
         
-        // Получение активной темы и проверка поддержки кастоматизации
+        // Отримання активної теми та перевірка підтримки кастомізації
         $activeTheme = themeManager()->getActiveTheme();
         list($supportsCustomization, $themePath) = $this->checkCustomizationSupport($activeTheme);
         
@@ -103,11 +103,11 @@ class CustomizerPage extends AdminPage {
             return;
         }
         
-        // Загрузка конфигурации темы и кастомайзера
+        // Завантаження конфігурації теми та кастомізера
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
         $customizerConfig = $this->getCustomizerConfig($themePath);
         
-        // Получение настроек темы из БД
+        // Отримання налаштувань теми з БД
         $savedSettings = themeManager()->getSettings();
         
         $defaultSettings = $themeConfig['default_settings'] ?? [];
@@ -132,7 +132,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * Сохранение настроек (для обычных POST запросов)
+     * Збереження налаштувань (для звичайних POST запитів)
      */
     private function saveSettings() {
         if (!$this->verifyCsrf()) {
@@ -147,7 +147,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * Получение изображений из медиагалереи (AJAX)
+     * Отримання зображень з медіа-галереї (AJAX)
      */
     private function getMediaImages() {
         $mediaModule = mediaModule();
@@ -175,7 +175,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * Обработка загрузки изображения (AJAX)
+     * Обробка завантаження зображення (AJAX)
      */
     private function handleUpload() {
         if (!isset($_FILES['file']) || empty($_FILES['file']['tmp_name'])) {
@@ -195,7 +195,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * Обработка AJAX запросов
+     * Обробка AJAX запитів
      */
     private function handleAjax() {
         // Використовуємо Response клас для встановлення заголовків
@@ -231,7 +231,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * AJAX сохранение всех настроек
+     * AJAX збереження всіх налаштувань
      */
     private function ajaxSaveSettings() {
         if (!$this->verifyCsrf()) {
@@ -277,7 +277,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * AJAX сохранение одной настройки
+     * AJAX збереження однієї налаштування
      */
     private function ajaxSaveSingleSetting() {
         if (!$this->verifyCsrf()) {
@@ -302,7 +302,7 @@ class CustomizerPage extends AdminPage {
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
         $availableSettings = $themeConfig['available_settings'] ?? [];
         
-        // Находим настройку в конфигурации
+        // Знаходимо налаштування в конфігурації
         $settingConfig = null;
         foreach ($availableSettings as $category => $categorySettings) {
             if (isset($categorySettings[$key])) {
@@ -316,7 +316,7 @@ class CustomizerPage extends AdminPage {
             exit;
         }
         
-        // Валидируем и сохраняем одну настройку
+        // Валідуємо та зберігаємо одну налаштування
         $validatedSettings = [];
         $validatedSettings[$key] = $this->validateSetting($key, $value, $settingConfig);
         
@@ -327,7 +327,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * AJAX сброс настроек к значениям по умолчанию
+     * AJAX скидання налаштувань до значень за замовчуванням
      */
     private function ajaxResetSettings() {
         if (!$this->verifyCsrf()) {
@@ -344,10 +344,10 @@ class CustomizerPage extends AdminPage {
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
         $defaultSettings = $themeConfig['default_settings'] ?? [];
         
-        // Удаляем все настройки темы из БД (они будут браться из default_settings)
+        // Видаляємо всі налаштування теми з БД (вони будуть братися з default_settings)
         $this->db->prepare("DELETE FROM theme_settings WHERE theme_slug = ?")->execute([$activeTheme['slug']]);
         
-        // Очищаем кеш темы
+        // Очищаємо кеш теми
         themeManager()->clearThemeCache($activeTheme['slug']);
         
         echo json_encode([
@@ -359,7 +359,7 @@ class CustomizerPage extends AdminPage {
     }
     
     /**
-     * Валидация и сохранение настроек
+     * Валідація та збереження налаштувань
      */
     private function validateAndSaveSettings($settings) {
         try {
@@ -391,14 +391,14 @@ class CustomizerPage extends AdminPage {
             
             $validatedSettings = [];
             
-            // Валидация и фильтрация настроек
+            // Валідація та фільтрація налаштувань
             foreach ($settings as $key => $value) {
-                // Проверяем, что настройка разрешена в конфигурации темы
+                // Перевіряємо, що налаштування дозволене в конфігурації теми
                 if (!in_array($key, $allowedKeys)) {
                     continue;
                 }
                 
-                // Получаем конфигурацию настройки
+                // Отримуємо конфігурацію налаштування
                 $settingConfig = null;
                 foreach ($availableSettings as $category => $categorySettings) {
                     if (isset($categorySettings[$key])) {
@@ -412,15 +412,15 @@ class CustomizerPage extends AdminPage {
                 }
                 
                 $validatedValue = $this->validateSetting($key, $value, $settingConfig);
-                // Сохраняем значение, даже если оно пустое (для текстовых полей это нормально)
+                // Зберігаємо значення, навіть якщо воно порожнє (для текстових полів це нормально)
                 $validatedSettings[$key] = $validatedValue;
             }
             
-            // Обработка чекбоксов из всех категорий (не только 'other')
+            // Обробка чекбоксів з усіх категорій (не тільки 'other')
             foreach ($availableSettings as $category => $categorySettings) {
                 foreach ($categorySettings as $key => $config) {
                     if ($config['type'] === 'checkbox') {
-                        // Если настройка не была передана, устанавливаем '0'
+                        // Якщо налаштування не було передано, встановлюємо '0'
                         if (!isset($settings[$key])) {
                             $validatedSettings[$key] = '0';
                         }
@@ -428,7 +428,7 @@ class CustomizerPage extends AdminPage {
                 }
             }
             
-            // Сохраняем настройки
+            // Зберігаємо налаштування
             if (empty($validatedSettings)) {
                     return [
                     'success' => false,
@@ -439,7 +439,7 @@ class CustomizerPage extends AdminPage {
             $result = themeManager()->setSettings($validatedSettings);
             
             if ($result) {
-                // Очищаем кеш темы
+                // Очищаємо кеш теми
                 themeManager()->clearThemeCache($activeTheme['slug']);
                 
                 return [
@@ -500,7 +500,7 @@ class CustomizerPage extends AdminPage {
                     return $value;
                 }
                 
-                // Если значение не валидно, но не пустое, пытаемся исправить (добавляем # если отсутствует)
+                // Якщо значення не валідне, але не порожнє, намагаємося виправити (додаємо # якщо відсутнє)
                 if (!empty($value) && $value[0] !== '#') {
                     $value = '#' . $value;
                     if (preg_match('/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/', $value)) {
@@ -508,7 +508,7 @@ class CustomizerPage extends AdminPage {
                     }
                 }
                 
-                // Если все еще не валидно, возвращаем значение по умолчанию
+                // Якщо все ще не валідне, повертаємо значення за замовчуванням
                 $activeTheme = themeManager()->getActiveTheme();
                 if ($activeTheme) {
                     $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
@@ -524,13 +524,13 @@ class CustomizerPage extends AdminPage {
                 if (isset($options[$value])) {
                     return $value;
                 } elseif (!empty($options)) {
-                    // Если значение не найдено, возвращаем первое доступное
+                    // Якщо значення не знайдено, повертаємо перше доступне
                     return array_key_first($options);
                 }
-                return $value; // Возвращаем значение, даже если опций нет
+                return $value; // Повертаємо значення, навіть якщо опцій немає
                 
             case 'checkbox':
-                // Чекбоксы всегда возвращают '1' или '0'
+                // Чекбокси завжди повертають '1' або '0'
                 if ($value === true || $value === 'true' || $value === '1' || $value === 1) {
                     return '1';
                 }
@@ -538,11 +538,11 @@ class CustomizerPage extends AdminPage {
                 
             case 'media':
                 $value = sanitizeInput($value);
-                // Для media разрешаем пустые значения и любые строки, которые похожи на URL или путь
+                // Для media дозволяємо порожні значення та будь-які рядки, які схожі на URL або шлях
                 if (empty($value)) {
                     return '';
                 }
-                // Проверяем, что это похоже на URL или путь
+                // Перевіряємо, що це схоже на URL або шлях
                 if (filter_var($value, FILTER_VALIDATE_URL) || 
                     (strpos($value, '/') === 0) || 
                     (strpos($value, 'http') === 0) ||

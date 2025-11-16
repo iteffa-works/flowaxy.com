@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница редактора темы
+ * Сторінка редактора теми
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -37,10 +37,10 @@ class ThemeEditorPage extends AdminPage {
         
         $themePath = themeManager()->getThemePath($themeSlug);
         
-        // Получаем список файлов темы
+        // Отримуємо список файлів теми
         $themeFiles = $this->getThemeFiles($themePath);
         
-        // Рендерим страницу
+        // Рендеримо сторінку
         $this->render([
             'theme' => $theme,
             'themePath' => $themePath,
@@ -50,7 +50,7 @@ class ThemeEditorPage extends AdminPage {
     }
     
     /**
-     * Получение списка файлов темы
+     * Отримання списку файлів теми
      */
     private function getThemeFiles(string $themePath): array {
         $files = [];

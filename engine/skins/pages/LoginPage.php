@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница входа в админку
+ * Сторінка входу в адмінку
  */
 
 class LoginPage {
@@ -17,17 +17,17 @@ class LoginPage {
     }
     
     public function handle() {
-        // Обработка формы входа
+        // Обробка форми входу
         if ($_POST) {
             $this->processLogin();
         }
         
-        // Рендерим страницу
+        // Рендеримо сторінку
         $this->render();
     }
     
     /**
-     * Обработка входа
+     * Обробка входу
      */
     private function processLogin() {
         if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
@@ -68,7 +68,7 @@ class LoginPage {
     }
     
     /**
-     * Рендеринг страницы
+     * Рендеринг сторінки
      */
     private function render() {
         $error = $this->error;

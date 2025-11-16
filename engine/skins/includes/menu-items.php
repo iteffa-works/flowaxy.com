@@ -1,20 +1,20 @@
 <?php
 /**
- * Универсальные пункты меню для sidebar и мобильного меню
- * Возвращает массив пунктов меню
+ * Універсальні пункти меню для sidebar та мобільного меню
+ * Повертає масив пунктів меню
  */
 
 /**
- * Проверка поддержки кастоматизации активной темой
- * Использует оптимизированный метод ThemeManager
+ * Перевірка підтримки кастомізації активною темою
+ * Використовує оптимізований метод ThemeManager
  */
 function themeSupportsCustomization() {
     return themeManager()->supportsCustomization();
 }
 
 /**
- * Проверка поддержки навигации активной темой
- * Использует оптимизированный метод ThemeManager
+ * Перевірка підтримки навігації активною темою
+ * Використовує оптимізований метод ThemeManager
  */
 function themeSupportsNavigation() {
     return themeManager()->supportsNavigation();
@@ -35,7 +35,7 @@ function getMenuItems() {
     
     return cache_remember($cacheKey, function() use ($supportsCustomization, $supportsNavigation) {
     
-    // Формируем подменю "Дизайн"
+    // Формуємо підменю "Дизайн"
     $designSubmenu = [
         [
             'href' => adminUrl('themes'),
@@ -45,7 +45,7 @@ function getMenuItems() {
         ]
     ];
     
-    // Добавляем пункт кастоматизации только если тема поддерживает
+    // Додаємо пункт кастомізації тільки якщо тема підтримує
     if ($supportsCustomization) {
         $designSubmenu[] = [
             'href' => adminUrl('customizer'),
@@ -55,7 +55,7 @@ function getMenuItems() {
         ];
     }
     
-    // Добавляем пункт навигации только если тема поддерживает
+    // Додаємо пункт навігації тільки якщо тема підтримує
     if ($supportsNavigation) {
         $designSubmenu[] = [
             'href' => adminUrl('menus'),
@@ -111,24 +111,24 @@ function getMenuItems() {
         ]
     ];
     
-    // Применяем хук для добавления пунктов меню от плагинов
-    // Модули загрузятся только один раз при первом вызове
+    // Застосовуємо хук для додавання пунктів меню від плагінів
+    // Модулі завантажаться тільки один раз при першому виклику
     $menu = doHook('admin_menu', $menu);
     
-    // Сортируем по order
+    // Сортуємо по order
     usort($menu, function($a, $b) {
         $orderA = $a['order'] ?? 50;
         $orderB = $b['order'] ?? 50;
         return $orderA - $orderB;
     });
     
-        // Возвращаем меню
+        // Повертаємо меню
         return $menu;
-    }, 3600); // Кешируем на 1 час (меню меняется редко, только при изменении плагинов или темы)
+    }, 3600); // Кешуємо на 1 годину (меню змінюється рідко, тільки при зміні плагінів або теми)
 }
 
 /**
- * Рендерит пункт меню
+ * Рендерить пункт меню
  */
 function renderMenuItem($item, $currentPage, $isMobile = false) {
     $isActive = isset($item['page']) && $currentPage === $item['page'];
@@ -136,7 +136,7 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
     $target = isset($item['target']) ? ' target="' . $item['target'] . '"' : '';
     
     if ($hasSubmenu) {
-        // Меню с субменю (одинаково для десктопа и мобильных)
+        // Меню з підменю (однаково для десктопу та мобільних)
         $activeClass = '';
         if (isset($item['submenu'])) {
             foreach ($item['submenu'] as $subItem) {
@@ -149,7 +149,7 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
         if ($isActive) $activeClass = 'active';
         
         if ($isMobile) {
-            // Мобильная версия с субменю
+            // Мобільна версія з підменю
             echo '<div class="nav-item has-submenu">';
             echo '<a class="nav-link submenu-toggle ' . $activeClass . '" href="#" onclick="toggleSubmenu(this, event)">';
             echo '<i class="' . ($item['icon'] ?? '') . '"></i>';
@@ -165,7 +165,7 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             echo '</div>';
             echo '</div>';
         } else {
-            // Десктопная версия с субменю
+            // Десктопна версія з підменю
             echo '<li class="nav-item has-submenu">';
             echo '<a class="nav-link submenu-toggle ' . $activeClass . '" href="#" onclick="toggleSubmenu(this, event)">';
             echo '<i class="' . ($item['icon'] ?? '') . '"></i>';
@@ -182,7 +182,7 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             echo '</li>';
         }
     } else {
-        // Обычный пункт меню (без субменю)
+        // Звичайний пункт меню (без підменю)
         $activeClass = $isActive ? 'active' : '';
         if ($isMobile) {
             echo '<a class="nav-link ' . $activeClass . '" href="' . $item['href'] . '"' . $target . '>';

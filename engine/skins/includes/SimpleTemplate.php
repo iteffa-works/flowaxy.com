@@ -1,7 +1,7 @@
 <?php
 /**
- * Простой шаблонизатор без сложностей
- * Только основные функции без MVC
+ * Простий шаблонізатор без складностей
+ * Тільки основні функції без MVC
  */
 class SimpleTemplate {
     private $templateDir;
@@ -12,21 +12,21 @@ class SimpleTemplate {
     }
     
     /**
-     * Рендерит шаблон
+     * Рендерить шаблон
      */
     public function render($template, $data = []) {
-        // Объединяем данные
+        // Об'єднуємо дані
         $this->data = array_merge($this->data, $data);
         
-        // Извлекаем переменные
+        // Витягуємо змінні
         extract($this->data);
         
-        // Подключаем базовый layout
+        // Підключаємо базовий layout
         include $this->templateDir . 'layout/base.php';
     }
     
     /**
-     * Получает контент шаблона (використовує View клас)
+     * Отримує контент шаблону (використовує View клас)
      */
     public function getContent($templateName, $data = []) {
         $templateData = array_merge($this->data, $data);
@@ -50,7 +50,7 @@ class SimpleTemplate {
     }
     
     /**
-     * Рендерит компонент
+     * Рендерить компонент
      */
     public function component($component, $data = []) {
         $componentData = array_merge($this->data, $data);
@@ -63,7 +63,7 @@ class SimpleTemplate {
     }
     
     /**
-     * Добавляет данные
+     * Додає дані
      */
     public function assign($key, $value) {
         $this->data[$key] = $value;
@@ -71,14 +71,14 @@ class SimpleTemplate {
     }
     
     /**
-     * Экранирует HTML (використовує Security клас)
+     * Екранує HTML (використовує Security клас)
      */
     public function escape($string) {
         return Security::clean($string);
     }
     
     /**
-     * Форматирует дату
+     * Форматує дату
      */
     public function formatDate($date, $format = 'd.m.Y H:i') {
         if (is_string($date)) {
@@ -88,7 +88,7 @@ class SimpleTemplate {
     }
     
     /**
-     * Форматирует число
+     * Форматує число
      */
     public function formatNumber($number, $decimals = 0) {
         return number_format((float)$number, $decimals, ',', ' ');
@@ -96,7 +96,7 @@ class SimpleTemplate {
 }
 
 /**
- * Глобальная функция для рендеринга
+ * Глобальна функція для рендерингу
  */
 function renderTemplate($template, $data = []) {
     $engine = new SimpleTemplate();

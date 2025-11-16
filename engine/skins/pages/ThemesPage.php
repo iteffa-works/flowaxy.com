@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления темами
+ * Сторінка керування темами
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -26,42 +26,42 @@ class ThemesPage extends AdminPage {
     }
     
     public function handle() {
-        // Обработка AJAX запросов
+        // Обробка AJAX запитів
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             $this->handleAjax();
             return;
         }
         
-        // Обработка активации темы
+        // Обробка активації теми
         if ($_POST && isset($_POST['activate_theme'])) {
             $this->activateTheme();
         }
         
-        // Очищаем кеш тем для получения актуальной информации об активности
+        // Очищаємо кеш тем для отримання актуальної інформації про активність
         themeManager()->clearThemeCache();
         
-        // Получение всех тем
+        // Отримання всіх тем
         $themes = themeManager()->getAllThemes();
         $activeTheme = themeManager()->getActiveTheme();
         
-        // Проверяем поддержку кастоматизации для каждой темы (из theme.json или customizer.php)
+        // Перевіряємо підтримку кастомізації для кожної теми (з theme.json або customizer.php)
         $themesWithCustomization = [];
         foreach ($themes as $theme) {
-            // Используем supports_customization из theme.json, если есть
+            // Використовуємо supports_customization з theme.json, якщо є
             if (isset($theme['supports_customization'])) {
                 $themesWithCustomization[$theme['slug']] = (bool)$theme['supports_customization'];
             } else {
-                // Fallback: проверяем наличие customizer.php
+                // Fallback: перевіряємо наявність customizer.php
                 $themePath = themeManager()->getThemePath($theme['slug']);
                 $themesWithCustomization[$theme['slug']] = file_exists($themePath . 'customizer.php');
             }
         }
         
-        // Проверяем поддержку кастоматизации активной темы
+        // Перевіряємо підтримку кастомізації активної теми
         $activeThemeSupportsCustomization = $activeTheme ? ($themesWithCustomization[$activeTheme['slug']] ?? false) : false;
         
-        // Рендерим страницу
+        // Рендеримо сторінку
         $this->render([
             'themes' => $themes,
             'activeTheme' => $activeTheme,
@@ -71,7 +71,7 @@ class ThemesPage extends AdminPage {
     }
     
     /**
-     * Активация темы
+     * Активація теми
      */
     private function activateTheme() {
         if (!$this->verifyCsrf()) {
@@ -110,7 +110,7 @@ class ThemesPage extends AdminPage {
     }
     
     /**
-     * Обработка AJAX запросов
+     * Обробка AJAX запитів
      */
     private function handleAjax() {
         // Використовуємо Response клас для встановлення заголовків
@@ -134,7 +134,7 @@ class ThemesPage extends AdminPage {
     }
     
     /**
-     * AJAX активация темы с компиляцией SCSS
+     * AJAX активація теми з компіляцією SCSS
      */
     private function ajaxActivateTheme() {
         if (!$this->verifyCsrf()) {
@@ -149,14 +149,14 @@ class ThemesPage extends AdminPage {
             exit;
         }
         
-        // Проверяем, поддерживает ли тема SCSS
+        // Перевіряємо, чи підтримує тема SCSS
         $hasScssSupport = themeManager()->hasScssSupport($themeSlug);
         
-        // Компилируем SCSS перед активацией, если тема поддерживает SCSS
+        // Компілюємо SCSS перед активацією, якщо тема підтримує SCSS
         if ($hasScssSupport) {
             $compileResult = themeManager()->compileScss($themeSlug, true);
             if (!$compileResult) {
-                // Предупреждаем, но не блокируем активацию
+                // Попереджаємо, але не блокуємо активацію
                 error_log("ThemeManager: SCSS compilation failed for theme: {$themeSlug}");
             }
         }
@@ -195,7 +195,7 @@ class ThemesPage extends AdminPage {
     }
     
     /**
-     * AJAX проверка статуса компиляции
+     * AJAX перевірка статусу компіляції
      */
     private function ajaxCheckCompilation() {
         $themeSlug = sanitizeInput($_GET['theme_slug'] ?? '');

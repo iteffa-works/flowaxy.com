@@ -1,6 +1,6 @@
 <?php
 /**
- * Модуль управления медиафайлами
+ * Модуль керування медіафайлами
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-// BaseModule теперь загружается через автозагрузчик из base/BaseModule.php
+// BaseModule тепер завантажується через автозавантажувач з base/BaseModule.php
 
 class Media extends BaseModule {
     private $uploadsDir;
@@ -31,7 +31,7 @@ class Media extends BaseModule {
     private $maxFileSize = 10485760;
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
         $this->uploadsDir = rtrim(UPLOADS_DIR, '/') . '/';
@@ -41,21 +41,21 @@ class Media extends BaseModule {
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Регистрация пункта меню в админке
+        // Реєстрація пункту меню в адмінці
         addHook('admin_menu', [$this, 'addAdminMenuItem']);
         
-        // Регистрация страницы админки
+        // Реєстрація сторінки адмінки
         addHook('admin_register_routes', [$this, 'registerAdminRoute']);
     }
     
     /**
-     * Добавление пункта меню в админку
+     * Додавання пункту меню в адмінку
      * 
-     * @param array $menu Текущее меню
-     * @return array Обновленное меню
+     * @param array $menu Поточне меню
+     * @return array Оновлене меню
      */
     public function addAdminMenuItem(array $menu): array {
         $menu[] = [
@@ -69,13 +69,13 @@ class Media extends BaseModule {
     }
     
     /**
-     * Регистрация маршрута админки
+     * Реєстрація маршруту адмінки
      * 
-     * @param Router|null $router Роутер админки
+     * @param Router|null $router Роутер адмінки
      */
     public function registerAdminRoute($router): void {
         if ($router === null) {
-            return; // Роутер еще не создан
+            return; // Роутер ще не створено
         }
         
         require_once dirname(__DIR__) . '/skins/pages/MediaPage.php';
@@ -83,33 +83,33 @@ class Media extends BaseModule {
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      * 
      * @return array
      */
     public function getInfo(): array {
         return [
             'name' => 'Media',
-            'title' => 'Медиафайлы',
-            'description' => 'Управление медиафайлами системы',
+            'title' => 'Медіафайли',
+            'description' => 'Керування медіафайлами системи',
             'version' => '1.0.0',
             'author' => 'Flowaxy CMS'
         ];
     }
     
     /**
-     * Получение API методов модуля
+     * Отримання API методів модуля
      * 
      * @return array
      */
     public function getApiMethods(): array {
         return [
-            'uploadFile' => 'Загрузка файла',
-            'deleteFile' => 'Удаление файла',
-            'getFile' => 'Получение файла по ID',
-            'getFiles' => 'Получение списка файлов с фильтрацией',
-            'updateFile' => 'Обновление информации о файле',
-            'getStats' => 'Получение статистики медиа'
+            'uploadFile' => 'Завантаження файлу',
+            'deleteFile' => 'Видалення файлу',
+            'getFile' => 'Отримання файлу за ID',
+            'getFiles' => 'Отримання списку файлів з фільтрацією',
+            'updateFile' => 'Оновлення інформації про файл',
+            'getStats' => 'Отримання статистики медіа'
         ];
     }
     
@@ -591,12 +591,12 @@ class Media extends BaseModule {
  * @return Media
  */
 function mediaModule() {
-    // Загружаем модуль по требованию
+    // Завантажуємо модуль за вимогою
     if (!class_exists('Media')) {
         require_once dirname(__DIR__) . '/modules/Media.php';
     }
     
-    // Убеждаемся, что модуль загружен через ModuleLoader
+    // Переконуємося, що модуль завантажено через ModuleLoader
     if (!ModuleLoader::isModuleLoaded('Media')) {
         ModuleLoader::loadModule('Media');
     }

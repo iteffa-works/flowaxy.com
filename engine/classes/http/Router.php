@@ -64,8 +64,8 @@ class Router {
         
         $route = [
             'methods' => $methods,
-            'path' => trim($path, '/'), // Сохраняем оригинальный путь без слэшей для точного сравнения
-            'normalizedPath' => $this->normalizePath($path), // Нормализованный путь для паттерна
+            'path' => trim($path, '/'), // Зберігаємо оригінальний шлях без слешів для точного порівняння
+            'normalizedPath' => $this->normalizePath($path), // Нормалізований шлях для паттерну
             'handler' => $handler,
             'middleware' => $options['middleware'] ?? [],
             'name' => $options['name'] ?? null,
@@ -152,10 +152,10 @@ class Router {
         // Завантаження маршрутів з модулів
         $this->loadModuleRoutes();
         
-        // Завантаження маршрутів з теми (перед хуком, чтобы тема могла перезаписать дефолтные маршруты)
+        // Завантаження маршрутів з теми (перед хуком, щоб тема могла перезаписати дефолтні маршрути)
         $this->loadThemeRoutes();
         
-        // Завантаження маршрутів з плагінів через хук (последним, чтобы плагины могли перезаписать маршруты темы)
+        // Завантаження маршрутів з плагінів через хук (останнім, щоб плагіни могли перезаписати маршрути теми)
         doHook('register_routes', $this);
     }
     
@@ -173,7 +173,7 @@ class Router {
      */
     private function loadThemeRoutes(): void {
         // Завантажуємо Cache перед використанням функції cache_remember()
-        // Router находится в engine/classes/http/, а Cache в engine/classes/data/
+        // Router знаходиться в engine/classes/http/, а Cache в engine/classes/data/
         if (!class_exists('Cache') && !function_exists('cache_remember')) {
             $cacheFile = __DIR__ . '/../data/Cache.php';
             if (file_exists($cacheFile)) {
@@ -192,7 +192,7 @@ class Router {
             return;
         }
         
-        // Передаем slug темы, а не весь массив
+        // Передаємо slug теми, а не весь масив
         $themePath = $themeManager->getThemePath($activeTheme['slug']);
         if (empty($themePath)) {
             return;
@@ -223,20 +223,20 @@ class Router {
             $basePath = rtrim($this->basePath, '/');
             if (strpos($uri, $basePath) === 0) {
                 $uri = substr($uri, strlen($basePath));
-                // Нормализуем URI: убираем лишние слэши
+                // Нормалізуємо URI: прибираємо зайві слеші
                 $uri = '/' . ltrim($uri, '/');
-                // Если остался только слэш, возвращаем пустую строку
+                // Якщо залишився тільки слеш, повертаємо порожній рядок
                 if ($uri === '/') {
                     $uri = '';
                 }
             }
         } else if ($this->basePath === '/') {
-            // Для фронтенда базовый путь '/', просто нормализуем URI
-            // Убираем начальный слэш, если он есть
+            // Для фронтенду базовий шлях '/', просто нормалізуємо URI
+            // Прибираємо початковий слеш, якщо він є
             $uri = ltrim($uri, '/');
         }
         
-        // Видаляємо index.php (включая случаи с путями типа /index.php/path)
+        // Видаляємо index.php (включаючи випадки з шляхами типу /index.php/path)
         $uri = preg_replace('#^/?index\.php(/.*)?$#', '$1', $uri);
         $uri = ltrim($uri, '/');
         
@@ -245,8 +245,8 @@ class Router {
             $uri = $matches[1];
         }
         
-        // Возвращаем путь без начальных и конечных слэшей для точного сравнения
-        // Для пустого пути возвращаем пустую строку, для остальных - путь без слэшей
+        // Повертаємо шлях без початкових і кінцевих слешів для точного порівняння
+        // Для порожнього шляху повертаємо порожній рядок, для інших - шлях без слешів
         return trim($uri, '/');
     }
     
@@ -258,7 +258,7 @@ class Router {
         // Просто нормалізуємо шлях без додавання базового шляху
         // Базовий шлях видаляється з URI в getCurrentUri(), а не додається до паттерну
         $path = trim($path, '/');
-        // Для пустого пути возвращаем пустую строку, для остальных - путь со слэшем
+        // Для порожнього шляху повертаємо порожній рядок, для інших - шлях зі слешем
         return empty($path) ? '' : '/' . $path;
     }
     
@@ -282,7 +282,7 @@ class Router {
             return '/^\/?$/';
         }
         
-        // Убираем начальный слэш для паттерна, так как он будет добавлен в uriPath
+        // Прибираємо початковий слеш для паттерну, оскільки він буде доданий в uriPath
         $normalizedPath = ltrim($normalizedPath, '/');
         
         $pattern = preg_quote($normalizedPath, '/');
@@ -301,7 +301,7 @@ class Router {
         $uri = $this->getCurrentUri();
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         
-        // Сначала проверяем, есть ли маршрут для пустого пути
+        // Спочатку перевіряємо, чи є маршрут для порожнього шляху
         $hasEmptyRoute = false;
         foreach ($this->routes as $route) {
             if (($route['path'] === '' || empty($route['path'])) && in_array($method, $route['methods'])) {
@@ -310,7 +310,7 @@ class Router {
             }
         }
         
-        // Если пути пустой и нет маршрута для пустого пути, используем маршрут за замовчуванням
+        // Якщо шлях порожній і немає маршруту для порожнього шляху, використовуємо маршрут за замовчуванням
         if (empty($uri) && !$hasEmptyRoute && $this->defaultRoute !== null) {
             $uri = $this->defaultRoute;
         }
@@ -327,8 +327,8 @@ class Router {
             // Для порожнього URI використовуємо '/', для інших - '/path'
             $uriPath = empty($uri) ? '/' : '/' . $uri;
             
-            // Сначала проверяем точное совпадение пути (быстрее чем regex)
-            // route['path'] теперь хранится без слэшей, так же как и $uri
+            // Спочатку перевіряємо точне співпадіння шляху (швидше ніж regex)
+            // route['path'] тепер зберігається без слешів, так само як і $uri
             if ($route['path'] === $uri) {
                 // Виконання middleware
                 if (!$this->runMiddlewares($route['middleware'], $params)) {
@@ -350,7 +350,7 @@ class Router {
                 return $this->executeHandler($route['handler'], $params);
             }
             
-            // Используем regex pattern для маршрутов с параметрами
+            // Використовуємо regex pattern для маршрутів з параметрами
             if (preg_match($route['pattern'], $uriPath, $matches)) {
                 // Витягування параметрів
                 foreach ($route['params'] as $param) {
@@ -370,7 +370,7 @@ class Router {
         }
         
         // Маршрут не знайдено
-        // Для отладки (можно убрать после тестирования)
+        // Для відлагодження (можна прибрати після тестування)
         // error_log("Router::dispatch() - Route not found. URI: {$uri}, Method: {$method}, BasePath: {$this->basePath}, Routes count: " . count($this->routes));
         $this->show404();
         return false;
@@ -455,7 +455,7 @@ class Router {
     public function url(string $routeName, array $params = []): ?string {
         foreach ($this->routes as $route) {
             if ($route['name'] === $routeName) {
-                // Используем normalizedPath для генерации URL, чтобы сохранить структуру с параметрами
+                // Використовуємо normalizedPath для генерації URL, щоб зберегти структуру з параметрами
                 $url = isset($route['normalizedPath']) ? trim($route['normalizedPath'], '/') : $route['path'];
                 foreach ($params as $key => $value) {
                     $url = str_replace('{' . $key . '}', $value, $url);

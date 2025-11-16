@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница настроек
+ * Сторінка налаштувань
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -21,22 +21,22 @@ class SettingsPage extends AdminPage {
     }
     
     public function handle() {
-        // Обработка сохранения
+        // Обробка збереження
         if ($_POST && isset($_POST['save_settings'])) {
             $this->saveSettings();
         }
         
-        // Получение настроек
+        // Отримання налаштувань
         $settings = $this->getSettings();
         
-        // Рендерим страницу
+        // Рендеримо сторінку
         $this->render([
             'settings' => $settings
         ]);
     }
     
     /**
-     * Сохранение настроек
+     * Збереження налаштувань
      */
     private function saveSettings() {
         if (!$this->verifyCsrf()) {
@@ -58,7 +58,7 @@ class SettingsPage extends AdminPage {
             }
             
             $this->db->commit();
-            // Очищаем кеш настроек сайта
+            // Очищаємо кеш налаштувань сайту
             cache_forget('site_settings');
             $this->setMessage('Налаштування успішно збережено', 'success');
         } catch (Exception $e) {
@@ -69,7 +69,7 @@ class SettingsPage extends AdminPage {
     }
     
     /**
-     * Получение настроек
+     * Отримання налаштувань
      */
     private function getSettings() {
         $settings = [];
@@ -88,7 +88,7 @@ class SettingsPage extends AdminPage {
             error_log("Settings load error: " . $e->getMessage());
         }
         
-        // Значения по умолчанию
+        // Значення за замовчуванням
         $defaultSettings = [
             'site_name' => 'Landing CMS',
             'site_tagline' => 'Сучасна система керування контентом',

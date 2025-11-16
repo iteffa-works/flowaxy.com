@@ -1,6 +1,6 @@
 <?php
 /**
- * Загрузчик системных модулей
+ * Завантажувач системних модулів
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -14,18 +14,18 @@ class ModuleLoader {
     private static $initialized = false;
     
     /**
-     * Инициализация загрузчика
-     * Загружает только критически важные модули, остальные загружаются по требованию
+     * Ініціалізація завантажувача
+     * Завантажує тільки критично важливі модулі, інші завантажуються за вимогою
      */
     public static function init(): void {
         if (self::$initialized) {
-            return; // Уже инициализирован
+            return; // Вже ініціалізовано
         }
         
         self::$modulesDir = __DIR__;
         
-        // Загружаем только критически важные модули, которые нужны для работы системы
-        $criticalModules = ['PluginManager']; // Модули, которые нужно загрузить сразу
+        // Завантажуємо тільки критично важливі модулі, які потрібні для роботи системи
+        $criticalModules = ['PluginManager']; // Модулі, які потрібно завантажити одразу
         
         foreach ($criticalModules as $moduleName) {
             self::loadModule($moduleName);
@@ -35,41 +35,41 @@ class ModuleLoader {
     }
     
     /**
-     * Ленивая загрузка модуля по требованию
+     * Ліниве завантаження модуля за вимогою
      * 
-     * @param string $moduleName Имя модуля
+     * @param string $moduleName Ім'я модуля
      * @return BaseModule|null
      */
     public static function loadModule(string $moduleName): ?BaseModule {
-        // Если модуль уже загружен, возвращаем его
+        // Якщо модуль вже завантажено, повертаємо його
         if (isset(self::$loadedModules[$moduleName])) {
             return self::$loadedModules[$moduleName];
         }
         
-        // Пропускаем служебные файлы
+        // Пропускаємо службові файли
         if ($moduleName === 'loader' || $moduleName === 'compatibility') {
             return null;
         }
         
-        // Проверяем, что директория модулей определена
+        // Перевіряємо, що директорія модулів визначена
         if (empty(self::$modulesDir)) {
             self::$modulesDir = __DIR__;
         }
         
         $moduleFile = self::$modulesDir . '/' . $moduleName . '.php';
         
-        // Проверяем существование файла модуля
+        // Перевіряємо існування файлу модуля
         if (!file_exists($moduleFile)) {
             error_log("Module file not found: {$moduleFile}");
             return null;
         }
         
-        // Загружаем модуль
+        // Завантажуємо модуль
         return self::loadModuleFile($moduleFile, $moduleName);
     }
     
     /**
-     * Загрузка всех модулей (для совместимости и отладки)
+     * Завантаження всіх модулів (для сумісності та відлагодження)
      */
     private static function loadAllModules(): void {
         $modules = glob(self::$modulesDir . '/*.php');
@@ -78,7 +78,7 @@ class ModuleLoader {
             foreach ($modules as $moduleFile) {
                 $moduleName = basename($moduleFile, '.php');
                 
-                // Пропускаем служебные файлы и уже загруженные модули
+                // Пропускаємо службові файли та вже завантажені модулі
                 if ($moduleName === 'loader' || $moduleName === 'compatibility' || isset(self::$loadedModules[$moduleName])) {
                     continue;
                 }
@@ -89,18 +89,18 @@ class ModuleLoader {
     }
     
     /**
-     * Загрузка файла модуля
+     * Завантаження файлу модуля
      */
     private static function loadModuleFile(string $moduleFile, string $moduleName): ?BaseModule {
         try {
-            // Убеждаемся, что BaseModule загружен (автозагрузчик должен загрузить)
+            // Переконуємося, що BaseModule завантажено (автозавантажувач має завантажити)
             if (!class_exists('BaseModule')) {
-                // Пробуем загрузить из новой структуры
+                // Пробуємо завантажити з нової структури
                 $baseModuleFile = dirname(self::$modulesDir) . '/classes/base/BaseModule.php';
                 if (file_exists($baseModuleFile)) {
                     require_once $baseModuleFile;
                 } else {
-                    // Обратная совместимость - старая структура
+                    // Зворотна сумісність - стара структура
                     $baseModuleFile = dirname(self::$modulesDir) . '/classes/BaseModule.php';
                     if (file_exists($baseModuleFile)) {
                         require_once $baseModuleFile;
@@ -110,7 +110,7 @@ class ModuleLoader {
             
             require_once $moduleFile;
             
-            // Проверяем, что класс существует
+            // Перевіряємо, що клас існує
             if (!class_exists($moduleName)) {
                 error_log("Module class {$moduleName} not found after loading file: {$moduleFile}");
                 return null;
@@ -118,14 +118,14 @@ class ModuleLoader {
             
             $module = $moduleName::getInstance();
             
-            // Регистрируем хуки модуля
+            // Реєструємо хуки модуля
             if (method_exists($module, 'registerHooks')) {
                 $module->registerHooks();
             }
             
             self::$loadedModules[$moduleName] = $module;
             
-            // Логируем загрузку модуля через хук (если доступен)
+            // Логуємо завантаження модуля через хук (якщо доступний)
             if (function_exists('doHook')) {
                 doHook('module_loaded', $moduleName);
             }
@@ -145,9 +145,9 @@ class ModuleLoader {
     }
     
     /**
-     * Получение загруженного модуля
+     * Отримання завантаженого модуля
      * 
-     * @param string $moduleName Имя модуля
+     * @param string $moduleName Ім'я модуля
      * @return BaseModule|null
      */
     public static function getModule(string $moduleName): ?BaseModule {
@@ -155,13 +155,13 @@ class ModuleLoader {
     }
     
     /**
-     * Получение списка всех загруженных модулей
+     * Отримання списку всіх завантажених модулів
      * 
-     * @param bool $loadAll Если true, загружает все модули (для отладки)
+     * @param bool $loadAll Якщо true, завантажує всі модулі (для відлагодження)
      * @return array
      */
     public static function getLoadedModules(bool $loadAll = false): array {
-        // Если запрошена загрузка всех модулей (для отладки/админки)
+        // Якщо запрошено завантаження всіх модулів (для відлагодження/адмінки)
         if ($loadAll && self::$initialized) {
             self::loadAllModules();
         }
@@ -170,9 +170,9 @@ class ModuleLoader {
     }
     
     /**
-     * Проверка, загружен ли модуль
+     * Перевірка, чи завантажено модуль
      * 
-     * @param string $moduleName Имя модуля
+     * @param string $moduleName Ім'я модуля
      * @return bool
      */
     public static function isModuleLoaded(string $moduleName): bool {

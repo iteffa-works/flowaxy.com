@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с конфигурациями сайта
- * Управление конфигурационными файлами в директории engine/data
+ * Клас для роботи з конфігураціями сайту
+ * Керування конфігураційними файлами в директорії engine/data
  * 
  * @package Engine\Classes
  * @version 1.0.0
@@ -16,9 +16,9 @@ class Config {
     private const DEFAULT_EXTENSION = '.json';
     
     /**
-     * Конструктор (приватный для Singleton)
+     * Конструктор (приватний для Singleton)
      * 
-     * @param string|null $configDir Директория для конфигураций
+     * @param string|null $configDir Директорія для конфігурацій
      */
     private function __construct(?string $configDir = null) {
         $this->configDir = $configDir ?? dirname(__DIR__) . '/data/';
@@ -27,7 +27,7 @@ class Config {
     }
     
     /**
-     * Получение экземпляра класса (Singleton)
+     * Отримання екземпляра класу (Singleton)
      * 
      * @return self
      */
@@ -39,7 +39,7 @@ class Config {
     }
     
     /**
-     * Создание директории конфигураций
+     * Створення директорії конфігурацій
      * 
      * @return void
      */
@@ -48,7 +48,7 @@ class Config {
             @mkdir($this->configDir, 0755, true);
         }
         
-        // Создаем .htaccess для защиты (використовуємо File клас)
+        // Створюємо .htaccess для захисту (використовуємо File клас)
         $htaccessFile = $this->configDir . '.htaccess';
         $file = new File($htaccessFile);
         if (!$file->exists()) {
@@ -59,7 +59,7 @@ class Config {
             }
         }
         
-        // Создаем .gitkeep для git (використовуємо File клас)
+        // Створюємо .gitkeep для git (використовуємо File клас)
         $gitkeepFile = $this->configDir . '.gitkeep';
         $gitkeep = new File($gitkeepFile);
         if (!$gitkeep->exists()) {
@@ -72,19 +72,19 @@ class Config {
     }
     
     /**
-     * Получение значения конфигурации
+     * Отримання значення конфігурації
      * 
-     * @param string $key Ключ конфигурации (может быть в формате "config.key" или "config.section.key")
-     * @param mixed $default Значение по умолчанию
-     * @param string|null $extension Расширение файла (.json или .ini)
+     * @param string $key Ключ конфігурації (може бути в форматі "config.key" або "config.section.key")
+     * @param mixed $default Значення за замовчуванням
+     * @param string|null $extension Розширення файлу (.json або .ini)
      * @return mixed
      */
     public function get(string $key, $default = null, ?string $extension = null) {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
-        // Разбираем ключ
+        // Розбираємо ключ
         if (strpos($key, '.') === false) {
-            // Если ключ без точки, значит это имя конфига
+            // Якщо ключ без точки, значить це ім'я конфігу
             $configName = $key;
             $path = null;
         } else {
@@ -93,7 +93,7 @@ class Config {
             $path = $parts[1] ?? null;
         }
         
-        // Загружаем конфигурацию, если её нет в памяти
+        // Завантажуємо конфігурацію, якщо її немає в пам'яті
         if (!isset($this->loadedConfigs[$configName])) {
             $this->loadConfig($configName, $extension);
         }
@@ -101,57 +101,57 @@ class Config {
         $config = $this->loadedConfigs[$configName];
         
         if ($path === null) {
-            // Возвращаем весь конфиг
+            // Повертаємо весь конфіг
             return $config;
         }
         
-        // Получаем значение по пути
+        // Отримуємо значення за шляхом
         return $this->getValueByPath($config, $path, $default);
     }
     
     /**
-     * Установка значения конфигурации
+     * Встановлення значення конфігурації
      * 
-     * @param string $key Ключ конфигурации
-     * @param mixed $value Значение
-     * @param string|null $extension Расширение файла
+     * @param string $key Ключ конфігурації
+     * @param mixed $value Значення
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function set(string $key, $value, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
-        // Разбираем ключ
+        // Розбираємо ключ
         if (strpos($key, '.') === false) {
-            throw new Exception("Для установки значения требуется указать путь (например, 'config.key')");
+            throw new Exception("Для встановлення значення потрібно вказати шлях (наприклад, 'config.key')");
         }
         
         $parts = explode('.', $key, 2);
         $configName = $parts[0];
         $path = $parts[1];
         
-        // Загружаем конфигурацию, если её нет в памяти
+        // Завантажуємо конфігурацію, якщо її немає в пам'яті
         if (!isset($this->loadedConfigs[$configName])) {
             $this->loadConfig($configName, $extension);
         }
         
-        // Устанавливаем значение по пути
+        // Встановлюємо значення за шляхом
         $this->setValueByPath($this->loadedConfigs[$configName], $path, $value);
         
-        // Сохраняем конфигурацию
+        // Зберігаємо конфігурацію
         return $this->saveConfig($configName, $extension);
     }
     
     /**
-     * Проверка наличия ключа в конфигурации
+     * Перевірка наявності ключа в конфігурації
      * 
-     * @param string $key Ключ конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $key Ключ конфігурації
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function has(string $key, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
-        // Разбираем ключ
+        // Розбираємо ключ
         if (strpos($key, '.') === false) {
             $configName = $key;
             $path = null;
@@ -161,7 +161,7 @@ class Config {
             $path = $parts[1] ?? null;
         }
         
-        // Загружаем конфигурацию, если её нет в памяти
+        // Завантажуємо конфігурацію, якщо її немає в пам'яті
         if (!isset($this->loadedConfigs[$configName])) {
             $this->loadConfig($configName, $extension);
         }
@@ -175,40 +175,40 @@ class Config {
     }
     
     /**
-     * Удаление значения из конфигурации
+     * Видалення значення з конфігурації
      * 
-     * @param string $key Ключ конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $key Ключ конфігурації
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function remove(string $key, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
         if (strpos($key, '.') === false) {
-            throw new Exception("Для удаления значения требуется указать путь (например, 'config.key')");
+            throw new Exception("Для видалення значення потрібно вказати шлях (наприклад, 'config.key')");
         }
         
         $parts = explode('.', $key, 2);
         $configName = $parts[0];
         $path = $parts[1];
         
-        // Загружаем конфигурацию, если её нет в памяти
+        // Завантажуємо конфігурацію, якщо її немає в пам'яті
         if (!isset($this->loadedConfigs[$configName])) {
             $this->loadConfig($configName, $extension);
         }
         
-        // Удаляем значение по пути
+        // Видаляємо значення за шляхом
         $this->removeValueByPath($this->loadedConfigs[$configName], $path);
         
-        // Сохраняем конфигурацию
+        // Зберігаємо конфігурацію
         return $this->saveConfig($configName, $extension);
     }
     
     /**
-     * Загрузка конфигурации
+     * Завантаження конфігурації
      * 
-     * @param string $configName Имя конфигурации (без расширения)
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації (без розширення)
+     * @param string|null $extension Розширення файлу
      * @return void
      */
     private function loadConfig(string $configName, ?string $extension = null): void {
@@ -242,15 +242,15 @@ class Config {
                 $this->loadedConfigs[$configName] = [];
             }
         } else {
-            throw new Exception("Неподдерживаемое расширение файла: {$extension}");
+            throw new Exception("Непідтримуване розширення файлу: {$extension}");
         }
     }
     
     /**
-     * Сохранение конфигурации
+     * Збереження конфігурації
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     private function saveConfig(string $configName, ?string $extension = null): bool {
@@ -287,30 +287,30 @@ class Config {
                 return false;
             }
         } else {
-            throw new Exception("Неподдерживаемое расширение файла: {$extension}");
+            throw new Exception("Непідтримуване розширення файлу: {$extension}");
         }
     }
     
     /**
-     * Получение пути к файлу конфигурации
+     * Отримання шляху до файлу конфігурації
      * 
-     * @param string $configName Имя конфигурации
-     * @param string $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string $extension Розширення файлу
      * @return string
      */
     private function getConfigPath(string $configName, string $extension): string {
-        // Безопасность: убираем недопустимые символы из имени конфига
+        // Безпека: прибираємо неприпустимі символи з імені конфігу
         $configName = preg_replace('/[^a-zA-Z0-9_-]/', '', $configName);
         
         return $this->configDir . $configName . $extension;
     }
     
     /**
-     * Получение значения по пути (точечная нотация)
+     * Отримання значення за шляхом (точкова нотація)
      * 
-     * @param array $data Данные
-     * @param string $path Путь
-     * @param mixed $default Значение по умолчанию
+     * @param array $data Дані
+     * @param string $path Шлях
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     private function getValueByPath($data, string $path, $default = null) {
@@ -339,11 +339,11 @@ class Config {
     }
     
     /**
-     * Установка значения по пути (точечная нотация)
+     * Встановлення значення за шляхом (точкова нотація)
      * 
-     * @param array $data Данные (передается по ссылке)
-     * @param string $path Путь
-     * @param mixed $value Значение
+     * @param array $data Дані (передається за посиланням)
+     * @param string $path Шлях
+     * @param mixed $value Значення
      * @return void
      */
     private function setValueByPath(&$data, string $path, $value): void {
@@ -381,10 +381,10 @@ class Config {
     }
     
     /**
-     * Проверка наличия значения по пути
+     * Перевірка наявності значення за шляхом
      * 
-     * @param mixed $data Данные
-     * @param string $path Путь
+     * @param mixed $data Дані
+     * @param string $path Шлях
      * @return bool
      */
     private function hasValueByPath($data, string $path): bool {
@@ -411,10 +411,10 @@ class Config {
     }
     
     /**
-     * Удаление значения по пути
+     * Видалення значення за шляхом
      * 
-     * @param mixed $data Данные (передается по ссылке)
-     * @param string $path Путь
+     * @param mixed $data Дані (передається за посиланням)
+     * @param string $path Шлях
      * @return void
      */
     private function removeValueByPath(&$data, string $path): void {
@@ -446,10 +446,10 @@ class Config {
     }
     
     /**
-     * Получение всех данных конфигурации
+     * Отримання всіх даних конфігурації
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
      * @return array
      */
     public function all(string $configName, ?string $extension = null): array {
@@ -463,11 +463,11 @@ class Config {
     }
     
     /**
-     * Установка всех данных конфигурации
+     * Встановлення всіх даних конфігурації
      * 
-     * @param string $configName Имя конфигурации
-     * @param array $data Данные
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param array $data Дані
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function setAll(string $configName, array $data, ?string $extension = null): bool {
@@ -507,7 +507,7 @@ class Config {
     }
     
     /**
-     * Получение пути к директории конфигураций
+     * Отримання шляху до директорії конфігурацій
      * 
      * @return string
      */
@@ -516,9 +516,9 @@ class Config {
     }
     
     /**
-     * Получение списка всех конфигурационных файлов
+     * Отримання списку всіх конфігураційних файлів
      * 
-     * @param string|null $extension Расширение файла (если null, все расширения)
+     * @param string|null $extension Розширення файлу (якщо null, всі розширення)
      * @return array
      */
     public function getConfigFiles(?string $extension = null): array {
@@ -538,7 +538,7 @@ class Config {
         foreach ($foundFiles as $file) {
             if (is_file($file)) {
                 $filename = basename($file);
-                // Пропускаем служебные файлы
+                // Пропускаємо службові файли
                 if (in_array($filename, ['.htaccess', '.gitkeep'], true)) {
                     continue;
                 }
@@ -550,12 +550,12 @@ class Config {
     }
     
     /**
-     * Экспорт конфигурации в JSON
+     * Експорт конфігурації в JSON
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
-     * @return string JSON строка
-     * @throws Exception Если конфигурация не найдена
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
+     * @return string JSON рядок
+     * @throws Exception Якщо конфігурацію не знайдено
      */
     public function export(string $configName, ?string $extension = null): string {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
@@ -564,13 +564,13 @@ class Config {
     }
     
     /**
-     * Импорт конфигурации из JSON
+     * Імпорт конфігурації з JSON
      * 
-     * @param string $configName Имя конфигурации
-     * @param string $jsonData JSON строка
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string $jsonData JSON рядок
+     * @param string|null $extension Розширення файлу
      * @return bool
-     * @throws Exception Если не удалось импортировать
+     * @throws Exception Якщо не вдалося імпортувати
      */
     public function import(string $configName, string $jsonData, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
@@ -585,11 +585,11 @@ class Config {
     }
     
     /**
-     * Копирование конфигурации
+     * Копіювання конфігурації
      * 
-     * @param string $sourceConfig Исходная конфигурация
-     * @param string $targetConfig Целевая конфигурация
-     * @param string|null $extension Расширение файла
+     * @param string $sourceConfig Вихідна конфігурація
+     * @param string $targetConfig Цільова конфігурація
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function copy(string $sourceConfig, string $targetConfig, ?string $extension = null): bool {
@@ -599,20 +599,20 @@ class Config {
     }
     
     /**
-     * Удаление конфигурационного файла
+     * Видалення конфігураційного файлу
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function deleteFile(string $configName, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         $filePath = $this->getConfigPath($configName, $extension);
         
-        // Удаляем из памяти
+        // Видаляємо з пам'яті
         unset($this->loadedConfigs[$configName]);
         
-        // Удаляем файл (використовуємо File клас)
+        // Видаляємо файл (використовуємо File клас)
         $file = new File($filePath);
         if ($file->exists()) {
             try {
@@ -627,10 +627,10 @@ class Config {
     }
     
     /**
-     * Проверка существования конфигурационного файла
+     * Перевірка існування конфігураційного файлу
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function fileExists(string $configName, ?string $extension = null): bool {
@@ -641,11 +641,11 @@ class Config {
     }
     
     /**
-     * Получение размера конфигурационного файла
+     * Отримання розміру конфігураційного файлу
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
-     * @return int Размер файла в байтах, або -1 якщо файл не існує
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
+     * @return int Розмір файлу в байтах, або -1 якщо файл не існує
      */
     public function getFileSize(string $configName, ?string $extension = null): int {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
@@ -660,10 +660,10 @@ class Config {
     }
     
     /**
-     * Получение времени последнего изменения конфигурационного файла
+     * Отримання часу останньої зміни конфігураційного файлу
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $extension Расширение файла
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $extension Розширення файлу
      * @return int|false Unix timestamp або false якщо файл не існує
      */
     public function getFileMTime(string $configName, ?string $extension = null) {
@@ -679,12 +679,12 @@ class Config {
     }
     
     /**
-     * Объединение двух конфигураций
+     * Об'єднання двох конфігурацій
      * 
-     * @param string $configName1 Первая конфигурация
-     * @param string $configName2 Вторая конфигурация
-     * @param string $targetConfig Результирующая конфигурация
-     * @param string|null $extension Расширение файла
+     * @param string $configName1 Перша конфігурація
+     * @param string $configName2 Друга конфігурація
+     * @param string $targetConfig Результуюча конфігурація
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function merge(string $configName1, string $configName2, string $targetConfig, ?string $extension = null): bool {
@@ -696,12 +696,12 @@ class Config {
     }
     
     /**
-     * Резервное копирование конфигурации
+     * Резервне копіювання конфігурації
      * 
-     * @param string $configName Имя конфигурации
-     * @param string|null $backupPath Путь для резервной копии (если null, создается автоматически)
-     * @param string|null $extension Расширение файла
-     * @return bool|string Путь к резервной копии или false при ошибке
+     * @param string $configName Ім'я конфігурації
+     * @param string|null $backupPath Шлях для резервної копії (якщо null, створюється автоматично)
+     * @param string|null $extension Розширення файлу
+     * @return bool|string Шлях до резервної копії або false при помилці
      */
     public function backup(string $configName, ?string $backupPath = null, ?string $extension = null) {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
@@ -717,7 +717,7 @@ class Config {
             $backupPath = $this->configDir . $backupName;
         }
         
-        // Создаем директорию, если её нет (використовуємо Directory клас)
+        // Створюємо директорію, якщо її немає (використовуємо Directory клас)
         $dir = dirname($backupPath);
         $directory = new Directory($dir);
         if (!$directory->exists()) {
@@ -743,11 +743,11 @@ class Config {
     }
     
     /**
-     * Восстановление конфигурации из резервной копии
+     * Відновлення конфігурації з резервної копії
      * 
-     * @param string $backupPath Путь к резервной копии
-     * @param string $configName Имя конфигурации для восстановления
-     * @param string|null $extension Расширение файла
+     * @param string $backupPath Шлях до резервної копії
+     * @param string $configName Ім'я конфігурації для відновлення
+     * @param string|null $extension Розширення файлу
      * @return bool
      */
     public function restore(string $backupPath, string $configName, ?string $extension = null): bool {
@@ -758,7 +758,7 @@ class Config {
             return false;
         }
         
-        // Удаляем из памяти
+        // Видаляємо з пам'яті
         unset($this->loadedConfigs[$configName]);
         
         // Копіюємо файл (використовуємо File клас)
@@ -777,7 +777,7 @@ class Config {
         return false;
     }
     
-    // Предотвращение клонирования и десериализации
+    // Запобігання клонуванню та десеріалізації
     private function __clone() {}
     
     /**
@@ -789,9 +789,9 @@ class Config {
     }
 }
 
-// Глобальные функции для удобства
+// Глобальні функції для зручності
 /**
- * Получение экземпляра конфигурации
+ * Отримання екземпляра конфігурації
  * 
  * @return Config
  */
@@ -800,10 +800,10 @@ function config(): Config {
 }
 
 /**
- * Получение значения конфигурации
+ * Отримання значення конфігурації
  * 
  * @param string $key Ключ
- * @param mixed $default Значение по умолчанию
+ * @param mixed $default Значення за замовчуванням
  * @return mixed
  */
 function config_get(string $key, $default = null) {
@@ -811,10 +811,10 @@ function config_get(string $key, $default = null) {
 }
 
 /**
- * Установка значения конфигурации
+ * Встановлення значення конфігурації
  * 
  * @param string $key Ключ
- * @param mixed $value Значение
+ * @param mixed $value Значення
  * @return bool
  */
 function config_set(string $key, $value): bool {
@@ -822,7 +822,7 @@ function config_set(string $key, $value): bool {
 }
 
 /**
- * Проверка наличия ключа в конфигурации
+ * Перевірка наявності ключа в конфігурації
  * 
  * @param string $key Ключ
  * @return bool

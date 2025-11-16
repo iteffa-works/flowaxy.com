@@ -1,6 +1,6 @@
 <?php
 /**
- * Модуль управления плагинами
+ * Модуль керування плагінами
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-// BaseModule теперь загружается через автозагрузчик из base/BaseModule.php
+// BaseModule тепер завантажується через автозавантажувач з base/BaseModule.php
 
 class PluginManager extends BaseModule {
     private $plugins = [];
@@ -16,7 +16,7 @@ class PluginManager extends BaseModule {
     private $pluginsDir;
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
         $this->pluginsDir = dirname(__DIR__, 2) . '/plugins/';
@@ -24,14 +24,14 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Модуль PluginManager не регистрирует хуки, он сам управляет хуками
+        // Модуль PluginManager не реєструє хуки, він сам керує хуками
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      */
     public function getInfo(): array {
         return [
@@ -44,26 +44,26 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Получение API методов модуля
+     * Отримання API методів модуля
      */
     public function getApiMethods(): array {
         return [
-            'getAllPlugins' => 'Получение всех плагинов',
-            'getActivePlugins' => 'Получение активных плагинов',
-            'getPlugin' => 'Получение плагина по slug',
-            'installPlugin' => 'Установка плагина',
-            'activatePlugin' => 'Активация плагина',
-            'deactivatePlugin' => 'Деактивация плагина',
-            'uninstallPlugin' => 'Удаление плагина',
-            'addHook' => 'Добавление хука',
-            'doHook' => 'Выполнение хука',
-            'hasHook' => 'Проверка существования хука',
-            'autoDiscoverPlugins' => 'Автоматическое обнаружение плагинов'
+            'getAllPlugins' => 'Отримання всіх плагінів',
+            'getActivePlugins' => 'Отримання активних плагінів',
+            'getPlugin' => 'Отримання плагіна за slug',
+            'installPlugin' => 'Встановлення плагіна',
+            'activatePlugin' => 'Активація плагіна',
+            'deactivatePlugin' => 'Деактивація плагіна',
+            'uninstallPlugin' => 'Видалення плагіна',
+            'addHook' => 'Додавання хука',
+            'doHook' => 'Виконання хука',
+            'hasHook' => 'Перевірка існування хука',
+            'autoDiscoverPlugins' => 'Автоматичне виявлення плагінів'
         ];
     }
     
     /**
-     * Ручная инициализация плагинов
+     * Ручна ініціалізація плагінів
      */
     public function initializePlugins(): void {
         foreach ($this->plugins as $plugin) {
@@ -78,15 +78,16 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Загрузка активных плагинов
+     * Завантаження активних плагінів
      */
     private function loadPlugins(): void {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return;
         }
         
         try {
-            $stmt = $this->db->query("SELECT * FROM plugins WHERE is_active = 1 ORDER BY name ASC");
+            $stmt = $db->query("SELECT * FROM plugins WHERE is_active = 1 ORDER BY name ASC");
             $pluginData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($pluginData as $plugin) {
@@ -98,7 +99,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Получение имени класса плагина из slug
+     * Отримання імені класу плагіна з slug
      */
     private function getPluginClassName(string $pluginSlug): string {
         $parts = explode('-', $pluginSlug);
@@ -110,7 +111,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Загрузка конкретного плагина
+     * Завантаження конкретного плагіна
      */
     private function loadPlugin(array $pluginData): void {
         $slug = $pluginData['slug'] ?? '';
@@ -132,7 +133,7 @@ class PluginManager extends BaseModule {
                 $plugin = new $className();
                 $this->plugins[$slug] = $plugin;
                 
-                // Инициализируем плагин, чтобы зарегистрировать хуки
+                // Ініціалізуємо плагін, щоб зареєструвати хуки
                 if (method_exists($plugin, 'init')) {
                     try {
                         $plugin->init();
@@ -149,7 +150,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Получение пути к файлу плагина
+     * Отримання шляху до файлу плагіна
      */
     private function getPluginPath(string $pluginSlug): string {
         $className = $this->getPluginClassName($pluginSlug);
@@ -157,17 +158,22 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Получение экземпляра плагина (загружает если нужно)
+     * Отримання екземпляра плагіна (завантажує якщо потрібно)
      */
     private function getPluginInstance(string $pluginSlug) {
-        // Если плагин уже загружен, возвращаем его
+        // Якщо плагін вже завантажено, повертаємо його
         if (isset($this->plugins[$pluginSlug])) {
             return $this->plugins[$pluginSlug];
         }
         
-        // Пытаемся загрузить плагин из БД
+        // Намагаємося завантажити плагін з БД
+        $db = $this->getDB();
+        if (!$db) {
+            return null;
+        }
+        
         try {
-            $stmt = $this->db->prepare("SELECT * FROM plugins WHERE slug = ?");
+            $stmt = $db->prepare("SELECT * FROM plugins WHERE slug = ?");
             $stmt->execute([$pluginSlug]);
             $pluginData = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -183,7 +189,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Добавление хука
+     * Додавання хука
      */
     public function addHook(string $hookName, callable $callback, int $priority = 10): void {
         if (empty($hookName)) {
@@ -199,30 +205,30 @@ class PluginManager extends BaseModule {
             'priority' => $priority
         ];
         
-        // Сортируем по приоритету
+        // Сортуємо за пріоритетом
         usort($this->hooks[$hookName], fn($a, $b) => $a['priority'] - $b['priority']);
     }
     
     /**
-     * Выполнение хука
+     * Виконання хука
      */
     public function doHook(string $hookName, $data = null) {
         if (empty($hookName)) {
             return $data;
         }
         
-        // Для admin_menu и admin_register_routes всегда загружаем модули ДО проверки хуков
-        // Это гарантирует, что модули зарегистрируют свои хуки независимо от порядка загрузки плагинов
+        // Для admin_menu та admin_register_routes завжди завантажуємо модулі ДО перевірки хуків
+        // Це гарантує, що модулі зареєструють свої хуки незалежно від порядку завантаження плагінів
         if (($hookName === 'admin_menu' || $hookName === 'admin_register_routes') && class_exists('ModuleLoader')) {
             $this->loadAdminModules(true);
         }
         
-        // Проверяем наличие хуков после загрузки модулей
+        // Перевіряємо наявність хуків після завантаження модулів
         if (!isset($this->hooks[$hookName])) {
             return $data;
         }
         
-        // Определяем тип хука: объектные хуки (admin_register_routes) vs данные (admin_menu)
+        // Визначаємо тип хука: об'єктні хуки (admin_register_routes) vs дані (admin_menu)
         $isObjectHook = ($hookName === 'admin_register_routes');
         
         foreach ($this->hooks[$hookName] as $hook) {
@@ -233,7 +239,7 @@ class PluginManager extends BaseModule {
             try {
                 $result = call_user_func($hook['callback'], $data);
                 
-                // Для не-объектных хуков используем результат как обновленные данные
+                // Для не-об'єктних хуків використовуємо результат як оновлені дані
                 if (!$isObjectHook && $result !== null) {
                     $data = $result;
                 }
@@ -248,42 +254,42 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Загрузка модулей, которые регистрируют хуки для админки
+     * Завантаження модулів, які реєструють хуки для адмінки
      * 
-     * @param bool $forceLoadAll Если true, загружает все модули независимо от уже загруженных
+     * @param bool $forceLoadAll Якщо true, завантажує всі модулі незалежно від уже завантажених
      */
     private function loadAdminModules(bool $forceLoadAll = false): void {
         static $adminModulesLoaded = false;
         static $allModulesLoaded = false;
         
-        // Для admin_menu всегда загружаем все модули (но только один раз в рамках одного запроса)
+        // Для admin_menu завжди завантажуємо всі модулі (але тільки один раз в рамках одного запиту)
         if ($forceLoadAll) {
             if ($allModulesLoaded) {
-                // Модули уже загружены в этом запросе, но проверяем, что хуки зарегистрированы
-                // Это важно на случай, если модули были загружены до инициализации PluginManager
+                // Модулі вже завантажені в цьому запиті, але перевіряємо, що хуки зареєстровані
+                // Це важливо на випадок, якщо модулі були завантажені до ініціалізації PluginManager
                 $this->ensureModulesHooksRegistered();
                 return;
             }
         } else {
-            // Для admin_register_routes загружаем только если нужно
+            // Для admin_register_routes завантажуємо тільки якщо потрібно
             if ($adminModulesLoaded) {
-                return; // Уже загружены
+                return; // Вже завантажені
             }
             
-            // Определяем, нужна ли загрузка всех модулей
-            // Если уже есть загруженные модули (кроме PluginManager), значит они загружены по требованию
+            // Визначаємо, чи потрібне завантаження всіх модулів
+            // Якщо вже є завантажені модулі (окрім PluginManager), значить вони завантажені за вимогою
             $loadedModules = ModuleLoader::getLoadedModules();
-            $hasOtherModules = count($loadedModules) > 1; // Больше чем только PluginManager
+            $hasOtherModules = count($loadedModules) > 1; // Більше ніж тільки PluginManager
             
-            // Если модули уже загружены по требованию, не загружаем все остальные
-            // Это позволяет загружать только нужные модули для конкретной страницы
+            // Якщо модулі вже завантажені за вимогою, не завантажуємо всі інші
+            // Це дозволяє завантажувати тільки потрібні модулі для конкретної сторінки
             if ($hasOtherModules) {
                 $adminModulesLoaded = true;
                 return;
             }
         }
         
-        // Загружаем только модули, которые регистрируют хуки для админки
+        // Завантажуємо тільки модулі, які реєструють хуки для адмінки
         $modulesDir = dirname(__DIR__) . '/modules';
         $modules = glob($modulesDir . '/*.php');
         
@@ -291,21 +297,21 @@ class PluginManager extends BaseModule {
             foreach ($modules as $moduleFile) {
                 $moduleName = basename($moduleFile, '.php');
                 
-                // Пропускаем служебные файлы
+                // Пропускаємо службові файли
                 if ($moduleName === 'loader' || 
                     $moduleName === 'compatibility' || 
                     $moduleName === 'PluginManager') {
                     continue;
                 }
                 
-                // Загружаем модуль, если он еще не загружен
+                // Завантажуємо модуль, якщо він ще не завантажений
                 if (!ModuleLoader::isModuleLoaded($moduleName)) {
                     ModuleLoader::loadModule($moduleName);
                 }
             }
         }
         
-        // Убеждаемся, что хуки всех модулей зарегистрированы
+        // Переконуємося, що хуки всіх модулів зареєстровані
         $this->ensureModulesHooksRegistered();
         
         if ($forceLoadAll) {
@@ -316,7 +322,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Убеждается, что хуки всех загруженных модулей зарегистрированы
+     * Переконується, що хуки всіх завантажених модулів зареєстровані
      */
     private function ensureModulesHooksRegistered(): void {
         if (!class_exists('ModuleLoader')) {
@@ -326,17 +332,17 @@ class PluginManager extends BaseModule {
         $loadedModules = ModuleLoader::getLoadedModules();
         foreach ($loadedModules as $moduleName => $module) {
             if (is_object($module) && method_exists($module, 'registerHooks')) {
-                // Проверяем, зарегистрированы ли хуки для admin_menu или admin_register_routes
-                // Если нет, вызываем registerHooks() еще раз
-                // Это безопасно, так как addHook() просто добавляет хуки, а не заменяет их
+                // Перевіряємо, чи зареєстровані хуки для admin_menu або admin_register_routes
+                // Якщо ні, викликаємо registerHooks() ще раз
+                // Це безпечно, оскільки addHook() просто додає хуки, а не замінює їх
                 $needsRegistration = false;
                 
-                // Проверяем admin_menu
+                // Перевіряємо admin_menu
                 if (!isset($this->hooks['admin_menu']) || !$this->hasModuleHook($moduleName, 'admin_menu')) {
                     $needsRegistration = true;
                 }
                 
-                // Проверяем admin_register_routes
+                // Перевіряємо admin_register_routes
                 if (!isset($this->hooks['admin_register_routes']) || !$this->hasModuleHook($moduleName, 'admin_register_routes')) {
                     $needsRegistration = true;
                 }
@@ -353,7 +359,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Проверяет, зарегистрирован ли хук для конкретного модуля
+     * Перевіряє, чи зареєстрований хук для конкретного модуля
      */
     private function hasModuleHook(string $moduleName, string $hookName): bool {
         if (!isset($this->hooks[$hookName])) {
@@ -375,15 +381,15 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Проверка существования хука
+     * Перевірка існування хука
      */
     public function hasHook(string $hookName): bool {
         return !empty($hookName) && isset($this->hooks[$hookName]) && !empty($this->hooks[$hookName]);
     }
     
     /**
-     * Получение всех плагинов (из файловой системы)
-     * Автоматически обнаруживает плагины по наличию plugin.json
+     * Отримання всіх плагінів (з файлової системи)
+     * Автоматично виявляє плагіни за наявністю plugin.json
      */
     public function getAllPlugins(): array {
         $allPlugins = [];
@@ -426,15 +432,20 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Автоматическое обнаружение и установка новых плагинов
+     * Автоматичне виявлення та встановлення нових плагінів
      */
     public function autoDiscoverPlugins(): int {
         $allPlugins = $this->getAllPlugins();
         $installedCount = 0;
         
+        $db = $this->getDB();
+        if (!$db) {
+            return 0;
+        }
+        
         foreach ($allPlugins as $slug => $config) {
             try {
-                $stmt = $this->db->prepare("SELECT id FROM plugins WHERE slug = ?");
+                $stmt = $db->prepare("SELECT id FROM plugins WHERE slug = ?");
                 $stmt->execute([$slug]);
                 
                 if (!$stmt->fetch()) {
@@ -451,14 +462,14 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Получение активных плагинов
+     * Отримання активних плагінів
      */
     public function getActivePlugins(): array {
         return $this->plugins;
     }
     
     /**
-     * Установка плагина
+     * Встановлення плагіна
      */
     public function installPlugin(string $pluginSlug): bool {
         try {
@@ -492,11 +503,16 @@ class PluginManager extends BaseModule {
             // Выполняем SQL файлы из папки db
             $this->executeDatabaseFiles($pluginDir . '/db');
             
-            // Используем slug из конфига или из имени директории
+            // Використовуємо slug з конфігу або з імені директорії
             $pluginSlug = $config['slug'] ?? $pluginSlug;
             
-            // Добавляем плагин в базу данных
-            $stmt = $this->db->prepare("
+            // Додаємо плагін до бази даних
+            $db = $this->getDB();
+            if (!$db) {
+                return false;
+            }
+            
+            $stmt = $db->prepare("
                 INSERT INTO plugins (name, slug, description, version, author, is_active) 
                 VALUES (?, ?, ?, ?, ?, 0)
                 ON DUPLICATE KEY UPDATE 
@@ -527,12 +543,17 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Удаление плагина
+     * Видалення плагіна
      */
     public function uninstallPlugin(string $pluginSlug): bool {
         try {
-            // Получаем данные плагина из БД
-            $stmt = $this->db->prepare("SELECT * FROM plugins WHERE slug = ?");
+            $db = $this->getDB();
+            if (!$db) {
+                return false;
+            }
+            
+            // Отримуємо дані плагіна з БД
+            $stmt = $db->prepare("SELECT * FROM plugins WHERE slug = ?");
             $stmt->execute([$pluginSlug]);
             $pluginData = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -540,20 +561,20 @@ class PluginManager extends BaseModule {
                 return false;
             }
             
-            // Вызываем метод удаления плагина
+            // Викликаємо метод видалення плагіна
             $plugin = $this->getPlugin($pluginSlug);
             if ($plugin && method_exists($plugin, 'uninstall')) {
                 $plugin->uninstall();
             }
             
-            // Деактивируем плагин
+            // Деактивуємо плагін
             $this->deactivatePlugin($pluginSlug);
             
-            // Удаляем плагин из базы данных
-            $stmt = $this->db->prepare("DELETE FROM plugins WHERE slug = ?");
+            // Видаляємо плагін з бази даних
+            $stmt = $db->prepare("DELETE FROM plugins WHERE slug = ?");
             if ($stmt->execute([$pluginSlug])) {
                 cache_forget('active_plugins');
-                // Логируем удаление плагина
+                // Логуємо видалення плагіна
                 doHook('plugin_uninstalled', $pluginSlug);
                 return true;
             }
@@ -566,32 +587,37 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Активация плагина
+     * Активація плагіна
      */
     public function activatePlugin(string $pluginSlug): bool {
         try {
-            $stmt = $this->db->prepare("UPDATE plugins SET is_active = 1 WHERE slug = ?");
+            $db = $this->getDB();
+            if (!$db) {
+                return false;
+            }
+            
+            $stmt = $db->prepare("UPDATE plugins SET is_active = 1 WHERE slug = ?");
             if (!$stmt->execute([$pluginSlug])) {
                 return false;
             }
             
             cache_forget('active_plugins');
-            cache_forget('active_plugins_hash'); // Очищаем хеш плагинов при активации
+            cache_forget('active_plugins_hash'); // Очищаємо хеш плагінів при активації
             
-            // Загружаем и активируем плагин
+            // Завантажуємо та активуємо плагін
             $plugin = $this->getPluginInstance($pluginSlug);
             if ($plugin) {
-                // Вызываем activate() для логики активации
+                // Викликаємо activate() для логіки активації
                 if (method_exists($plugin, 'activate')) {
                     $plugin->activate();
                 }
-                // init() уже вызывается в loadPlugin(), не нужно вызывать повторно
+                // init() вже викликається в loadPlugin(), не потрібно викликати повторно
             }
             
-            // Очищаем кеш меню после активации плагина
+            // Очищаємо кеш меню після активації плагіна
             $this->clearMenuCache();
             
-            // Логируем активацию плагина
+            // Логуємо активацію плагіна
             doHook('plugin_activated', $pluginSlug);
             
             return true;
@@ -602,29 +628,34 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Деактивация плагина
+     * Деактивація плагіна
      */
     public function deactivatePlugin(string $pluginSlug): bool {
         try {
-            // Вызываем метод деактивации плагина
+            // Викликаємо метод деактивації плагіна
             $plugin = $this->getPluginInstance($pluginSlug);
             if ($plugin && method_exists($plugin, 'deactivate')) {
                 $plugin->deactivate();
             }
             
-            $stmt = $this->db->prepare("UPDATE plugins SET is_active = 0 WHERE slug = ?");
+            $db = $this->getDB();
+            if (!$db) {
+                return false;
+            }
+            
+            $stmt = $db->prepare("UPDATE plugins SET is_active = 0 WHERE slug = ?");
             if (!$stmt->execute([$pluginSlug])) {
                 return false;
             }
             
             cache_forget('active_plugins');
-            cache_forget('active_plugins_hash'); // Очищаем хеш плагинов при деактивации
+            cache_forget('active_plugins_hash'); // Очищаємо хеш плагінів при деактивації
             unset($this->plugins[$pluginSlug]);
             
-            // Очищаем кеш меню после изменения плагинов
+            // Очищаємо кеш меню після зміни плагінів
             $this->clearMenuCache();
             
-            // Логируем деактивацию плагина
+            // Логуємо деактивацію плагіна
             doHook('plugin_deactivated', $pluginSlug);
             
             return true;
@@ -635,29 +666,30 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Проверка активности плагина
+     * Перевірка активності плагіна
      */
     public function isPluginActive(string $pluginSlug): bool {
         return !empty($pluginSlug) && isset($this->plugins[$pluginSlug]);
     }
     
     /**
-     * Получение конкретного плагина
+     * Отримання конкретного плагіна
      */
     public function getPlugin(string $pluginSlug) {
         return $this->plugins[$pluginSlug] ?? $this->getPluginInstance($pluginSlug);
     }
     
     /**
-     * Получение настройки плагина
+     * Отримання налаштування плагіна
      */
     public function getPluginSetting(string $pluginSlug, string $settingKey, $default = null) {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return $default;
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT setting_value FROM plugin_settings WHERE plugin_slug = ? AND setting_key = ?");
+            $stmt = $db->prepare("SELECT setting_value FROM plugin_settings WHERE plugin_slug = ? AND setting_key = ?");
             $stmt->execute([$pluginSlug, $settingKey]);
             $result = $stmt->fetch();
             
@@ -668,15 +700,16 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Сохранение настройки плагина
+     * Збереження налаштування плагіна
      */
     public function setPluginSetting(string $pluginSlug, string $settingKey, $value): bool {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return false;
         }
         
         try {
-            $stmt = $this->db->prepare("
+            $stmt = $db->prepare("
                 INSERT INTO plugin_settings (plugin_slug, setting_key, setting_value) 
                 VALUES (?, ?, ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
@@ -690,7 +723,7 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Выполнение SQL файлов из директории db плагина
+     * Виконання SQL файлів з директорії db плагіна
      */
     private function executeDatabaseFiles(string $dbDir): void {
         if (!is_dir($dbDir)) {
@@ -711,10 +744,11 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Выполнение SQL файла
+     * Виконання SQL файлу
      */
     private function executeSqlFile(string $sqlFile): bool {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return false;
         }
         
@@ -731,7 +765,7 @@ class PluginManager extends BaseModule {
             foreach ($queries as $query) {
                 $query = trim($query);
                 if (!empty($query)) {
-                    $this->db->exec($query);
+                    $db->exec($query);
                 }
             }
             
@@ -743,14 +777,14 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Очистка кеша меню администратора
-     * Очищает все возможные комбинации ключей кеша меню
+     * Очищення кешу меню адміністратора
+     * Очищає всі можливі комбінації ключів кешу меню
      */
     private function clearMenuCache(): void {
         $activePlugins = $this->getActivePlugins();
         $pluginsHash = md5(implode(',', array_keys($activePlugins)));
         
-        // Очищаем все возможные комбинации поддержки темы
+        // Очищаємо всі можливі комбінації підтримки теми
         for ($custom = 0; $custom <= 1; $custom++) {
             for ($nav = 0; $nav <= 1; $nav++) {
                 $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
@@ -758,7 +792,7 @@ class PluginManager extends BaseModule {
             }
         }
         
-        // Очищаем старые ключи кеша меню без хеша плагинов (для обратной совместимости)
+        // Очищаємо старі ключі кешу меню без хешу плагінів (для зворотної сумісності)
         $oldPatterns = [
             'admin_menu_items_0',
             'admin_menu_items_1',
@@ -771,19 +805,19 @@ class PluginManager extends BaseModule {
             cache_forget($pattern);
         }
         
-        // Очищаем кеш хеша плагинов
+        // Очищаємо кеш хешу плагінів
         cache_forget('active_plugins_hash');
     }
     
     /**
-     * Очистка всего кеша меню админки
-     * Используется при удалении модулей или изменении структуры меню
+     * Очищення всього кешу меню адмінки
+     * Використовується при видаленні модулів або зміні структури меню
      */
     public function clearAllMenuCache(): void {
         $cache = cache();
         $cacheDir = CACHE_DIR ?? dirname(__DIR__, 2) . '/storage/cache/';
         
-        // Удаляем все файлы кеша, начинающиеся с admin_menu_items_
+        // Видаляємо всі файли кешу, що починаються з admin_menu_items_
         if (is_dir($cacheDir)) {
             $files = glob($cacheDir . 'admin_menu_items_*.cache');
             if ($files !== false) {
@@ -793,20 +827,20 @@ class PluginManager extends BaseModule {
             }
         }
         
-        // Очищаем кеш хеша плагинов
+        // Очищаємо кеш хешу плагінів
         cache_forget('active_plugins_hash');
     }
 }
 
 /**
- * Глобальная функция для получения экземпляра модуля PluginManager
+ * Глобальна функція для отримання екземпляра модуля PluginManager
  */
 function pluginManager() {
     return PluginManager::getInstance();
 }
 
 /**
- * Глобальные функции для работы с хуками
+ * Глобальні функції для роботи з хуками
  */
 function addHook(string $hookName, callable $callback, int $priority = 10): void {
     pluginManager()->addHook($hookName, $callback, $priority);

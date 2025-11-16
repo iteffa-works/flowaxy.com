@@ -1,7 +1,7 @@
 <?php
 /**
- * Базовый класс для страниц админки
- * Упрощенная архитектура без MVC
+ * Базовий клас для сторінок адмінки
+ * Спрощена архітектура без MVC
  */
 
 class AdminPage {
@@ -18,18 +18,18 @@ class AdminPage {
     protected $additionalJS = [];
     
     public function __construct() {
-        // Проверка авторизации
+        // Перевірка авторизації
         requireAdmin();
         
-        // Подключение к БД с обработкой ошибок
+        // Підключення до БД з обробкою помилок
         try {
             $this->db = getDB(true);
             if ($this->db === null) {
-                // Если подключение не удалось, getDB() уже показал страницу ошибки
+                // Якщо підключення не вдалося, getDB() вже показав сторінку помилки
                 exit;
             }
         } catch (Exception $e) {
-            // Показываем страницу ошибки
+            // Показуємо сторінку помилки
             if (function_exists('showDatabaseError')) {
                 showDatabaseError([
                     'host' => DB_HOST ?? 'unknown',
@@ -45,7 +45,7 @@ class AdminPage {
     }
     
     /**
-     * Установка сообщения
+     * Встановлення повідомлення
      */
     protected function setMessage($message, $type = 'info') {
         $this->message = $message;
@@ -53,7 +53,7 @@ class AdminPage {
     }
     
     /**
-     * Установка заголовка страницы
+     * Встановлення заголовка сторінки
      */
     protected function setPageHeader($title, $description = '', $icon = '', $buttons = '') {
         $this->pageHeaderTitle = $title;
@@ -63,7 +63,7 @@ class AdminPage {
     }
     
     /**
-     * Проверка CSRF токена
+     * Перевірка CSRF токена
      */
     protected function verifyCsrf() {
         if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
@@ -74,7 +74,7 @@ class AdminPage {
     }
     
     /**
-     * Получение данных для шаблона
+     * Отримання даних для шаблону
      */
     protected function getTemplateData() {
         return [
@@ -92,36 +92,36 @@ class AdminPage {
     }
     
     /**
-     * Получение пути к шаблону (может быть переопределено в дочерних классах)
+     * Отримання шляху до шаблону (може бути перевизначено в дочірніх класах)
      */
     protected function getTemplatePath() {
         return __DIR__ . '/../templates/';
     }
     
     /**
-     * Рендеринг страницы
+     * Рендеринг сторінки
      */
     protected function render($data = []) {
         $templateData = array_merge($this->getTemplateData(), $data);
         
-        // Проверяем, есть ли кастомный путь к шаблону
+        // Перевіряємо, чи є кастомний шлях до шаблону
         $customTemplatePath = $this->getTemplatePath();
         $defaultTemplatePath = __DIR__ . '/../templates/';
         
         if ($customTemplatePath !== $defaultTemplatePath) {
-            // Используем кастомный шаблон из плагина
+            // Використовуємо кастомний шаблон з плагіна
             $this->renderCustomTemplate($customTemplatePath, $templateData);
         } else {
-            // Используем стандартный шаблон
+            // Використовуємо стандартний шаблон
             renderTemplate($this->templateName, $templateData);
         }
     }
     
     /**
-     * Рендеринг кастомного шаблона (для плагинов)
+     * Рендеринг кастомного шаблону (для плагінів)
      */
     protected function renderCustomTemplate($templatePath, $data) {
-        // Извлекаем переменные из данных
+        // Витягуємо змінні з даних
         extract($data);
         
         $templateFile = $templatePath . $this->templateName . '.php';
@@ -130,17 +130,17 @@ class AdminPage {
             die("Template not found: " . $templateFile);
         }
         
-        // Сохраняем путь к кастомному шаблону для использования в layout
+        // Зберігаємо шлях до кастомного шаблону для використання в layout
         $customTemplateFile = $templateFile;
         
-        // Используем стандартный layout админки для плагинов
+        // Використовуємо стандартний layout адмінки для плагінів
         include __DIR__ . '/../templates/layout/base-plugin.php';
     }
     
     /**
-     * Обработка запроса (переопределяется в дочерних классах)
+     * Обробка запиту (перевизначається в дочірніх класах)
      */
     public function handle() {
-        // Переопределяется в дочерних классах
+        // Перевизначається в дочірніх класах
     }
 }

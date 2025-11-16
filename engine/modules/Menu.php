@@ -1,6 +1,6 @@
 <?php
 /**
- * Модуль управления меню навигации
+ * Модуль керування меню навігації
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -8,47 +8,47 @@
 
 declare(strict_types=1);
 
-// BaseModule и MenuManager теперь загружаются через автозагрузчик
+// BaseModule та MenuManager тепер завантажуються через автозавантажувач
 // BaseModule: base/BaseModule.php
 // MenuManager: managers/MenuManager.php
 
 class Menu extends BaseModule {
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
-        // Модуль инициализирован
+        // Модуль ініціалізовано
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Регистрация маршрута админки
+        // Реєстрація маршруту адмінки
         addHook('admin_register_routes', [$this, 'registerAdminRoute']);
         
-        // Регистрация обработки шорткодов для произвольных меню
+        // Реєстрація обробки шорткодів для довільних меню
         addHook('theme_content', [$this, 'processShortcodes'], 20);
         
-        // Регистрация виджетов меню
+        // Реєстрація віджетів меню
         addHook('theme_widgets', [$this, 'registerMenuWidgets']);
         
-        // Регистрация хука для встраивания меню в футер
+        // Реєстрація хука для вбудовування меню в футер
         addHook('theme_footer', [$this, 'renderFooterMenus']);
     }
     
     /**
-     * Регистрация маршрута админки
+     * Реєстрація маршруту адмінки
      * 
-     * @param Router|null $router Роутер админки
+     * @param Router|null $router Роутер адмінки
      */
     public function registerAdminRoute($router): void {
         if ($router === null) {
             return;
         }
         
-        // Регистрируем маршрут только если тема поддерживает навигацию
+        // Реєструємо маршрут тільки якщо тема підтримує навігацію
         if (!$this->themeSupportsNavigation()) {
             return;
         }
@@ -58,7 +58,7 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      * 
      * @return array
      */
@@ -73,7 +73,7 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Получение доступных расположений меню из активной темы
+     * Отримання доступних розташувань меню з активної теми
      * 
      * @return array
      */
@@ -86,7 +86,7 @@ class Menu extends BaseModule {
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
         $menuLocations = $themeConfig['menu_locations'] ?? [];
         
-        // Если тема не поддерживает навигацию, возвращаем пустой массив
+        // Якщо тема не підтримує навігацію, повертаємо порожній масив
         if (!($themeConfig['supports_navigation'] ?? false)) {
             return [];
         }
@@ -95,7 +95,7 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Проверка поддержки навигации активной темой
+     * Перевірка підтримки навігації активною темою
      * 
      * @return bool
      */
@@ -110,13 +110,13 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Обработка шорткодов меню в контенте
+     * Обробка шорткодів меню в контенті
      * 
-     * @param string $content Контент страницы
-     * @return string Обработанный контент
+     * @param string $content Контент сторінки
+     * @return string Оброблений контент
      */
     public function processShortcodes(string $content): string {
-        // Обработка шорткода [menu slug="menu-slug"]
+        // Обробка шорткоду [menu slug="menu-slug"]
         $content = preg_replace_callback(
             '/\[menu\s+slug=["\']([^"\']+)["\'](?:\s+class=["\']([^"\']+)["\'])?(?:\s+style=["\']([^"\']+)["\'])?\]/i',
             function($matches) {
@@ -137,7 +137,7 @@ class Menu extends BaseModule {
                 
                 $html = $menuManager->renderMenu($slug, $cssClass);
                 
-                // Добавляем стили если указаны
+                // Додаємо стилі якщо вказані
                 if (!empty($style)) {
                     $html = str_replace('<ul', '<ul style="' . htmlspecialchars($style) . '"', $html);
                 }
@@ -147,7 +147,7 @@ class Menu extends BaseModule {
             $content
         );
         
-        // Обработка шорткода [menu_widget slug="menu-slug" location="footer"]
+        // Обробка шорткоду [menu_widget slug="menu-slug" location="footer"]
         $content = preg_replace_callback(
             '/\[menu_widget\s+slug=["\']([^"\']+)["\'](?:\s+location=["\']([^"\']+)["\'])?(?:\s+class=["\']([^"\']+)["\'])?\]/i',
             function($matches) {
@@ -168,12 +168,12 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Рендеринг виджета меню
+     * Рендеринг віджета меню
      * 
      * @param string $slug Slug меню
-     * @param string $location Расположение виджета
-     * @param string $cssClass CSS класс
-     * @return string HTML виджета
+     * @param string $location Розташування віджета
+     * @param string $cssClass CSS клас
+     * @return string HTML віджета
      */
     public function renderMenuWidget(string $slug, string $location = 'widget', string $cssClass = 'menu-widget'): string {
         $menuManager = menuManager();
@@ -222,10 +222,10 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Рендеринг меню по slug (для использования в темах)
+     * Рендеринг меню за slug (для використання в темах)
      * 
      * @param string $slug Slug меню
-     * @param string $cssClass CSS класс для меню
+     * @param string $cssClass CSS клас для меню
      * @return string HTML меню
      */
     public function renderMenuBySlug(string $slug, string $cssClass = 'menu'): string {
@@ -234,7 +234,7 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Получение менеджера меню
+     * Отримання менеджера меню
      * 
      * @return MenuManager
      */
@@ -243,17 +243,17 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Регистрация виджетов меню
+     * Реєстрація віджетів меню
      * 
-     * @param array $widgets Текущие виджеты
-     * @return array Обновленные виджеты
+     * @param array $widgets Поточні віджети
+     * @return array Оновлені віджети
      */
     public function registerMenuWidgets(array $widgets): array {
         $menuManager = menuManager();
         $allMenus = $menuManager->getAllMenus();
         
         foreach ($allMenus as $menu) {
-            // Добавляем виджеты только для произвольных меню
+            // Додаємо віджети тільки для довільних меню
             if ($menu['location'] === 'custom') {
                 $widgets[] = [
                     'id' => 'menu_' . $menu['slug'],
@@ -274,10 +274,10 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Рендеринг меню в футере
+     * Рендеринг меню в футері
      * 
-     * @param string $footerContent Текущий контент футера
-     * @return string Обновленный контент футера
+     * @param string $footerContent Поточний контент футера
+     * @return string Оновлений контент футера
      */
     public function renderFooterMenus(string $footerContent): string {
         $menuManager = menuManager();
@@ -287,7 +287,7 @@ class Menu extends BaseModule {
             $menuItems = $menuManager->getMenuItems($footerMenu['id']);
             if (!empty($menuItems)) {
                 $menuHtml = $this->renderMenuWidget($footerMenu['slug'], 'footer', 'footer-menu');
-                // Вставляем меню перед закрывающим тегом footer
+                // Вставляємо меню перед закриваючим тегом footer
                 $footerContent = str_replace('</footer>', $menuHtml . '</footer>', $footerContent);
             }
         }
@@ -296,10 +296,10 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Получение меню для конкретного расположения
+     * Отримання меню для конкретного розташування
      * 
-     * @param string $location Расположение меню
-     * @return array|null Меню или null
+     * @param string $location Розташування меню
+     * @return array|null Меню або null
      */
     public function getMenuByLocation(string $location): ?array {
         $menuManager = menuManager();
@@ -315,9 +315,9 @@ class Menu extends BaseModule {
     }
     
     /**
-     * Проверка наличия меню для расположения
+     * Перевірка наявності меню для розташування
      * 
-     * @param string $location Расположение меню
+     * @param string $location Розташування меню
      * @return bool
      */
     public function hasMenuForLocation(string $location): bool {
@@ -326,7 +326,7 @@ class Menu extends BaseModule {
 }
 
 /**
- * Глобальная функция для получения модуля меню
+ * Глобальна функція для отримання модуля меню
  */
 function menuModule() {
     return Menu::getInstance();
