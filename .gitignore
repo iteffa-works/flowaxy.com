@@ -38,3 +38,6 @@ package-lock.json
 # Системные файлы
 .htaccess.backup
 *.bak
+
+# SCSS файлы
+themes/studio/assets/css/style.css
