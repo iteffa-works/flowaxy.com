@@ -1,18 +1,33 @@
+<?php
+/**
+ * Главный шаблон темы Creative Agency
+ * Exdos - Creative Agency HTML Template
+ */
+
+// Получаем менеджер тем
+$themeManager = themeManager();
+$themeUrl = $themeManager->getThemeUrl();
+$siteTitle = getSetting('site_title', 'Exdos - Creative Agency HTML Template');
+$siteDescription = getSetting('site_description', 'Creative Agency Template');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exdos - Creative Agency HTML Template </title>
+    <meta name="description" content="<?= safe_html($siteDescription) ?>">
+    <title><?= safe_html($siteTitle) ?></title>
 
-    <link rel="icon" type="image/x-icon" href="assets/img/logo/favicon.png">
+    <link rel="icon" type="image/x-icon" href="<?= $themeUrl ?>assets/img/logo/favicon.png">
 
-    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="assets/css/fontawesome-pro.min.css">
-    <link rel="stylesheet" href="assets/css/flaticon-exdos.css">
-    <link rel="stylesheet" href="assets/css/magnific-popup.css">
-    <link rel="stylesheet" href="assets/css/swiper-bundle.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/fontawesome-pro.min.css">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/flaticon-exdos.css">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/magnific-popup.css">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/swiper-bundle.min.css">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/style.css">
+    
+    <?php doHook('theme_head'); ?>
 </head>
 <body>
     
@@ -40,7 +55,7 @@
                 <div class="row gx-0 align-items-center">
                     <div class="col-xl-2 col-lg-5 col-md-4 col-6">
                         <div class="tp-logo">
-                            <a href="index.html"><img src="assets/img/logo/logo-white.png" alt=""></a>
+                            <a href="<?= SITE_URL ?>"><img src="<?= $themeUrl ?>assets/img/logo/logo-white.png" alt=""></a>
                         </div>
                     </div>
                     <div class="col-xl-10 col-lg-7 col-md-8 col-6">
@@ -48,14 +63,14 @@
                             <div class="tp-main-menu pl-45 d-none d-xl-block">
                                 <nav class="tp-mobile-menu-active">
                                     <ul>
-                                        <li class="has-dropdown"><a href="index.html">Home</a>
+                                        <li class="has-dropdown"><a href="<?= SITE_URL ?>">Home</a>
                                             <div class="tp-mega-menu">
                                                 <div class="tp-home-menu">
                                                     <div class="row gx-4 row-cols-2 row-cols-md-2 row-cols-xl-5">
                                                         <div class="col mb-25">
-                                                            <a href="index.html">
+                                                            <a href="<?= SITE_URL ?>">
                                                                 <div class="tp-home-thumb">
-                                                                    <img src="assets/img/demo/home-1.jpg" alt="">
+                                                                    <img src="<?= $themeUrl ?>assets/img/demo/home-1.jpg" alt="">
                                                                     <h3 class="tp-home-title">Home 01</h3>
                                                                 </div>
                                                             </a>
@@ -63,7 +78,7 @@
                                                         <div class="col mb-25">
                                                             <a href="index-2.html">
                                                                 <div class="tp-home-thumb">
-                                                                    <img src="assets/img/demo/home-2.jpg" alt="">
+                                                                    <img src="<?= $themeUrl ?>assets/img/demo/home-2.jpg" alt="">
                                                                     <h3 class="tp-home-title">Home 02</h3>
                                                                 </div>
                                                             </a>
@@ -71,7 +86,7 @@
                                                         <div class="col mb-25">
                                                             <a href="index-3.html">
                                                                 <div class="tp-home-thumb">
-                                                                    <img src="assets/img/demo/home-3.jpg" alt="">
+                                                                    <img src="<?= $themeUrl ?>assets/img/demo/home-3.jpg" alt="">
                                                                     <h3 class="tp-home-title">Home 03</h3>
                                                                 </div>
                                                             </a>
@@ -79,7 +94,7 @@
                                                         <div class="col mb-25">
                                                             <a href="index-4.html">
                                                                 <div class="tp-home-thumb">
-                                                                    <img src="assets/img/demo/home-4.jpg" alt="">
+                                                                    <img src="<?= $themeUrl ?>assets/img/demo/home-4.jpg" alt="">
                                                                     <h3 class="tp-home-title">Home 04</h3>
                                                                 </div>
                                                             </a>
@@ -87,7 +102,7 @@
                                                         <div class="col mb-25">
                                                             <a href="index-5.html">
                                                                 <div class="tp-home-thumb">
-                                                                    <img src="assets/img/demo/home-5.jpg" alt="">
+                                                                    <img src="<?= $themeUrl ?>assets/img/demo/home-5.jpg" alt="">
                                                                     <h3 class="tp-home-title">Home 05</h3>
                                                                 </div>
                                                             </a>
@@ -186,7 +201,7 @@
         <div class="tp-offcanvas-wrapper">
             <div class="tp-offcanvas-header d-flex justify-content-between align-items-center mb-90">
                 <div class="tp-offcanvas-logo">
-                    <a href="index.html"><img src="assets/img/logo/logo-black.png" alt=""></a>
+                    <a href="<?= SITE_URL ?>"><img src="<?= $themeUrl ?>assets/img/logo/logo-black.png" alt=""></a>
                 </div>
                 <div class="tp-offcanvas-close">
                     <button class="tp-offcanvas-close-toggle"><i class="fal fa-times"></i></button>
@@ -200,10 +215,10 @@
                 <p>Lorem ipsum dolor sit amet, consect etur adipiscing elit. </p>
             </div>
             <div class="tp-offcanvas-gallery mb-50">
-                <a class="popup-image" href="assets/img/project/showcase-thumb-01.jpg"><img src="assets/img/project/showcase-thumb-01.jpg" alt=""></a>
-                <a class="popup-image" href="assets/img/project/showcase-thumb-02.jpg"><img src="assets/img/project/showcase-thumb-02.jpg" alt=""></a>
-                <a class="popup-image" href="assets/img/project/showcase-thumb-03.jpg"><img src="assets/img/project/showcase-thumb-03.jpg" alt=""></a>
-                <a class="popup-image" href="assets/img/project/showcase-thumb-04.jpg"><img src="assets/img/project/showcase-thumb-04.jpg" alt=""></a>
+                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/showcase-thumb-01.jpg"><img src="<?= $themeUrl ?>assets/img/project/showcase-thumb-01.jpg" alt=""></a>
+                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/showcase-thumb-02.jpg"><img src="<?= $themeUrl ?>assets/img/project/showcase-thumb-02.jpg" alt=""></a>
+                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/showcase-thumb-03.jpg"><img src="<?= $themeUrl ?>assets/img/project/showcase-thumb-03.jpg" alt=""></a>
+                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/showcase-thumb-04.jpg"><img src="<?= $themeUrl ?>assets/img/project/showcase-thumb-04.jpg" alt=""></a>
             </div>
             <div class="tp-offcanvas-info mb-50">
                 <h3 class="tp-offcanvas-sm-title">Information</h3>
@@ -232,11 +247,11 @@
                 <!-- tp-hero-area start -->
                 <section class="tp-hero-area tp-hero-space tp-black-bg pt-265 pb-170 p-relative " style="background-image: url(assets/img/shape/hero-1-bg-shape.png);">
                     <div class="tp-hero-shape">
-                        <img class="tp-hero-shape-1 p-absolute" data-speed=".9" src="assets/img/shape/hero-1-ball-shape.png" alt="">
-                        <img class="tp-hero-shape-2 p-absolute d-none d-xl-block" data-speed=".9" src="assets/img/shape/hero-1-large-shape.png" alt="">
-                        <img class="tp-hero-shape-3 p-absolute" data-speed=".9" src="assets/img/shape/hero-sm-circle.png" alt="">
-                        <img class="tp-hero-shape-4 p-absolute d-none d-md-block" data-speed=".9" src="assets/img/shape/hero-1-shape-2.png" alt="">
-                        <img class="tp-hero-shape-5 p-absolute d-none d-md-block" data-speed=".9" src="assets/img/shape/hero-1-circle-3.png" alt="">
+                        <img class="tp-hero-shape-1 p-absolute" data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/hero-1-ball-shape.png" alt="">
+                        <img class="tp-hero-shape-2 p-absolute d-none d-xl-block" data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/hero-1-large-shape.png" alt="">
+                        <img class="tp-hero-shape-3 p-absolute" data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/hero-sm-circle.png" alt="">
+                        <img class="tp-hero-shape-4 p-absolute d-none d-md-block" data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/hero-1-shape-2.png" alt="">
+                        <img class="tp-hero-shape-5 p-absolute d-none d-md-block" data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/hero-1-circle-3.png" alt="">
                     </div>
                     <div class="hero-info d-none d-xxl-flex">
                         <div class="hero-social">
@@ -272,21 +287,21 @@
 
                 <section class="tp-about-area fix pt-130 pb-135 p-relative" style="background-image: url(assets/img/bg/about-bg.jpg);">
                     <div class="tp-about-shape">
-                        <img class="tp-about-shape-1 p-absolute d-none d-md-block" src="assets/img/shape/about-star-1.png" alt="">
-                        <img class="tp-about-shape-2 p-absolute" src="assets/img/shape/about-star-2.png" alt="">
-                        <img class="tp-about-shape-3 p-absolute" src="assets/img/shape/about-star-3.png" alt="">
+                        <img class="tp-about-shape-1 p-absolute d-none d-md-block" src="<?= $themeUrl ?>assets/img/shape/about-star-1.png" alt="">
+                        <img class="tp-about-shape-2 p-absolute" src="<?= $themeUrl ?>assets/img/shape/about-star-2.png" alt="">
+                        <img class="tp-about-shape-3 p-absolute" src="<?= $themeUrl ?>assets/img/shape/about-star-3.png" alt="">
                     </div>
                     <div class="container p-relative z-index-11">
                         <div class="row flex-column-reverse flex-md-row">
                             <div class="col-md-6">
                                 <div class="tp-about-img br-20 mb-100 wow img-custom-anim-top" data-wow-duration="1.5s" data-wow-delay="0.1s">
-                                    <img src="assets/img/about/about-h-1.jpg" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/about/about-h-1.jpg" alt="">
                                 </div>
 
                                 <div class="tp-about-video pl-110 mb-100">
                                     <div class="tp-about-video-info d-flex align-items-center mb-27">
                                         <div class="tp-about-video-icon mr-15">
-                                            <a class="popup-video" href="https://www.youtube.com/watch?v=l6rsx5nhim0"><img src="assets/img/shape/play.svg" alt=""></a>
+                                            <a class="popup-video" href="https://www.youtube.com/watch?v=l6rsx5nhim0"><img src="<?= $themeUrl ?>assets/img/shape/play.svg" alt=""></a>
                                         </div>
                                         <h4 class="m-0">Intro video</h4>
                                     </div>
@@ -312,7 +327,7 @@
                                     </div>
                                 </div>
                                 <div class="tp-about-img br-20 mb-100 pl-42 wow img-custom-anim-top" data-wow-duration="1.5s" data-wow-delay="0.4s">
-                                    <img src="assets/img/about/about-h-2.jpg" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/about/about-h-2.jpg" alt="">
                                 </div>
                             </div>
                         </div>
@@ -334,7 +349,7 @@
                                         <form action="#">
                                             <div class="tp-newsletter-input p-relative">
                                                 <input type="email" placeholder="Email Here*">
-                                                <img src="assets/img/shape/plane.svg" alt="">
+                                                <img src="<?= $themeUrl ?>assets/img/shape/plane.svg" alt="">
                                             </div>
                                             <button class="tp-btn-sec">
                                                 <span class="tp-btn-wrap">
@@ -472,28 +487,28 @@
                                     <div class="tab-content" id="nav-tabContent">
                                         <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab" tabindex="0">
                                             <div class="tp-project-tab-thumb">
-                                                <a class="popup-image" href="assets/img/project/project-tab-1.jpg"><img src="assets/img/project/project-tab-1.jpg" alt=""></a>
+                                                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/project-tab-1.jpg"><img src="<?= $themeUrl ?>assets/img/project/project-tab-1.jpg" alt=""></a>
                                             </div>
                                         </div>
                                         <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab" tabindex="0">
                                             <div class="tp-project-tab-thumb">
-                                                <a class="popup-image" href="assets/img/project/project-tab-2.jpg"><img src="assets/img/project/project-tab-2.jpg" alt=""></a>
+                                                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/project-tab-2.jpg"><img src="<?= $themeUrl ?>assets/img/project/project-tab-2.jpg" alt=""></a>
                                             </div>
                                         </div>
                                         <div class="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab" tabindex="0">
                                             <div class="tp-project-tab-thumb">
-                                                <a class="popup-image" href="assets/img/project/project-tab-3.jpg"><img src="assets/img/project/project-tab-3.jpg" alt=""></a>
+                                                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/project-tab-3.jpg"><img src="<?= $themeUrl ?>assets/img/project/project-tab-3.jpg" alt=""></a>
                                             </div>
                                         </div>
 
                                         <div class="tab-pane fade" id="nav-contact-1" role="tabpanel" aria-labelledby="nav-contact-tab-1" tabindex="0">
                                             <div class="tp-project-tab-thumb">
-                                                <a class="popup-image" href="assets/img/project/project-tab-4.jpg"><img src="assets/img/project/project-tab-4.jpg" alt=""></a>
+                                                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/project-tab-4.jpg"><img src="<?= $themeUrl ?>assets/img/project/project-tab-4.jpg" alt=""></a>
                                             </div>
                                         </div>
                                         <div class="tab-pane fade" id="nav-contact-2" role="tabpanel" aria-labelledby="nav-contact-tab-2" tabindex="0">
                                             <div class="tp-project-tab-thumb">
-                                                <a class="popup-image" href="assets/img/project/project-tab-5.jpg"><img src="assets/img/project/project-tab-5.jpg" alt=""></a>
+                                                <a class="popup-image" href="<?= $themeUrl ?>assets/img/project/project-tab-5.jpg"><img src="<?= $themeUrl ?>assets/img/project/project-tab-5.jpg" alt=""></a>
                                             </div>
                                         </div>
                                     </div>
@@ -514,13 +529,13 @@
                         </div>
                         <div class="tp-testimonial-wrapper text-center p-relative">
                             <div class="tp-testimonial-shape">
-                                <img src="assets/img/shape/quote-testimonial.png" alt="">
+                                <img src="<?= $themeUrl ?>assets/img/shape/quote-testimonial.png" alt="">
                             </div>
                             <div class="tp-testimonial-shape-thumb-1 p-absolute d-none d-xl-block">
-                                <img src="assets/img/testimonial/thumb-2.jpg" alt="">
+                                <img src="<?= $themeUrl ?>assets/img/testimonial/thumb-2.jpg" alt="">
                             </div>
                             <div class="tp-testimonial-shape-thumb-2 p-absolute d-none d-xl-block">
-                                <img src="assets/img/testimonial/thumb-1.jpg" alt="">
+                                <img src="<?= $themeUrl ?>assets/img/testimonial/thumb-1.jpg" alt="">
                             </div>
 
                             <div class="swiper tp-testimonial-active">
@@ -578,67 +593,67 @@
                             <div class="swiper-wrapper tp-slide-transtion">
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-01.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-01.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-02.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-02.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-03.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-03.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-04.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-04.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-05.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-05.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-06.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-06.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-07.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-07.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-01.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-01.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-06.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-06.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-03.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-03.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-01.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-01.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-03.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-03.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-y-05.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-y-05.png" alt="">
                                 </div>
                             </div>
                             </div>
@@ -652,67 +667,67 @@
                             <div class="swiper-wrapper tp-slide-transtion">
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-01.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-01.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-02.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-02.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-03.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-03.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-04.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-04.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-05.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-05.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-06.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-06.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-07.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-07.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-01.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-01.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-06.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-06.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-03.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-03.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-01.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-01.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-03.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-03.png" alt="">
                                 </div>
                             </div>
                             <div class="swiper-slide tp-brand-slide-element">
                                 <div class="tp-brand-img">
-                                    <img src="assets/img/brand/brand-b-05.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/brand/brand-b-05.png" alt="">
                                 </div>
                             </div>
                             </div>
@@ -743,7 +758,7 @@
                             <div class="swiper-slide">
                                     <div class="tpteam">
                                         <div class="tpteam__thumb br-15">
-                                            <a href="team-details.html"><img src="assets/img/team/team-01.jpg" alt=""></a>
+                                            <a href="team-details.html"><img src="<?= $themeUrl ?>assets/img/team/team-01.jpg" alt=""></a>
                                         </div>
                                         <div class="tpteam__info mt-30 ml-80">
                                             <h3 class="tpteam__title"><a href="team-details.html">Bonnie Z. Brown</a></h3>
@@ -759,7 +774,7 @@
                             <div class="swiper-slide">
                                     <div class="tpteam">
                                         <div class="tpteam__thumb br-15">
-                                            <a href="team-details.html"><img src="assets/img/team/team-02.jpg" alt=""></a>
+                                            <a href="team-details.html"><img src="<?= $themeUrl ?>assets/img/team/team-02.jpg" alt=""></a>
                                         </div>
                                         <div class="tpteam__info mt-30 ml-80">
                                             <h3 class="tpteam__title"><a href="team-details.html">Cynthia A. Keely</a></h3>
@@ -775,7 +790,7 @@
                             <div class="swiper-slide">
                                     <div class="tpteam">
                                         <div class="tpteam__thumb br-15">
-                                            <a href="team-details.html"><img src="assets/img/team/team-03.jpg" alt=""></a>
+                                            <a href="team-details.html"><img src="<?= $themeUrl ?>assets/img/team/team-03.jpg" alt=""></a>
                                         </div>
                                         <div class="tpteam__info mt-30 ml-80">
                                             <h3 class="tpteam__title"><a href="team-details.html">Donald D. Lowel</a></h3>
@@ -791,7 +806,7 @@
                             <div class="swiper-slide">
                                     <div class="tpteam">
                                         <div class="tpteam__thumb br-15">
-                                            <a href="team-details.html"><img src="assets/img/team/team-04.jpg" alt=""></a>
+                                            <a href="team-details.html"><img src="<?= $themeUrl ?>assets/img/team/team-04.jpg" alt=""></a>
                                         </div>
                                         <div class="tpteam__info mt-30 ml-80">
                                             <h3 class="tpteam__title"><a href="team-details.html">Maria A. Murray</a></h3>
@@ -807,7 +822,7 @@
                             <div class="swiper-slide">
                                     <div class="tpteam">
                                         <div class="tpteam__thumb br-15">
-                                            <a href="team-details.html"><img src="assets/img/team/team-05.jpg" alt=""></a>
+                                            <a href="team-details.html"><img src="<?= $themeUrl ?>assets/img/team/team-05.jpg" alt=""></a>
                                         </div>
                                         <div class="tpteam__info mt-30 ml-80">
                                             <h3 class="tpteam__title"><a href="team-details.html">Kendra R. Macoy</a></h3>
@@ -823,7 +838,7 @@
                             <div class="swiper-slide">
                                     <div class="tpteam">
                                         <div class="tpteam__thumb br-15">
-                                            <a href="team-details.html"><img src="assets/img/team/team-06.jpg" alt=""></a>
+                                            <a href="team-details.html"><img src="<?= $themeUrl ?>assets/img/team/team-06.jpg" alt=""></a>
                                         </div>
                                         <div class="tpteam__info mt-30 ml-80">
                                             <h3 class="tpteam__title"><a href="team-details.html">Kellee R. Cherry</a></h3>
@@ -849,7 +864,7 @@
                                     <h2 class="tp-section-title tp_title_anim mb-20">Exdos received many global awards that inspired our member</h2>
                                 </div>
                                 <div class="shape-arrow mb-40 d-none d-xl-block">
-                                    <img src="assets/img/shape/big-arrow.png" alt="">
+                                    <img src="<?= $themeUrl ?>assets/img/shape/big-arrow.png" alt="">
                                 </div>
                             </div>
                             <div class="col-xl-6">
@@ -963,7 +978,7 @@
                             <div class="col-xl-4 col-lg-4 col-md-6">
                                 <div class="tpblog mb-40">
                                     <div class="tpblog__thumb br-20 mb-35 wow img-custom-anim-top" data-wow-duration="1.5s" data-wow-delay="0.1s">
-                                        <a href="blog-details.html"><img src="assets/img/blog/blog-post-01.jpg" alt=""></a>
+                                        <a href="blog-details.html"><img src="<?= $themeUrl ?>assets/img/blog/blog-post-01.jpg" alt=""></a>
                                     </div>
                                     <div class="tpblog__content pl-30">
                                         <div class="tpblog__meta mb-15">
@@ -985,7 +1000,7 @@
                             <div class="col-xl-4 col-lg-4 col-md-6">
                                 <div class="tpblog mb-40">
                                     <div class="tpblog__thumb br-20 mb-35 wow img-custom-anim-top" data-wow-duration="1.5s" data-wow-delay="0.2s">
-                                        <a href="blog-details.html"><img src="assets/img/blog/blog-post-02.jpg" alt=""></a>
+                                        <a href="blog-details.html"><img src="<?= $themeUrl ?>assets/img/blog/blog-post-02.jpg" alt=""></a>
                                     </div>
                                     <div class="tpblog__content pl-30">
                                         <div class="tpblog__meta mb-15">
@@ -1007,7 +1022,7 @@
                             <div class="col-xl-4 col-lg-4 col-md-6">
                                 <div class="tpblog mb-40">
                                     <div class="tpblog__thumb br-20 mb-35 wow img-custom-anim-top" data-wow-duration="1.5s" data-wow-delay="0.4s">
-                                        <a href="blog-details.html"><img src="assets/img/blog/blog-post-03.jpg" alt=""></a>
+                                        <a href="blog-details.html"><img src="<?= $themeUrl ?>assets/img/blog/blog-post-03.jpg" alt=""></a>
                                     </div>
                                     <div class="tpblog__content pl-30">
                                         <div class="tpblog__meta mb-15">
@@ -1080,23 +1095,23 @@
             <footer class="tp-theme-black-bg p-relative">
 
                 <div class="tp-footer-shape-01 p-absolute">
-                    <img data-speed=".9" src="assets/img/shape/footer/shape-01.png" alt="">
+                    <img data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/footer/shape-01.png" alt="">
                 </div>
                 <div class="tp-footer-shape-02 p-absolute">
-                    <img data-speed=".9" src="assets/img/shape/footer/shape-02.png" alt="">
+                    <img data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/footer/shape-02.png" alt="">
                 </div>
                 <div class="tp-footer-shape-03 p-absolute">
-                    <img data-speed=".9" src="assets/img/shape/footer/shape-03.png" alt="">
+                    <img data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/footer/shape-03.png" alt="">
                 </div>
                 <div class="tp-footer-shape-04 p-absolute">
-                    <img data-speed=".9" src="assets/img/shape/footer/shape-04.png" alt="">
+                    <img data-speed=".9" src="<?= $themeUrl ?>assets/img/shape/footer/shape-04.png" alt="">
                 </div>
                 <div class="container">
                     <div class="tp-foter-logo-area pt-130">
                         <div class="row align-items-center">
                             <div class="col-xl-3 col-lg-3 col-md-4">
                                 <div class="footer-logo mb-30">
-                                    <a href="index.html"><img src="assets/img/logo/logo-white.png" alt=""></a>
+                                    <a href="<?= SITE_URL ?>"><img src="<?= $themeUrl ?>assets/img/logo/logo-white.png" alt=""></a>
                                 </div>
                             </div>
                             <div class="col-xl-6 col-lg-5 col-md-4 d-none d-md-block">
@@ -1189,18 +1204,20 @@
     </div>
 
 
-    <script src="assets/js/jquery-3.7.1.min.js"></script>
-    <script src="assets/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/gsap.js"></script>
-    <script src="assets/js/scroll-to-plugin.js"></script>
-    <script src="assets/js/scroll-trigger.js"></script>
-    <script src="assets/js/scroll-smoother.js"></script>
-    <script src="assets/js/split-text.js"></script>
-    <script src="assets/js/isotope.pkgd.min.js"></script>
-    <script src="assets/js/jquery.magnific-popup.min.js"></script>
-    <script src="assets/js/swiper-bundle.min.js"></script>
-    <script src="assets/js/nice-select.js"></script>
-    <script src="assets/js/wow.js"></script>
-    <script src="assets/js/main.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/jquery-3.7.1.min.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/gsap.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/scroll-to-plugin.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/scroll-trigger.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/scroll-smoother.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/split-text.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/isotope.pkgd.min.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/jquery.magnific-popup.min.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/swiper-bundle.min.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/nice-select.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/wow.js"></script>
+    <script src="<?= $themeUrl ?>assets/js/main.js"></script>
+    
+    <?php doHook('theme_footer'); ?>
 </body>
 </html>
