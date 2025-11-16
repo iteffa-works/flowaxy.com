@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `media_files` (
   KEY `idx_media_type` (`media_type`),
   KEY `idx_uploaded_at` (`uploaded_at`),
   KEY `idx_uploaded_by` (`uploaded_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_flowaxy.media_files: ~0 rows (приблизно)
 
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `menus` (
   KEY `idx_menu_location` (`location`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_flowaxy.menus: ~1 rows (приблизно)
+-- Dumping data for table db_flowaxy.menus: ~0 rows (приблизно)
 INSERT INTO `menus` (`id`, `name`, `slug`, `description`, `location`, `created_at`, `updated_at`) VALUES
 	(1, 'Головне меню', 'main_menu', 'Основне меню навігації сайту', 'primary', '2025-11-15 10:47:13', '2025-11-15 10:47:13');
 
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `plugins` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`),
   KEY `idx_plugins_active` (`is_active`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_flowaxy.plugins: ~0 rows (приблизно)
 
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS `plugin_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `plugin_setting` (`plugin_slug`,`setting_key`),
   KEY `idx_plugin_slug` (`plugin_slug`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_flowaxy.plugin_settings: ~0 rows (приблизно)
 
@@ -127,33 +127,9 @@ CREATE TABLE IF NOT EXISTS `site_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `setting_key` (`setting_key`),
   KEY `idx_settings_key` (`setting_key`)
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_flowaxy.site_settings: ~23 rows (приблизно)
-INSERT INTO `site_settings` (`id`, `setting_key`, `setting_value`, `created_at`, `updated_at`) VALUES
-	(1, 'active_theme', 'minimal-scss', '2025-11-16 11:15:54', '2025-11-16 15:50:29'),
-	(2, 'site_name', 'Flowaxy Studio', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(3, 'site_tagline', 'Створюємо цифрові рішення майбутнього', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(4, 'site_description', 'Flowaxy Studio — українська креативна діджитал-студія, що спеціалізується на веб-розробці, дизайні та створенні сучасних цифрових продуктів. Ми поєднуємо технології, креатив та бізнес-логіку, щоб створювати рішення, які працюють та розвивають ваш бренд.', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(5, 'copyright', '© 2025 Flowaxy Studio. Усі права захищено.', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(6, 'admin_email', 'admin@example.com', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(7, 'site_phone', '', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(8, 'timezone', 'Europe/Kiev', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(9, 'meta_keywords', '', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(10, 'google_analytics', '', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
-	(12, 'logger_max_file_size', '10485760', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(13, 'logger_retention_days', '30', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(14, 'logger_log_errors', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(15, 'logger_log_warnings', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(16, 'logger_log_info', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(17, 'logger_log_success', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(18, 'logger_log_debug', '0', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(19, 'logger_log_db_queries', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(20, 'logger_log_file_operations', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(21, 'logger_log_plugin_events', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(22, 'logger_log_module_events', '1', '2025-11-16 11:38:54', '2025-11-16 11:38:54'),
-	(32, 'site_language', 'uk', '2025-11-16 12:04:57', '2025-11-16 12:04:57'),
-	(33, 'admin_language', 'uk', '2025-11-16 12:04:57', '2025-11-16 12:04:57');
+-- Dumping data for table db_flowaxy.site_settings: ~0 rows (приблизно)
 
 -- Dumping structure for таблиця db_flowaxy.theme_settings
 CREATE TABLE IF NOT EXISTS `theme_settings` (
