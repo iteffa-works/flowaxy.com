@@ -229,16 +229,13 @@ class Router {
     
     /**
      * Нормалізація шляху
+     * Увага: НЕ додає basePath до path для паттерну, це робиться в getCurrentUri()
      */
     private function normalizePath(string $path): string {
+        // Просто нормалізуємо шлях без додавання базового шляху
+        // Базовий шлях видаляється з URI в getCurrentUri(), а не додається до паттерну
         $path = trim($path, '/');
-        
-        if ($this->basePath !== null && $this->basePath !== '/') {
-            $base = trim($this->basePath, '/');
-            $path = $base . ($path ? '/' . $path : '');
-        }
-        
-        return '/' . trim($path, '/');
+        return '/' . $path;
     }
     
     /**
@@ -255,6 +252,12 @@ class Router {
     private function pathToPattern(string $path): string {
         // Нормалізуємо шлях для pattern
         $normalizedPath = $this->normalizePath($path);
+        
+        // Якщо шлях порожній, він має відповідати кореневому маршруту
+        if (empty($normalizedPath) || $normalizedPath === '/') {
+            return '/^\/?$/';
+        }
+        
         $pattern = preg_quote($normalizedPath, '/');
         $pattern = str_replace('\{', '(?P<', $pattern);
         $pattern = str_replace('\}', '>[^/]+)', $pattern);
@@ -271,8 +274,17 @@ class Router {
         $uri = $this->getCurrentUri();
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         
-        // Якщо шлях порожній, використовуємо маршрут за замовчуванням
-        if (empty($uri) && $this->defaultRoute !== null) {
+        // Сначала проверяем, есть ли маршрут для пустого пути
+        $hasEmptyRoute = false;
+        foreach ($this->routes as $route) {
+            if (($route['path'] === '/' || $route['path'] === '') && in_array($method, $route['methods'])) {
+                $hasEmptyRoute = true;
+                break;
+            }
+        }
+        
+        // Если пути пустой и нет маршрута для пустого пути, используем маршрут за замовчуванням
+        if (empty($uri) && !$hasEmptyRoute && $this->defaultRoute !== null) {
             $uri = $this->defaultRoute;
         }
         
@@ -285,7 +297,20 @@ class Router {
             
             // Перевірка шляху
             $params = [];
-            $uriPath = '/' . $uri;
+            // Для порожнього URI використовуємо '/', для інших - '/path'
+            $uriPath = empty($uri) ? '/' : '/' . $uri;
+            
+            // Додатково перевіряємо, чи порожній URI відповідає порожньому маршруту
+            if (empty($uri) && ($route['path'] === '/' || $route['path'] === '')) {
+                // Виконання middleware
+                if (!$this->runMiddlewares($route['middleware'], $params)) {
+                    return false;
+                }
+                
+                // Виконання обробника
+                return $this->executeHandler($route['handler'], $params);
+            }
+            
             if (preg_match($route['pattern'], $uriPath, $matches)) {
                 // Витягування параметрів
                 foreach ($route['params'] as $param) {
@@ -402,7 +427,7 @@ class Router {
      * Відображення сторінки 404
      */
     private function show404(): void {
-        Response::status(404)->send();
+        (new Response())->status(404)->send();
         
         // Перевіряємо, чи є кастомна сторінка 404 у темі
         if (function_exists('themeManager')) {

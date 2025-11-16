@@ -31,28 +31,29 @@ class Logger extends BaseModule {
         // Определяем директорию для логов
         $this->logsDir = dirname(__DIR__, 2) . '/storage/logs/';
         
-        // Получаем подключение к БД (если не установлено в BaseModule)
-        if ($this->db === null) {
-            $this->db = getDB();
-        }
+        // НЕ загружаем БД в init(), чтобы избежать циклических зависимостей
+        // БД будет загружена позже через getDB() метод BaseModule
         
-        // Загружаем настройки
-        $this->loadSettings();
-        
-        // Создаем директорию, если её нет
+        // Создаем директорию, если её нет (без БД)
         $this->ensureLogsDir();
         
-        // Регистрируем обработчик ошибок PHP
+        // Регистрируем обработчик ошибок PHP (без БД)
         $this->registerErrorHandler();
         
-        // Регистрируем автоматическое логирование
-        $this->registerAutoLogging();
+        // НЕ регистрируем автоматическое логирование в init(), 
+        // так как это требует БД и может вызвать рекурсию
+        // Регистрация будет выполнена позже через registerHooks()
     }
     
     /**
      * Регистрация хуков модуля
      */
     public function registerHooks(): void {
+        // Загружаем настройки (теперь безопасно, так как БД уже должна быть доступна)
+        $this->loadSettings();
+        
+        // Регистрируем автоматическое логирование (теперь безопасно)
+        $this->registerAutoLogging();
         // Регистрация пункта меню в админке
         addHook('admin_menu', [$this, 'addAdminMenuItem']);
         
@@ -146,14 +147,16 @@ class Logger extends BaseModule {
     
     /**
      * Загрузка настроек из БД
+     * Использует ленивую загрузку БД через getDB() метод BaseModule
      */
     private function loadSettings(): void {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return;
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)");
+            $stmt = $db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)");
             $stmt->execute(['logger_max_file_size', 'logger_retention_days']);
             $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
             
@@ -171,14 +174,16 @@ class Logger extends BaseModule {
     
     /**
      * Получение настройки
+     * Использует ленивую загрузку БД через getDB() метод BaseModule
      */
     public function getSetting(string $key, $default = null) {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return $default;
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ?");
+            $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ?");
             $stmt->execute(['logger_' . $key]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -190,14 +195,16 @@ class Logger extends BaseModule {
     
     /**
      * Сохранение настройки
+     * Использует ленивую загрузку БД через getDB() метод BaseModule
      */
     public function setSetting(string $key, $value): bool {
-        if (!$this->db) {
+        $db = $this->getDB();
+        if (!$db) {
             return false;
         }
         
         try {
-            $stmt = $this->db->prepare("
+            $stmt = $db->prepare("
                 INSERT INTO site_settings (setting_key, setting_value) 
                 VALUES (?, ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)

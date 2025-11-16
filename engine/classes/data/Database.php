@@ -30,33 +30,41 @@ class Database {
     
     /**
      * Конструктор (приватный для Singleton)
+     * Важно: НЕ инициализируем Logger в конструкторе, чтобы избежать циклических зависимостей
      */
     private function __construct() {
-        // Инициализация logger
-        $this->initLogger();
-        
-        // Загружаем порог медленных запросов из настроек Logger
-        if ($this->logger && method_exists($this->logger, 'getSetting')) {
-            $threshold = (float)$this->logger->getSetting('slow_query_threshold', '1.0');
-            $this->slowQueryThreshold = $threshold;
-        }
+        // НЕ инициализируем logger здесь, чтобы избежать рекурсии:
+        // Database::__construct() -> initLogger() -> logger() -> Logger::getInstance() -> BaseModule::__construct() -> getDB() -> Database::getInstance()
+        // Logger будет загружен лениво через getLogger() метод
     }
     
     /**
-     * Инициализация Logger
+     * Ленивое получение Logger
+     * Вызывается только когда нужно логировать, после того как Database уже создан
+     * 
+     * @return Logger|null
      */
-    private function initLogger(): void {
-        try {
-            // Пытаемся получить Logger через функцию
-            if (function_exists('logger')) {
-                $this->logger = logger();
-            } elseif (class_exists('Logger') && method_exists('Logger', 'getInstance')) {
-                $this->logger = Logger::getInstance();
+    private function getLogger() {
+        if ($this->logger === null) {
+            try {
+                // Пытаемся получить Logger через функцию
+                if (function_exists('logger')) {
+                    $this->logger = logger();
+                } elseif (class_exists('Logger') && method_exists('Logger', 'getInstance')) {
+                    $this->logger = Logger::getInstance();
+                }
+                
+                // Загружаем порог медленных запросов из настроек Logger
+                if ($this->logger && method_exists($this->logger, 'getSetting')) {
+                    $threshold = (float)$this->logger->getSetting('slow_query_threshold', '1.0');
+                    $this->slowQueryThreshold = $threshold;
+                }
+            } catch (Exception $e) {
+                // Logger недоступен, продолжаем без него
+                error_log("Database: Logger initialization failed: " . $e->getMessage());
             }
-        } catch (Exception $e) {
-            // Logger недоступен, продолжаем без него
-            error_log("Database: Logger initialization failed: " . $e->getMessage());
         }
+        return $this->logger;
     }
     
     /**
@@ -516,9 +524,10 @@ class Database {
      */
     private function getSetting(string $key, string $default = ''): string {
         // Используем настройки Logger, если доступны
-        if ($this->logger && method_exists($this->logger, 'getSetting')) {
+        $logger = $this->getLogger();
+        if ($logger && method_exists($logger, 'getSetting')) {
             $loggerKey = strpos($key, 'logger_') === 0 ? substr($key, 7) : $key;
-            $value = $this->logger->getSetting($loggerKey, $default);
+            $value = $logger->getSetting($loggerKey, $default);
             return $value !== null ? (string)$value : $default;
         }
         
@@ -535,30 +544,34 @@ class Database {
      * Логирование через Logger
      */
     private function logError(string $message, array $context = []): void {
-        if ($this->logger && method_exists($this->logger, 'logError')) {
-            $this->logger->logError($message, $context);
+        $logger = $this->getLogger();
+        if ($logger && method_exists($logger, 'logError')) {
+            $logger->logError($message, $context);
         } else {
             error_log("Database ERROR: {$message} " . json_encode($context));
         }
     }
     
     private function logWarning(string $message, array $context = []): void {
-        if ($this->logger && method_exists($this->logger, 'logWarning')) {
-            $this->logger->logWarning($message, $context);
+        $logger = $this->getLogger();
+        if ($logger && method_exists($logger, 'logWarning')) {
+            $logger->logWarning($message, $context);
         } else {
             error_log("Database WARNING: {$message} " . json_encode($context));
         }
     }
     
     private function logInfo(string $message, array $context = []): void {
-        if ($this->logger && method_exists($this->logger, 'logInfo')) {
-            $this->logger->logInfo($message, $context);
+        $logger = $this->getLogger();
+        if ($logger && method_exists($logger, 'logInfo')) {
+            $logger->logInfo($message, $context);
         }
     }
     
     private function logDebug(string $message, array $context = []): void {
-        if ($this->logger && method_exists($this->logger, 'logDebug')) {
-            $this->logger->logDebug($message, $context);
+        $logger = $this->getLogger();
+        if ($logger && method_exists($logger, 'logDebug')) {
+            $logger->logDebug($message, $context);
         }
     }
     
@@ -679,8 +692,9 @@ class Database {
         $this->slowQueryThreshold = $seconds;
         
         // Сохраняем в настройки Logger, если доступен
-        if ($this->logger && method_exists($this->logger, 'setSetting')) {
-            $this->logger->setSetting('slow_query_threshold', (string)$seconds);
+        $logger = $this->getLogger();
+        if ($logger && method_exists($logger, 'setSetting')) {
+            $logger->setSetting('slow_query_threshold', (string)$seconds);
         }
     }
     

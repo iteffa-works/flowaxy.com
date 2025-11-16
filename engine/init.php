@@ -83,6 +83,21 @@ spl_autoload_register(function (string $className): void {
             'Router' => 'http',
             'View' => 'view',
             'Mail' => 'mail',
+            // Сторінки адмінки (для автозавантаження)
+            'LoginPage' => 'skins/pages',
+            'LogoutPage' => 'skins/pages',
+            'DashboardPage' => 'skins/pages',
+            'SettingsPage' => 'skins/pages',
+            'ProfilePage' => 'skins/pages',
+            'PluginsPage' => 'skins/pages',
+            'ThemesPage' => 'skins/pages',
+            'CustomizerPage' => 'skins/pages',
+            'MenusPage' => 'skins/pages',
+            'SystemPage' => 'skins/pages',
+            'ThemeEditorPage' => 'skins/pages',
+            'LogsPage' => 'skins/pages',
+            'LoggerSettingsPage' => 'skins/pages',
+            'MediaPage' => 'skins/pages',
         ];
         
         $subdir = $subdirectories[$className] ?? '';
@@ -109,6 +124,16 @@ spl_autoload_register(function (string $className): void {
             $classFile = $classesDir . $dir . '/' . $className . '.php';
             if (file_exists($classFile) && is_readable($classFile)) {
                 require_once $classFile;
+                return;
+            }
+        }
+        
+        // Перевіряємо сторінки адмінки
+        if (strpos($className, 'Page') !== false && strpos($className, 'AdminPage') === false) {
+            $pagesDir = __DIR__ . '/skins/pages/';
+            $pageFile = $pagesDir . $className . '.php';
+            if (file_exists($pageFile) && is_readable($pageFile)) {
+                require_once $pageFile;
                 return;
             }
         }
@@ -494,6 +519,20 @@ function getSetting(string $key, string $default = ''): string {
 }
 
 // Створення необхідних директорій якщо не існують (використовує Directory клас)
+// Явно завантажуємо класи Directory та File перед використанням
+if (!class_exists('Directory')) {
+    $directoryClassFile = __DIR__ . '/classes/files/Directory.php';
+    if (file_exists($directoryClassFile)) {
+        require_once $directoryClassFile;
+    }
+}
+if (!class_exists('File')) {
+    $fileClassFile = __DIR__ . '/classes/files/File.php';
+    if (file_exists($fileClassFile)) {
+        require_once $fileClassFile;
+    }
+}
+
 $directories = [
     UPLOADS_DIR,
     CACHE_DIR,
@@ -501,17 +540,62 @@ $directories = [
 ];
 
 foreach ($directories as $dir) {
-    $directory = new Directory($dir);
-    if (!$directory->exists()) {
-        $directory->create(0755, true);
+    // Використовуємо клас Directory якщо доступний, інакше стандартні PHP функції
+    if (class_exists('Directory')) {
+        try {
+            $directory = new Directory($dir);
+            if (method_exists($directory, 'exists') && !$directory->exists()) {
+                if (method_exists($directory, 'create')) {
+                    $directory->create(0755, true);
+                } else {
+                    // Fallback на стандартні PHP функції
+                    if (!is_dir($dir)) {
+                        @mkdir($dir, 0755, true);
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Failed to create directory {$dir} using Directory class: " . $e->getMessage());
+            // Fallback на стандартні PHP функції
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+        }
+    } else {
+        // Fallback: використовуємо стандартні PHP функції
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
     }
     
     // Створюємо .htaccess для захисту директорій
     if (strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false) {
         $htaccessFile = rtrim($dir, '/') . '/.htaccess';
-        $file = new File($htaccessFile);
-        if (!$file->exists()) {
-            $file->write("Deny from all\n");
+        if (class_exists('File')) {
+            try {
+                $file = new File($htaccessFile);
+                if (method_exists($file, 'exists') && !$file->exists()) {
+                    if (method_exists($file, 'write')) {
+                        $file->write("Deny from all\n");
+                    } else {
+                        // Fallback на стандартні PHP функції
+                        if (!file_exists($htaccessFile)) {
+                            @file_put_contents($htaccessFile, "Deny from all\n");
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Failed to write .htaccess to {$htaccessFile} using File class: " . $e->getMessage());
+                // Fallback на стандартні PHP функції
+                if (!file_exists($htaccessFile)) {
+                    @file_put_contents($htaccessFile, "Deny from all\n");
+                }
+            }
+        } else {
+            // Fallback: використовуємо стандартні PHP функції
+            if (!file_exists($htaccessFile)) {
+                @file_put_contents($htaccessFile, "Deny from all\n");
+            }
         }
     }
 }

@@ -11,7 +11,7 @@ RewriteRule ^admin/(styles|scripts)/(.*)$ /engine/skins/$1/$2 [L]
 
 # Обработка всех остальных запросов админки
 RewriteCond %{REQUEST_URI} ^/admin/(.*)$
-RewriteRule ^admin/(.*)$ engine/include/admin-router.php [QSA,L]
+RewriteRule ^admin/(.*)$ admin.php [QSA,L]
 
 # Исключаем реальные файлы и директории
 RewriteCond %{REQUEST_FILENAME} !-f

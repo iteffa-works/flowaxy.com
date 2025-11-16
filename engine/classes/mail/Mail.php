@@ -176,7 +176,7 @@ class Mail {
             return $this->body;
         }
         
-        $boundary = '----=_NextPart_' . md5(time());
+        $boundary = '----=_NextPart_' . md5((string)time());
         $this->header('Content-Type', "multipart/mixed; boundary=\"{$boundary}\"");
         
         $body = "--{$boundary}\r\n";
@@ -222,7 +222,7 @@ class Mail {
      * @param bool $isHtml HTML формат
      * @return bool
      */
-    public static function send(string $to, string $subject, string $body, bool $isHtml = true): bool {
+    public static function sendQuick(string $to, string $subject, string $body, bool $isHtml = true): bool {
         return (new self($to, $subject, $body))->isHtml($isHtml)->send();
     }
 }

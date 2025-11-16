@@ -1,6 +1,0 @@
-# Разрешаем доступ только к admin-router.php
-<FilesMatch "^(?!admin-router\.php$).*$">
-    Order Allow,Deny
-    Deny from all
-</FilesMatch>
-

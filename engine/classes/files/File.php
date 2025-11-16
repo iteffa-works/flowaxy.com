@@ -316,73 +316,78 @@ class File {
     
     /**
      * Статичний метод: Перевірка існування файла
+     * Перейменовано з exists() щоб уникнути конфлікту з методом екземпляра
      * 
      * @param string $filePath Шлях до файла
      * @return bool
      */
-    public static function exists(string $filePath): bool {
+    public static function fileExists(string $filePath): bool {
         return file_exists($filePath) && is_file($filePath);
     }
     
     /**
      * Статичний метод: Читання файла
+     * Перейменовано з read() щоб уникнути конфлікту з методом екземпляра
      * 
      * @param string $filePath Шлях до файла
      * @return string|false
      */
-    public static function read(string $filePath) {
+    public static function readFile(string $filePath) {
         try {
             return (new self($filePath))->read();
         } catch (Exception $e) {
-            error_log("File::read error: " . $e->getMessage());
+            error_log("File::readFile error: " . $e->getMessage());
             return false;
         }
     }
     
     /**
      * Статичний метод: Запис в файл
+     * Перейменовано з write() щоб уникнути конфлікту з методом екземпляра
      * 
      * @param string $filePath Шлях до файла
      * @param string $content Вміст
      * @param bool $append Додавати в кінець
      * @return bool
      */
-    public static function write(string $filePath, string $content, bool $append = false): bool {
+    public static function writeFile(string $filePath, string $content, bool $append = false): bool {
         try {
             return (new self($filePath))->write($content, $append);
         } catch (Exception $e) {
-            error_log("File::write error: " . $e->getMessage());
+            error_log("File::writeFile error: " . $e->getMessage());
             return false;
         }
     }
     
     /**
      * Статичний метод: Копіювання файла
+     * Перейменовано з copy() щоб уникнути конфлікту з методом екземпляра
      * 
      * @param string $sourcePath Вихідний шлях
      * @param string $destinationPath Шлях призначення
      * @return bool
      */
-    public static function copy(string $sourcePath, string $destinationPath): bool {
+    public static function copyFile(string $sourcePath, string $destinationPath): bool {
         try {
             return (new self($sourcePath))->copy($destinationPath);
         } catch (Exception $e) {
-            error_log("File::copy error: " . $e->getMessage());
+            error_log("File::copyFile error: " . $e->getMessage());
             return false;
         }
     }
     
     /**
      * Статичний метод: Видалення файла
+     * Перейменовано з delete() щоб уникнути конфлікту з методом екземпляра
      * 
      * @param string $filePath Шлях до файла
      * @return bool
      */
-    public static function delete(string $filePath): bool {
+    public static function deleteFile(string $filePath): bool {
         try {
             return (new self($filePath))->delete();
         } catch (Exception $e) {
-            error_log("File::delete error: " . $e->getMessage());
+            error_log("File::deleteFile error: " . $e->getMessage());
             return false;
         }
     }
