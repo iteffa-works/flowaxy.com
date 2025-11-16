@@ -112,7 +112,9 @@ class CustomizerPage extends AdminPage {
         
         $defaultSettings = $themeConfig['default_settings'] ?? [];
         $settings = array_merge($defaultSettings, $savedSettings);
-        $categories = $customizerConfig['categories'] ?? [
+        
+        // Дефолтные категории с иконками
+        $defaultCategories = [
             'identity' => ['icon' => 'fa-id-card', 'label' => 'Ідентичність сайту'],
             'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
             'fonts' => ['icon' => 'fa-font', 'label' => 'Typography'],
@@ -121,6 +123,27 @@ class CustomizerPage extends AdminPage {
             'footer' => ['icon' => 'fa-window-minimize', 'label' => 'Footer Settings'],
             'css' => ['icon' => 'fa-code', 'label' => 'Додатковий код CSS'],
         ];
+        
+        // Получаем доступные настройки из темы
+        $availableSettings = $themeConfig['available_settings'] ?? [];
+        
+        // Формируем список категорий только из тех, что есть в available_settings
+        $categories = [];
+        if (isset($customizerConfig['categories']) && is_array($customizerConfig['categories'])) {
+            // Если в customizer.php определены категории, используем их
+            foreach ($customizerConfig['categories'] as $category => $categoryInfo) {
+                if (isset($availableSettings[$category]) && !empty($availableSettings[$category])) {
+                    $categories[$category] = $categoryInfo;
+                }
+            }
+        } else {
+            // Иначе используем дефолтные категории, но только те, что есть в available_settings
+            foreach ($defaultCategories as $category => $categoryInfo) {
+                if (isset($availableSettings[$category]) && !empty($availableSettings[$category])) {
+                    $categories[$category] = $categoryInfo;
+                }
+            }
+        }
         $this->render([
             'activeTheme' => $activeTheme,
             'themeConfig' => $themeConfig,
