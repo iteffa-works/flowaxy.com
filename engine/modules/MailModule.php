@@ -606,30 +606,164 @@ class MailModule extends BaseModule {
     private function parseEmail(string $emailContent): array {
         $email = [
             'from' => '',
+            'to' => '',
+            'cc' => '',
+            'bcc' => '',
             'subject' => '',
             'date' => '',
             'body' => '',
+            'body_html' => '',
             'headers' => []
         ];
         
-        $parts = explode("\r\n\r\n", $emailContent, 2);
-        $headers = $parts[0] ?? '';
+        // Розділяємо заголовки та тіло
+        $parts = preg_split("/\r\n\r\n|\n\n/", $emailContent, 2);
+        $headersText = $parts[0] ?? '';
         $body = $parts[1] ?? '';
         
-        $lines = explode("\r\n", $headers);
+        // Парсимо заголовки (обробляємо багаторядкові)
+        $headers = [];
+        $lines = preg_split("/\r\n|\n/", $headersText);
+        $currentHeader = null;
+        
         foreach ($lines as $line) {
-            if (preg_match('/^From:\s*(.+)$/i', $line, $matches)) {
-                $email['from'] = trim($matches[1]);
-            } elseif (preg_match('/^Subject:\s*(.+)$/i', $line, $matches)) {
-                $email['subject'] = mb_decode_mimeheader(trim($matches[1]));
-            } elseif (preg_match('/^Date:\s*(.+)$/i', $line, $matches)) {
-                $email['date'] = trim($matches[1]);
+            // Якщо рядок починається з пробілу або табуляції - це продовження попереднього заголовка
+            if (preg_match('/^\s+/', $line) && $currentHeader !== null) {
+                $headers[$currentHeader] .= ' ' . trim($line);
+            } else {
+                // Новий заголовок
+                if (preg_match('/^([^:]+):\s*(.+)$/', $line, $matches)) {
+                    $currentHeader = strtolower(trim($matches[1]));
+                    $headers[$currentHeader] = trim($matches[2]);
+                }
             }
         }
         
-        $email['body'] = $body;
+        // Витягуємо дані з заголовків
+        $email['from'] = $this->decodeHeader($headers['from'] ?? '');
+        $email['to'] = $this->decodeHeader($headers['to'] ?? '');
+        $email['cc'] = $this->decodeHeader($headers['cc'] ?? '');
+        $email['bcc'] = $this->decodeHeader($headers['bcc'] ?? '');
+        $email['subject'] = $this->decodeHeader($headers['subject'] ?? '');
+        $email['date'] = $headers['date'] ?? '';
+        
+        // Парсимо тіло листа (може бути multipart)
+        $contentType = $headers['content-type'] ?? '';
+        if (stripos($contentType, 'multipart') !== false) {
+            // Multipart повідомлення
+            $boundary = '';
+            if (preg_match('/boundary=["\']?([^"\']+)["\']?/i', $contentType, $matches)) {
+                $boundary = trim($matches[1], '"\'');
+            }
+            
+            if ($boundary) {
+                $parts = explode('--' . $boundary, $body);
+                foreach ($parts as $part) {
+                    $part = trim($part);
+                    if (empty($part) || $part === '--') continue;
+                    
+                    $partLines = preg_split("/\r\n\r\n|\n\n/", $part, 2);
+                    $partHeaders = $partLines[0] ?? '';
+                    $partBody = $partLines[1] ?? '';
+                    
+                    $partContentType = '';
+                    if (preg_match('/Content-Type:\s*([^;\r\n]+)/i', $partHeaders, $matches)) {
+                        $partContentType = strtolower(trim($matches[1]));
+                    }
+                    
+                    if (stripos($partContentType, 'text/html') !== false) {
+                        $email['body_html'] = $this->decodeBody($partBody);
+                    } elseif (stripos($partContentType, 'text/plain') !== false || empty($email['body'])) {
+                        $email['body'] = $this->decodeBody($partBody);
+                    }
+                }
+            }
+        } else {
+            // Просте повідомлення
+            if (stripos($contentType, 'text/html') !== false) {
+                $email['body_html'] = $this->decodeBody($body);
+                $email['body'] = strip_tags($email['body_html']);
+            } else {
+                $email['body'] = $this->decodeBody($body);
+            }
+        }
+        
+        // Якщо тіло порожнє, використовуємо весь контент
+        if (empty($email['body']) && empty($email['body_html'])) {
+            $email['body'] = $this->decodeBody($body);
+        }
         
         return $email;
+    }
+    
+    /**
+     * Декодування заголовка (MIME)
+     * 
+     * @param string $header
+     * @return string
+     */
+    private function decodeHeader(string $header): string {
+        if (empty($header)) {
+            return '';
+        }
+        
+        // Декодуємо MIME encoded заголовки
+        if (preg_match_all('/=\?([^?]+)\?([QB])\?([^?]+)\?=/i', $header, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            $decoded = '';
+            $lastPos = 0;
+            
+            foreach ($matches as $match) {
+                $matchPos = $match[0][1];
+                $matchStr = $match[0][0];
+                
+                $decoded .= substr($header, $lastPos, $matchPos - $lastPos);
+                $charset = $match[1][0];
+                $encoding = strtoupper($match[2][0]);
+                $text = $match[3][0];
+                
+                if ($encoding === 'Q') {
+                    $text = quoted_printable_decode($text);
+                } elseif ($encoding === 'B') {
+                    $text = base64_decode($text);
+                }
+                
+                if (function_exists('mb_convert_encoding') && !empty($charset)) {
+                    $text = @mb_convert_encoding($text, 'UTF-8', $charset);
+                }
+                
+                $decoded .= $text;
+                $lastPos = $matchPos + strlen($matchStr);
+            }
+            
+            $decoded .= substr($header, $lastPos);
+            return $decoded;
+        }
+        
+        // Якщо не MIME encoded, просто декодуємо якщо потрібно
+        if (function_exists('mb_decode_mimeheader')) {
+            return mb_decode_mimeheader($header);
+        }
+        
+        return $header;
+    }
+    
+    /**
+     * Декодування тіла листа
+     * 
+     * @param string $body
+     * @return string
+     */
+    private function decodeBody(string $body): string {
+        if (empty($body)) {
+            return '';
+        }
+        
+        // Видаляємо зайві пробіли та переноси
+        $body = trim($body);
+        
+        // Можна додати додаткову обробку за потреби
+        
+        return $body;
     }
     
     /**
