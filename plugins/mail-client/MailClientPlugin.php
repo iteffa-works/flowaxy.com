@@ -26,6 +26,7 @@ class MailClientPlugin extends BasePlugin {
      */
     public function activate() {
         $this->createTables();
+        $this->updateTables(); // Оновлюємо структуру якщо потрібно
     }
     
     /**
@@ -51,7 +52,8 @@ class MailClientPlugin extends BasePlugin {
         }
         
         try {
-            // Видаляємо таблиці
+            // Видаляємо таблиці (в правильном порядке из-за внешних ключей)
+            $this->db->exec("DROP TABLE IF EXISTS mail_client_attachments");
             $this->db->exec("DROP TABLE IF EXISTS mail_client_emails");
             $this->db->exec("DROP TABLE IF EXISTS mail_client_folders");
         } catch (Exception $e) {
@@ -108,6 +110,24 @@ class MailClientPlugin extends BasePlugin {
                 INDEX idx_order (order_num)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             
+            // Таблиця для вложений
+            $this->db->exec("CREATE TABLE IF NOT EXISTS mail_client_attachments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email_id INT NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                original_filename VARCHAR(255),
+                file_path VARCHAR(500),
+                mime_type VARCHAR(100),
+                file_size INT DEFAULT 0,
+                content_id VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_email_id (email_id),
+                FOREIGN KEY (email_id) REFERENCES mail_client_emails(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            
+            // Оновлюємо структуру таблиць якщо потрібно
+            $this->updateTables();
+            
             // Додаємо стандартні папки якщо їх немає
             $folders = [
                 ['inbox', 'Вхідні', 'fas fa-inbox'],
@@ -157,6 +177,56 @@ class MailClientPlugin extends BasePlugin {
         
         require_once __DIR__ . '/admin/MailClientAdminPage.php';
         $router->add(['GET', 'POST'], 'mail-client', 'MailClientAdminPage');
+    }
+    
+    /**
+     * Оновлення структури таблиць (додавання нових полів/таблиць)
+     */
+    private function updateTables() {
+        if (!$this->db) {
+            return;
+        }
+        
+        try {
+            // Перевіряємо чи існує таблиця вкладень
+            $tableCheck = $this->db->query("SHOW TABLES LIKE 'mail_client_attachments'");
+            if (!$tableCheck || $tableCheck->rowCount() === 0) {
+                // Створюємо таблицю вкладень якщо її немає
+                $this->db->exec("CREATE TABLE IF NOT EXISTS mail_client_attachments (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    email_id INT NOT NULL,
+                    filename VARCHAR(255) NOT NULL,
+                    original_filename VARCHAR(255),
+                    file_path VARCHAR(500),
+                    mime_type VARCHAR(100),
+                    file_size INT DEFAULT 0,
+                    content_id VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_email_id (email_id),
+                    FOREIGN KEY (email_id) REFERENCES mail_client_emails(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            
+            // Перевіряємо чи є поле headers в таблиці листів
+            $columnsCheck = $this->db->query("SHOW COLUMNS FROM mail_client_emails LIKE 'headers'");
+            if (!$columnsCheck || $columnsCheck->rowCount() === 0) {
+                // Додаємо поле headers якщо його немає
+                $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN headers TEXT AFTER attachments");
+            }
+            
+            // Перевіряємо чи є поля cc та bcc
+            $ccCheck = $this->db->query("SHOW COLUMNS FROM mail_client_emails LIKE 'cc'");
+            if (!$ccCheck || $ccCheck->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN cc VARCHAR(255) AFTER `to`");
+            }
+            
+            $bccCheck = $this->db->query("SHOW COLUMNS FROM mail_client_emails LIKE 'bcc'");
+            if (!$bccCheck || $bccCheck->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN bcc VARCHAR(255) AFTER cc");
+            }
+        } catch (Exception $e) {
+            error_log("MailClientPlugin updateTables error: " . $e->getMessage());
+        }
     }
 }
 

@@ -6,6 +6,7 @@
 const MailClient = {
     currentFolder: 'inbox',
     currentEmailId: null,
+    currentEmail: null, // Зберігаємо дані поточного листа для reply
     currentPage: 1,
     selectedEmails: [],
     isLoading: false,
@@ -17,14 +18,17 @@ const MailClient = {
         // Завантажуємо статистику папок через AJAX (не блокуємо завантаження)
         this.updateFolderStats();
         
+        // Автоматично отримуємо нові листи при завантаженні сторінки (в фоновому режимі)
+        setTimeout(() => {
+            this.receiveEmails(true); // silent = true - без підтвердження
+        }, 1000); // Затримка 1 секунда, щоб не блокувати завантаження
+        
         // Автоматичне оновлення кожні 10 хвилин (збільшено з 5 для зменшення навантаження)
         setInterval(() => {
             if (this.currentFolder === 'inbox' && !this.isLoading) {
                 this.loadFolder('inbox', true);
             }
         }, 600000);
-        
-        // НЕ завантажуємо пошту автоматично - тільки по кнопці або запиту користувача
     },
     
     // Видалено автоматичну перевірку - тільки по запиту користувача
@@ -222,7 +226,25 @@ const MailClient = {
     },
     
     loadEmail: async function(emailId) {
-        if (this.isLoading) return;
+        // Перевіряємо чи не завантажується вже інший лист
+        if (this.isLoading) {
+            // Якщо завантажується той самий лист, не робимо нічого
+            if (this.currentEmailId === emailId) {
+                return;
+            }
+            // Якщо завантажується інший лист, чекаємо трохи і повторюємо
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (this.isLoading) {
+                return; // Все ще завантажується, виходимо
+            }
+        }
+        
+        // Перевіряємо чи елемент view існує
+        const view = document.getElementById('mailView');
+        if (!view) {
+            console.error('mailView element not found');
+            return;
+        }
         
         this.currentEmailId = emailId;
         
@@ -234,20 +256,40 @@ const MailClient = {
             }
         });
         
-        const view = document.getElementById('mailView');
-        view.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i> Завантаження...</div>';
+        view.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Завантаження...</div>';
         
         this.isLoading = true;
         
         try {
             const baseUrl = window.location.href.split('?')[0];
             const response = await fetch(`${baseUrl}?action=get_email&id=${emailId}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                cache: 'no-cache'
             });
+            
+            // Перевіряємо статус відповіді
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Перевіряємо чи відповідь JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Non-JSON response:', text);
+                throw new Error('Сервер повернув некоректну відповідь');
+            }
             
             const data = await response.json();
             
-            if (data.success) {
+            // Перевіряємо чи це все ще той самий лист (на випадок якщо користувач швидко переключився)
+            if (this.currentEmailId !== emailId) {
+                return; // Користувач вже вибрав інший лист
+            }
+            
+            if (data.success && data.email) {
+                // Зберігаємо дані листа для використання в reply
+                this.currentEmail = data.email;
                 this.renderEmail(data.email);
                 // Оновлюємо список листів щоб позначити як прочитане
                 const emailItem = document.querySelector(`.mail-item[data-email-id="${emailId}"]`);
@@ -255,46 +297,127 @@ const MailClient = {
                     emailItem.classList.remove('unread');
                 }
             } else {
-                this.showAlert(data.error || 'Помилка завантаження листа', 'danger');
+                const errorMsg = data.error || 'Помилка завантаження листа';
+                console.error('Error loading email:', errorMsg, data);
+                this.showAlert(errorMsg, 'danger');
                 view.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
                         <h4>Помилка</h4>
-                        <p>${this.escapeHtml(data.error || 'Не вдалося завантажити лист')}</p>
+                        <p>${this.escapeHtml(errorMsg)}</p>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="MailClient.loadEmail(${emailId})">
+                            <i class="fas fa-redo me-1"></i>Спробувати ще раз
+                        </button>
                     </div>
                 `;
             }
         } catch (error) {
             console.error('Error loading email:', error);
-            this.showAlert('Помилка завантаження листа: ' + error.message, 'danger');
+            
+            // Перевіряємо чи це все ще той самий лист
+            if (this.currentEmailId !== emailId) {
+                return; // Користувач вже вибрав інший лист
+            }
+            
+            const errorMsg = error.message || 'Помилка завантаження листа';
+            this.showAlert(errorMsg, 'danger');
             view.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
                     <h4>Помилка</h4>
-                    <p>Не вдалося завантажити лист</p>
+                    <p>${this.escapeHtml(errorMsg)}</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="MailClient.loadEmail(${emailId})">
+                        <i class="fas fa-redo me-1"></i>Спробувати ще раз
+                    </button>
                 </div>
             `;
         } finally {
-            this.isLoading = false;
+            // Скидаємо прапорець завантаження тільки якщо це все ще той самий лист
+            if (this.currentEmailId === emailId) {
+                this.isLoading = false;
+            }
         }
     },
     
     renderEmail: function(email) {
+        if (!email) {
+            console.error('renderEmail: email is null or undefined');
+            return;
+        }
+        
         const view = document.getElementById('mailView');
-        const date = this.formatDate(email.date_received || email.date_sent || email.created_at);
-        const from = this.extractEmailName(email.from || '');
-        const fromEmail = this.extractEmail(email.from || '');
-        const to = email.to || '';
-        const cc = email.cc || '';
+        if (!view) {
+            console.error('renderEmail: mailView element not found');
+            return;
+        }
         
-        let body = email.body_html || email.body || '(Порожнє повідомлення)';
+        try {
+            const date = this.formatDate(email.date_received || email.date_sent || email.created_at);
+            const from = this.extractEmailName(email.from || '');
+            const fromEmail = this.extractEmail(email.from || '');
+            const to = email.to || '';
+            const cc = email.cc || '';
+            
+            let body = email.body_html || email.body || '(Порожнє повідомлення)';
         
-        // Якщо HTML, створюємо iframe для безпеки
-        if (email.body_html) {
+        // Декодуємо Base64, якщо потрібно (на випадок, якщо не декодувалося на сервері)
+        if (body && typeof body === 'string') {
+            // Перевіряємо, чи це може бути Base64
+            const trimmed = body.trim();
+            if (/^[A-Za-z0-9+\/]+=*$/.test(trimmed) && trimmed.length % 4 === 0 && trimmed.length > 50) {
+                try {
+                    const decoded = atob(trimmed);
+                    // Перевіряємо, чи декодований текст виглядає як HTML або текст
+                    if (decoded.includes('<') || decoded.length > 0) {
+                        body = decoded;
+                    }
+                } catch (e) {
+                    // Не Base64, залишаємо як є
+                }
+            }
+        }
+        
+        // Якщо HTML, відображаємо в iframe для безпеки
+        if (email.body_html || (body && body.includes('<'))) {
+            // Очищаємо HTML від потенційно небезпечних елементів
+            const cleanBody = this.sanitizeHtml(body);
             const iframeId = 'email-body-' + email.id;
-            body = `<iframe id="${iframeId}" srcdoc="${this.escapeHtml(body)}"></iframe>`;
+            body = `<div class="email-html-content" style="padding: 20px; max-width: 100%; overflow-x: auto;">
+                ${cleanBody}
+            </div>`;
         } else {
-            body = '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit;">' + this.escapeHtml(body) + '</pre>';
+            body = '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit; padding: 20px;">' + this.escapeHtml(body) + '</pre>';
+        }
+        
+        // Формуємо список вкладень
+        let attachmentsHtml = '';
+        if (email.attachments && email.attachments.length > 0) {
+            attachmentsHtml = '<div class="mail-attachments mt-3 p-3 bg-light rounded">';
+            attachmentsHtml += '<h6 class="mb-2"><i class="fas fa-paperclip me-2"></i>Вкладення (' + email.attachments.length + '):</h6>';
+            attachmentsHtml += '<div class="d-flex flex-wrap gap-2">';
+            
+            email.attachments.forEach(att => {
+                const fileName = att.original_filename || att.filename || 'attachment';
+                const fileSize = this.formatFileSize(att.file_size || 0);
+                const fileIcon = this.getFileIcon(att.mime_type || '');
+                
+                attachmentsHtml += `
+                    <div class="attachment-item p-2 border rounded bg-white" style="min-width: 200px;">
+                        <div class="d-flex align-items-center">
+                            <i class="${fileIcon} me-2 text-primary" style="font-size: 1.5rem;"></i>
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <div class="text-truncate fw-bold" title="${this.escapeHtml(fileName)}">${this.escapeHtml(fileName)}</div>
+                                <small class="text-muted">${fileSize}</small>
+                            </div>
+                            <a href="${this.getAttachmentUrl(att.id)}" class="btn btn-sm btn-outline-primary ms-2" download title="Завантажити">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            attachmentsHtml += '</div></div>';
         }
         
         view.innerHTML = `
@@ -321,15 +444,117 @@ const MailClient = {
                     </div>
                 </div>
             </div>
+            ${attachmentsHtml}
             <div class="mail-view-body">
                 ${body}
             </div>
         `;
+        } catch (error) {
+            console.error('Error rendering email:', error, email);
+            view.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h4>Помилка відображення</h4>
+                    <p>Не вдалося відобразити лист. Спробуйте відкрити його ще раз.</p>
+                    ${email && email.id ? `<button class="btn btn-sm btn-primary mt-2" onclick="MailClient.loadEmail(${email.id})">
+                        <i class="fas fa-redo me-1"></i>Спробувати ще раз
+                    </button>` : ''}
+                </div>
+            `;
+        }
+    },
+    
+    /**
+     * Валідація та нормалізація email адреси
+     * Підтримує формати: "Ім'я <email@example.com>" або "email@example.com"
+     */
+    normalizeEmail: function(emailString) {
+        if (!emailString) return '';
+        
+        emailString = emailString.trim();
+        
+        // Якщо формат "Ім'я <email@example.com>"
+        const match = emailString.match(/^(.+?)\s*<(.+?)>$/);
+        if (match) {
+            const name = match[1].trim();
+            const email = match[2].trim();
+            // Валідуємо email
+            if (this.isValidEmail(email)) {
+                return name ? `${name} <${email}>` : email;
+            }
+        }
+        
+        // Якщо просто email
+        if (this.isValidEmail(emailString)) {
+            return emailString;
+        }
+        
+        return null; // Невірний формат
+    },
+    
+    /**
+     * Валідація email адреси
+     */
+    isValidEmail: function(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    },
+    
+    /**
+     * Витягування email з рядка (для відправки)
+     */
+    extractEmailFromString: function(emailString) {
+        if (!emailString) return '';
+        
+        emailString = emailString.trim();
+        
+        // Якщо формат "Ім'я <email@example.com>"
+        const match = emailString.match(/^(.+?)\s*<(.+?)>$/);
+        if (match) {
+            return match[2].trim();
+        }
+        
+        // Якщо просто email
+        return emailString;
     },
     
     sendEmail: async function() {
         const form = document.getElementById('composeForm');
+        const toField = document.getElementById('composeTo');
+        const toValue = toField.value.trim();
+        
+        // Валідуємо та нормалізуємо адреси
+        if (!toValue) {
+            toField.classList.add('is-invalid');
+            document.getElementById('composeToError').textContent = 'Введіть адресу отримувача';
+            return;
+        }
+        
+        // Розділяємо кілька адрес через кому
+        const addresses = toValue.split(',').map(addr => addr.trim()).filter(addr => addr);
+        const normalizedAddresses = [];
+        const errors = [];
+        
+        for (let i = 0; i < addresses.length; i++) {
+            const normalized = this.normalizeEmail(addresses[i]);
+            if (!normalized) {
+                errors.push(`Невірний формат адреси: "${addresses[i]}"`);
+            } else {
+                normalizedAddresses.push(normalized);
+            }
+        }
+        
+        if (errors.length > 0) {
+            toField.classList.add('is-invalid');
+            document.getElementById('composeToError').textContent = errors.join('; ');
+            return;
+        }
+        
+        toField.classList.remove('is-invalid');
+        
+        // Створюємо FormData з нормалізованими адресами
         const formData = new FormData(form);
+        formData.set('to', normalizedAddresses.join(', '));
         
         const sendBtn = form.querySelector('button[type="submit"]');
         const originalText = sendBtn.innerHTML;
@@ -575,10 +800,24 @@ const MailClient = {
         this.loadEmail(emailId).then(() => {
             const emailItem = document.querySelector(`.mail-item[data-email-id="${emailId}"]`);
             if (emailItem) {
-                const from = emailItem.querySelector('.mail-item-from')?.textContent || '';
-                const subject = emailItem.querySelector('.mail-item-subject')?.textContent || '';
+                // Отримуємо дані з завантаженого листа
+                const email = this.currentEmail || {};
+                const from = email.from || '';
+                const subject = email.subject || '';
                 const replySubject = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
-                this.showComposeModal(from, replySubject);
+                
+                // Форматуємо адресу в формат "Ім'я <email>"
+                let formattedFrom = from;
+                if (from && !from.includes('<')) {
+                    // Якщо тільки email, спробуємо витягти ім'я
+                    const emailMatch = from.match(/^(.+?)\s*<(.+?)>$/);
+                    if (!emailMatch) {
+                        // Якщо просто email, залишаємо як є
+                        formattedFrom = from;
+                    }
+                }
+                
+                this.showComposeModal(formattedFrom, replySubject);
             }
         });
     },
@@ -760,6 +999,83 @@ const MailClient = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+    
+    /**
+     * Форматування розміру файлу
+     */
+    formatFileSize: function(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    },
+    
+    /**
+     * Отримання іконки для типу файлу
+     */
+    getFileIcon: function(mimeType) {
+        if (!mimeType) return 'fas fa-file';
+        
+        const icons = {
+            'application/pdf': 'fas fa-file-pdf text-danger',
+            'application/zip': 'fas fa-file-archive text-warning',
+            'application/msword': 'fas fa-file-word text-primary',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fas fa-file-word text-primary',
+            'application/vnd.ms-excel': 'fas fa-file-excel text-success',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fas fa-file-excel text-success',
+            'image/jpeg': 'fas fa-file-image text-info',
+            'image/png': 'fas fa-file-image text-info',
+            'image/gif': 'fas fa-file-image text-info',
+            'text/plain': 'fas fa-file-alt',
+            'text/html': 'fas fa-file-code text-primary'
+        };
+        
+        return icons[mimeType] || 'fas fa-file';
+    },
+    
+    /**
+     * Отримання URL для скачивання вкладення
+     */
+    getAttachmentUrl: function(attachmentId) {
+        const baseUrl = window.location.href.split('?')[0];
+        return `${baseUrl}?action=download_attachment&id=${attachmentId}&csrf_token=${encodeURIComponent(document.querySelector('input[name="csrf_token"]').value)}`;
+    },
+    
+    /**
+     * Очищення HTML від небезпечних елементів
+     */
+    sanitizeHtml: function(html) {
+        if (!html) return '';
+        
+        // Створюємо тимчасовий елемент для парсингу
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        
+        // Видаляємо небезпечні елементи та атрибути
+        const dangerousTags = ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button'];
+        dangerousTags.forEach(tag => {
+            const elements = temp.querySelectorAll(tag);
+            elements.forEach(el => el.remove());
+        });
+        
+        // Видаляємо небезпечні атрибути
+        const allElements = temp.querySelectorAll('*');
+        allElements.forEach(el => {
+            // Видаляємо onclick, onerror та інші event handlers
+            Array.from(el.attributes).forEach(attr => {
+                if (attr.name.startsWith('on')) {
+                    el.removeAttribute(attr.name);
+                }
+                // Видаляємо javascript: з href та src
+                if ((attr.name === 'href' || attr.name === 'src') && attr.value.startsWith('javascript:')) {
+                    el.removeAttribute(attr.name);
+                }
+            });
+        });
+        
+        return temp.innerHTML;
     }
 };
 

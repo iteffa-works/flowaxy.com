@@ -565,9 +565,10 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="composeTo" class="form-label">Кому <span class="text-danger">*</span></label>
-                        <input type="email" class="form-control" id="composeTo" name="to" required 
-                               placeholder="email@example.com" multiple>
-                        <div class="form-text">Можна вказати кілька адрес через кому</div>
+                        <input type="text" class="form-control" id="composeTo" name="to" required 
+                               placeholder="Ім'я <email@example.com> або email@example.com">
+                        <div class="form-text">Можна вказати кілька адрес через кому. Формат: "Ім'я <email@example.com>" або просто email@example.com</div>
+                        <div class="invalid-feedback" id="composeToError"></div>
                     </div>
                     <div class="mb-3">
                         <label for="composeSubject" class="form-label">Тема <span class="text-danger">*</span></label>

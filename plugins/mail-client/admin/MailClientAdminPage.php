@@ -50,12 +50,22 @@ class MailClientAdminPage extends AdminPage {
     }
     
     public function handle() {
+        // Обробка скачивання вложений (не AJAX)
+        if (isset($_GET['action']) && $_GET['action'] === 'download_attachment') {
+            $this->ajaxDownloadAttachment();
+            return;
+        }
+        
         // Обробка AJAX запитів
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             $this->handleAjax();
             return;
         }
+        
+        // Автоматично отримуємо нові листи при завантаженні сторінки (в фоновому режимі)
+        // Не блокуємо завантаження сторінки
+        $this->autoReceiveEmails();
         
         // Отримуємо тільки папки (легкий запит)
         $folders = $this->getFolders();
@@ -66,6 +76,14 @@ class MailClientAdminPage extends AdminPage {
             'folders' => $folders,
             'stats' => [] // Пуста статистика, завантажиться через AJAX
         ]);
+    }
+    
+    /**
+     * Автоматичне отримання нових листів (викликається при завантаженні сторінки)
+     */
+    private function autoReceiveEmails() {
+        // Запускаємо в фоновому режимі через AJAX, щоб не блокувати завантаження сторінки
+        // Це буде викликано через JavaScript після завантаження сторінки
     }
     
     /**
@@ -312,18 +330,63 @@ class MailClientAdminPage extends AdminPage {
             if ($email) {
                 // Позначаємо як прочитане
                 if (!$email['is_read']) {
-                    $updateStmt = $this->db->prepare("UPDATE mail_client_emails SET is_read = 1 WHERE id = ?");
-                    $updateStmt->execute([$id]);
-                    $email['is_read'] = 1;
+                    try {
+                        $updateStmt = $this->db->prepare("UPDATE mail_client_emails SET is_read = 1 WHERE id = ?");
+                        $updateStmt->execute([$id]);
+                        $email['is_read'] = 1;
+                    } catch (Exception $e) {
+                        error_log("Error marking email as read: " . $e->getMessage());
+                        // Продовжуємо навіть якщо не вдалося позначити як прочитане
+                    }
                 }
                 
-                echo json_encode(['success' => true, 'email' => $email], JSON_UNESCAPED_UNICODE);
+                // Отримуємо вкладення (якщо таблиця існує)
+                $email['attachments'] = [];
+                try {
+                    // Перевіряємо чи існує таблиця вкладень
+                    $tableCheck = $this->db->query("SHOW TABLES LIKE 'mail_client_attachments'");
+                    if ($tableCheck && $tableCheck->rowCount() > 0) {
+                        $attachmentsStmt = $this->db->prepare("
+                            SELECT id, filename, original_filename, file_path, mime_type, file_size 
+                            FROM mail_client_attachments 
+                            WHERE email_id = ?
+                        ");
+                        $attachmentsStmt->execute([$id]);
+                        $email['attachments'] = $attachmentsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    }
+                } catch (Exception $e) {
+                    error_log("Error getting attachments: " . $e->getMessage());
+                    // Якщо помилка з вкладеннями, просто встановлюємо порожній масив
+                    $email['attachments'] = [];
+                }
+                
+                // Переконуємося, що всі поля є рядками для JSON
+                $email['from'] = (string)($email['from'] ?? '');
+                $email['to'] = (string)($email['to'] ?? '');
+                $email['cc'] = (string)($email['cc'] ?? '');
+                $email['bcc'] = (string)($email['bcc'] ?? '');
+                $email['subject'] = (string)($email['subject'] ?? '');
+                $email['body'] = (string)($email['body'] ?? '');
+                $email['body_html'] = (string)($email['body_html'] ?? '');
+                
+                echo json_encode(['success' => true, 'email' => $email], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
             } else {
                 echo json_encode(['success' => false, 'error' => 'Лист не знайдено'], JSON_UNESCAPED_UNICODE);
             }
         } catch (Exception $e) {
             error_log("Error getting email: " . $e->getMessage());
-            echo json_encode(['success' => false, 'error' => 'Помилка отримання листа'], JSON_UNESCAPED_UNICODE);
+            error_log("Stack trace: " . $e->getTraceAsString());
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Помилка отримання листа: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Error $e) {
+            error_log("Fatal error getting email: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Критична помилка отримання листа'
+            ], JSON_UNESCAPED_UNICODE);
         }
         exit;
     }
@@ -353,8 +416,19 @@ class MailClientAdminPage extends AdminPage {
             exit;
         }
         
+        // Зберігаємо оригінальний формат для БД (з іменами)
+        $toForDb = $to;
+        
+        // Витягуємо тільки email адреси для відправки (якщо формат "Ім'я <email>")
+        $toForSend = $this->extractEmailsFromString($to);
+        
+        if (empty($toForSend)) {
+            echo json_encode(['success' => false, 'error' => 'Невірний формат адреси отримувача'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
         try {
-            $result = $mailModule->sendEmail($to, $subject, $body, ['is_html' => $isHtml]);
+            $result = $mailModule->sendEmail($toForSend, $subject, $body, ['is_html' => $isHtml]);
             
             if ($result) {
                 // Зберігаємо копію в надіслані
@@ -370,7 +444,7 @@ class MailClientAdminPage extends AdminPage {
                     $stmt->execute([
                         $messageId,
                         $from,
-                        $to,
+                        $toForDb, // Зберігаємо з іменами для відображення
                         $subject,
                         strip_tags($body),
                         $isHtml ? $body : null
@@ -638,18 +712,76 @@ class MailClientAdminPage extends AdminPage {
                 $imported = 0;
                 
                 foreach ($result['emails'] as $emailData) {
-                    // Перевіряємо чи вже є такий лист
-                    $messageId = md5($emailData['from'] . $emailData['subject'] . ($emailData['date'] ?? ''));
-                    
-                    $checkStmt = $this->db->prepare("SELECT id FROM mail_client_emails WHERE message_id = ?");
-                    $checkStmt->execute([$messageId]);
-                    
-                    if (!$checkStmt->fetch()) {
+                    try {
+                        // Нормалізуємо message-id (видаляємо углові дужки якщо є)
+                        $messageId = $emailData['message_id'] ?? '';
+                        if (!empty($messageId)) {
+                            $messageId = trim($messageId, '<>');
+                        }
+                        
+                        // Якщо message-id порожній або невалідний, генеруємо на основі даних листа
+                        if (empty($messageId)) {
+                            // Використовуємо комбінацію from + subject + date для унікальності
+                            $from = $emailData['from'] ?? '';
+                            $subject = $emailData['subject'] ?? '';
+                            $date = $emailData['date'] ?? '';
+                            
+                            // Витягуємо email з from (якщо формат "Ім'я <email>")
+                            if (preg_match('/<(.+?)>/', $from, $matches)) {
+                                $from = $matches[1];
+                            }
+                            
+                            $messageId = md5(strtolower(trim($from)) . '|' . trim($subject) . '|' . trim($date));
+                        }
+                        
+                        // Перевіряємо чи вже є такий лист по message_id
+                        $checkStmt = $this->db->prepare("SELECT id FROM mail_client_emails WHERE message_id = ? LIMIT 1");
+                        $checkStmt->execute([$messageId]);
+                        
+                        if ($checkStmt->fetch()) {
+                            // Лист вже існує, пропускаємо
+                            continue;
+                        }
+                        
+                        // Додаткова перевірка: чи немає дубліката за комбінацією from + subject + date
+                        // (на випадок якщо message-id змінився)
+                        $from = $emailData['from'] ?? '';
+                        $subject = $emailData['subject'] ?? '';
+                        $date = $emailData['date'] ?? '';
+                        
+                        // Нормалізуємо дату для порівняння
+                        $normalizedDate = null;
+                        if (!empty($date)) {
+                            try {
+                                $normalizedDate = date('Y-m-d H:i:s', strtotime($date));
+                            } catch (Exception $e) {
+                                $normalizedDate = null;
+                            }
+                        }
+                        
+                        // Перевіряємо дублікат за комбінацією полів (якщо дата в межах 1 хвилини)
+                        if ($normalizedDate) {
+                            $dateFrom = date('Y-m-d H:i:s', strtotime($normalizedDate . ' -1 minute'));
+                            $dateTo = date('Y-m-d H:i:s', strtotime($normalizedDate . ' +1 minute'));
+                            
+                            $duplicateStmt = $this->db->prepare("
+                                SELECT id FROM mail_client_emails 
+                                WHERE `from` = ? AND subject = ? 
+                                AND date_received BETWEEN ? AND ?
+                                LIMIT 1
+                            ");
+                            $duplicateStmt->execute([$from, $subject, $dateFrom, $dateTo]);
+                            
+                            if ($duplicateStmt->fetch()) {
+                                // Знайдено дублікат, пропускаємо
+                                continue;
+                            }
+                        }
                         // Зберігаємо лист
                         $stmt = $this->db->prepare("
                             INSERT INTO mail_client_emails 
-                            (message_id, folder, `from`, `to`, subject, body, body_html, date_received, is_read)
-                            VALUES (?, 'inbox', ?, ?, ?, ?, ?, ?, 0)
+                            (message_id, folder, `from`, `to`, cc, bcc, subject, body, body_html, date_received, is_read, headers)
+                            VALUES (?, 'inbox', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
                         ");
                         
                         $dateReceived = null;
@@ -672,17 +804,43 @@ class MailClientAdminPage extends AdminPage {
                             $bodyText = strip_tags($bodyHtml);
                         }
                         
+                        $headersJson = !empty($emailData['headers']) ? json_encode($emailData['headers'], JSON_UNESCAPED_UNICODE) : null;
+                        
                         $stmt->execute([
                             $messageId,
                             $emailData['from'] ?? '',
                             $emailData['to'] ?? '',
+                            $emailData['cc'] ?? '',
+                            $emailData['bcc'] ?? '',
                             $emailData['subject'] ?? '',
                             $bodyText,
-                            $bodyHtml ?: null, // HTML версія
-                            $dateReceived
+                            $bodyHtml ?: null,
+                            $dateReceived,
+                            $headersJson
                         ]);
                         
+                        $emailId = $this->db->lastInsertId();
+                        
+                        // Зберігаємо вкладення
+                        if (!empty($emailData['attachments']) && is_array($emailData['attachments'])) {
+                            try {
+                                $this->saveAttachments($emailId, $emailData['attachments']);
+                            } catch (Exception $e) {
+                                error_log("Error saving attachments for email {$emailId}: " . $e->getMessage());
+                                // Продовжуємо навіть якщо вкладення не збереглися
+                            }
+                        }
+                        
                         $imported++;
+                    } catch (Exception $e) {
+                        // Логуємо помилку для конкретного листа, але продовжуємо обробку інших
+                        error_log("Error processing email: " . $e->getMessage());
+                        error_log("Email data: " . json_encode([
+                            'from' => $emailData['from'] ?? '',
+                            'subject' => $emailData['subject'] ?? '',
+                            'date' => $emailData['date'] ?? ''
+                        ]));
+                        continue; // Пропускаємо цей лист і продовжуємо з наступним
                     }
                 }
                 
@@ -691,15 +849,23 @@ class MailClientAdminPage extends AdminPage {
                     $this->clearFolderStatsCache();
                 }
                 
+                $message = $imported > 0 
+                    ? "Отримано {$imported} нових листів" 
+                    : "Нових листів не знайдено";
+                
                 echo json_encode([
                     'success' => true,
-                    'message' => "Отримано {$imported} нових листів",
+                    'message' => $message,
                     'imported' => $imported
                 ], JSON_UNESCAPED_UNICODE);
             } else {
+                // Якщо немає помилки, але і листів немає - це нормально
+                $errorMessage = $result['message'] ?? 'Нових листів не знайдено';
+                
                 echo json_encode([
-                    'success' => false,
-                    'error' => $result['message'] ?? 'Помилка отримання пошти'
+                    'success' => true, // Вважаємо успіхом, якщо просто немає нових листів
+                    'message' => $errorMessage,
+                    'imported' => 0
                 ], JSON_UNESCAPED_UNICODE);
             }
         } catch (Exception $e) {
@@ -735,6 +901,95 @@ class MailClientAdminPage extends AdminPage {
             'stats' => $stats
         ], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+    
+    /**
+     * AJAX: Скачивание вложения
+     */
+    private function ajaxDownloadAttachment() {
+        $id = (int)($_GET['id'] ?? 0);
+        
+        if (!$id || !$this->db) {
+            http_response_code(404);
+            exit;
+        }
+        
+        try {
+            $stmt = $this->db->prepare("
+                SELECT a.*, e.id as email_id 
+                FROM mail_client_attachments a
+                JOIN mail_client_emails e ON a.email_id = e.id
+                WHERE a.id = ?
+            ");
+            $stmt->execute([$id]);
+            $attachment = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$attachment || empty($attachment['file_path'])) {
+                http_response_code(404);
+                exit;
+            }
+            
+            // Получаем полный путь к файлу
+            $filePath = dirname(__DIR__, 3) . '/' . $attachment['file_path'];
+            
+            if (!file_exists($filePath) || !is_readable($filePath)) {
+                http_response_code(404);
+                exit;
+            }
+            
+            // Отправляем файл
+            $filename = $attachment['original_filename'] ?: $attachment['filename'];
+            $mimeType = $attachment['mime_type'] ?: 'application/octet-stream';
+            
+            header('Content-Type: ' . $mimeType);
+            header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"');
+            header('Content-Length: ' . filesize($filePath));
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            
+            readfile($filePath);
+            exit;
+        } catch (Exception $e) {
+            error_log("Error downloading attachment: " . $e->getMessage());
+            http_response_code(500);
+            exit;
+        }
+    }
+    
+    /**
+     * Витягування email адрес з рядка (формат "Ім'я <email>" або просто "email")
+     * 
+     * @param string $emailString
+     * @return string
+     */
+    private function extractEmailsFromString(string $emailString): string {
+        if (empty($emailString)) {
+            return '';
+        }
+        
+        // Розділяємо кілька адрес через кому
+        $addresses = array_map('trim', explode(',', $emailString));
+        $emails = [];
+        
+        foreach ($addresses as $address) {
+            $address = trim($address);
+            if (empty($address)) {
+                continue;
+            }
+            
+            // Якщо формат "Ім'я <email@example.com>"
+            if (preg_match('/^(.+?)\s*<(.+?)>$/', $address, $matches)) {
+                $email = trim($matches[2]);
+                if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $emails[] = $email;
+                }
+            } elseif (filter_var($address, FILTER_VALIDATE_EMAIL)) {
+                // Якщо просто email
+                $emails[] = $address;
+            }
+        }
+        
+        return implode(', ', $emails);
     }
 }
 

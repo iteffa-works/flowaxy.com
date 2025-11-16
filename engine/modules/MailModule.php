@@ -654,7 +654,9 @@ class MailModule extends BaseModule {
             'date' => '',
             'body' => '',
             'body_html' => '',
-            'headers' => []
+            'headers' => [],
+            'attachments' => [],
+            'message_id' => ''
         ];
         
         // Розділяємо заголовки та тіло
@@ -687,6 +689,8 @@ class MailModule extends BaseModule {
         $email['bcc'] = $this->decodeHeader($headers['bcc'] ?? '');
         $email['subject'] = $this->decodeHeader($headers['subject'] ?? '');
         $email['date'] = $headers['date'] ?? '';
+        $email['message_id'] = $headers['message-id'] ?? '';
+        $email['headers'] = $headers;
         
         // Парсимо тіло листа (може бути multipart)
         $contentType = $headers['content-type'] ?? '';
@@ -707,31 +711,55 @@ class MailModule extends BaseModule {
                     $partHeaders = $partLines[0] ?? '';
                     $partBody = $partLines[1] ?? '';
                     
-                    $partContentType = '';
-                    if (preg_match('/Content-Type:\s*([^;\r\n]+)/i', $partHeaders, $matches)) {
-                        $partContentType = strtolower(trim($matches[1]));
+                    // Парсимо заголовки частини
+                    $partHeadersArray = [];
+                    foreach (preg_split("/\r\n|\n/", $partHeaders) as $line) {
+                        if (preg_match('/^([^:]+):\s*(.+)$/', $line, $matches)) {
+                            $partHeadersArray[strtolower(trim($matches[1]))] = trim($matches[2]);
+                        }
                     }
                     
-                    if (stripos($partContentType, 'text/html') !== false) {
-                        $email['body_html'] = $this->decodeBody($partBody);
+                    // Отримуємо кодування передачі
+                    $partTransferEncoding = $partHeadersArray['content-transfer-encoding'] ?? '';
+                    $partContentType = $partHeadersArray['content-type'] ?? '';
+                    $contentDisposition = $partHeadersArray['content-disposition'] ?? '';
+                    
+                    // Перевіряємо чи це вкладення
+                    $isAttachment = stripos($contentDisposition, 'attachment') !== false || 
+                                   stripos($contentDisposition, 'inline') !== false;
+                    
+                    if ($isAttachment || (stripos($partContentType, 'application/') !== false || 
+                        stripos($partContentType, 'image/') !== false || 
+                        stripos($partContentType, 'video/') !== false ||
+                        stripos($partContentType, 'audio/') !== false)) {
+                        // Це вкладення
+                        $attachment = $this->parseAttachment($partHeadersArray, $partBody, $partTransferEncoding);
+                        if ($attachment) {
+                            $email['attachments'][] = $attachment;
+                        }
+                    } elseif (stripos($partContentType, 'text/html') !== false) {
+                        $email['body_html'] = $this->decodeBody($partBody, $partTransferEncoding);
                     } elseif (stripos($partContentType, 'text/plain') !== false || empty($email['body'])) {
-                        $email['body'] = $this->decodeBody($partBody);
+                        $email['body'] = $this->decodeBody($partBody, $partTransferEncoding);
                     }
                 }
             }
         } else {
             // Просте повідомлення
+            $transferEncoding = $headers['content-transfer-encoding'] ?? '';
+            
             if (stripos($contentType, 'text/html') !== false) {
-                $email['body_html'] = $this->decodeBody($body);
+                $email['body_html'] = $this->decodeBody($body, $transferEncoding);
                 $email['body'] = strip_tags($email['body_html']);
             } else {
-                $email['body'] = $this->decodeBody($body);
+                $email['body'] = $this->decodeBody($body, $transferEncoding);
             }
         }
         
         // Якщо тіло порожнє, використовуємо весь контент
         if (empty($email['body']) && empty($email['body_html'])) {
-            $email['body'] = $this->decodeBody($body);
+            $transferEncoding = $headers['content-transfer-encoding'] ?? '';
+            $email['body'] = $this->decodeBody($body, $transferEncoding);
         }
         
         return $email;
@@ -792,9 +820,10 @@ class MailModule extends BaseModule {
      * Декодування тіла листа
      * 
      * @param string $body
+     * @param string $transferEncoding Кодування передачі (base64, quoted-printable, 7bit, 8bit)
      * @return string
      */
-    private function decodeBody(string $body): string {
+    private function decodeBody(string $body, string $transferEncoding = ''): string {
         if (empty($body)) {
             return '';
         }
@@ -802,9 +831,101 @@ class MailModule extends BaseModule {
         // Видаляємо зайві пробіли та переноси
         $body = trim($body);
         
-        // Можна додати додаткову обробку за потреби
+        // Декодуємо залежно від кодування передачі
+        $encoding = strtolower(trim($transferEncoding));
+        
+        if ($encoding === 'base64') {
+            // Декодуємо Base64
+            $decoded = base64_decode($body, true);
+            if ($decoded !== false) {
+                $body = $decoded;
+            }
+        } elseif ($encoding === 'quoted-printable' || $encoding === 'qp') {
+            // Декодуємо quoted-printable
+            $body = quoted_printable_decode($body);
+        }
+        
+        // Якщо кодування не вказано, спробуємо визначити автоматично
+        // Base64 зазвичай містить тільки A-Z, a-z, 0-9, +, /, = і закінчується на =
+        if (empty($transferEncoding)) {
+            $trimmed = trim($body);
+            // Перевіряємо, чи це може бути Base64
+            if (preg_match('/^[A-Za-z0-9+\/]+=*$/', $trimmed) && strlen($trimmed) % 4 === 0) {
+                $decoded = base64_decode($trimmed, true);
+                if ($decoded !== false && mb_check_encoding($decoded, 'UTF-8')) {
+                    $body = $decoded;
+                }
+            }
+        }
         
         return $body;
+    }
+    
+    /**
+     * Парсинг вкладення
+     * 
+     * @param array $headers Заголовки частини
+     * @param string $body Тіло вкладення
+     * @param string $transferEncoding Кодування передачі
+     * @return array|null
+     */
+    private function parseAttachment(array $headers, string $body, string $transferEncoding): ?array {
+        $contentType = $headers['content-type'] ?? '';
+        $contentDisposition = $headers['content-disposition'] ?? '';
+        $contentId = $headers['content-id'] ?? '';
+        
+        // Витягуємо ім'я файлу
+        $filename = '';
+        if (preg_match('/filename=["\']?([^"\';]+)["\']?/i', $contentDisposition, $matches)) {
+            $filename = trim($matches[1], ' "\'');
+        } elseif (preg_match('/name=["\']?([^"\';]+)["\']?/i', $contentType, $matches)) {
+            $filename = trim($matches[1], ' "\'');
+        }
+        
+        // Декодуємо ім'я файлу якщо потрібно
+        if (!empty($filename)) {
+            $filename = $this->decodeHeader($filename);
+        }
+        
+        if (empty($filename)) {
+            // Якщо ім'я файлу не вказано, генеруємо на основі content-type
+            $extension = 'bin';
+            if (preg_match('/([^\/]+)$/', $contentType, $matches)) {
+                $mimeType = strtolower(trim($matches[1]));
+                $extensions = [
+                    'pdf' => 'pdf',
+                    'jpeg' => 'jpg',
+                    'jpg' => 'jpg',
+                    'png' => 'png',
+                    'gif' => 'gif',
+                    'zip' => 'zip',
+                    'msword' => 'doc',
+                    'vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+                    'vnd.ms-excel' => 'xls',
+                    'vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx'
+                ];
+                $extension = $extensions[$mimeType] ?? 'bin';
+            }
+            $filename = 'attachment_' . time() . '.' . $extension;
+        }
+        
+        // Декодуємо тіло вкладення
+        $decodedBody = $this->decodeBody($body, $transferEncoding);
+        
+        // Визначаємо MIME тип
+        $mimeType = 'application/octet-stream';
+        if (preg_match('/^([^;]+)/', $contentType, $matches)) {
+            $mimeType = trim($matches[1]);
+        }
+        
+        return [
+            'filename' => $filename,
+            'mime_type' => $mimeType,
+            'content' => $decodedBody,
+            'size' => strlen($decodedBody),
+            'content_id' => trim($contentId, '<>'),
+            'content_disposition' => $contentDisposition
+        ];
     }
     
     /**
