@@ -182,6 +182,7 @@ class DocumentationPage extends AdminPage {
                         'PluginManager - Керування плагінами',
                         'Media - Керування медіафайлами',
                         'Menu - Керування меню',
+                        'MailModule - Керування поштою (SMTP, POP3, IMAP)',
                         'Config - Керування конфігурацією',
                         'ThemeManager - Керування темами'
                     ]
@@ -305,6 +306,19 @@ class DocumentationPage extends AdminPage {
                         'deleteMenu() - Видалення меню',
                         'getMenuItems() - Отримання пунктів меню'
                     ]
+                ],
+                [
+                    'title' => 'MailModule',
+                    'description' => 'Модуль керування поштою. Підтримка SMTP (відправка), POP3 та IMAP (отримання). Налаштування серверів, портів, шифрування та тестування з\'єднань.',
+                    'methods' => [
+                        'sendEmail() - Відправка email через SMTP',
+                        'receiveEmails() - Отримання email через POP3/IMAP',
+                        'testSmtpConnection() - Тестування SMTP з\'єднання',
+                        'testPop3Connection() - Тестування POP3 з\'єднання',
+                        'testImapConnection() - Тестування IMAP з\'єднання',
+                        'getSettings() - Отримання налаштувань пошти',
+                        'saveSettings() - Збереження налаштувань пошти'
+                    ]
                 ]
             ]
         ];
@@ -417,10 +431,53 @@ $result = doHook(\'admin_menu\', $menu);'
                         'pluginManager(): PluginManager - Отримання менеджера плагінів',
                         'themeManager(): ThemeManager - Отримання менеджера тем',
                         'mediaModule(): Media - Отримання модуля медіа',
+                        'mailModule(): MailModule - Отримання модуля пошти',
                         'menuModule(): Menu - Отримання модуля меню',
                         'menuManager(): MenuManager - Отримання менеджера меню',
                         'config(): Config - Отримання об\'єкта конфігурації'
                     ]
+                ],
+                [
+                    'title' => 'Пошта',
+                    'description' => 'Функції для роботи з поштою:',
+                    'items' => [
+                        'mailModule(): MailModule - Отримання модуля пошти',
+                        'mailModule()->sendEmail($to, $subject, $body, $options) - Відправка email',
+                        'mailModule()->receiveEmails($limit) - Отримання email через POP3',
+                        'mailModule()->testSmtpConnection() - Тестування SMTP',
+                        'mailModule()->testPop3Connection() - Тестування POP3',
+                        'mailModule()->testImapConnection() - Тестування IMAP',
+                        'mailModule()->getSettings() - Налаштування пошти',
+                        'mailModule()->saveSettings($settings) - Збереження налаштувань'
+                    ],
+                    'code' => '// Отримання модуля пошти
+$mailModule = mailModule();
+
+// Відправка email
+$mailModule->sendEmail(
+    \'recipient@example.com\',
+    \'Тема листа\',
+    \'<h1>Тіло листа</h1><p>HTML контент</p>\',
+    [\'is_html\' => true]
+);
+
+// Тестування SMTP з\'єднання
+$result = $mailModule->testSmtpConnection();
+if ($result[\'success\']) {
+    echo "SMTP працює: " . $result[\'message\'];
+} else {
+    echo "Помилка: " . $result[\'message\'];
+}
+
+// Отримання пошти через POP3
+$result = $mailModule->receiveEmails(10);
+if ($result[\'success\']) {
+    foreach ($result[\'emails\'] as $email) {
+        echo "Тема: " . $email[\'subject\'] . "\\n";
+        echo "Від: " . $email[\'from\'] . "\\n";
+        echo "Тіло: " . $email[\'body\'] . "\\n\\n";
+    }
+}'
                 ],
                 [
                     'title' => 'Хуки',

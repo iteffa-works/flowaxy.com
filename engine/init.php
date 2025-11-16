@@ -42,7 +42,7 @@ spl_autoload_register(function (string $className): void {
         
         // Спочатку перевіряємо модулі (Config тепер в modules)
         $modulesDir = __DIR__ . '/modules/';
-        if ($className === 'Config' || in_array($className, ['Media', 'Menu', 'PluginManager'])) {
+        if ($className === 'Config' || in_array($className, ['Media', 'Menu', 'PluginManager', 'MailModule'])) {
             $moduleFile = $modulesDir . $className . '.php';
             if (file_exists($moduleFile) && is_readable($moduleFile)) {
                 require_once $moduleFile;
