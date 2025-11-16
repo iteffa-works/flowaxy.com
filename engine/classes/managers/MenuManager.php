@@ -187,8 +187,8 @@ class MenuManager {
             $result = $stmt->execute([$name, $slug, $description, $location]);
             
             if ($result) {
-                // Сохраняем расположение меню в настройках темы
-                $this->saveMenuLocationToTheme($location);
+                // Сохраняем slug меню в настройках темы
+                $this->saveMenuSlugToTheme($slug);
                 
                 // Очищаем кеш
                 cache_forget('all_menus');
@@ -222,8 +222,8 @@ class MenuManager {
             $result = $stmt->execute([$name, $slug, $description, $location, $id]);
             
             if ($result) {
-                // Сохраняем расположение меню в настройках темы
-                $this->saveMenuLocationToTheme($location);
+                // Сохраняем slug меню в настройках темы
+                $this->saveMenuSlugToTheme($slug);
                 
                 // Очищаем кеш
                 cache_forget('all_menus');
@@ -498,12 +498,12 @@ class MenuManager {
     }
     
     /**
-     * Сохранение расположения меню в настройках темы
+     * Сохранение slug меню в настройках темы
      * 
-     * @param string $location Расположение меню
+     * @param string $menuSlug Slug меню
      * @return void
      */
-    private function saveMenuLocationToTheme(string $location): void {
+    private function saveMenuSlugToTheme(string $menuSlug): void {
         if (!$this->db) {
             return;
         }
@@ -517,19 +517,19 @@ class MenuManager {
             
             $themeSlug = $activeTheme['slug'];
             
-            // Сохраняем расположение меню в theme_settings
+            // Сохраняем slug меню в theme_settings
             $stmt = $this->db->prepare("
                 INSERT INTO theme_settings (theme_slug, setting_key, setting_value) 
-                VALUES (?, 'menu_location', ?) 
+                VALUES (?, 'menu_slug', ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
             ");
             
-            $stmt->execute([$themeSlug, $location]);
+            $stmt->execute([$themeSlug, $menuSlug]);
             
             // Очищаем кеш настроек темы
             cache_forget('theme_settings_' . $themeSlug);
         } catch (Exception $e) {
-            error_log("MenuManager saveMenuLocationToTheme error: " . $e->getMessage());
+            error_log("MenuManager saveMenuSlugToTheme error: " . $e->getMessage());
         }
     }
 }

@@ -46,8 +46,8 @@ class ModuleLoader {
             return self::$loadedModules[$moduleName];
         }
         
-        // Пропускаємо службові файли
-        if ($moduleName === 'loader' || $moduleName === 'compatibility') {
+        // Пропускаємо службові файли та класи, які не є модулями
+        if ($moduleName === 'loader' || $moduleName === 'compatibility' || $moduleName === 'Config') {
             return null;
         }
         
@@ -117,6 +117,12 @@ class ModuleLoader {
             }
             
             $module = $moduleName::getInstance();
+            
+            // Перевіряємо, що модуль наслідується від BaseModule
+            if (!($module instanceof BaseModule)) {
+                error_log("Module {$moduleName} does not extend BaseModule, skipping");
+                return null;
+            }
             
             // Реєструємо хуки модуля
             if (method_exists($module, 'registerHooks')) {

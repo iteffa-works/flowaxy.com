@@ -330,6 +330,7 @@ class PluginManager extends BaseModule {
         }
         
         // Завантажуємо плагіни тільки для admin хуків і тільки один раз
+        // Для theme хуків завантажуємо модулі, щоб вони могли зареєструвати хуки
         if (!isset($this->hooks[$hookName])) {
             // Якщо це admin хуки, завантажуємо плагіни щоб вони могли зареєструвати хуки
             if ($hookName === 'admin_menu' || $hookName === 'admin_register_routes' || $hookName === 'handle_early_request') {
@@ -337,6 +338,21 @@ class PluginManager extends BaseModule {
                 // Ініціалізуємо плагіни тільки один раз
                 $this->initializePlugins();
                 // Перевіряємо знову після завантаження
+                if (!isset($this->hooks[$hookName])) {
+                    return $data;
+                }
+            } elseif (strpos($hookName, 'theme_') === 0 && class_exists('ModuleLoader')) {
+                // Для theme хуків завантажуємо модулі, які можуть зареєструвати хуки
+                static $themeModulesLoaded = [];
+                if (!isset($themeModulesLoaded[$hookName])) {
+                    // Завантажуємо модуль Menu для theme_menu хука
+                    if ($hookName === 'theme_menu' && !ModuleLoader::isModuleLoaded('Menu')) {
+                        ModuleLoader::loadModule('Menu');
+                        // registerHooks() вызывается автоматически в ModuleLoader::loadModule()
+                    }
+                    $themeModulesLoaded[$hookName] = true;
+                }
+                // Перевіряємо знову після завантаження модулів
                 if (!isset($this->hooks[$hookName])) {
                     return $data;
                 }

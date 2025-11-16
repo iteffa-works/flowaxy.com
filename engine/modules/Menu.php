@@ -284,21 +284,88 @@ class Menu extends BaseModule {
      * @return void
      */
     public function renderHeaderMenu(): void {
+        // Убеждаемся, что MenuManager загружен
+        if (!class_exists('MenuManager')) {
+            $menuManagerFile = dirname(__DIR__) . '/classes/managers/MenuManager.php';
+            if (file_exists($menuManagerFile)) {
+                require_once $menuManagerFile;
+            }
+        }
+        
+        if (!function_exists('menuManager')) {
+            return;
+        }
+        
         $menuManager = menuManager();
+        if (!$menuManager) {
+            return;
+        }
         
-        // Получаем сохраненное расположение меню из настроек темы
-        $savedLocation = themeManager()->getSetting('menu_location');
+        // Получаем активную тему
+        $activeTheme = themeManager()->getActiveTheme();
+        if (!$activeTheme) {
+            return;
+        }
         
-        // Если есть сохраненное расположение, используем его
-        // Иначе ищем меню с расположением 'header'
-        $location = !empty($savedLocation) ? $savedLocation : 'header';
+        $themeSlug = $activeTheme['slug'];
         
-        $menu = $this->getMenuByLocation($location);
+        // Получаем сохраненный slug меню из настроек текущей темы
+        $savedMenuSlug = themeManager()->getSetting('menu_slug');
+        
+        // Если не получили через getSetting, пробуем напрямую из БД
+        if (empty($savedMenuSlug)) {
+            $db = getDB();
+            if ($db) {
+                try {
+                    $stmt = $db->prepare("SELECT setting_value FROM theme_settings WHERE theme_slug = ? AND setting_key = 'menu_slug' LIMIT 1");
+                    $stmt->execute([$themeSlug]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($result && !empty($result['setting_value'])) {
+                        $savedMenuSlug = $result['setting_value'];
+                    }
+                } catch (Exception $e) {
+                    // Игнорируем ошибки
+                }
+            }
+        }
+        
+        $menu = null;
+        
+        // Если есть сохраненный slug меню, используем его
+        if (!empty($savedMenuSlug)) {
+            $menu = $menuManager->getMenu($savedMenuSlug);
+        }
+        
+        // Если меню не найдено по slug, пробуем найти по расположению из theme.json
+        if (!$menu) {
+            // Получаем расположения меню из theme.json
+            $themeConfig = themeManager()->getThemeConfig($themeSlug);
+            $menuLocations = $themeConfig['menu_locations'] ?? [];
+            
+            // Берем первое доступное расположение (обычно 'header')
+            $location = 'header';
+            if (!empty($menuLocations)) {
+                $location = array_key_first($menuLocations);
+            }
+            
+            $menu = $this->getMenuByLocation($location);
+        }
         
         if ($menu) {
-            $menuItems = $menuManager->getMenuItems($menu['id']);
-            if (!empty($menuItems)) {
-                echo $this->renderMenuItems($menuItems);
+            // Получаем все пункты меню (включая вложенные)
+            $allMenuItems = $menuManager->getAllMenuItems($menu['id']);
+            
+            if (empty($allMenuItems)) {
+                return;
+            }
+            
+            // Фильтруем только активные пункты
+            $activeMenuItems = array_filter($allMenuItems, function($item) {
+                return ($item['is_active'] == '1' || $item['is_active'] == 1);
+            });
+            
+            if (!empty($activeMenuItems)) {
+                echo $this->renderMenuItems($activeMenuItems);
             }
         }
     }
@@ -313,8 +380,24 @@ class Menu extends BaseModule {
     private function renderMenuItems(array $menuItems, ?int $parentId = null): string {
         // Фільтруємо пункти за parent_id
         $filteredItems = array_filter($menuItems, function($item) use ($parentId) {
-            $itemParentId = isset($item['parent_id']) && $item['parent_id'] !== null ? (int)$item['parent_id'] : null;
-            return $itemParentId === $parentId && ($item['is_active'] == '1' || $item['is_active'] == 1);
+            // Проверяем is_active отдельно, так как мы уже отфильтровали активные пункты выше
+            // Но оставляем проверку для безопасности
+            $isActive = ($item['is_active'] == '1' || $item['is_active'] == 1);
+            if (!$isActive) {
+                return false;
+            }
+            
+            // Обрабатываем parent_id: null, 0, или число
+            $itemParentId = null;
+            if (isset($item['parent_id'])) {
+                if ($item['parent_id'] === null || $item['parent_id'] === '' || $item['parent_id'] === '0') {
+                    $itemParentId = null;
+                } else {
+                    $itemParentId = (int)$item['parent_id'];
+                }
+            }
+            
+            return $itemParentId === $parentId;
         });
         
         if (empty($filteredItems)) {
@@ -372,7 +455,10 @@ class Menu extends BaseModule {
      * @param string $footerContent Поточний контент футера
      * @return string Оновлений контент футера
      */
-    public function renderFooterMenus(string $footerContent): string {
+    public function renderFooterMenus(?string $footerContent = null): string {
+        if ($footerContent === null) {
+            $footerContent = '';
+        }
         $menuManager = menuManager();
         $footerMenu = $menuManager->getMenu('footer');
         
