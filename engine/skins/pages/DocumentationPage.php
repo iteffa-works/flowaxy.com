@@ -182,7 +182,6 @@ class DocumentationPage extends AdminPage {
                         'PluginManager - Керування плагінами',
                         'Media - Керування медіафайлами',
                         'Menu - Керування меню',
-                        'MailModule - Керування поштою (SMTP, POP3, IMAP)',
                         'Config - Керування конфігурацією',
                         'ThemeManager - Керування темами'
                     ]
@@ -308,8 +307,8 @@ class DocumentationPage extends AdminPage {
                     ]
                 ],
                 [
-                    'title' => 'MailModule',
-                    'description' => 'Модуль керування поштою. Підтримка SMTP (відправка), POP3 та IMAP (отримання). Налаштування серверів, портів, шифрування та тестування з\'єднань.',
+                    'title' => 'Mailer (Плагін)',
+                    'description' => 'Професійний плагін керування поштою. Підтримка SMTP (відправка), POP3 та IMAP (отримання). Налаштування серверів, портів, шифрування та тестування з\'єднань. Доступний як плагін "mailer".',
                     'methods' => [
                         'sendEmail() - Відправка email через SMTP',
                         'receiveEmails() - Отримання email через POP3/IMAP',
@@ -431,7 +430,8 @@ $result = doHook(\'admin_menu\', $menu);'
                         'pluginManager(): PluginManager - Отримання менеджера плагінів',
                         'themeManager(): ThemeManager - Отримання менеджера тем',
                         'mediaModule(): Media - Отримання модуля медіа',
-                        'mailModule(): MailModule - Отримання модуля пошти',
+                        'mailer(): Mailer - Отримання екземпляра Mailer (рекомендовано)',
+                        'mailModule(): Mailer - Отримання екземпляра Mailer (зворотна сумісність)',
                         'menuModule(): Menu - Отримання модуля меню',
                         'menuManager(): MenuManager - Отримання менеджера меню',
                         'config(): Config - Отримання об\'єкта конфігурації'
@@ -441,20 +441,21 @@ $result = doHook(\'admin_menu\', $menu);'
                     'title' => 'Пошта',
                     'description' => 'Функції для роботи з поштою:',
                     'items' => [
-                        'mailModule(): MailModule - Отримання модуля пошти',
-                        'mailModule()->sendEmail($to, $subject, $body, $options) - Відправка email',
-                        'mailModule()->receiveEmails($limit) - Отримання email через POP3',
-                        'mailModule()->testSmtpConnection() - Тестування SMTP',
-                        'mailModule()->testPop3Connection() - Тестування POP3',
-                        'mailModule()->testImapConnection() - Тестування IMAP',
-                        'mailModule()->getSettings() - Налаштування пошти',
-                        'mailModule()->saveSettings($settings) - Збереження налаштувань'
+                        'mailer(): Mailer - Отримання екземпляра Mailer (рекомендовано)',
+                        'mailModule(): Mailer - Отримання екземпляра Mailer (зворотна сумісність)',
+                        'mailer()->sendEmail($to, $subject, $body, $options) - Відправка email',
+                        'mailer()->receiveEmails($limit) - Отримання email через POP3',
+                        'mailer()->testSmtpConnection() - Тестування SMTP',
+                        'mailer()->testPop3Connection() - Тестування POP3',
+                        'mailer()->testImapConnection() - Тестування IMAP',
+                        'mailer()->getSettings() - Налаштування пошти',
+                        'mailer()->saveSettings($settings) - Збереження налаштувань'
                     ],
                     'code' => '// Отримання модуля пошти
-$mailModule = mailModule();
+$mailer = mailer(); // або mailModule() для зворотної сумісності
 
 // Відправка email
-$mailModule->sendEmail(
+$mailer->sendEmail(
     \'recipient@example.com\',
     \'Тема листа\',
     \'<h1>Тіло листа</h1><p>HTML контент</p>\',
@@ -462,7 +463,7 @@ $mailModule->sendEmail(
 );
 
 // Тестування SMTP з\'єднання
-$result = $mailModule->testSmtpConnection();
+$result = $mailer->testSmtpConnection();
 if ($result[\'success\']) {
     echo "SMTP працює: " . $result[\'message\'];
 } else {
@@ -470,7 +471,7 @@ if ($result[\'success\']) {
 }
 
 // Отримання пошти через POP3
-$result = $mailModule->receiveEmails(10);
+$result = $mailer->receiveEmails(10);
 if ($result[\'success\']) {
     foreach ($result[\'emails\'] as $email) {
         echo "Тема: " . $email[\'subject\'] . "\\n";
