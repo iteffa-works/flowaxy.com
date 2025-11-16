@@ -190,7 +190,7 @@ abstract class ThemePlugin extends BasePlugin {
      * @param string|null $version Версія для кешування
      * @return void
      */
-    protected function enqueueStyle(string $handle, string $file, array $dependencies = [], ?string $version = null): void {
+    public function enqueueStyle($handle, $file, $dependencies = [], $version = null) {
         if (isset($this->enqueuedStyles[$handle])) {
             return; // Вже підключено
         }
@@ -200,13 +200,16 @@ abstract class ThemePlugin extends BasePlugin {
         
         // Додаємо версію якщо вказано
         if ($version !== null) {
-            $url .= '?v=' . urlencode($version);
+            $url .= '?v=' . urlencode((string)$version);
         } else {
             // Автоматично додаємо версію з файлу (mtime)
             $themePath = $this->getThemePath();
             $filePath = $themePath . $file;
             if (file_exists($filePath)) {
-                $url .= '?v=' . filemtime($filePath);
+                $mtime = filemtime($filePath);
+                if ($mtime !== false) {
+                    $url .= '?v=' . $mtime;
+                }
             }
         }
         
@@ -232,7 +235,7 @@ abstract class ThemePlugin extends BasePlugin {
      * @param string|null $version Версія для кешування
      * @return void
      */
-    protected function enqueueScript(string $handle, string $file, array $dependencies = [], bool $inFooter = true, ?string $version = null): void {
+    public function enqueueScript($handle, $file, $dependencies = [], $inFooter = true, $version = null) {
         if (isset($this->enqueuedScripts[$handle])) {
             return; // Вже підключено
         }
@@ -242,13 +245,16 @@ abstract class ThemePlugin extends BasePlugin {
         
         // Додаємо версію якщо вказано
         if ($version !== null) {
-            $url .= '?v=' . urlencode($version);
+            $url .= '?v=' . urlencode((string)$version);
         } else {
             // Автоматично додаємо версію з файлу (mtime)
             $themePath = $this->getThemePath();
             $filePath = $themePath . $file;
             if (file_exists($filePath)) {
-                $url .= '?v=' . filemtime($filePath);
+                $mtime = filemtime($filePath);
+                if ($mtime !== false) {
+                    $url .= '?v=' . $mtime;
+                }
             }
         }
         
