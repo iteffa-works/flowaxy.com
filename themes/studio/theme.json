@@ -1,0 +1,61 @@
+{
+    "slug": "webstudio",
+    "name": "Web Studio",
+    "version": "1.0.0",
+    "description": "Студійний шаблон для веб-студії з повною інформацією про студію.",
+    "author": "Flowaxy CMS",
+    "supports_customization": false,
+    "supports_navigation": false,
+    "default_settings": {
+        "studio_name": "Web Studio Flowaxy",
+        "studio_tagline": "Створюємо унікальні веб-рішення",
+        "studio_description": "Наша студія спеціалізується на розробці сучасних веб-сайтів та веб-додатків. Ми об'єднуємо креативність та технічну майстерність для створення продуктів, які виділяються.",
+        "studio_phone": "+38 (000) 000-00-00",
+        "studio_email": "info@flowaxy.com",
+        "studio_address": "Україна, м. Київ",
+        "studio_website": "https://flowaxy.com",
+        "studio_social_facebook": "",
+        "studio_social_instagram": "",
+        "studio_social_linkedin": "",
+        "studio_social_twitter": "",
+        "studio_services": [
+            {
+                "title": "Веб-розробка",
+                "description": "Створення сучасних веб-сайтів"
+            },
+            {
+                "title": "Дизайн",
+                "description": "Унікальний дизайн для вашого бренду"
+            },
+            {
+                "title": "SEO",
+                "description": "Підвищення видимості в пошукових системах"
+            }
+        ],
+        "studio_team": [
+            {
+                "name": "Іван Іванов",
+                "position": "CEO & Founder",
+                "photo": "",
+                "bio": "Засновник студії з 10-річним досвідом"
+            }
+        ],
+        "studio_portfolio_highlight": true,
+        "studio_clients_count": "50+",
+        "studio_projects_count": "200+",
+        "studio_years_experience": "5",
+        "studio_working_hours": "Пн-Пт: 9:00 - 18:00",
+        "studio_specialization": "Веб-розробка, Дизайн, Брендинг",
+        "studio_founded_year": "2020",
+        "studio_about_title": "Про нашу студію",
+        "studio_about_text": "Ми команда професіоналів, яка створює унікальні цифрові рішення для бізнесу різних галузей.",
+        "studio_mission": "Допомагати бізнесу досягати успіху за допомогою якісних веб-рішень",
+        "studio_vision": "Бути провідною студією в галузі веб-розробки в Україні",
+        "primary_color": "#000000",
+        "secondary_color": "#666666",
+        "background_color": "#ffffff",
+        "text_color": "#000000",
+        "logo": "",
+        "logo_width": "150"
+    }
+}
