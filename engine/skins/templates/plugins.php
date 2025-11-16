@@ -198,9 +198,20 @@
     </div>
 </div>
 <?php else: ?>
-    <div class="text-center py-5">
-        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-        <p class="text-muted">Плагіни відсутні</p>
+    <div class="plugins-empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-puzzle-piece"></i>
+        </div>
+        <h4>Плагіни відсутні</h4>
+        <p class="text-muted">Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.</p>
+        <div class="d-flex gap-2 justify-content-center">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadPluginModal">
+                <i class="fas fa-upload me-1"></i>Завантажити плагін
+            </button>
+            <a href="https://flowaxy.com/marketplace/plugins" target="_blank" class="btn btn-outline-primary">
+                <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
+            </a>
+        </div>
     </div>
 <?php endif; ?>
 
@@ -268,6 +279,71 @@ function resetFilters() {
     filterPlugins();
 }
 </script>
+
+<style>
+.plugins-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.plugins-empty-state .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 2.5rem;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+}
+
+.plugins-empty-state h4 {
+    color: #2d3748;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.plugins-empty-state .text-muted {
+    color: #718096;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.plugins-empty-state .btn {
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.plugins-empty-state .btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+.plugins-empty-state .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+}
+
+.plugins-empty-state .btn-outline-primary {
+    border: 2px solid #0d6efd;
+    color: #0d6efd;
+    background: transparent;
+}
+
+.plugins-empty-state .btn-outline-primary:hover {
+    background: #0d6efd;
+    color: #fff;
+    transform: translateY(-2px);
+}
+</style>
 
 <!-- Модальне вікно завантаження плагіна -->
 <div class="modal fade" id="uploadPluginModal" tabindex="-1" aria-labelledby="uploadPluginModalLabel" aria-hidden="true">
