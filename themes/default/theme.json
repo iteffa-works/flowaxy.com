@@ -9,13 +9,44 @@
         "primary_color": "#0d6efd",
         "primary_color_hover": "#0b5ed7",
         "secondary_color": "#6c757d",
+        "background_color": "#ffffff",
+        "text_color": "#212529",
+        "text_color_secondary": "#6c757d",
+        "link_color": "#0d6efd",
+        "link_color_hover": "#0b5ed7",
+        "header_background": "#ffffff",
+        "footer_background": "#212529",
+        "footer_text_color": "#ffffff",
+        "logo": "",
+        "logo_width": "150",
+        "font_family": "system",
+        "font_family_heading": "system",
+        "font_size_base": "16",
+        "font_size_h1": "40",
+        "font_size_h2": "32",
+        "font_size_h3": "24",
+        "font_weight_base": "400",
+        "font_weight_heading": "700",
+        "line_height_base": "1.6",
         "hero_title": "Ласкаво просимо до Landing CMS",
         "hero_description": "Сучасна система управління контентом з потужним функціоналом",
         "hero_button_text": "Дізнатися більше",
         "hero_button_url": "#features",
         "features_title": "Наші можливості",
         "features_description": "Всі функції, які вам потрібні для успішного веб-сайту",
-        "content_title": "Основний контент"
+        "content_title": "Основний контент",
+        "header_sticky": "1",
+        "header_height": "80",
+        "header_padding": "20",
+        "header_transparent": "0",
+        "menu_style": "default",
+        "menu_font_size": "16",
+        "menu_font_weight": "600",
+        "menu_spacing": "20",
+        "footer_columns": "3",
+        "footer_padding": "60",
+        "footer_copyright": "© 2025 Landing CMS - Усі права захищені",
+        "custom_css": ""
     },
     "available_settings": {
         "colors": {
@@ -33,43 +64,227 @@
                 "label": "Додатковий колір",
                 "type": "color",
                 "description": "Додатковий колір для другорядних елементів"
+            },
+            "background_color": {
+                "label": "Колір фону",
+                "type": "color",
+                "description": "Основний колір фону сторінки"
+            },
+            "text_color": {
+                "label": "Колір тексту",
+                "type": "color",
+                "description": "Основний колір тексту на сторінці"
+            },
+            "text_color_secondary": {
+                "label": "Додатковий колір тексту",
+                "type": "color",
+                "description": "Колір другорядного тексту"
+            },
+            "link_color": {
+                "label": "Колір посилань",
+                "type": "color",
+                "description": "Колір посилань на сторінці"
+            },
+            "link_color_hover": {
+                "label": "Колір посилань при наведенні",
+                "type": "color",
+                "description": "Колір посилань при наведенні курсора"
+            },
+            "header_background": {
+                "label": "Фон шапки",
+                "type": "color",
+                "description": "Колір фону шапки сайту"
+            },
+            "footer_background": {
+                "label": "Фон підвалу",
+                "type": "color",
+                "description": "Колір фону підвалу сайту"
+            },
+            "footer_text_color": {
+                "label": "Колір тексту підвалу",
+                "type": "color",
+                "description": "Колір тексту в підвалі сайту"
             }
         },
-        "other": {
-            "hero_title": {
-                "label": "Заголовок Hero секції",
-                "type": "text",
-                "description": "Головний заголовок на початку сторінки"
+        "fonts": {
+            "font_family": {
+                "label": "Сімейство шрифтів",
+                "type": "select",
+                "description": "Основний шрифт для тексту",
+                "options": {
+                    "system": "Системний (за замовчуванням)",
+                    "roboto": "Roboto",
+                    "open-sans": "Open Sans",
+                    "lato": "Lato",
+                    "montserrat": "Montserrat",
+                    "raleway": "Raleway",
+                    "poppins": "Poppins",
+                    "inter": "Inter",
+                    "nunito": "Nunito"
+                }
             },
-            "hero_description": {
-                "label": "Опис Hero секції",
+            "font_family_heading": {
+                "label": "Шрифт заголовків",
+                "type": "select",
+                "description": "Шрифт для заголовків (H1, H2, H3)",
+                "options": {
+                    "system": "Системний (за замовчуванням)",
+                    "roboto": "Roboto",
+                    "open-sans": "Open Sans",
+                    "lato": "Lato",
+                    "montserrat": "Montserrat",
+                    "raleway": "Raleway",
+                    "poppins": "Poppins",
+                    "inter": "Inter",
+                    "nunito": "Nunito"
+                }
+            },
+            "font_size_base": {
+                "label": "Базовий розмір шрифту (px)",
+                "type": "text",
+                "description": "Основний розмір шрифту для тексту"
+            },
+            "font_size_h1": {
+                "label": "Розмір H1 (px)",
+                "type": "text",
+                "description": "Розмір шрифту для заголовка H1"
+            },
+            "font_size_h2": {
+                "label": "Розмір H2 (px)",
+                "type": "text",
+                "description": "Розмір шрифту для заголовка H2"
+            },
+            "font_size_h3": {
+                "label": "Розмір H3 (px)",
+                "type": "text",
+                "description": "Розмір шрифту для заголовка H3"
+            },
+            "font_weight_base": {
+                "label": "Насиченість тексту",
+                "type": "select",
+                "description": "Насиченість основного тексту",
+                "options": {
+                    "300": "Light (300)",
+                    "400": "Normal (400)",
+                    "500": "Medium (500)",
+                    "600": "Semi Bold (600)",
+                    "700": "Bold (700)"
+                }
+            },
+            "font_weight_heading": {
+                "label": "Насиченість заголовків",
+                "type": "select",
+                "description": "Насиченість заголовків",
+                "options": {
+                    "400": "Normal (400)",
+                    "500": "Medium (500)",
+                    "600": "Semi Bold (600)",
+                    "700": "Bold (700)",
+                    "800": "Extra Bold (800)"
+                }
+            },
+            "line_height_base": {
+                "label": "Висота рядка",
+                "type": "text",
+                "description": "Висота рядка для основного тексту (наприклад: 1.5, 1.6)"
+            }
+        },
+        "identity": {
+            "logo": {
+                "label": "Логотип",
+                "type": "media",
+                "description": "Завантажте логотип для сайту"
+            },
+            "logo_width": {
+                "label": "Ширина логотипу (px)",
+                "type": "text",
+                "description": "Ширина логотипу в пікселях"
+            }
+        },
+        "menu": {
+            "menu_style": {
+                "label": "Стиль меню",
+                "type": "select",
+                "description": "Виберіть стиль відображення меню",
+                "options": {
+                    "default": "Звичайний",
+                    "underline": "З підкресленням",
+                    "background": "З фоном",
+                    "minimal": "Мінімалістичний"
+                }
+            },
+            "menu_font_size": {
+                "label": "Розмір шрифту меню (px)",
+                "type": "text",
+                "description": "Розмір шрифту пунктів меню"
+            },
+            "menu_font_weight": {
+                "label": "Насиченість шрифту меню",
+                "type": "select",
+                "description": "Насиченість шрифту пунктів меню",
+                "options": {
+                    "400": "Normal (400)",
+                    "500": "Medium (500)",
+                    "600": "Semi Bold (600)",
+                    "700": "Bold (700)"
+                }
+            },
+            "menu_spacing": {
+                "label": "Відстань між пунктами (px)",
+                "type": "text",
+                "description": "Відстань між пунктами меню в пікселях"
+            }
+        },
+        "header": {
+            "header_sticky": {
+                "label": "Закріплена шапка",
+                "type": "checkbox",
+                "description": "Шапка залишається видимою при прокрутці"
+            },
+            "header_height": {
+                "label": "Висота шапки (px)",
+                "type": "text",
+                "description": "Мінімальна висота шапки в пікселях"
+            },
+            "header_padding": {
+                "label": "Внутрішні відступи (px)",
+                "type": "text",
+                "description": "Вертикальні відступи всередині шапки"
+            },
+            "header_transparent": {
+                "label": "Прозора шапка",
+                "type": "checkbox",
+                "description": "Зробити шапку прозорою на початку сторінки"
+            }
+        },
+        "footer": {
+            "footer_columns": {
+                "label": "Кількість колонок",
+                "type": "select",
+                "description": "Кількість колонок в підвалі",
+                "options": {
+                    "1": "1 колонка",
+                    "2": "2 колонки",
+                    "3": "3 колонки",
+                    "4": "4 колонки"
+                }
+            },
+            "footer_padding": {
+                "label": "Внутрішні відступи (px)",
+                "type": "text",
+                "description": "Вертикальні відступи всередині підвалу"
+            },
+            "footer_copyright": {
+                "label": "Текст копірайту",
+                "type": "text",
+                "description": "Текст копірайту в підвалі"
+            }
+        },
+        "css": {
+            "custom_css": {
+                "label": "Додатковий CSS",
                 "type": "textarea",
-                "description": "Опис під заголовком Hero секції"
-            },
-            "hero_button_text": {
-                "label": "Текст кнопки Hero",
-                "type": "text",
-                "description": "Текст на кнопці в Hero секції"
-            },
-            "hero_button_url": {
-                "label": "URL кнопки Hero",
-                "type": "text",
-                "description": "Посилання кнопки в Hero секції"
-            },
-            "features_title": {
-                "label": "Заголовок секції можливостей",
-                "type": "text",
-                "description": "Заголовок секції з можливостями"
-            },
-            "features_description": {
-                "label": "Опис секції можливостей",
-                "type": "textarea",
-                "description": "Опис під заголовком секції можливостей"
-            },
-            "content_title": {
-                "label": "Заголовок контенту",
-                "type": "text",
-                "description": "Заголовок основного контенту"
+                "description": "Додайте власні CSS стилі. Вони будуть застосовані до всієї теми."
             }
         }
     }

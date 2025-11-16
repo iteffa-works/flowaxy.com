@@ -12,6 +12,11 @@ return [
     
     // Категории настроек с их метаданными
     'categories' => [
+        'identity' => [
+            'icon' => 'fa-id-card',
+            'label' => 'Ідентичність сайту',
+            'description' => 'Логотип та основні налаштування сайту'
+        ],
         'colors' => [
             'icon' => 'fa-palette',
             'label' => 'Кольори',
@@ -19,18 +24,28 @@ return [
         ],
         'fonts' => [
             'icon' => 'fa-font',
-            'label' => 'Шрифти',
-            'description' => 'Налаштування шрифтів'
+            'label' => 'Typography',
+            'description' => 'Налаштування шрифтів та типографіки'
         ],
-        'sizes' => [
-            'icon' => 'fa-ruler',
-            'label' => 'Розміри',
-            'description' => 'Налаштування розмірів елементів'
+        'menu' => [
+            'icon' => 'fa-bars',
+            'label' => 'Меню',
+            'description' => 'Налаштування меню навігації'
         ],
-        'other' => [
-            'icon' => 'fa-cog',
-            'label' => 'Логотип та інше',
-            'description' => 'Інші налаштування теми'
+        'header' => [
+            'icon' => 'fa-window-maximize',
+            'label' => 'Header Settings',
+            'description' => 'Налаштування шапки сайту'
+        ],
+        'footer' => [
+            'icon' => 'fa-window-minimize',
+            'label' => 'Footer Settings',
+            'description' => 'Налаштування підвалу сайту'
+        ],
+        'css' => [
+            'icon' => 'fa-code',
+            'label' => 'Додатковий код CSS',
+            'description' => 'Кастомні CSS стилі'
         ]
     ],
     

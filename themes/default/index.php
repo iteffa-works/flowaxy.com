@@ -10,10 +10,41 @@ $menuManager = menuManager();
 
 // Получаем настройки темы
 $primaryColor = $themeManager->getSetting('primary_color', '#0d6efd');
+$primaryColorHover = $themeManager->getSetting('primary_color_hover', '#0b5ed7');
 $secondaryColor = $themeManager->getSetting('secondary_color', '#6c757d');
+$backgroundColor = $themeManager->getSetting('background_color', '#ffffff');
+$textColor = $themeManager->getSetting('text_color', '#212529');
+$textColorSecondary = $themeManager->getSetting('text_color_secondary', '#6c757d');
+$linkColor = $themeManager->getSetting('link_color', '#0d6efd');
+$linkColorHover = $themeManager->getSetting('link_color_hover', '#0b5ed7');
+$headerBackground = $themeManager->getSetting('header_background', '#ffffff');
+$footerBackground = $themeManager->getSetting('footer_background', '#212529');
+$footerTextColor = $themeManager->getSetting('footer_text_color', '#ffffff');
+$logoUrl = $themeManager->getSetting('logo', '');
+$logoWidth = $themeManager->getSetting('logo_width', '150');
+$fontFamily = $themeManager->getSetting('font_family', 'system');
+$fontFamilyHeading = $themeManager->getSetting('font_family_heading', 'system');
+$fontSizeBase = $themeManager->getSetting('font_size_base', '16');
+$fontSizeH1 = $themeManager->getSetting('font_size_h1', '40');
+$fontSizeH2 = $themeManager->getSetting('font_size_h2', '32');
+$fontSizeH3 = $themeManager->getSetting('font_size_h3', '24');
+$fontWeightBase = $themeManager->getSetting('font_weight_base', '400');
+$fontWeightHeading = $themeManager->getSetting('font_weight_heading', '700');
+$lineHeightBase = $themeManager->getSetting('line_height_base', '1.6');
+$headerSticky = $themeManager->getSetting('header_sticky', '1');
+$headerHeight = $themeManager->getSetting('header_height', '80');
+$headerPadding = $themeManager->getSetting('header_padding', '20');
+$headerTransparent = $themeManager->getSetting('header_transparent', '0');
+$menuStyle = $themeManager->getSetting('menu_style', 'default');
+$menuFontSize = $themeManager->getSetting('menu_font_size', '16');
+$menuFontWeight = $themeManager->getSetting('menu_font_weight', '600');
+$menuSpacing = $themeManager->getSetting('menu_spacing', '20');
+$footerColumns = $themeManager->getSetting('footer_columns', '3');
+$footerPadding = $themeManager->getSetting('footer_padding', '60');
+$footerCopyright = $themeManager->getSetting('footer_copyright', '© 2025 Landing CMS - Усі права захищені');
+$customCss = $themeManager->getSetting('custom_css', '');
 $siteTitle = getSetting('site_title', 'Landing CMS');
 $siteDescription = getSetting('site_description', 'Сучасна CMS система');
-$logoUrl = getSetting('site_logo', '');
 
 // Получаем главное меню
 $mainMenu = $menuManager->getMenu('primary');
@@ -39,25 +70,173 @@ $themeData = doHook('theme_before_render', [
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <?php
+    // Подключение Google Fonts
+    $googleFonts = [];
+    $fontMap = [
+        'roboto' => 'Roboto:300,400,500,600,700',
+        'open-sans' => 'Open+Sans:300,400,500,600,700',
+        'lato' => 'Lato:300,400,500,600,700',
+        'montserrat' => 'Montserrat:300,400,500,600,700,800',
+        'raleway' => 'Raleway:300,400,500,600,700,800',
+        'poppins' => 'Poppins:300,400,500,600,700',
+        'inter' => 'Inter:300,400,500,600,700',
+        'nunito' => 'Nunito:300,400,500,600,700,800'
+    ];
+    
+    if ($fontFamily !== 'system' && isset($fontMap[$fontFamily])) {
+        $googleFonts[] = $fontMap[$fontFamily];
+    }
+    if ($fontFamilyHeading !== 'system' && isset($fontMap[$fontFamilyHeading]) && $fontFamilyHeading !== $fontFamily) {
+        $googleFonts[] = $fontMap[$fontFamilyHeading];
+    }
+    
+    if (!empty($googleFonts)) {
+        $fontsUrl = 'https://fonts.googleapis.com/css2?family=' . implode('&family=', array_unique($googleFonts)) . '&display=swap';
+        echo '<link rel="stylesheet" href="' . htmlspecialchars($fontsUrl) . '">';
+    }
+    ?>
+    
     <!-- Custom Theme Styles -->
     <link rel="stylesheet" href="<?= $themeManager->getThemeUrl() ?>style.css">
     
-    <!-- Dynamic Theme Colors -->
+    <!-- Dynamic Theme Colors and Typography -->
     <style>
+        <?php
+        // Функция для получения CSS-имени шрифта
+        function getFontFamily($font) {
+            if ($font === 'system') {
+                return '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+            }
+            $fontMap = [
+                'roboto' => '"Roboto", sans-serif',
+                'open-sans' => '"Open Sans", sans-serif',
+                'lato' => '"Lato", sans-serif',
+                'montserrat' => '"Montserrat", sans-serif',
+                'raleway' => '"Raleway", sans-serif',
+                'poppins' => '"Poppins", sans-serif',
+                'inter' => '"Inter", sans-serif',
+                'nunito' => '"Nunito", sans-serif'
+            ];
+            return $fontMap[$font] ?? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        }
+        ?>
         :root {
             --bs-primary: <?= safe_html($primaryColor) ?>;
             --bs-secondary: <?= safe_html($secondaryColor) ?>;
+            --theme-bg: <?= safe_html($backgroundColor) ?>;
+            --theme-text: <?= safe_html($textColor) ?>;
+            --theme-text-secondary: <?= safe_html($textColorSecondary) ?>;
+            --theme-link: <?= safe_html($linkColor) ?>;
+            --theme-link-hover: <?= safe_html($linkColorHover) ?>;
+            --theme-header-bg: <?= safe_html($headerBackground) ?>;
+            --theme-footer-bg: <?= safe_html($footerBackground) ?>;
+            --theme-footer-text: <?= safe_html($footerTextColor) ?>;
         }
-        .bg-primary { background-color: <?= safe_html($primaryColor) ?> !important; }
-        .text-primary { color: <?= safe_html($primaryColor) ?> !important; }
+        
+        body {
+            background-color: <?= safe_html($backgroundColor) ?>;
+            color: <?= safe_html($textColor) ?>;
+            font-family: <?= getFontFamily($fontFamily) ?>;
+            font-size: <?= (int)$fontSizeBase ?>px;
+            font-weight: <?= (int)$fontWeightBase ?>;
+            line-height: <?= safe_html($lineHeightBase) ?>;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: <?= getFontFamily($fontFamilyHeading) ?>;
+            font-weight: <?= (int)$fontWeightHeading ?>;
+            color: <?= safe_html($textColor) ?>;
+        }
+        
+        h1 { font-size: <?= (int)$fontSizeH1 ?>px; }
+        h2 { font-size: <?= (int)$fontSizeH2 ?>px; }
+        h3 { font-size: <?= (int)$fontSizeH3 ?>px; }
+        
+        a {
+            color: <?= safe_html($linkColor) ?>;
+        }
+        
+        a:hover {
+            color: <?= safe_html($linkColorHover) ?>;
+        }
+        
+        .text-secondary {
+            color: <?= safe_html($textColorSecondary) ?> !important;
+        }
+        
+        .bg-primary { 
+            background-color: <?= safe_html($primaryColor) ?> !important; 
+        }
+        
+        .text-primary { 
+            color: <?= safe_html($primaryColor) ?> !important; 
+        }
+        
         .btn-primary { 
             background-color: <?= safe_html($primaryColor) ?>;
             border-color: <?= safe_html($primaryColor) ?>;
         }
+        
         .btn-primary:hover {
-            background-color: <?= safe_html($themeManager->getSetting('primary_color_hover', $primaryColor)) ?>;
-            border-color: <?= safe_html($themeManager->getSetting('primary_color_hover', $primaryColor)) ?>;
+            background-color: <?= safe_html($primaryColorHover) ?>;
+            border-color: <?= safe_html($primaryColorHover) ?>;
         }
+        
+        header, .navbar {
+            background-color: <?= safe_html($headerBackground) ?> !important;
+            min-height: <?= (int)$headerHeight ?>px;
+        }
+        
+        /* Menu Styles */
+        .navbar-nav {
+            font-size: <?= (int)$menuFontSize ?>px;
+            font-weight: <?= (int)$menuFontWeight ?>;
+        }
+        
+        .menu-style-underline .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: <?= safe_html($primaryColor) ?>;
+        }
+        
+        .menu-style-background .nav-link.active {
+            background: <?= safe_html($primaryColor) ?>;
+            color: #fff !important;
+            border-radius: 6px;
+            padding: 8px 16px !important;
+        }
+        
+        .menu-style-minimal .nav-link {
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: <?= ((int)$menuFontSize - 2) ?>px;
+        }
+        
+        footer {
+            background-color: <?= safe_html($footerBackground) ?> !important;
+            color: <?= safe_html($footerTextColor) ?> !important;
+            padding: <?= (int)$footerPadding ?>px 0 !important;
+        }
+        
+        footer a {
+            color: <?= safe_html($footerTextColor) ?>;
+        }
+        
+        footer a:hover {
+            color: <?= safe_html($linkColorHover) ?>;
+        }
+        
+        <?php if (!empty($customCss)): ?>
+        /* Custom CSS */
+        <?= safe_html($customCss) ?>
+        <?php endif; ?>
     </style>
     
     <?php doHook('theme_head'); ?>
@@ -66,12 +245,12 @@ $themeData = doHook('theme_before_render', [
     <?php doHook('theme_body_start'); ?>
     
     <!-- Header -->
-    <header class="bg-white shadow-sm sticky-top">
-        <nav class="navbar navbar-expand-lg navbar-light">
+    <header class="shadow-sm <?= ($headerSticky == '1') ? 'sticky-top' : '' ?>" style="<?= ($headerTransparent == '1') ? 'background: transparent !important;' : '' ?>">
+        <nav class="navbar navbar-expand-lg navbar-light" style="padding: <?= (int)$headerPadding ?>px 0;">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center" href="<?= SITE_URL ?>">
                     <?php if ($logoUrl): ?>
-                        <img src="<?= safe_html($logoUrl) ?>" alt="<?= safe_html($siteTitle) ?>" height="40" class="me-2">
+                        <img src="<?= safe_html($logoUrl) ?>" alt="<?= safe_html($siteTitle) ?>" style="width: <?= (int)$logoWidth ?>px; height: auto;" class="me-2">
                     <?php else: ?>
                         <i class="fas fa-rocket text-primary me-2"></i>
                     <?php endif; ?>
@@ -84,7 +263,7 @@ $themeData = doHook('theme_before_render', [
                 
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <?php if (!empty($menuItems)): ?>
-                        <ul class="navbar-nav ms-auto">
+                        <ul class="navbar-nav ms-auto menu-style-<?= htmlspecialchars($menuStyle) ?>" style="gap: <?= (int)$menuSpacing ?>px;">
                             <?php foreach ($menuItems as $item): ?>
                                 <?php
                                 $children = $menuManager->getMenuItems($mainMenu['id'], $item['id']);
@@ -118,6 +297,7 @@ $themeData = doHook('theme_before_render', [
                                     <?php else: ?>
                                         <a class="nav-link<?= $isActive ? ' active' : '' ?>" 
                                            href="<?= safe_html($item['url']) ?>"
+                                           style="font-size: <?= (int)$menuFontSize ?>px; font-weight: <?= (int)$menuFontWeight ?>;"
                                            <?= $item['target'] !== '_self' ? 'target="' . safe_html($item['target']) . '"' : '' ?>>
                                             <?php if ($item['icon']): ?>
                                                 <i class="<?= safe_html($item['icon']) ?> me-1"></i>
@@ -296,21 +476,29 @@ $themeData = doHook('theme_before_render', [
     </main>
     
     <!-- Footer -->
-    <footer class="bg-dark text-white py-5 mt-5">
+    <footer class="mt-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-4 mb-4">
+                <?php
+                $footerCols = (int)$footerColumns;
+                $colClass = $footerCols > 0 ? 'col-md-' . (12 / $footerCols) : 'col-md-4';
+                ?>
+                
+                <?php if ($footerCols >= 1): ?>
+                <div class="<?= $colClass ?> mb-4">
                     <h5><?= safe_html($siteTitle) ?></h5>
                     <p class="text-muted"><?= safe_html($siteDescription) ?></p>
                 </div>
+                <?php endif; ?>
                 
-                <div class="col-md-4 mb-4">
+                <?php if ($footerCols >= 2): ?>
+                <div class="<?= $colClass ?> mb-4">
                     <h5>Швидкі посилання</h5>
                     <ul class="list-unstyled">
                         <?php if (!empty($menuItems)): ?>
                             <?php foreach (array_slice($menuItems, 0, 5) as $item): ?>
                                 <li class="mb-2">
-                                    <a href="<?= safe_html($item['url']) ?>" class="text-muted text-decoration-none">
+                                    <a href="<?= safe_html($item['url']) ?>" class="text-decoration-none">
                                         <?= safe_html($item['title']) ?>
                                     </a>
                                 </li>
@@ -318,10 +506,12 @@ $themeData = doHook('theme_before_render', [
                         <?php endif; ?>
                     </ul>
                 </div>
+                <?php endif; ?>
                 
-                <div class="col-md-4 mb-4">
+                <?php if ($footerCols >= 3): ?>
+                <div class="<?= $colClass ?> mb-4">
                     <h5>Контакти</h5>
-                    <ul class="list-unstyled text-muted">
+                    <ul class="list-unstyled">
                         <li class="mb-2">
                             <i class="fas fa-envelope me-2"></i>
                             <?= safe_html(getSetting('site_email', 'info@example.com')) ?>
@@ -332,19 +522,32 @@ $themeData = doHook('theme_before_render', [
                         </li>
                     </ul>
                 </div>
+                <?php endif; ?>
+                
+                <?php if ($footerCols >= 4): ?>
+                <div class="<?= $colClass ?> mb-4">
+                    <h5>Інформація</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="text-decoration-none">Про нас</a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-decoration-none">Політика конфіденційності</a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-decoration-none">Умови використання</a>
+                        </li>
+                    </ul>
+                </div>
+                <?php endif; ?>
             </div>
             
             <hr class="bg-secondary">
             
             <div class="row">
-                <div class="col-md-6">
-                    <p class="text-muted mb-0">
-                        &copy; <?= date('Y') ?> <?= safe_html($siteTitle) ?>. Всі права захищені.
-                    </p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="text-muted mb-0">
-                        Powered by <a href="#" class="text-white text-decoration-none">Landing CMS</a>
+                <div class="col-md-12 text-center">
+                    <p class="mb-0">
+                        <?= safe_html($footerCopyright) ?>
                     </p>
                 </div>
             </div>

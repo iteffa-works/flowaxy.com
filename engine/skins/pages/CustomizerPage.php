@@ -113,10 +113,13 @@ class CustomizerPage extends AdminPage {
         $defaultSettings = $themeConfig['default_settings'] ?? [];
         $settings = array_merge($defaultSettings, $savedSettings);
         $categories = $customizerConfig['categories'] ?? [
+            'identity' => ['icon' => 'fa-id-card', 'label' => 'Ідентичність сайту'],
             'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
-            'fonts' => ['icon' => 'fa-font', 'label' => 'Шрифти'],
-            'sizes' => ['icon' => 'fa-ruler', 'label' => 'Розміри'],
-            'other' => ['icon' => 'fa-cog', 'label' => 'Логотип та інше'],
+            'fonts' => ['icon' => 'fa-font', 'label' => 'Typography'],
+            'menu' => ['icon' => 'fa-bars', 'label' => 'Меню'],
+            'header' => ['icon' => 'fa-window-maximize', 'label' => 'Header Settings'],
+            'footer' => ['icon' => 'fa-window-minimize', 'label' => 'Footer Settings'],
+            'css' => ['icon' => 'fa-code', 'label' => 'Додатковий код CSS'],
         ];
         $this->render([
             'activeTheme' => $activeTheme,
