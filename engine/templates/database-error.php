@@ -339,7 +339,7 @@
                     </li>
                     <li>
                         <strong>Невірні параметри підключення</strong>
-                        <span>Перевірте файл config/database.php: хост, порт, ім'я бази даних</span>
+                        <span>Перевірте файл engine/data/database.php: хост, порт, ім'я бази даних</span>
                     </li>
                     <li>
                         <strong>База даних не існує</strong>

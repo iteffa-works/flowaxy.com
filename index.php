@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/engine/init.php';
 
 // Проверка доступности БД перед загрузкой системы
 if (!isDatabaseAvailable()) {
