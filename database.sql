@@ -1,15 +1,20 @@
--- ========================================
--- Landing CMS - База данных
--- Чистая структура без данных
--- ========================================
+-- --------------------------------------------------------
+-- Сервер:                       127.0.1.26
+-- Версія сервера:               5.7.44 - MySQL Community Server (GPL)
+-- ОС сервера:                   Win64
+-- HeidiSQL Версія:              12.12.0.7122
+-- --------------------------------------------------------
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET NAMES utf8 */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- ========================================
--- МЕДИАФАЙЛЫ
--- ========================================
-
+-- Dumping structure for таблиця db_flowaxy.media_files
 CREATE TABLE IF NOT EXISTS `media_files` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -33,10 +38,9 @@ CREATE TABLE IF NOT EXISTS `media_files` (
   KEY `idx_uploaded_by` (`uploaded_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========================================
--- МЕНЮ
--- ========================================
+-- Dumping data for table db_flowaxy.media_files: ~0 rows (приблизно)
 
+-- Dumping structure for таблиця db_flowaxy.menus
 CREATE TABLE IF NOT EXISTS `menus` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -48,8 +52,13 @@ CREATE TABLE IF NOT EXISTS `menus` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`),
   KEY `idx_menu_location` (`location`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Dumping data for table db_flowaxy.menus: ~0 rows (приблизно)
+INSERT INTO `menus` (`id`, `name`, `slug`, `description`, `location`, `created_at`, `updated_at`) VALUES
+	(1, 'Головне меню', 'main_menu', 'Основне меню навігації сайту', 'primary', '2025-11-15 10:47:13', '2025-11-15 10:47:13');
+
+-- Dumping structure for таблиця db_flowaxy.menu_items
 CREATE TABLE IF NOT EXISTS `menu_items` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `menu_id` int(11) NOT NULL,
@@ -72,10 +81,9 @@ CREATE TABLE IF NOT EXISTS `menu_items` (
   CONSTRAINT `menu_items_ibfk_2` FOREIGN KEY (`parent_id`) REFERENCES `menu_items` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========================================
--- ПЛАГИНЫ
--- ========================================
+-- Dumping data for table db_flowaxy.menu_items: ~0 rows (приблизно)
 
+-- Dumping structure for таблиця db_flowaxy.plugins
 CREATE TABLE IF NOT EXISTS `plugins` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -92,6 +100,9 @@ CREATE TABLE IF NOT EXISTS `plugins` (
   KEY `idx_plugins_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Dumping data for table db_flowaxy.plugins: ~0 rows (приблизно)
+
+-- Dumping structure for таблиця db_flowaxy.plugin_settings
 CREATE TABLE IF NOT EXISTS `plugin_settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `plugin_slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -104,10 +115,9 @@ CREATE TABLE IF NOT EXISTS `plugin_settings` (
   KEY `idx_plugin_slug` (`plugin_slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========================================
--- НАСТРОЙКИ САЙТА
--- ========================================
+-- Dumping data for table db_flowaxy.plugin_settings: ~0 rows (приблизно)
 
+-- Dumping structure for таблиця db_flowaxy.site_settings
 CREATE TABLE IF NOT EXISTS `site_settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `setting_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -117,13 +127,22 @@ CREATE TABLE IF NOT EXISTS `site_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `setting_key` (`setting_key`),
   KEY `idx_settings_key` (`setting_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========================================
--- ТЕМЫ
--- ========================================
--- Примечание: Метаданные тем хранятся в theme.json, активная тема - в site_settings (ключ 'active_theme')
+-- Dumping data for table db_flowaxy.site_settings: ~10 rows (приблизно)
+INSERT INTO `site_settings` (`id`, `setting_key`, `setting_value`, `created_at`, `updated_at`) VALUES
+	(1, 'active_theme', 'minimal-css', '2025-11-16 11:15:54', '2025-11-16 11:15:54'),
+	(2, 'site_name', 'Flowaxy Studio', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(3, 'site_tagline', 'Створюємо цифрові рішення майбутнього', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(4, 'site_description', 'Flowaxy Studio — українська креативна діджитал-студія, що спеціалізується на веб-розробці, дизайні та створенні сучасних цифрових продуктів. Ми поєднуємо технології, креатив та бізнес-логіку, щоб створювати рішення, які працюють та розвивають ваш бренд.', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(5, 'copyright', '© 2025 Flowaxy Studio. Усі права захищено.', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(6, 'admin_email', 'admin@example.com', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(7, 'site_phone', '', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(8, 'timezone', 'Europe/Kiev', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(9, 'meta_keywords', '', '2025-11-16 11:18:05', '2025-11-16 11:18:05'),
+	(10, 'google_analytics', '', '2025-11-16 11:18:05', '2025-11-16 11:18:05');
 
+-- Dumping structure for таблиця db_flowaxy.theme_settings
 CREATE TABLE IF NOT EXISTS `theme_settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `theme_slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -136,10 +155,9 @@ CREATE TABLE IF NOT EXISTS `theme_settings` (
   KEY `idx_theme_slug` (`theme_slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========================================
--- ПОЛЬЗОВАТЕЛИ
--- ========================================
+-- Dumping data for table db_flowaxy.theme_settings: ~0 rows (приблизно)
 
+-- Dumping structure for таблиця db_flowaxy.users
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -150,52 +168,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY `idx_email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========================================
--- ИНИЦИАЛИЗАЦИЯ БАЗОВЫХ ДАННЫХ
--- ========================================
+-- Dumping data for table db_flowaxy.users: ~0 rows (приблизно)
+INSERT INTO `users` (`id`, `username`, `password`, `email`, `created_at`, `updated_at`) VALUES
+	(1, 'admin', '$2y$12$855490mRE/ep8WSrED5afu1oUQkVss3tcAEJoAKr2jMJikqIPp4wy', 'admin@example.com', '2025-11-15 10:47:13', '2025-11-16 11:14:51');
 
--- Создание администратора по умолчанию (пароль: admin)
--- ВАЖНО: Измените пароль после первого входа!
-INSERT INTO `users` (`username`, `password`, `email`) VALUES
-('admin', '$2y$12$xa3pKMq58EseRRULsXQxeuU47gjYJ2dceelcwSfLx58Grjgh4CZMe', 'admin@example.com')
-ON DUPLICATE KEY UPDATE `username`=`username`;
-
--- Базовые настройки сайта
-INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
-('site_name', 'Landing CMS'),
-('site_title', 'Landing CMS'),
-('site_description', 'Сучасна CMS система'),
-('site_tagline', ''),
-('admin_email', ''),
-('timezone', 'Europe/Kiev'),
-('meta_keywords', ''),
-('google_analytics', ''),
-('copyright', '© 2025 Landing CMS - Усі права захищені')
-ON DUPLICATE KEY UPDATE `setting_key`=`setting_key`;
-
--- Настройки логгера
-INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
-('logger_max_file_size', '10485760'),
-('logger_retention_days', '30'),
-('logger_log_errors', '1'),
-('logger_log_warnings', '1'),
-('logger_log_info', '0'),
-('logger_log_success', '1'),
-('logger_log_debug', '0'),
-('logger_log_db_queries', '1'),
-('logger_log_file_operations', '1'),
-('logger_log_plugin_events', '1'),
-('logger_log_module_events', '1')
-ON DUPLICATE KEY UPDATE `setting_key`=`setting_key`;
-
--- Активная тема (по умолчанию 'default', если тема существует)
-INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
-('active_theme', 'default')
-ON DUPLICATE KEY UPDATE `setting_key`=`setting_key`;
-
--- Создание главного меню
-INSERT INTO `menus` (`name`, `slug`, `description`, `location`) VALUES
-('Головне меню', 'main_menu', 'Основне меню навігації сайту', 'primary')
-ON DUPLICATE KEY UPDATE `slug`=`slug`;
+/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
+/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
+/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;

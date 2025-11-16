@@ -6,8 +6,15 @@
 
 $themeManager = themeManager();
 $themeUrl = $themeManager->getThemeUrl();
-$siteTitle = getSetting('site_title', 'Flowaxy CMS');
+
+// Получаем настройки сайта из базы данных
+$siteTitle = getSetting('site_name', 'Flowaxy CMS');
+$siteTagline = getSetting('site_tagline', 'Сучасна CMS система');
 $siteDescription = getSetting('site_description', 'Сучасна CMS система для створення сайтів');
+$sitePhone = getSetting('site_phone', '');
+$adminEmail = getSetting('admin_email', '');
+$copyrightText = getSetting('copyright', '');
+$copyright = !empty($copyrightText) ? $copyrightText : ('© ' . date('Y') . ' ' . $siteTitle . '. Всі права захищені.');
 ?>
 <!DOCTYPE html>
 <html lang="uk">
@@ -18,7 +25,7 @@ $siteDescription = getSetting('site_description', 'Сучасна CMS систе
     <title><?= safe_html($siteTitle) ?></title>
     
     <!-- Подключение CSS файла из assets/css -->
-    <link rel="stylesheet" href="<?= $themeManager->getStylesheetUrl() ?>">
+    <link rel="stylesheet" href="<?= $themeUrl ?>assets/css/style.css">
     
     <?php doHook('theme_head'); ?>
 </head>
@@ -58,7 +65,7 @@ $siteDescription = getSetting('site_description', 'Сучасна CMS систе
     
     <footer class="footer">
         <div class="container">
-            <p>&copy; <?= date('Y') ?> <?= safe_html($siteTitle) ?>. Всі права захищені.</p>
+            <p><?= safe_html($copyright) ?></p>
         </div>
     </footer>
     
