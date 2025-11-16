@@ -48,32 +48,7 @@ if ($handled === true) {
     exit; // Запрос обработан плагином
 }
 
-// Убеждаемся, что класс Cache загружен (для функции cache_remember())
-// Cache нужен для ThemeManager, который использует cache_remember()
-// Функции cache_remember(), cache_forget() и др. определены в Cache.php
-if (!class_exists('Cache')) {
-    // Пробуем загрузить из новой структуры
-    $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
-    if (file_exists($cacheFile)) {
-        require_once $cacheFile;
-    } else {
-        // Обратная совместимость - старая структура
-        require_once __DIR__ . '/engine/classes/Cache.php';
-    }
-}
-
-// Убеждаемся, что класс ThemeManager загружен (для функции themeManager())
-// Функция themeManager() определена в том же файле, что и класс ThemeManager
-if (!class_exists('ThemeManager')) {
-    // Пробуем загрузить из новой структуры
-    $themeManagerFile = __DIR__ . '/engine/classes/managers/ThemeManager.php';
-    if (file_exists($themeManagerFile)) {
-        require_once $themeManagerFile;
-    } else {
-        // Обратная совместимость - старая структура
-        require_once __DIR__ . '/engine/classes/ThemeManager.php';
-    }
-}
+// Всі класи завантажуються автоматично через автозавантажувач з engine/init.php
 
 // Получаем активную тему
 if (!function_exists('themeManager')) {
@@ -85,11 +60,12 @@ $themeManager = themeManager();
 $activeTheme = $themeManager->getActiveTheme();
 $themePath = $themeManager->getThemePath();
 
-// Проверяем, есть ли шаблон темы
+// Перевіряємо, чи є шаблон теми (використовуємо File клас)
 if ($activeTheme !== null && !empty($themePath)) {
     $themeTemplate = $themePath . 'index.php';
-    if (file_exists($themeTemplate) && is_readable($themeTemplate)) {
-        // Используем шаблон темы
+    $file = new File($themeTemplate);
+    if ($file->exists() && $file->isReadable()) {
+        // Використовуємо шаблон теми
         include $themeTemplate;
         exit;
     }

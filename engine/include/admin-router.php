@@ -8,30 +8,7 @@ require_once dirname(__DIR__, 2) . '/config/config.php';
 require_once __DIR__ . '/../skins/includes/SimpleTemplate.php';
 require_once __DIR__ . '/../skins/includes/Router.php';
 
-// Убеждаемся, что необходимые классы загружены для menu-items.php
-// Cache нужен для функций cache_remember(), cache_forget()
-if (!class_exists('Cache')) {
-    // Пробуем загрузить из новой структуры
-    $cacheFile = dirname(__DIR__) . '/classes/data/Cache.php';
-    if (file_exists($cacheFile)) {
-        require_once $cacheFile;
-    } else {
-        // Обратная совместимость - старая структура
-        require_once dirname(__DIR__) . '/classes/Cache.php';
-    }
-}
-
-// ThemeManager нужен для функции themeManager() и themeSupportsCustomization()
-if (!class_exists('ThemeManager')) {
-    // Пробуем загрузить из новой структуры
-    $themeManagerFile = dirname(__DIR__) . '/classes/managers/ThemeManager.php';
-    if (file_exists($themeManagerFile)) {
-        require_once $themeManagerFile;
-    } else {
-        // Обратная совместимость - старая структура
-        require_once dirname(__DIR__) . '/classes/ThemeManager.php';
-    }
-}
+// Всі класи завантажуються автоматично через автозавантажувач з engine/init.php
 
 // Модули загружаются лениво - только когда они нужны для конкретной страницы
 
