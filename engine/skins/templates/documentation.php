@@ -12,16 +12,6 @@
     </div>
 <?php endif; ?>
 
-<!-- Пошук -->
-<div class="doc-search mb-4">
-    <div class="input-group input-group-lg">
-        <span class="input-group-text bg-white border-end-0">
-            <i class="fas fa-search text-muted"></i>
-        </span>
-        <input type="text" id="docSearch" class="form-control border-start-0" placeholder="Пошук по документації...">
-    </div>
-</div>
-
 <!-- Навігація -->
 <div class="doc-nav mb-4">
     <ul class="nav nav-tabs border-0" role="tablist">
@@ -308,109 +298,33 @@
     <?php endif; ?>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Пошук
-    const searchInput = document.getElementById('docSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-            const activeTab = document.querySelector('.tab-pane.active');
-            
-            if (!activeTab) return;
-            
-            if (searchTerm === '') {
-                activeTab.querySelectorAll('.doc-card, .doc-section-item, .doc-intro').forEach(el => {
-                    el.style.display = '';
-                });
-                activeTab.querySelectorAll('mark').forEach(mark => {
-                    mark.outerHTML = mark.textContent;
-                });
-                return;
-            }
-            
-            let found = false;
-            activeTab.querySelectorAll('.doc-card, .doc-section-item, .doc-intro').forEach(item => {
-                const text = item.textContent.toLowerCase();
-                if (text.includes(searchTerm)) {
-                    item.style.display = '';
-                    found = true;
-                    highlightText(item, searchTerm);
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    }
-    
-    function highlightText(element, term) {
-        const walker = document.createTreeWalker(
-            element,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-        );
-        
-        const textNodes = [];
-        let node;
-        while (node = walker.nextNode()) {
-            if (node.parentElement.tagName !== 'CODE' && node.parentElement.tagName !== 'PRE') {
-                textNodes.push(node);
-            }
-        }
-        
-        textNodes.forEach(textNode => {
-            const text = textNode.textContent;
-            const regex = new RegExp(`(${term})`, 'gi');
-            if (regex.test(text)) {
-                const highlighted = text.replace(regex, '<mark>$1</mark>');
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = highlighted;
-                textNode.parentNode.replaceChild(wrapper, textNode);
-            }
-        });
-    }
-});
-</script>
 
 <style>
 /* Flat дизайн */
-.doc-search {
-    position: sticky;
-    top: 140px;
-    z-index: 10;
-    background: white;
-    padding-top: 1rem;
-    margin-top: -1rem;
-    border-bottom: 1px solid #e9ecef;
-    padding-bottom: 1rem;
-}
-
 .doc-nav {
-    position: sticky;
-    top: 200px;
-    z-index: 9;
-    background: white;
-    padding-top: 1rem;
-    margin-top: -1rem;
+    border-bottom: 2px solid #e9ecef;
 }
 
 .doc-nav .nav-tabs {
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .doc-nav .nav-link {
     border: none;
     border-radius: 0;
-    padding: 0.75rem 1.5rem;
+    padding: 0.875rem 1.25rem;
     color: #6c757d;
     font-weight: 500;
-    border-bottom: 2px solid transparent;
-    transition: none;
+    font-size: 0.9375rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s ease;
+    background: transparent;
 }
 
 .doc-nav .nav-link:hover {
     color: #0d6efd;
+    background: #f8f9fa;
     border-bottom-color: #0d6efd;
 }
 
@@ -418,6 +332,11 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #0d6efd;
     background: transparent;
     border-bottom-color: #0d6efd;
+    font-weight: 600;
+}
+
+.doc-nav .nav-link i {
+    font-size: 0.875rem;
 }
 
 /* Картки структури */
@@ -657,22 +576,16 @@ mark {
 
 /* Адаптивність */
 @media (max-width: 991.98px) {
-    .doc-search,
-    .doc-nav {
-        position: relative;
-        top: 0;
-        padding-top: 0;
-        margin-top: 0;
-    }
-    
     .doc-nav .nav-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
     .doc-nav .nav-link {
         white-space: nowrap;
         padding: 0.75rem 1rem;
+        font-size: 0.875rem;
     }
 }
 
