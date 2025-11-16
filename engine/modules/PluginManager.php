@@ -571,25 +571,24 @@ class PluginManager extends BaseModule {
             return 0;
         }
         
-        // Создаем таблицу для отслеживания удаленных плагинов, если её нет
-        $this->ensureDeletedPluginsTable();
+        // Видаляємо стовпець is_deleted якщо він існує (більше не потрібен)
+        try {
+            $checkStmt = $db->query("SHOW COLUMNS FROM plugins LIKE 'is_deleted'");
+            if ($checkStmt && $checkStmt->rowCount() > 0) {
+                $db->exec("ALTER TABLE plugins DROP COLUMN is_deleted");
+            }
+        } catch (Exception $e) {
+            // Ігноруємо помилку якщо стовпець не існує або вже видалений
+        }
         
         foreach ($allPlugins as $slug => $config) {
             try {
-                // Проверяем, не был ли плагин удален пользователем
-                $deletedStmt = $db->prepare("SELECT id FROM deleted_plugins WHERE slug = ?");
-                $deletedStmt->execute([$slug]);
-                if ($deletedStmt->fetch()) {
-                    // Плагин был удален пользователем, пропускаем его
-                    continue;
-                }
-                
                 // Проверяем, установлен ли плагин
                 $stmt = $db->prepare("SELECT id FROM plugins WHERE slug = ?");
                 $stmt->execute([$slug]);
                 
                 if (!$stmt->fetch()) {
-                    // Плагин не установлен и не был удален - устанавливаем
+                    // Плагин не установлен - устанавливаем
                     if ($this->installPlugin($slug)) {
                         $installedCount++;
                     }
@@ -600,29 +599,6 @@ class PluginManager extends BaseModule {
         }
         
         return $installedCount;
-    }
-    
-    /**
-     * Создание таблицы для отслеживания удаленных плагинов
-     */
-    private function ensureDeletedPluginsTable(): void {
-        $db = $this->getDB();
-        if (!$db) {
-            return;
-        }
-        
-        try {
-            $db->exec("
-                CREATE TABLE IF NOT EXISTS deleted_plugins (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    slug VARCHAR(100) UNIQUE NOT NULL,
-                    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_slug (slug)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            ");
-        } catch (Exception $e) {
-            error_log("Error creating deleted_plugins table: " . $e->getMessage());
-        }
     }
     
     /**
@@ -766,20 +742,9 @@ class PluginManager extends BaseModule {
                 $plugin->uninstall();
             }
             
-            // Видаляємо плагін з бази даних (тільки записи, файли залишаються)
+            // Видаляємо плагін з бази даних (повністю видаляємо запис)
             $stmt = $db->prepare("DELETE FROM plugins WHERE slug = ?");
             if ($stmt->execute([$pluginSlug])) {
-                // Создаем таблицу для удаленных плагинов, если её нет
-                $this->ensureDeletedPluginsTable();
-                
-                // Добавляем плагин в список удаленных, чтобы он не переустанавливался автоматически
-                try {
-                    $deletedStmt = $db->prepare("INSERT IGNORE INTO deleted_plugins (slug) VALUES (?)");
-                    $deletedStmt->execute([$pluginSlug]);
-                } catch (Exception $e) {
-                    error_log("Error adding to deleted_plugins: " . $e->getMessage());
-                }
-                
                 // Очищаємо кеш ПЕРЕД clearMenuCache, чтобы хеш пересчитался правильно
                 if (function_exists('cache_forget')) {
                     cache_forget('active_plugins');
