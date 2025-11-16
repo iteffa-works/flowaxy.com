@@ -10,7 +10,7 @@ class ProfilePage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Профіль користувача - Landing CMS';
+        $this->pageTitle = 'Профіль користувача - Flowaxy CMS';
         $this->templateName = 'profile';
         
         $this->setPageHeader(

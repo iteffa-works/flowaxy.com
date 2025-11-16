@@ -11,7 +11,7 @@ class MenusPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Меню - Landing CMS';
+        $this->pageTitle = 'Меню - Flowaxy CMS';
         $this->templateName = 'menus';
         
         $this->setPageHeader(

@@ -10,7 +10,7 @@ class DiagnosticsPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Діагностика системи - Landing CMS';
+        $this->pageTitle = 'Діагностика системи - Flowaxy CMS';
         $this->templateName = 'diagnostics';
         
         $this->setPageHeader(

@@ -18,7 +18,7 @@ class MediaPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Медіафайли - Landing CMS';
+        $this->pageTitle = 'Медіафайли - Flowaxy CMS';
         $this->templateName = 'media';
         
         $this->setPageHeader(

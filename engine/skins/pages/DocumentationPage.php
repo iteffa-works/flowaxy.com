@@ -10,7 +10,7 @@ class DocumentationPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Документація движка - Landing CMS';
+        $this->pageTitle = 'Документація движка - Flowaxy CMS';
         $this->templateName = 'documentation';
         
         $this->setPageHeader(
@@ -366,19 +366,85 @@ $result = doHook(\'admin_menu\', $menu);'
             'title' => 'API для розробників',
             'sections' => [
                 [
-                    'title' => 'Глобальні функції',
-                    'description' => 'Доступні глобальні функції:',
+                    'title' => 'База даних',
+                    'description' => 'Функції для роботи з базою даних:',
                     'items' => [
-                        'getDB() - Отримання підключення до БД',
-                        'cache() - Отримання об\'єкта кешу',
-                        'cache_remember() - Отримання з кешу або збереження',
-                        'cache_forget() - Видалення з кешу',
-                        'pluginManager() - Отримання менеджера плагінів',
-                        'themeManager() - Отримання менеджера тем',
-                        'mediaModule() - Отримання модуля медіа',
-                        'adminUrl() - Генерація URL адмінки',
-                        'doHook() - Виконання хука',
-                        'addHook() - Додавання хука'
+                        'getDB(bool $showError = true): ?PDO - Отримання підключення до БД',
+                        'isDatabaseAvailable(bool $showError = false): bool - Перевірка доступності БД',
+                        'showDatabaseError(array $errorDetails): void - Відображення помилки БД'
+                    ]
+                ],
+                [
+                    'title' => 'Кешування',
+                    'description' => 'Функції для роботи з кешем:',
+                    'items' => [
+                        'cache(): Cache - Отримання об\'єкта кешу',
+                        'cache_get(string $key, $default = null) - Отримання з кешу',
+                        'cache_set(string $key, $data, ?int $ttl = null): bool - Збереження в кеш',
+                        'cache_remember(string $key, callable $callback, ?int $ttl = null) - Отримання з кешу або виконання callback',
+                        'cache_forget(string $key): bool - Видалення з кешу',
+                        'cache_flush(): bool - Очищення всього кешу'
+                    ]
+                ],
+                [
+                    'title' => 'Безпека',
+                    'description' => 'Функції безпеки:',
+                    'items' => [
+                        'generateCSRFToken(): string - Генерація CSRF токена',
+                        'verifyCSRFToken(?string $token): bool - Перевірка CSRF токена',
+                        'isAdminLoggedIn(): bool - Перевірка авторизації адміна',
+                        'requireAdmin(): void - Обов\'язкова авторизація адміна',
+                        'sanitizeInput($input): string - Очищення вводу'
+                    ]
+                ],
+                [
+                    'title' => 'URL та навігація',
+                    'description' => 'Функції для роботи з URL:',
+                    'items' => [
+                        'adminUrl(string $path = \'\'): string - Генерація URL адмінки',
+                        'getProtocolRelativeUrl(string $path = \'\'): string - Отримання протокол-відносного URL',
+                        'getUploadsUrl(string $filePath = \'\'): string - URL завантажень',
+                        'toProtocolRelativeUrl(string $url): string - Конвертація в протокол-відносний URL',
+                        'redirectTo(string $url): void - Перенаправлення'
+                    ]
+                ],
+                [
+                    'title' => 'Модулі та плагіни',
+                    'description' => 'Функції для роботи з модулями та плагінами:',
+                    'items' => [
+                        'pluginManager(): PluginManager - Отримання менеджера плагінів',
+                        'themeManager(): ThemeManager - Отримання менеджера тем',
+                        'mediaModule(): Media - Отримання модуля медіа',
+                        'menuModule(): Menu - Отримання модуля меню',
+                        'menuManager(): MenuManager - Отримання менеджера меню',
+                        'config(): Config - Отримання об\'єкта конфігурації'
+                    ]
+                ],
+                [
+                    'title' => 'Хуки',
+                    'description' => 'Функції для роботи з хуками:',
+                    'items' => [
+                        'addHook(string $hookName, callable $callback, int $priority = 10): void - Додавання хука',
+                        'doHook(string $hookName, $data = null) - Виконання хука',
+                        'hasHook(string $hookName): bool - Перевірка наявності хука'
+                    ]
+                ],
+                [
+                    'title' => 'Конфігурація',
+                    'description' => 'Функції для роботи з конфігурацією:',
+                    'items' => [
+                        'config_get(string $key, $default = null) - Отримання значення конфігурації',
+                        'config_set(string $key, $value): bool - Встановлення значення конфігурації',
+                        'config_has(string $key): bool - Перевірка наявності ключа',
+                        'getSiteSettings(): array - Отримання всіх налаштувань сайту',
+                        'getSetting(string $key, string $default = \'\'): string - Отримання налаштування'
+                    ]
+                ],
+                [
+                    'title' => 'Утиліти',
+                    'description' => 'Допоміжні функції:',
+                    'items' => [
+                        'formatBytes(int $bytes, int $precision = 2): string - Форматування розміру файлу'
                     ]
                 ],
                 [

@@ -10,12 +10,12 @@ class DashboardPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Панель управління - Landing CMS';
+        $this->pageTitle = 'Панель управління - Flowaxy CMS';
         $this->templateName = 'dashboard';
         
         $this->setPageHeader(
             'Панель управління',
-            'Ласкаво просимо до Landing CMS',
+            'Ласкаво просимо до Flowaxy CMS',
             'fas fa-tachometer-alt',
             '<a href="' . adminUrl('settings') . '" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-cog me-1"></i>Налаштування

@@ -15,7 +15,7 @@
             <div class="admin-logo-icon me-2">
                 <i class="fas fa-cog"></i>
             </div>
-            <span class="logo-text">Landing CMS</span>
+            <span class="logo-text">Flowaxy CMS</span>
         </a>
 
         <!-- Правая часть навбара -->
@@ -77,7 +77,7 @@
             <div class="admin-logo-icon">
                 <i class="fas fa-cog"></i>
             </div>
-            <span class="mobile-sidebar-title">Landing CMS</span>
+            <span class="mobile-sidebar-title">Flowaxy CMS</span>
         </div>
         <button class="mobile-sidebar-close" onclick="toggleMobileSidebar()">
             <i class="fas fa-times"></i>

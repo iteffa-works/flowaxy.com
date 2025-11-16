@@ -10,7 +10,7 @@ class SettingsPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Налаштування сайту - Landing CMS';
+        $this->pageTitle = 'Налаштування сайту - Flowaxy CMS';
         $this->templateName = 'settings';
         
         $this->setPageHeader(
@@ -90,7 +90,7 @@ class SettingsPage extends AdminPage {
         
         // Значення за замовчуванням
         $defaultSettings = [
-            'site_name' => 'Landing CMS',
+            'site_name' => 'Flowaxy CMS',
             'site_tagline' => 'Сучасна система керування контентом',
             'site_description' => 'Створюйте красиві лендінги легко і швидко',
             'admin_email' => 'admin@example.com',

@@ -10,7 +10,7 @@ class ThemeEditorPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Редактор теми - Landing CMS';
+        $this->pageTitle = 'Редактор теми - Flowaxy CMS';
         $this->templateName = 'theme-editor';
         
         $this->setPageHeader(

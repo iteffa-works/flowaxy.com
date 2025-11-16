@@ -10,7 +10,7 @@ class ThemesPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Теми - Landing CMS';
+        $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
         $marketplaceButton = '<a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-primary">

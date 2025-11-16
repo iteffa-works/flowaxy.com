@@ -30,7 +30,7 @@
                                 <label for="siteName" class="form-label">Название сайта</label>
                                 <input type="text" class="form-control" id="siteName" 
                                        name="settings[site_name]" 
-                                       value="<?= htmlspecialchars($settings['site_name'] ?? 'Landing CMS') ?>">
+                                       value="<?= htmlspecialchars($settings['site_name'] ?? 'Flowaxy CMS') ?>">
                             </div>
                         </div>
                         <div class="col-md-6">

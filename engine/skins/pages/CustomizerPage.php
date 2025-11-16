@@ -44,7 +44,7 @@ class CustomizerPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Налаштування дизайну - Landing CMS';
+        $this->pageTitle = 'Налаштування дизайну - Flowaxy CMS';
         $this->templateName = 'customizer';
         
         $activeTheme = themeManager()->getActiveTheme();

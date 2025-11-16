@@ -68,7 +68,7 @@ class Menu extends BaseModule {
             'title' => 'Меню навігації',
             'description' => 'Управління меню навігації та розташуваннями',
             'version' => '1.0.0',
-            'author' => 'Landing CMS'
+            'author' => 'Flowaxy CMS'
         ];
     }
     

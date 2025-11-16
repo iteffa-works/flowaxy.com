@@ -10,7 +10,7 @@ class PluginsPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Керування плагінами - Landing CMS';
+        $this->pageTitle = 'Керування плагінами - Flowaxy CMS';
         $this->templateName = 'plugins';
         
         $this->setPageHeader(

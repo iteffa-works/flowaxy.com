@@ -8,7 +8,7 @@ class AdminPage {
     protected $db;
     protected $message = '';
     protected $messageType = '';
-    protected $pageTitle = 'Landing CMS';
+    protected $pageTitle = 'Flowaxy CMS';
     protected $pageHeaderTitle = '';
     protected $pageHeaderDescription = '';
     protected $pageHeaderIcon = '';

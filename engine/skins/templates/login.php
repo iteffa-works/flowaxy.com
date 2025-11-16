@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вхід в адмін-панель - Landing CMS</title>
+    <title>Вхід в адмін-панель - Flowaxy CMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/admin/styles/font-awesome/css/all.min.css" rel="stylesheet">
     <style>
@@ -232,7 +232,7 @@
                 <div class="logo-icon">
                     <i class="fas fa-shield-halved"></i>
                 </div>
-                <h1>Landing CMS</h1>
+                <h1>Flowaxy CMS</h1>
                 <p>Адміністративна панель</p>
             </div>
             
