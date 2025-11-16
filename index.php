@@ -75,8 +75,80 @@ if ($isAdminRequest) {
     // Створюємо роутер для фронтенду
     $router = new Router('/', null);
     
-    // Хук для реєстрації маршрутів (плагіни та теми можуть реєструвати свої маршрути)
-    doHook('register_routes', $router);
+    // Завантажуємо Cache перед використанням функції cache_remember()
+    if (!class_exists('Cache')) {
+        $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
+        if (file_exists($cacheFile)) {
+            require_once $cacheFile;
+        }
+    }
+    
+    // Завантажуємо ThemeManager перед використанням функції themeManager()
+    if (!class_exists('ThemeManager')) {
+        $themeManagerFile = __DIR__ . '/engine/classes/managers/ThemeManager.php';
+        if (file_exists($themeManagerFile)) {
+            require_once $themeManagerFile;
+        }
+    }
+    
+    // Додаємо дефолтний маршрут для фронтенду ДО автоматичної загрузки маршрутів
+    // Це гарантує, що маршрут буде доступний, якщо тема не зареєструє свій
+    $router->add(['GET', 'POST'], '', function() {
+        // Завантажуємо активну тему
+        if (function_exists('themeManager')) {
+            $themeManager = themeManager();
+            $activeTheme = $themeManager->getActiveTheme();
+            
+            if ($activeTheme !== null && isset($activeTheme['slug'])) {
+                $themePath = $themeManager->getThemePath($activeTheme['slug']);
+                
+                if (!empty($themePath)) {
+                    // Спробуємо завантажити index.php теми
+                    $themeIndexFile = $themePath . 'index.php';
+                    if (file_exists($themeIndexFile)) {
+                        // Передаємо дані теми в шаблон
+                        $themeData = [
+                            'theme_path' => $themePath,
+                            'theme_url' => '/themes/' . $activeTheme['slug'],
+                            'theme_slug' => $activeTheme['slug']
+                        ];
+                        
+                        // Включаємо шаблон теми
+                        extract($themeData);
+                        include $themeIndexFile;
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // Якщо тема не завантажена, показуємо повідомлення
+        http_response_code(200);
+        echo '<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Встановіть тему</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <h1>Встановіть тему</h1>
+                <p class="text-muted">Для відображення сайту необхідно встановити та активувати тему.</p>
+                <a href="/admin/themes" class="btn btn-primary">Перейти до тем</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>';
+        return true;
+    });
+    
+    // Хук для реєстрації маршрутів НЕ викликаємо тут, він буде викликаний в autoLoad()
+    // Це уникне подвійного виклику хука
 }
 
 // Обробляємо запит (роутер автоматично завантажить маршрути з модулів, плагінів та теми)

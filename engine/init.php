@@ -42,7 +42,7 @@ spl_autoload_register(function (string $className): void {
         
         // Спочатку перевіряємо модулі (Config тепер в modules)
         $modulesDir = __DIR__ . '/modules/';
-        if ($className === 'Config' || in_array($className, ['Logger', 'Media', 'Menu', 'PluginManager'])) {
+        if ($className === 'Config' || in_array($className, ['Media', 'Menu', 'PluginManager'])) {
             $moduleFile = $modulesDir . $className . '.php';
             if (file_exists($moduleFile) && is_readable($moduleFile)) {
                 require_once $moduleFile;
@@ -95,8 +95,6 @@ spl_autoload_register(function (string $className): void {
             'MenusPage' => 'skins/pages',
             'SystemPage' => 'skins/pages',
             'ThemeEditorPage' => 'skins/pages',
-            'LogsPage' => 'skins/pages',
-            'LoggerSettingsPage' => 'skins/pages',
             'MediaPage' => 'skins/pages',
         ];
         

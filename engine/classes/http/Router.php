@@ -152,11 +152,11 @@ class Router {
         // Завантаження маршрутів з модулів
         $this->loadModuleRoutes();
         
-        // Завантаження маршрутів з плагінів через хук
-        doHook('register_routes', $this);
-        
-        // Завантаження маршрутів з теми
+        // Завантаження маршрутів з теми (перед хуком, чтобы тема могла перезаписать дефолтные маршруты)
         $this->loadThemeRoutes();
+        
+        // Завантаження маршрутів з плагінів через хук (последним, чтобы плагины могли перезаписать маршруты темы)
+        doHook('register_routes', $this);
     }
     
     /**
@@ -172,6 +172,15 @@ class Router {
      * Завантаження маршрутів з теми
      */
     private function loadThemeRoutes(): void {
+        // Завантажуємо Cache перед використанням функції cache_remember()
+        // Router находится в engine/classes/http/, а Cache в engine/classes/data/
+        if (!class_exists('Cache') && !function_exists('cache_remember')) {
+            $cacheFile = __DIR__ . '/../data/Cache.php';
+            if (file_exists($cacheFile)) {
+                require_once $cacheFile;
+            }
+        }
+        
         if (!function_exists('themeManager')) {
             return;
         }
@@ -221,13 +230,15 @@ class Router {
                     $uri = '';
                 }
             }
+        } else if ($this->basePath === '/') {
+            // Для фронтенда базовый путь '/', просто нормализуем URI
+            // Убираем начальный слэш, если он есть
+            $uri = ltrim($uri, '/');
         }
         
         // Видаляємо index.php (включая случаи с путями типа /index.php/path)
-        $uri = preg_replace('#/index\.php(/.*)?$#', '$1', $uri);
-        if (empty($uri)) {
-            $uri = '/';
-        }
+        $uri = preg_replace('#^/?index\.php(/.*)?$#', '$1', $uri);
+        $uri = ltrim($uri, '/');
         
         // Видаляємо розширення .php якщо є
         if (preg_match('/^(.+)\.php$/', $uri, $matches)) {
@@ -235,9 +246,8 @@ class Router {
         }
         
         // Возвращаем путь без начальных и конечных слэшей для точного сравнения
-        $result = trim($uri, '/');
-        
-        return $result;
+        // Для пустого пути возвращаем пустую строку, для остальных - путь без слэшей
+        return trim($uri, '/');
     }
     
     /**

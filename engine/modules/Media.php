@@ -79,7 +79,7 @@ class Media extends BaseModule {
         }
         
         require_once dirname(__DIR__) . '/skins/pages/MediaPage.php';
-        $router->add('media', 'MediaPage');
+        $router->add(['GET', 'POST'], 'media', 'MediaPage');
     }
     
     /**

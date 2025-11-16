@@ -746,6 +746,44 @@ class PluginManager extends BaseModule {
                 cache_forget($key);
             }
         }
+        
+        // Очищаем старые ключи кеша меню без хеша плагинов (для обратной совместимости)
+        $oldPatterns = [
+            'admin_menu_items_0',
+            'admin_menu_items_1',
+            'admin_menu_items_0_0',
+            'admin_menu_items_0_1',
+            'admin_menu_items_1_0',
+            'admin_menu_items_1_1'
+        ];
+        foreach ($oldPatterns as $pattern) {
+            cache_forget($pattern);
+        }
+        
+        // Очищаем кеш хеша плагинов
+        cache_forget('active_plugins_hash');
+    }
+    
+    /**
+     * Очистка всего кеша меню админки
+     * Используется при удалении модулей или изменении структуры меню
+     */
+    public function clearAllMenuCache(): void {
+        $cache = cache();
+        $cacheDir = CACHE_DIR ?? dirname(__DIR__, 2) . '/storage/cache/';
+        
+        // Удаляем все файлы кеша, начинающиеся с admin_menu_items_
+        if (is_dir($cacheDir)) {
+            $files = glob($cacheDir . 'admin_menu_items_*.cache');
+            if ($files !== false) {
+                foreach ($files as $file) {
+                    @unlink($file);
+                }
+            }
+        }
+        
+        // Очищаем кеш хеша плагинов
+        cache_forget('active_plugins_hash');
     }
 }
 
