@@ -15,7 +15,7 @@ $coreClasses = [
     'BasePlugin',
     'Cache',
     'ThemeManager',
-    'MenuManager' // Оставляем для обратной совместимости, но рекомендуется использовать модуль Menu
+    'MenuManager'
 ];
 
 foreach ($coreClasses as $class) {

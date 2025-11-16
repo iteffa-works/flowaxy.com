@@ -24,9 +24,6 @@ class Menu extends BaseModule {
      * Регистрация хуков модуля
      */
     public function registerHooks(): void {
-        // Регистрация пункта меню в админке
-        addHook('admin_menu', [$this, 'addAdminMenuItem']);
-        
         // Регистрация маршрута админки
         addHook('admin_register_routes', [$this, 'registerAdminRoute']);
         
@@ -38,27 +35,6 @@ class Menu extends BaseModule {
         
         // Регистрация хука для встраивания меню в футер
         addHook('theme_footer', [$this, 'renderFooterMenus']);
-    }
-    
-    /**
-     * Добавление пункта меню в админку
-     * Добавляется только если активная тема поддерживает навигацию
-     * 
-     * @param array $menu Текущее меню
-     * @return array Обновленное меню
-     */
-    public function addAdminMenuItem(array $menu): array {
-        // Добавляем пункт меню только если тема поддерживает навигацию
-        if ($this->themeSupportsNavigation()) {
-            $menu[] = [
-                'href' => adminUrl('menus'),
-                'icon' => 'fas fa-bars',
-                'text' => 'Меню',
-                'page' => 'menus',
-                'order' => 15
-            ];
-        }
-        return $menu;
     }
     
     /**
