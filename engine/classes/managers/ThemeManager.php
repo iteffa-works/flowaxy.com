@@ -363,7 +363,7 @@ class ThemeManager {
                         $previousCssFile = $previousThemePath . 'assets/css/style.css';
                         if (file_exists($previousCssFile) && is_file($previousCssFile)) {
                             @unlink($previousCssFile);
-                            error_log("ThemeManager: Deleted compiled CSS file for deactivated theme with SCSS: {$previousThemeSlug}");
+                            // Удаляем скомпилированный CSS файл предыдущей темы (не логируем, это нормальное поведение)
                         }
                     }
                 }

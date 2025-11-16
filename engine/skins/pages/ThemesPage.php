@@ -625,6 +625,17 @@ class ThemesPage extends AdminPage {
             return;
         }
         
+        // Видаляємо всі налаштування теми з theme_settings
+        try {
+            $db = getDB();
+            if ($db) {
+                $stmt = $db->prepare("DELETE FROM theme_settings WHERE theme_slug = ?");
+                $stmt->execute([$themeSlug]);
+            }
+        } catch (Exception $e) {
+            error_log("Error deleting theme settings: " . $e->getMessage());
+        }
+        
         // Видаляємо папку теми
         try {
             $this->deleteDirectory($themePath);

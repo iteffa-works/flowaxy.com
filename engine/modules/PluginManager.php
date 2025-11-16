@@ -758,9 +758,19 @@ class PluginManager extends BaseModule {
                 $plugin->uninstall();
             }
             
+            // Видаляємо всі налаштування плагіна з plugin_settings
+            $stmt = $db->prepare("DELETE FROM plugin_settings WHERE plugin_slug = ?");
+            $stmt->execute([$pluginSlug]);
+            
             // Видаляємо плагін з бази даних (повністю видаляємо запис)
             $stmt = $db->prepare("DELETE FROM plugins WHERE slug = ?");
             if ($stmt->execute([$pluginSlug])) {
+                // Видаляємо файли плагіна
+                $pluginDir = $this->pluginsDir . $pluginSlug;
+                if (is_dir($pluginDir)) {
+                    $this->deletePluginDirectory($pluginDir);
+                }
+                
                 // Очищаємо кеш ПЕРЕД clearMenuCache, чтобы хеш пересчитался правильно
                 if (function_exists('cache_forget')) {
                     cache_forget('active_plugins');
@@ -782,6 +792,31 @@ class PluginManager extends BaseModule {
         }
         
         return false;
+    }
+    
+    /**
+     * Рекурсивне видалення директорії плагіна
+     * 
+     * @param string $dir Шлях до директорії
+     * @return bool
+     */
+    private function deletePluginDirectory(string $dir): bool {
+        if (!is_dir($dir)) {
+            return false;
+        }
+        
+        $files = array_diff(scandir($dir), ['.', '..']);
+        
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            if (is_dir($path)) {
+                $this->deletePluginDirectory($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        
+        return @rmdir($dir);
     }
     
     /**

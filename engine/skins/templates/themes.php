@@ -11,6 +11,9 @@
     </div>
 <?php endif; ?>
 
+<!-- Скрытое поле с CSRF токеном для JavaScript -->
+<input type="hidden" id="csrf_token" name="csrf_token" value="<?= generateCSRFToken() ?>">
+
 <div class="content-section themes-page">
     <div class="content-section-header">
         <span><i class="fas fa-palette me-2"></i>Встановлені теми</span>
@@ -134,7 +137,7 @@
                                     <?php endif; ?>
                                     
                                     <?php if (!$isActive): ?>
-                                        <button type="button" class="btn btn-danger" onclick="deleteTheme('<?= htmlspecialchars($theme['slug'] ?? '') ?>')" title="Видалити тему">
+                                        <button type="button" class="btn btn-danger delete-theme-btn" data-theme-slug="<?= htmlspecialchars($theme['slug'] ?? '') ?>" title="Видалити тему">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     <?php endif; ?>
@@ -406,6 +409,8 @@
     background: #dc3545;
     border-color: #dc3545;
     color: #fff;
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 .theme-actions .btn-danger:hover:not(:disabled) {
@@ -415,7 +420,13 @@
 
 .theme-actions .btn-danger:disabled {
     opacity: 0.5;
-    cursor: not-allowed;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
+.theme-actions .btn-danger.delete-theme-btn:not(:disabled) {
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 @media (max-width: 768px) {
@@ -471,7 +482,26 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         initThemeActivation();
+        initThemeDeletion();
     });
+    
+    function initThemeDeletion() {
+        document.querySelectorAll('.delete-theme-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const themeSlug = this.dataset.themeSlug;
+                if (!themeSlug) {
+                    alert('Помилка: не вказано slug теми');
+                    return false;
+                }
+                
+                deleteTheme(themeSlug);
+                return false;
+            });
+        });
+    }
     
     function initThemeActivation() {
         document.querySelectorAll('.theme-activate-form').forEach(function(form) {
@@ -589,17 +619,39 @@
     }
     
     function deleteTheme(slug) {
-        if (confirm('Ви впевнені, що хочете видалити цю тему? Всі файли теми будуть видалені.')) {
+        if (!slug) {
+            alert('Помилка: не вказано slug теми');
+            return false;
+        }
+        
+        if (confirm('Ви впевнені, що хочете видалити цю тему?\n\nБудуть видалені:\n- Всі файли теми\n- Всі налаштування теми з бази даних (theme_settings)\n\nЦю дію неможливо скасувати!')) {
+            // Создаем форму для отправки POST запроса
             const form = document.createElement('form');
             form.method = 'POST';
+            form.action = window.location.href;
+            
+            // Получаем CSRF токен из скрытого поля на странице
+            const csrfInput = document.getElementById('csrf_token') || document.querySelector('input[name="csrf_token"]');
+            const csrfToken = csrfInput ? csrfInput.value : '';
+            
+            if (!csrfToken) {
+                alert('Помилка: не знайдено CSRF токен');
+                console.error('CSRF token not found');
+                return false;
+            }
+            
             form.innerHTML = `
-                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="csrf_token" value="${csrfToken}">
                 <input type="hidden" name="action" value="delete_theme">
                 <input type="hidden" name="theme_slug" value="${slug}">
             `;
+            
             document.body.appendChild(form);
+            console.log('Submitting delete theme form for:', slug);
             form.submit();
         }
+        
+        return false;
     }
 })();
 </script>
