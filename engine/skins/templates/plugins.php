@@ -12,208 +12,88 @@
     </div>
 <?php endif; ?>
 
-<!-- Статистика -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card border-left-primary h-100">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Всего плагинов
-                        </div>
-                        <div class="h4 mb-0 font-weight-bold"><?= $stats['total'] ?? 0 ?></div>
-                        <div class="text-xs text-muted">В системе</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-puzzle-piece fa-2x text-primary opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card border-left-success h-100">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Активные
-                        </div>
-                        <div class="h4 mb-0 font-weight-bold"><?= $stats['active'] ?? 0 ?></div>
-                        <div class="text-xs text-muted">Работающие</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-check-circle fa-2x text-success opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card border-left-warning h-100">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Неактивные
-                        </div>
-                        <div class="h4 mb-0 font-weight-bold"><?= $stats['inactive'] ?? 0 ?></div>
-                        <div class="text-xs text-muted">Отключенные</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-pause-circle fa-2x text-warning opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card border-left-info h-100">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Встановлені
-                        </div>
-                        <div class="h4 mb-0 font-weight-bold"><?= $stats['installed'] ?? 0 ?></div>
-                        <div class="text-xs text-muted">Всього</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-download fa-2x text-info opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Фильтры -->
-<div class="content-section mb-4">
-    <div class="content-section-body">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <select class="form-select" id="statusFilter" onchange="filterPlugins()">
-                    <option value="all">Все плагины</option>
-                    <option value="active">Активные</option>
-                    <option value="inactive">Неактивные</option>
-                    <option value="available">Доступные для установки</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <input type="text" class="form-control" id="searchFilter" 
-                       placeholder="Поиск плагинов..." onkeyup="filterPlugins()">
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
-                    <i class="fas fa-times me-1"></i>Сброс
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Все плагины -->
-<?php if (!empty($installedPlugins)): ?>
-<div class="content-section mb-4">
+<div class="content-section plugins-page">
     <div class="content-section-header">
-        <span><i class="fas fa-puzzle-piece me-2"></i>Плагіни</span>
+        <span><i class="fas fa-puzzle-piece me-2"></i>Встановлені плагіни</span>
     </div>
     <div class="content-section-body">
-        <div class="row">
-            <?php foreach ($installedPlugins as $plugin): ?>
-                <div class="col-lg-6 mb-3 plugin-item" data-status="<?= $plugin['is_active'] ? 'active' : ($plugin['is_installed'] ? 'inactive' : 'available') ?>" data-name="<?= strtolower($plugin['name'] ?? '') ?>">
-                    <div class="card h-100 <?= $plugin['is_active'] ? 'border-success' : ($plugin['is_installed'] ? 'border-secondary' : 'border-info') ?>">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h6 class="card-title mb-0">
-                                    <?= htmlspecialchars($plugin['name'] ?? 'Неизвестный плагин') ?>
-                                    <?php if ($plugin['is_active']): ?>
-                                        <span class="badge bg-success ms-2">Активний</span>
-                                    <?php elseif ($plugin['is_installed']): ?>
-                                        <span class="badge bg-secondary ms-2">Встановлений</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-info ms-2">Доступний</span>
-                                    <?php endif; ?>
-                                </h6>
-                                <small class="text-muted">v<?= htmlspecialchars($plugin['version'] ?? '1.0.0') ?></small>
-                            </div>
-                            
-                            <p class="card-text text-muted small mb-3">
-                                <?= htmlspecialchars($plugin['description'] ?? 'Описание отсутствует') ?>
-                            </p>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="btn-group btn-group-sm">
-                                    <?php if (!$plugin['is_installed']): ?>
-                                        <!-- Не установлен - показываем кнопку установки -->
-                                        <button class="btn btn-primary btn-sm" 
-                                                onclick="installPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')"
-                                                style="padding: 0.5rem 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center;">
-                                            <i class="fas fa-download me-2"></i><span>Встановити</span>
-                                        </button>
-                                    <?php elseif ($plugin['is_active']): ?>
-                                        <!-- Активен - показываем деактивацию -->
-                                        <button class="btn btn-warning btn-sm" 
-                                                onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', false)"
-                                                style="padding: 0.5rem 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center;">
-                                            <i class="fas fa-pause me-2"></i><span>Деактивувати</span>
-                                        </button>
-                                    <?php else: ?>
-                                        <!-- Установлен но не активен - показываем активацию -->
-                                        <button class="btn btn-success btn-sm" 
-                                                onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', true)"
-                                                style="padding: 0.5rem 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center;">
-                                            <i class="fas fa-play me-2"></i><span>Активувати</span>
-                                        </button>
-                                    <?php endif; ?>
+        <?php if (!empty($installedPlugins)): ?>
+            <div class="plugins-list">
+                <div class="row">
+                    <?php foreach ($installedPlugins as $plugin): ?>
+                        <div class="col-lg-6 mb-3 plugin-item" data-status="<?= $plugin['is_active'] ? 'active' : ($plugin['is_installed'] ? 'inactive' : 'available') ?>" data-name="<?= strtolower($plugin['name'] ?? '') ?>">
+                            <div class="plugin-card">
+                                <div class="plugin-header">
+                                    <h6 class="plugin-name">
+                                        <?= htmlspecialchars($plugin['name'] ?? 'Неизвестный плагин') ?>
+                                    </h6>
+                                    <div class="plugin-badges">
+                                        <?php if ($plugin['is_active']): ?>
+                                            <span class="badge badge-active">Активний</span>
+                                        <?php elseif ($plugin['is_installed']): ?>
+                                            <span class="badge badge-installed">Встановлений</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-available">Доступний</span>
+                                        <?php endif; ?>
+                                        <span class="plugin-version">v<?= htmlspecialchars($plugin['version'] ?? '1.0.0') ?></span>
+                                    </div>
                                 </div>
                                 
-                                <?php if ($plugin['is_installed']): ?>
-                                    <?php if ($plugin['is_active']): ?>
-                                        <!-- Плагин активен - кнопка неактивна -->
-                                        <button class="btn btn-outline-danger btn-sm" 
-                                                disabled
-                                                title="Спочатку деактивуйте плагін перед видаленням">
-                                            <i class="fas fa-trash"></i>
+                                <p class="plugin-description">
+                                    <?= htmlspecialchars($plugin['description'] ?? 'Описание отсутствует') ?>
+                                </p>
+                                
+                                <div class="plugin-actions">
+                                    <?php if (!$plugin['is_installed']): ?>
+                                        <button class="btn btn-primary" onclick="installPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')">
+                                            <i class="fas fa-download me-1"></i>Встановити
+                                        </button>
+                                    <?php elseif ($plugin['is_active']): ?>
+                                        <button class="btn btn-warning" onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', false)">
+                                            <i class="fas fa-pause me-1"></i>Деактивувати
                                         </button>
                                     <?php else: ?>
-                                        <!-- Плагин неактивен - можно удалить -->
-                                        <button class="btn btn-outline-danger btn-sm" 
-                                                onclick="uninstallPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')"
-                                                title="Видалити плагін">
-                                            <i class="fas fa-trash"></i>
+                                        <button class="btn btn-success" onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', true)">
+                                            <i class="fas fa-play me-1"></i>Активувати
                                         </button>
                                     <?php endif; ?>
-                                <?php endif; ?>
+                                    
+                                    <?php if ($plugin['is_installed']): ?>
+                                        <?php if ($plugin['is_active']): ?>
+                                            <button class="btn btn-danger" disabled title="Спочатку деактивуйте плагін перед видаленням">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn btn-danger" onclick="uninstallPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')" title="Видалити плагін">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
-        </div>
+            </div>
+        <?php else: ?>
+            <div class="plugins-empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-puzzle-piece"></i>
+                </div>
+                <h4>Плагіни відсутні</h4>
+                <p class="text-muted">Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadPluginModal">
+                        <i class="fas fa-upload me-1"></i>Завантажити плагін
+                    </button>
+                    <a href="https://flowaxy.com/marketplace/plugins" target="_blank" class="btn btn-outline-primary">
+                        <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
+                    </a>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
-<?php else: ?>
-    <div class="plugins-empty-state">
-        <div class="empty-state-icon">
-            <i class="fas fa-puzzle-piece"></i>
-        </div>
-        <h4>Плагіни відсутні</h4>
-        <p class="text-muted">Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.</p>
-        <div class="d-flex gap-2 justify-content-center">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadPluginModal">
-                <i class="fas fa-upload me-1"></i>Завантажити плагін
-            </button>
-            <a href="https://flowaxy.com/marketplace/plugins" target="_blank" class="btn btn-outline-primary">
-                <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
-            </a>
-        </div>
-    </div>
-<?php endif; ?>
 
 <script>
 function togglePlugin(slug, activate) {
@@ -281,9 +161,163 @@ function resetFilters() {
 </script>
 
 <style>
+/* Плоский строгий дизайн */
+.plugins-page {
+    background: transparent;
+}
+
+.content-section-header {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
+    padding: 16px 20px;
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.95rem;
+}
+
+.content-section-body {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-top: none;
+    padding: 24px;
+}
+
+.plugins-list {
+    padding: 0;
+}
+
+.plugin-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.plugin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.plugin-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+}
+
+.plugin-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 0;
+    text-transform: uppercase;
+}
+
+.badge-active {
+    background: #28a745;
+    color: #fff;
+}
+
+.badge-installed {
+    background: #6c757d;
+    color: #fff;
+}
+
+.badge-available {
+    background: #17a2b8;
+    color: #fff;
+}
+
+.plugin-version {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.plugin-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+.plugin-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.plugin-actions .btn {
+    border-radius: 0;
+    border: 1px solid #dee2e6;
+    padding: 8px 16px;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.plugin-actions .btn-primary {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.plugin-actions .btn-primary:hover {
+    background: #0b5ed7;
+    border-color: #0b5ed7;
+}
+
+.plugin-actions .btn-success {
+    background: #28a745;
+    border-color: #28a745;
+    color: #fff;
+}
+
+.plugin-actions .btn-success:hover {
+    background: #218838;
+    border-color: #218838;
+}
+
+.plugin-actions .btn-warning {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.plugin-actions .btn-warning:hover {
+    background: #e0a800;
+    border-color: #e0a800;
+}
+
+.plugin-actions .btn-danger {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
+.plugin-actions .btn-danger:hover:not(:disabled) {
+    background: #c82333;
+    border-color: #c82333;
+}
+
+.plugin-actions .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .plugins-empty-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: 80px 20px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
 }
 
 .plugins-empty-state .empty-state-icon {
@@ -291,57 +325,62 @@ function resetFilters() {
     height: 80px;
     margin: 0 auto 24px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 20px;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-size: 2.5rem;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
 }
 
 .plugins-empty-state h4 {
-    color: #2d3748;
+    color: #212529;
     font-weight: 600;
     margin-bottom: 12px;
+    font-size: 1.5rem;
 }
 
 .plugins-empty-state .text-muted {
-    color: #718096;
-    margin-bottom: 24px;
+    color: #6c757d;
+    margin-bottom: 32px;
     font-size: 0.95rem;
     line-height: 1.6;
 }
 
 .plugins-empty-state .btn {
     padding: 12px 24px;
-    font-weight: 600;
-    border-radius: 10px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-weight: 500;
+    border-radius: 0;
+    border: 1px solid;
+    font-size: 0.9rem;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
 }
 
 .plugins-empty-state .btn-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
 }
 
 .plugins-empty-state .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+    background: #0b5ed7;
+    border-color: #0b5ed7;
 }
 
 .plugins-empty-state .btn-outline-primary {
-    border: 2px solid #0d6efd;
+    border-color: #0d6efd;
     color: #0d6efd;
     background: transparent;
 }
 
 .plugins-empty-state .btn-outline-primary:hover {
     background: #0d6efd;
+    border-color: #0d6efd;
     color: #fff;
-    transform: translateY(-2px);
 }
 </style>
 

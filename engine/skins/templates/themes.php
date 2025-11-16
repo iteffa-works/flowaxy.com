@@ -23,9 +23,14 @@
                 </div>
                 <h4>Теми не знайдено</h4>
                 <p class="text-muted">Встановіть тему за замовчуванням через міграцію бази даних або завантажте нову тему з маркетплейсу.</p>
-                <a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-primary">
-                    <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
-                </a>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadThemeModal">
+                        <i class="fas fa-upload me-1"></i>Завантажити тему
+                    </button>
+                    <a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-outline-primary">
+                        <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
+                    </a>
+                </div>
             </div>
         <?php else: ?>
             <div class="themes-list">
@@ -140,26 +145,27 @@
 }
 
 .content-section-header {
-    background: linear-gradient(135deg, #f8f9fc 0%, #ffffff 100%);
-    border: 1px solid #e3e6f0;
-    border-radius: 12px 12px 0 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
     padding: 16px 20px;
     font-weight: 600;
-    color: #2d3748;
+    color: #212529;
     font-size: 0.95rem;
 }
 
 .content-section-body {
     background: #fff;
-    border: 1px solid #e3e6f0;
+    border: 1px solid #e0e0e0;
     border-top: none;
-    border-radius: 0 0 12px 12px;
     padding: 24px;
 }
 
 .themes-empty-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: 80px 20px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
 }
 
 .empty-state-icon {
@@ -167,19 +173,62 @@
     height: 80px;
     margin: 0 auto 24px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 20px;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-size: 2.5rem;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
 }
 
 .themes-empty-state h4 {
-    color: #2d3748;
+    color: #212529;
     font-weight: 600;
     margin-bottom: 12px;
+    font-size: 1.5rem;
+}
+
+.themes-empty-state .text-muted {
+    color: #6c757d;
+    margin-bottom: 32px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.themes-empty-state .btn {
+    padding: 12px 24px;
+    font-weight: 500;
+    border-radius: 0;
+    border: 1px solid;
+    font-size: 0.9rem;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.themes-empty-state .btn-primary {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.themes-empty-state .btn-primary:hover {
+    background: #0b5ed7;
+    border-color: #0b5ed7;
+}
+
+.themes-empty-state .btn-outline-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    background: transparent;
+}
+
+.themes-empty-state .btn-outline-primary:hover {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
 }
 
 .themes-list {
@@ -192,61 +241,23 @@
     display: flex;
     align-items: center;
     gap: 24px;
-    padding: 24px;
+    padding: 20px;
     background: #fff;
-    border: 2px solid #e3e6f0;
-    border-radius: 16px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e0e0e0;
     position: relative;
-    overflow: hidden;
-}
-
-.theme-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.theme-item:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    border-color: #cbd5e0;
-    transform: translateY(-4px);
-}
-
-.theme-item:hover::before {
-    opacity: 1;
 }
 
 .theme-item.theme-active {
-    border: 2px solid #0d6efd;
-    background: linear-gradient(to right, rgba(13, 110, 253, 0.04) 0%, #fff 8%);
-    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.08), 0 8px 32px rgba(13, 110, 253, 0.15);
-}
-
-.theme-item.theme-active::before {
-    opacity: 1;
-    background: linear-gradient(180deg, #0d6efd 0%, #0b5ed7 100%);
+    border-left: 4px solid #0d6efd;
 }
 
 .theme-item-preview {
     flex: 0 0 140px;
     height: 90px;
-    border-radius: 12px;
     overflow: hidden;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: #f8f9fa;
     position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s ease;
-}
-
-.theme-item:hover .theme-item-preview {
-    transform: scale(1.05);
+    border: 1px solid #e0e0e0;
 }
 
 .theme-preview-img {
@@ -262,7 +273,7 @@
     align-items: center;
     justify-content: center;
     color: #adb5bd;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: #f8f9fa;
 }
 
 .theme-preview-placeholder i {
@@ -274,16 +285,14 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 28px;
-    height: 28px;
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    background: #0d6efd;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-size: 0.875rem;
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
     border: 2px solid #fff;
 }
 
@@ -297,9 +306,9 @@
 }
 
 .theme-item-name {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #1a202c;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
     margin: 0 0 8px 0;
     display: flex;
     align-items: center;
@@ -310,14 +319,12 @@
 .theme-active-badge {
     display: inline-flex;
     align-items: center;
-    padding: 5px 12px;
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    padding: 4px 10px;
+    background: #0d6efd;
     color: #fff;
-    border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+    text-transform: uppercase;
 }
 
 .theme-active-badge i {
@@ -325,10 +332,10 @@
 }
 
 .theme-item-description {
-    font-size: 0.95rem;
-    color: #718096;
+    font-size: 0.9rem;
+    color: #6c757d;
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .theme-item-meta {
@@ -344,17 +351,11 @@
     align-items: center;
     gap: 6px;
     font-size: 0.875rem;
-    color: #718096;
+    color: #6c757d;
     font-weight: 500;
-    padding: 6px 12px;
+    padding: 4px 10px;
     background: #f8f9fa;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.theme-meta-item:hover {
-    background: #e9ecef;
-    color: #4a5568;
+    border: 1px solid #e0e0e0;
 }
 
 .theme-meta-item i {
@@ -366,6 +367,7 @@
     color: #0d6efd;
     font-weight: 600;
     background: rgba(13, 110, 253, 0.1) !important;
+    border-color: rgba(13, 110, 253, 0.2) !important;
 }
 
 .theme-customization-badge i {
@@ -387,11 +389,10 @@
 .theme-actions-group .btn {
     white-space: nowrap;
     font-size: 0.875rem;
-    padding: 10px 18px;
-    border-radius: 10px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 8px 16px;
+    border-radius: 0;
+    font-weight: 500;
+    border: 1px solid #dee2e6;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -406,38 +407,37 @@
 }
 
 .theme-actions-group .btn-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
 }
 
 .theme-actions-group .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+    background: #0b5ed7;
+    border-color: #0b5ed7;
 }
 
 .theme-actions-group .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
     background: #6c757d !important;
     border-color: #6c757d !important;
-    box-shadow: none;
 }
 
-
 .theme-item .btn-primary:not(.theme-actions-group .btn-primary) {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-weight: 600;
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 0;
+    font-weight: 500;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1.5;
     vertical-align: middle;
+    border: 1px solid;
 }
 
 .theme-item .btn-primary:not(.theme-actions-group .btn-primary) i {
@@ -447,8 +447,8 @@
 }
 
 .theme-item .btn-primary:not(.theme-actions-group .btn-primary):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+    background: #0b5ed7;
+    border-color: #0b5ed7;
 }
 
 @media (max-width: 768px) {
