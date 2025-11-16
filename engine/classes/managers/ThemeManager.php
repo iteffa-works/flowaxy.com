@@ -128,9 +128,22 @@ class ThemeManager {
      * @return array
      */
     public function getAllThemes(): array {
-        $themesDir = dirname(__DIR__, 2) . '/themes/';
+        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+        // __DIR__ = engine/classes/managers
+        // dirname(__DIR__, 2) = engine (поднимаемся на 2 уровня вверх)
+        // dirname(__DIR__, 2) . '/../themes/' = themes (из engine поднимаемся на уровень выше к корню, затем themes)
+        $baseDir = dirname(__DIR__, 2); // engine
+        $rootDir = dirname($baseDir); // корень проекта
+        $themesDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
+        
+        // Нормализуем путь (убираем ../ и делаем абсолютный)
+        $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         
         if (!is_dir($themesDir)) {
+            error_log("ThemeManager: Themes directory not found: {$themesDir}");
+            error_log("ThemeManager: __DIR__ = " . __DIR__);
+            error_log("ThemeManager: baseDir = " . $baseDir);
+            error_log("ThemeManager: rootDir = " . $rootDir);
             return [];
         }
         
@@ -235,7 +248,9 @@ class ThemeManager {
      * @return string|null
      */
     private function getThemeScreenshot(string $themeSlug): ?string {
-        $themesDir = dirname(__DIR__, 2) . '/themes/';
+        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+        $themesDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         $screenshotPath = $themesDir . $themeSlug . '/screenshot.png';
         
         if (file_exists($screenshotPath)) {
@@ -281,7 +296,9 @@ class ThemeManager {
         
         // Проверяем существование темы в файловой системе
         // Сначала пробуем найти по slug из конфига (ищем папку с таким slug в конфиге)
-        $themesDir = dirname(__DIR__, 2) . '/themes/';
+        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+        $themesDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         $themeFolderSlug = null;
         
         // Ищем папку темы по slug из конфига
@@ -581,19 +598,23 @@ class ThemeManager {
     public function getThemePath(?string $themeSlug = null): string {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
+        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+        $themesBaseDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
+        
         if ($theme === null || !isset($theme['slug'])) {
-            return dirname(__DIR__, 2) . '/themes/default/';
+            return $themesBaseDir . 'default/';
         }
         
         $slug = $theme['slug'];
         // Безопасная проверка пути
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for path: {$slug}");
-            return dirname(__DIR__, 2) . '/themes/default/';
+            return $themesBaseDir . 'default/';
         }
         
-        $path = dirname(__DIR__, 2) . '/themes/' . $slug . '/';
-        return file_exists($path) ? $path : dirname(__DIR__, 2) . '/themes/default/';
+        $path = $themesBaseDir . $slug . '/';
+        return file_exists($path) ? $path : $themesBaseDir . 'default/';
     }
     
     /**
@@ -665,7 +686,10 @@ class ThemeManager {
             return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
         }
         
-        $themePath = dirname(__DIR__, 2) . '/themes/' . $slug . '/';
+        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+        $themesBaseDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
+        $themePath = $themesBaseDir . $slug . '/';
         
         if (!is_dir($themePath)) {
             $errors[] = "Директорія теми не знайдена: {$themePath}";
@@ -849,7 +873,10 @@ class ThemeManager {
         $cacheKey = 'theme_config_' . $slug;
         return cache_remember($cacheKey, function() use ($slug, $theme) {
             // Загружаем из theme.json
-            $jsonFile = dirname(__DIR__, 2) . '/themes/' . $slug . '/theme.json';
+            // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+            $themesBaseDir = dirname(__DIR__, 2) . '/../themes/';
+            $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
+            $jsonFile = $themesBaseDir . $slug . '/theme.json';
             
             if (file_exists($jsonFile) && is_readable($jsonFile)) {
                 try {
@@ -1023,7 +1050,9 @@ class ThemeManager {
             cache_forget('site_settings');
             
             // Очищаем кеш проверки активности для всех возможных тем
-            $themesDir = dirname(__DIR__, 2) . '/themes/';
+            // Путь к темам: engine/classes/managers -> engine -> корень -> themes
+            $themesDir = dirname(__DIR__, 2) . '/../themes/';
+            $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
             if (is_dir($themesDir)) {
                 $directories = glob($themesDir . '*', GLOB_ONLYDIR);
                 if ($directories !== false) {
