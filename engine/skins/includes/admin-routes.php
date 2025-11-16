@@ -1,37 +1,11 @@
 <?php
 /**
- * Точка входу для адмінки
- * Використовує універсальний роутер з engine/classes/http/Router.php
+ * Реєстрація маршрутів адмінки
+ * Використовується в index.php для автоматичної реєстрації маршрутів адмінки
  * 
- * @version 6.0.0
+ * @param Router $router Роутер для адмінки
+ * @return void
  */
-
-declare(strict_types=1);
-
-// Підключаємо централізовану ініціалізацію системи
-require_once __DIR__ . '/engine/init.php';
-
-// Підключаємо шаблонизатор
-require_once __DIR__ . '/engine/skins/includes/SimpleTemplate.php';
-
-// Завантажуємо Cache перед використанням функції cache_remember()
-if (!class_exists('Cache')) {
-    $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
-    if (file_exists($cacheFile)) {
-        require_once $cacheFile;
-    }
-}
-
-// Завантажуємо ThemeManager перед використанням функції themeManager()
-if (!class_exists('ThemeManager')) {
-    $themeManagerFile = __DIR__ . '/engine/classes/managers/ThemeManager.php';
-    if (file_exists($themeManagerFile)) {
-        require_once $themeManagerFile;
-    }
-}
-
-// Створюємо роутер для адмінки з базовим шляхом /admin
-$router = new Router('/admin', 'dashboard');
 
 // Реєструємо базові маршрути адмінки
 $router->add('', 'DashboardPage');
@@ -46,7 +20,7 @@ $router->add('system', 'SystemPage');
 $router->add('theme-editor', 'ThemeEditorPage');
 
 // Реєструємо маршрут кастомізатора тільки якщо активна тема підтримує кастомізацію
-require_once __DIR__ . '/engine/skins/includes/menu-items.php';
+require_once __DIR__ . '/menu-items.php';
 if (themeSupportsCustomization()) {
     $router->add('customizer', 'CustomizerPage');
 }
@@ -62,7 +36,7 @@ doHook('admin_register_routes', $router);
 // Реєструємо маршрути плагінів
 $activePlugins = pluginManager()->getActivePlugins();
 foreach ($activePlugins as $slug => $plugin) {
-    $pluginDir = __DIR__ . '/plugins/' . $slug;
+    $pluginDir = dirname(__DIR__, 3) . '/plugins/' . $slug;
     
     // Перетворюємо slug в ім'я класу адмін-сторінки
     $parts = explode('-', $slug);
@@ -75,14 +49,15 @@ foreach ($activePlugins as $slug => $plugin) {
     $adminPageFile = $pluginDir . '/admin/' . $className . '.php';
     
     // Використовуємо File клас для перевірки існування файлу
-    $file = new File($adminPageFile);
-    if ($file->exists()) {
+    if (class_exists('File')) {
+        $file = new File($adminPageFile);
+        if ($file->exists()) {
+            require_once $adminPageFile;
+            $router->add($slug, $className);
+        }
+    } elseif (file_exists($adminPageFile)) {
         require_once $adminPageFile;
         $router->add($slug, $className);
     }
 }
-
-// Обробляємо запит (роутер автоматично завантажить маршрути з модулів, плагінів та теми)
-$router->dispatch();
-
 

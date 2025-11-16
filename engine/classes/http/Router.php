@@ -178,11 +178,12 @@ class Router {
         $themeManager = themeManager();
         $activeTheme = $themeManager->getActiveTheme();
         
-        if ($activeTheme === null) {
+        if ($activeTheme === null || !isset($activeTheme['slug'])) {
             return;
         }
         
-        $themePath = $themeManager->getThemePath($activeTheme);
+        // Передаем slug темы, а не весь массив
+        $themePath = $themeManager->getThemePath($activeTheme['slug']);
         if (empty($themePath)) {
             return;
         }
@@ -235,7 +236,8 @@ class Router {
         // Просто нормалізуємо шлях без додавання базового шляху
         // Базовий шлях видаляється з URI в getCurrentUri(), а не додається до паттерну
         $path = trim($path, '/');
-        return '/' . $path;
+        // Для пустого пути возвращаем пустую строку, для остальных - путь со слэшем
+        return empty($path) ? '' : '/' . $path;
     }
     
     /**
@@ -258,10 +260,13 @@ class Router {
             return '/^\/?$/';
         }
         
+        // Убираем начальный слэш для паттерна, так как он будет добавлен в uriPath
+        $normalizedPath = ltrim($normalizedPath, '/');
+        
         $pattern = preg_quote($normalizedPath, '/');
         $pattern = str_replace('\{', '(?P<', $pattern);
         $pattern = str_replace('\}', '>[^/]+)', $pattern);
-        return '/^' . $pattern . '$/';
+        return '/^\/' . $pattern . '$/';
     }
     
     /**

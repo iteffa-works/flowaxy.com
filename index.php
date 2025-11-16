@@ -1,9 +1,9 @@
 <?php
 /**
  * Головна точка входу системи
- * Мінімальна ініціалізація та запуск роутера
+ * Універсальна обробка як фронтенду, так і адмінки
  * 
- * @version 5.0.0
+ * @version 6.0.0
  */
 
 declare(strict_types=1);
@@ -42,11 +42,42 @@ if ($handled === true) {
     exit;
 }
 
-// Створюємо роутер для фронтенду
-$router = new Router('/', null);
+// Визначаємо, чи це запит до адмінки
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$isAdminRequest = strpos($requestUri, '/admin') === 0;
 
-// Хук для реєстрації маршрутів (плагіни та теми можуть реєструвати свої маршрути)
-doHook('register_routes', $router);
+if ($isAdminRequest) {
+    // Підключаємо шаблонизатор для адмінки
+    require_once __DIR__ . '/engine/skins/includes/SimpleTemplate.php';
+    
+    // Завантажуємо Cache перед використанням функції cache_remember()
+    if (!class_exists('Cache')) {
+        $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
+        if (file_exists($cacheFile)) {
+            require_once $cacheFile;
+        }
+    }
+    
+    // Завантажуємо ThemeManager перед використанням функції themeManager()
+    if (!class_exists('ThemeManager')) {
+        $themeManagerFile = __DIR__ . '/engine/classes/managers/ThemeManager.php';
+        if (file_exists($themeManagerFile)) {
+            require_once $themeManagerFile;
+        }
+    }
+    
+    // Створюємо роутер для адмінки з базовим шляхом /admin
+    $router = new Router('/admin', 'dashboard');
+    
+    // Реєструємо маршрути адмінки з окремого файлу
+    require_once __DIR__ . '/engine/skins/includes/admin-routes.php';
+} else {
+    // Створюємо роутер для фронтенду
+    $router = new Router('/', null);
+    
+    // Хук для реєстрації маршрутів (плагіни та теми можуть реєструвати свої маршрути)
+    doHook('register_routes', $router);
+}
 
 // Обробляємо запит (роутер автоматично завантажить маршрути з модулів, плагінів та теми)
 $router->dispatch();
