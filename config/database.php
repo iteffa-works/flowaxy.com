@@ -14,7 +14,7 @@ if (!defined('DB_HOST')) {
     define('DB_HOST', '127.0.1.26');
 }
 if (!defined('DB_NAME')) {
-    define('DB_NAME', 'db_flowaxy2');
+    define('DB_NAME', 'db_flowaxy');
 }
 if (!defined('DB_USER')) {
     define('DB_USER', 'root');

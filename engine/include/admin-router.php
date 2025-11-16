@@ -8,6 +8,17 @@ require_once dirname(__DIR__, 2) . '/config/config.php';
 require_once __DIR__ . '/../skins/includes/SimpleTemplate.php';
 require_once __DIR__ . '/../skins/includes/Router.php';
 
+// Убеждаемся, что необходимые классы загружены для menu-items.php
+// Cache нужен для функций cache_remember(), cache_forget()
+if (!class_exists('Cache')) {
+    require_once dirname(__DIR__) . '/classes/Cache.php';
+}
+
+// ThemeManager нужен для функции themeManager() и themeSupportsCustomization()
+if (!class_exists('ThemeManager')) {
+    require_once dirname(__DIR__) . '/classes/ThemeManager.php';
+}
+
 // Модули загружаются лениво - только когда они нужны для конкретной страницы
 
 // Определяем текущий путь ДО вызова хуков, чтобы загрузить только нужный модуль

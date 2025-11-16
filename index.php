@@ -48,7 +48,25 @@ if ($handled === true) {
     exit; // Запрос обработан плагином
 }
 
+// Убеждаемся, что класс Cache загружен (для функции cache_remember())
+// Cache нужен для ThemeManager, который использует cache_remember()
+// Функции cache_remember(), cache_forget() и др. определены в Cache.php
+if (!class_exists('Cache')) {
+    require_once __DIR__ . '/engine/classes/Cache.php';
+}
+
+// Убеждаемся, что класс ThemeManager загружен (для функции themeManager())
+// Функция themeManager() определена в том же файле, что и класс ThemeManager
+if (!class_exists('ThemeManager')) {
+    require_once __DIR__ . '/engine/classes/ThemeManager.php';
+}
+
 // Получаем активную тему
+if (!function_exists('themeManager')) {
+    error_log("Error: themeManager() function not found after loading ThemeManager class");
+    die("System error: ThemeManager not available. Please check engine/classes/ThemeManager.php");
+}
+
 $themeManager = themeManager();
 $activeTheme = $themeManager->getActiveTheme();
 $themePath = $themeManager->getThemePath();
