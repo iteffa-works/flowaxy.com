@@ -167,8 +167,8 @@
                                             <?php elseif ($type === 'textarea'): ?>
                                                 <textarea class="form-control setting-input <?= ($key === 'custom_css') ? 'font-monospace' : '' ?>" 
                                                           id="setting_<?= htmlspecialchars($key) ?>" 
-                                                          data-key="<?= htmlspecialchars($key) ?>"
-                                                          rows="<?= ($key === 'custom_css') ? '15' : '5' ?>"
+                                                          data-key="<?= htmlspecialchars($key) ?>" 
+                                                          rows="<?= ($key === 'custom_css') ? '15' : '5' ?>" 
                                                           placeholder="<?= htmlspecialchars($description) ?>"
                                                           style="<?= ($key === 'custom_css') ? 'font-size: 0.875rem; line-height: 1.6;' : '' ?>"><?= htmlspecialchars($value) ?></textarea>
                                             <?php else: ?>
@@ -590,6 +590,7 @@
 .media-image-item:hover {
     opacity: 0.8;
 }
+
 </style>
 
 <?php endif; ?>

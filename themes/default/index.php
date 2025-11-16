@@ -111,7 +111,7 @@ $themeData = doHook('theme_before_render', [
     ?>
     
     <!-- Custom Theme Styles -->
-    <link rel="stylesheet" href="<?= $themeManager->getThemeUrl() ?>style.css">
+    <link rel="stylesheet" href="<?= $themeManager->getStylesheetUrl() ?>">
     
     <!-- Dynamic Theme Colors and Typography -->
     <style>

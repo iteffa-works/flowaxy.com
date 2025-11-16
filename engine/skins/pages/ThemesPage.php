@@ -26,6 +26,13 @@ class ThemesPage extends AdminPage {
     }
     
     public function handle() {
+        // Обработка AJAX запросов
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            $this->handleAjax();
+            return;
+        }
+        
         // Обработка активации темы
         if ($_POST && isset($_POST['activate_theme'])) {
             $this->activateTheme();
@@ -101,6 +108,115 @@ class ThemesPage extends AdminPage {
         } else {
             $this->setMessage('Помилка при активації теми', 'danger');
         }
+    }
+    
+    /**
+     * Обработка AJAX запросов
+     */
+    private function handleAjax() {
+        header('Content-Type: application/json');
+        
+        $action = sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        
+        switch ($action) {
+            case 'activate_theme':
+                $this->ajaxActivateTheme();
+                break;
+                
+            case 'check_compilation':
+                $this->ajaxCheckCompilation();
+                break;
+                
+            default:
+                echo json_encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE);
+                exit;
+        }
+    }
+    
+    /**
+     * AJAX активация темы с компиляцией SCSS
+     */
+    private function ajaxActivateTheme() {
+        if (!$this->verifyCsrf()) {
+            echo json_encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        $themeSlug = sanitizeInput($_POST['theme_slug'] ?? '');
+        
+        if (empty($themeSlug)) {
+            echo json_encode(['success' => false, 'error' => 'Тему не вибрано'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        // Проверяем, поддерживает ли тема SCSS
+        $hasScssSupport = themeManager()->hasScssSupport($themeSlug);
+        
+        // Компилируем SCSS перед активацией, если тема поддерживает SCSS
+        if ($hasScssSupport) {
+            $compileResult = themeManager()->compileScss($themeSlug, true);
+            if (!$compileResult) {
+                // Предупреждаем, но не блокируем активацию
+                error_log("ThemeManager: SCSS compilation failed for theme: {$themeSlug}");
+            }
+        }
+        
+        // Активируем тему
+        if (themeManager()->activateTheme($themeSlug)) {
+            // Очищаем все кеши после успешной активации
+            themeManager()->clearThemeCache();
+            
+            // Очищаем кеш меню админки (все варианты)
+            $cachePatterns = [
+                'admin_menu_items_0',
+                'admin_menu_items_1',
+                'admin_menu_items_0_0',
+                'admin_menu_items_0_1',
+                'admin_menu_items_1_0',
+                'admin_menu_items_1_1'
+            ];
+            foreach ($cachePatterns as $pattern) {
+                cache_forget($pattern);
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Тему успішно активовано',
+                'has_scss' => $hasScssSupport,
+                'compiled' => $hasScssSupport ? $compileResult : null
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Помилка при активації теми'
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
+    
+    /**
+     * AJAX проверка статуса компиляции
+     */
+    private function ajaxCheckCompilation() {
+        $themeSlug = sanitizeInput($_GET['theme_slug'] ?? '');
+        
+        if (empty($themeSlug)) {
+            echo json_encode(['success' => false, 'error' => 'Тему не вказано'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        $hasScssSupport = themeManager()->hasScssSupport($themeSlug);
+        $themePath = themeManager()->getThemePath($themeSlug);
+        $cssFile = $themePath . 'assets/css/style.css';
+        $cssExists = file_exists($cssFile);
+        
+        echo json_encode([
+            'success' => true,
+            'has_scss' => $hasScssSupport,
+            'css_exists' => $cssExists,
+            'css_file' => $cssExists ? 'assets/css/style.css' : null
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }
 

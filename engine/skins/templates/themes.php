@@ -89,12 +89,24 @@
                         
                         <div class="theme-item-actions">
                             <?php if (!$isActive): ?>
-                                <form method="POST" class="d-inline">
+                                <?php
+                                $hasScssSupport = themeManager()->hasScssSupport($theme['slug']);
+                                $themePath = themeManager()->getThemePath($theme['slug']);
+                                $cssFile = $themePath . 'assets/css/style.css';
+                                $cssExists = file_exists($cssFile);
+                                ?>
+                                <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= htmlspecialchars($theme['slug']) ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
                                     <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
                                     <input type="hidden" name="theme_slug" value="<?= htmlspecialchars($theme['slug']) ?>">
                                     <input type="hidden" name="activate_theme" value="1">
-                                    <button type="submit" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-check me-1"></i>Активувати
+                                    <button type="submit" class="btn btn-primary btn-sm theme-activate-btn">
+                                        <i class="fas fa-check me-1"></i>
+                                        <span class="btn-text">Активувати</span>
+                                        <?php if ($hasScssSupport): ?>
+                                            <span class="btn-spinner ms-2" style="display: none;">
+                                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                            </span>
+                                        <?php endif; ?>
                                     </button>
                                 </form>
                             <?php else: ?>
@@ -471,4 +483,156 @@
         gap: 8px;
     }
 }
+
+.theme-activate-btn {
+    position: relative;
+    min-width: 120px;
+}
+
+.theme-activate-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.theme-activate-btn .btn-spinner {
+    display: inline-flex;
+    align-items: center;
+}
+
+.theme-activate-btn.compiling .btn-text::after {
+    content: ' (компіляція...)';
+    font-size: 0.875em;
+}
+
+.theme-activate-btn.activating .btn-text::after {
+    content: ' (активація...)';
+    font-size: 0.875em;
+}
 </style>
+
+<script>
+(function() {
+    'use strict';
+    
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        initThemeActivation();
+    });
+    
+    function initThemeActivation() {
+        document.querySelectorAll('.theme-activate-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const themeSlug = this.dataset.themeSlug;
+                const hasScss = this.dataset.hasScss === '1';
+                const btn = this.querySelector('.theme-activate-btn');
+                const btnText = btn.querySelector('.btn-text');
+                const btnSpinner = btn.querySelector('.btn-spinner');
+                
+                // Отключаем кнопку и показываем спиннер
+                btn.disabled = true;
+                btn.classList.add(hasScss ? 'compiling' : 'activating');
+                if (btnSpinner) {
+                    btnSpinner.style.display = 'inline-flex';
+                }
+                
+                // Если тема поддерживает SCSS, сначала компилируем
+                if (hasScss) {
+                    btnText.textContent = 'Компілюється...';
+                    
+                    // Компилируем SCSS
+                    compileAndActivateTheme(themeSlug, btn, btnText, btnSpinner);
+                } else {
+                    // Просто активируем тему
+                    activateTheme(themeSlug, btn, btnText, btnSpinner);
+                }
+            });
+        });
+    }
+    
+    function compileAndActivateTheme(themeSlug, btn, btnText, btnSpinner) {
+        const formData = new FormData();
+        formData.append('action', 'activate_theme');
+        formData.append('theme_slug', themeSlug);
+        formData.append('csrf_token', csrfToken);
+        
+        fetch('', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                btnText.textContent = 'Активовано!';
+                btn.classList.remove('compiling');
+                btn.classList.add('activating');
+                
+                // Перезагружаем страницу через небольшую задержку
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('compiling', 'activating');
+                if (btnSpinner) {
+                    btnSpinner.style.display = 'none';
+                }
+                btnText.textContent = 'Активувати';
+                
+                alert('Помилка: ' + (data.error || 'Невідома помилка'));
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.classList.remove('compiling', 'activating');
+            if (btnSpinner) {
+                btnSpinner.style.display = 'none';
+            }
+            btnText.textContent = 'Активувати';
+            
+            alert('Помилка підключення до сервера');
+            console.error('Error:', error);
+        });
+    }
+    
+    function activateTheme(themeSlug, btn, btnText, btnSpinner) {
+        // Для тем без SCSS используем обычную активацию через форму
+        btnText.textContent = 'Активується...';
+        
+        // Отправляем форму обычным способом
+        const form = btn.closest('form');
+        if (form) {
+            // Создаем скрытую форму для отправки
+            const hiddenForm = document.createElement('form');
+            hiddenForm.method = 'POST';
+            hiddenForm.action = '';
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken;
+            hiddenForm.appendChild(csrfInput);
+            
+            const themeSlugInput = document.createElement('input');
+            themeSlugInput.type = 'hidden';
+            themeSlugInput.name = 'theme_slug';
+            themeSlugInput.value = themeSlug;
+            hiddenForm.appendChild(themeSlugInput);
+            
+            const activateInput = document.createElement('input');
+            activateInput.type = 'hidden';
+            activateInput.name = 'activate_theme';
+            activateInput.value = '1';
+            hiddenForm.appendChild(activateInput);
+            
+            document.body.appendChild(hiddenForm);
+            hiddenForm.submit();
+        }
+    }
+})();
+</script>

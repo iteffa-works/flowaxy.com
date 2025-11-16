@@ -15,7 +15,8 @@ $coreClasses = [
     'BasePlugin',
     'Cache',
     'ThemeManager',
-    'MenuManager'
+    'MenuManager',
+    'ScssCompiler'
 ];
 
 foreach ($coreClasses as $class) {

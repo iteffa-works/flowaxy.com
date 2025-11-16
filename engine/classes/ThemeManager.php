@@ -323,6 +323,31 @@ class ThemeManager {
         }
         
         try {
+            // Получаем предыдущую активную тему ДО активации новой (для удаления CSS)
+            $previousThemeSlug = null;
+            if ($this->db !== null) {
+                try {
+                    $stmt = $this->db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'active_theme' LIMIT 1");
+                    $stmt->execute();
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $previousThemeSlug = $result ? ($result['setting_value'] ?? null) : null;
+                } catch (PDOException $e) {
+                    error_log("ThemeManager: Error getting previous theme: " . $e->getMessage());
+                }
+            }
+            
+            // Удаляем скомпилированный CSS файл предыдущей темы (если была активна другая тема)
+            if ($previousThemeSlug && $previousThemeSlug !== $slug) {
+                $previousThemePath = $this->getThemePath($previousThemeSlug);
+                if (!empty($previousThemePath)) {
+                    $previousCssFile = $previousThemePath . 'assets/css/style.css';
+                    if (file_exists($previousCssFile) && is_file($previousCssFile)) {
+                        @unlink($previousCssFile);
+                        error_log("ThemeManager: Deleted compiled CSS file for deactivated theme: {$previousThemeSlug}");
+                    }
+                }
+            }
+            
             // Сохраняем активную тему в site_settings (используем slug из конфига)
             $stmt = $this->db->prepare("
                 INSERT INTO site_settings (setting_key, setting_value) 
@@ -347,6 +372,15 @@ class ThemeManager {
             $themeConfig = $this->getThemeConfig($slug);
             if (!empty($themeConfig)) {
                 $this->initializeDefaultSettings($slug);
+            }
+            
+            // Компилируем SCSS при активации темы, если тема поддерживает SCSS
+            if ($this->hasScssSupport($slug)) {
+                $compileResult = $this->compileScss($slug, true); // Принудительная компиляция при активации
+                if (!$compileResult) {
+                    error_log("ThemeManager: SCSS compilation failed for theme: {$slug}");
+                    // Не блокируем активацию, если компиляция не удалась
+                }
             }
             
             return true;
@@ -878,6 +912,92 @@ class ThemeManager {
         
         $themeConfig = $this->getThemeConfig($theme['slug']);
         return (bool)($themeConfig['supports_navigation'] ?? false);
+    }
+    
+    /**
+     * Проверка поддержки SCSS темой
+     * 
+     * @param string|null $themeSlug Slug темы (null для активной темы)
+     * @return bool
+     */
+    public function hasScssSupport(?string $themeSlug = null): bool {
+        $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
+        if (!$theme) {
+            return false;
+        }
+        
+        $themePath = $this->getThemePath($theme['slug']);
+        $scssFile = $themePath . 'assets/scss/main.scss';
+        
+        return file_exists($scssFile) && is_readable($scssFile);
+    }
+    
+    /**
+     * Компиляция SCSS в CSS для темы
+     * 
+     * @param string|null $themeSlug Slug темы (null для активной темы)
+     * @param bool $force Принудительная перекомпиляция
+     * @return bool Успешность компиляции
+     */
+    public function compileScss(?string $themeSlug = null, bool $force = false): bool {
+        $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
+        if (!$theme) {
+            return false;
+        }
+        
+        $themePath = $this->getThemePath($theme['slug']);
+        
+        $compiler = new ScssCompiler($themePath, 'assets/scss/main.scss', 'assets/css/style.css');
+        
+        if (!$compiler->hasScssFiles()) {
+            return false;
+        }
+        
+        return $compiler->compile($force);
+    }
+    
+    /**
+     * Получение URL файла стилей темы (CSS или скомпилированный SCSS)
+     * 
+     * @param string|null $themeSlug Slug темы (null для активной темы)
+     * @param string $cssFile Имя CSS файла (по умолчанию style.css)
+     * @return string URL файла стилей
+     */
+    public function getStylesheetUrl(?string $themeSlug = null, string $cssFile = 'style.css'): string {
+        $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
+        if (!$theme) {
+            return $this->getThemeUrl() . $cssFile;
+        }
+        
+        $themePath = $this->getThemePath($theme['slug']);
+        
+        // Проверяем, есть ли SCSS поддержка
+        if ($this->hasScssSupport($theme['slug'])) {
+            // Пытаемся скомпилировать SCSS (тихо, без ошибок если не получится)
+            try {
+                $this->compileScss($theme['slug']);
+            } catch (Exception $e) {
+                error_log("ThemeManager: SCSS compilation failed: " . $e->getMessage());
+            }
+            
+            $compiledCssFile = $themePath . 'assets/css/style.css';
+            
+            // Если скомпилированный файл существует, используем его
+            if (file_exists($compiledCssFile) && is_readable($compiledCssFile)) {
+                return $this->getThemeUrl($theme['slug']) . 'assets/css/style.css';
+            }
+        }
+        
+        // Используем обычный CSS файл
+        $regularCssFile = $themePath . $cssFile;
+        
+        // Проверяем, существует ли файл в корне темы
+        if (file_exists($regularCssFile) && is_readable($regularCssFile)) {
+            return $this->getThemeUrl($theme['slug']) . $cssFile;
+        }
+        
+        // Fallback: возвращаем URL по умолчанию
+        return $this->getThemeUrl($theme['slug']) . $cssFile;
     }
     
     /**
