@@ -395,7 +395,8 @@ class DiagnosticsPage extends AdminPage {
             // Перевірка таблиць
             $stmt = $db->query("SHOW TABLES");
             $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            $requiredTables = ['users', 'plugins', 'themes', 'site_settings'];
+            // Обов'язкові таблиці системи (themes замінено на theme_settings)
+            $requiredTables = ['users', 'plugins', 'plugin_settings', 'site_settings', 'theme_settings', 'menus', 'menu_items', 'media_files'];
             $missingTables = [];
             
             foreach ($requiredTables as $table) {
@@ -430,32 +431,68 @@ class DiagnosticsPage extends AdminPage {
      */
     private function checkPermissions() {
         $checks = [];
-        $baseDir = dirname(__DIR__, 2);
+        // __DIR__ = engine/skins/pages, dirname(__DIR__, 2) = engine
+        $engineDir = dirname(__DIR__, 2);
+        // Базовий каталог проекту (на рівень вище від engine)
+        $baseDir = dirname($engineDir);
+        
+        // Визначаємо шлях до engine/data (директорія конфігурації)
+        // engine/data відносно engine директорії
+        $configDir = $engineDir . DIRECTORY_SEPARATOR . 'data';
+        $configDir = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $configDir);
         
         $folders = [
-            'uploads' => defined('UPLOADS_DIR') ? UPLOADS_DIR : $baseDir . '/uploads',
-            'cache' => defined('CACHE_DIR') ? CACHE_DIR : $baseDir . '/storage/cache',
-            'plugins' => $baseDir . '/plugins',
-            'themes' => $baseDir . '/themes',
-            'config' => $baseDir . '/engine/data'
+            'uploads' => defined('UPLOADS_DIR') ? rtrim(UPLOADS_DIR, '/\\') : $baseDir . DIRECTORY_SEPARATOR . 'uploads',
+            'cache' => defined('CACHE_DIR') ? rtrim(CACHE_DIR, '/\\') : $baseDir . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache',
+            'plugins' => $baseDir . DIRECTORY_SEPARATOR . 'plugins',
+            'themes' => $baseDir . DIRECTORY_SEPARATOR . 'themes',
+            'config' => $configDir
         ];
         
         foreach ($folders as $name => $path) {
-            $path = str_replace(['\\', '//'], ['/', '/'], $path);
-            $path = rtrim($path, '/');
+            // Нормалізуємо шлях для поточної ОС
+            $path = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $path);
+            $path = rtrim($path, '/\\') . DIRECTORY_SEPARATOR;
             
+            // Перевіряємо існування та права
             $exists = file_exists($path) && is_dir($path);
             $readable = $exists && is_readable($path);
             $writable = $exists && is_writable($path);
             
+            // Для config директорії права на запис не обов'язкові (читання достатньо)
+            $requiredWritable = ($name !== 'config') ? true : false;
+            
+            $status = 'success';
+            if (!$exists) {
+                $status = 'error';
+            } elseif (!$readable) {
+                $status = 'error';
+            } elseif ($requiredWritable && !$writable) {
+                $status = 'warning';
+            } elseif (!$requiredWritable && !$writable) {
+                $status = 'info';
+            }
+            
+            $message = '';
+            if (!$exists) {
+                $message = 'Директорія не існує';
+            } elseif (!$readable) {
+                $message = 'Немає доступу на читання';
+            } elseif ($requiredWritable && !$writable) {
+                $message = 'Тільки читається (потрібен запис)';
+            } elseif (!$requiredWritable && !$writable) {
+                $message = 'Тільки читається (нормально для config)';
+            } else {
+                $message = 'Читається та записується';
+            }
+            
+            $displayPath = rtrim($path, '/\\');
+            
             $checks[$name] = [
                 'name' => ucfirst($name),
-                'value' => $exists ? $path : 'Не існує',
-                'status' => ($exists && $readable && $writable) ? 'success' : ($exists ? 'warning' : 'error'),
-                'message' => $exists ? 
-                    ($readable && $writable ? 'Читається та записується' : 
-                     ($readable ? 'Тільки читається' : 'Немає доступу')) : 
-                    'Директорія не існує'
+                'value' => $exists ? $displayPath : 'Не існує',
+                'status' => $status,
+                'message' => $message
             ];
         }
         
