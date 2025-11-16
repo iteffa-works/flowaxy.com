@@ -211,9 +211,9 @@ class PluginManager extends BaseModule {
             return $data;
         }
         
-        // Для admin_menu всегда загружаем модули ДО проверки хуков
+        // Для admin_menu и admin_register_routes всегда загружаем модули ДО проверки хуков
         // Это гарантирует, что модули зарегистрируют свои хуки независимо от порядка загрузки плагинов
-        if ($hookName === 'admin_menu' && class_exists('ModuleLoader')) {
+        if (($hookName === 'admin_menu' || $hookName === 'admin_register_routes') && class_exists('ModuleLoader')) {
             $this->loadAdminModules(true);
         }
         
@@ -326,11 +326,22 @@ class PluginManager extends BaseModule {
         $loadedModules = ModuleLoader::getLoadedModules();
         foreach ($loadedModules as $moduleName => $module) {
             if (is_object($module) && method_exists($module, 'registerHooks')) {
-                // Проверяем, зарегистрированы ли хуки для admin_menu
+                // Проверяем, зарегистрированы ли хуки для admin_menu или admin_register_routes
                 // Если нет, вызываем registerHooks() еще раз
                 // Это безопасно, так как addHook() просто добавляет хуки, а не заменяет их
-                if (!isset($this->hooks['admin_menu']) || 
-                    !$this->hasModuleHook($moduleName, 'admin_menu')) {
+                $needsRegistration = false;
+                
+                // Проверяем admin_menu
+                if (!isset($this->hooks['admin_menu']) || !$this->hasModuleHook($moduleName, 'admin_menu')) {
+                    $needsRegistration = true;
+                }
+                
+                // Проверяем admin_register_routes
+                if (!isset($this->hooks['admin_register_routes']) || !$this->hasModuleHook($moduleName, 'admin_register_routes')) {
+                    $needsRegistration = true;
+                }
+                
+                if ($needsRegistration) {
                     try {
                         $module->registerHooks();
                     } catch (Exception $e) {
