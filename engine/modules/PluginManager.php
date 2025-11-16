@@ -197,53 +197,38 @@ class PluginManager extends BaseModule {
      * Выполнение хука
      */
     public function doHook(string $hookName, $data = null) {
-        // Для хука admin_menu всегда загружаем все модули (нужны для отображения меню)
-        // Для хука admin_register_routes НЕ загружаем модули - они загружаются по требованию
-        // при обращении к конкретной странице через admin-router.php
-        if ($hookName === 'admin_menu' && class_exists('ModuleLoader')) {
-            $this->loadAdminModules(true); // Всегда загружаем все модули для меню
-        }
-        // Для admin_register_routes модули уже загружены по требованию в admin-router.php
-        
         if (empty($hookName) || !isset($this->hooks[$hookName])) {
             return $data;
         }
         
-        // Для хука admin_register_routes всегда передаем исходный объект $router каждому хуку
-        // (хуки не должны возвращать измененные данные, они работают с одним объектом)
-        // Для хука admin_menu каждый хук получает текущее меню и возвращает обновленное
-        $preserveOriginalData = ($hookName === 'admin_register_routes');
-        $originalData = $data;
-        
-        // Проверяем, что для хуков, требующих сохранения данных, данные не null
-        if ($preserveOriginalData && $originalData === null) {
-            error_log("Warning: Hook '{$hookName}' received null data but requires preserved data");
-            return $data;
+        // Загружаем модули для admin_menu (нужны для отображения меню)
+        if ($hookName === 'admin_menu' && class_exists('ModuleLoader')) {
+            $this->loadAdminModules(true);
         }
         
+        // Определяем тип хука: объектные хуки (admin_register_routes) vs данные (admin_menu)
+        $isObjectHook = ($hookName === 'admin_register_routes');
+        
         foreach ($this->hooks[$hookName] as $hook) {
-            if (is_callable($hook['callback'])) {
-                try {
-                    // Для хуков, которые сохраняют исходные данные (admin_register_routes),
-                    // всегда передаем оригинальный объект
-                    // Для других хуков (admin_menu) передаем текущие данные
-                    $hookData = $preserveOriginalData ? $originalData : $data;
-                    $result = call_user_func($hook['callback'], $hookData);
-                    
-                    // Для admin_register_routes игнорируем результат (работаем с одним объектом)
-                    // Для admin_menu используем результат как обновленные данные
-                    if (!$preserveOriginalData && $result !== null) {
-                        $data = $result;
-                    }
-                } catch (Exception $e) {
-                    error_log("Hook execution error for '{$hookName}': " . $e->getMessage());
-                } catch (Error $e) {
-                    error_log("Fatal error in hook '{$hookName}': " . $e->getMessage());
+            if (!is_callable($hook['callback'])) {
+                continue;
+            }
+            
+            try {
+                $result = call_user_func($hook['callback'], $data);
+                
+                // Для не-объектных хуков используем результат как обновленные данные
+                if (!$isObjectHook && $result !== null) {
+                    $data = $result;
                 }
+            } catch (Exception $e) {
+                error_log("Hook execution error for '{$hookName}': " . $e->getMessage());
+            } catch (Error $e) {
+                error_log("Fatal error in hook '{$hookName}': " . $e->getMessage());
             }
         }
         
-        return $preserveOriginalData ? $originalData : $data;
+        return $data;
     }
     
     /**

@@ -303,21 +303,7 @@ class ThemeManager {
             }
             
             // Очищаем весь кеш тем перед перезагрузкой
-            cache_forget('active_theme');
-            cache_forget('active_theme_slug');
-            cache_forget('theme_settings_' . $slug);
-            cache_forget('all_themes_filesystem');
-            cache_forget('theme_' . $slug);
-            cache_forget('site_settings');
-            
-            // Очищаем кеш проверки активности для всех возможных тем
-            if (is_dir($themesDir)) {
-                $directories = glob($themesDir . '*', GLOB_ONLYDIR);
-                foreach ($directories as $dir) {
-                    $themeSlug = basename($dir);
-                    cache_forget('active_theme_check_' . md5($themeSlug));
-                }
-            }
+            $this->clearThemeCache($slug);
             
             // Перезагружаем активную тему
             $this->loadActiveTheme();
@@ -787,31 +773,111 @@ class ThemeManager {
             ];
         }
         
-        // Загружаем из theme.json
-        $jsonFile = dirname(__DIR__, 2) . '/themes/' . $slug . '/theme.json';
-        
-        if (file_exists($jsonFile) && is_readable($jsonFile)) {
-            try {
-                $jsonContent = @file_get_contents($jsonFile);
-                if ($jsonContent !== false) {
-                    $config = json_decode($jsonContent, true);
-                    if (is_array($config)) {
-                        return $config;
+        // Кешируем конфигурацию темы
+        $cacheKey = 'theme_config_' . $slug;
+        return cache_remember($cacheKey, function() use ($slug, $theme) {
+            // Загружаем из theme.json
+            $jsonFile = dirname(__DIR__, 2) . '/themes/' . $slug . '/theme.json';
+            
+            if (file_exists($jsonFile) && is_readable($jsonFile)) {
+                try {
+                    $jsonContent = @file_get_contents($jsonFile);
+                    if ($jsonContent !== false) {
+                        $config = json_decode($jsonContent, true);
+                        if (is_array($config)) {
+                            return $config;
+                        }
                     }
+                } catch (Exception $e) {
+                    error_log("ThemeManager: Error loading theme.json for {$slug}: " . $e->getMessage());
                 }
-            } catch (Exception $e) {
-                error_log("ThemeManager: Error loading theme.json for {$slug}: " . $e->getMessage());
             }
+            
+            // Возвращаем базовую конфигурацию из данных темы, если theme.json не найден
+            return [
+                'name' => $theme['name'] ?? 'Default',
+                'version' => $theme['version'] ?? '1.0.0',
+                'description' => $theme['description'] ?? '',
+                'default_settings' => [],
+                'available_settings' => []
+            ];
+        }, 3600); // Кешируем на 1 час
+    }
+    
+    /**
+     * Проверка поддержки кастоматизации темой
+     * 
+     * @param string|null $themeSlug Slug темы (null для активной темы)
+     * @return bool
+     */
+    public function supportsCustomization(?string $themeSlug = null): bool {
+        $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
+        if (!$theme) {
+            return false;
         }
         
-        // Возвращаем базовую конфигурацию из данных темы, если theme.json не найден
-        return [
-            'name' => $theme['name'] ?? 'Default',
-            'version' => $theme['version'] ?? '1.0.0',
-            'description' => $theme['description'] ?? '',
-            'default_settings' => [],
-            'available_settings' => []
-        ];
+        $themeConfig = $this->getThemeConfig($theme['slug']);
+        if (isset($themeConfig['supports_customization'])) {
+            return (bool)$themeConfig['supports_customization'];
+        }
+        
+        // Fallback: проверяем наличие customizer.php
+        $themePath = $this->getThemePath($theme['slug']);
+        return file_exists($themePath . 'customizer.php');
+    }
+    
+    /**
+     * Проверка поддержки навигации темой
+     * 
+     * @param string|null $themeSlug Slug темы (null для активной темы)
+     * @return bool
+     */
+    public function supportsNavigation(?string $themeSlug = null): bool {
+        $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
+        if (!$theme) {
+            return false;
+        }
+        
+        $themeConfig = $this->getThemeConfig($theme['slug']);
+        return (bool)($themeConfig['supports_navigation'] ?? false);
+    }
+    
+    /**
+     * Очистка кеша темы
+     * 
+     * @param string|null $themeSlug Slug темы (null для всех тем)
+     * @return void
+     */
+    public function clearThemeCache(?string $themeSlug = null): void {
+        if ($themeSlug) {
+            // Очищаем кеш конкретной темы
+            cache_forget('active_theme');
+            cache_forget('active_theme_slug');
+            cache_forget('theme_settings_' . $themeSlug);
+            cache_forget('theme_config_' . $themeSlug);
+            cache_forget('theme_' . $themeSlug);
+            cache_forget('active_theme_check_' . md5($themeSlug));
+        } else {
+            // Очищаем весь кеш тем
+            cache_forget('active_theme');
+            cache_forget('active_theme_slug');
+            cache_forget('all_themes_filesystem');
+            cache_forget('site_settings');
+            
+            // Очищаем кеш проверки активности для всех возможных тем
+            $themesDir = dirname(__DIR__, 2) . '/themes/';
+            if (is_dir($themesDir)) {
+                $directories = glob($themesDir . '*', GLOB_ONLYDIR);
+                if ($directories !== false) {
+                    foreach ($directories as $dir) {
+                        $slug = basename($dir);
+                        cache_forget('active_theme_check_' . md5($slug));
+                        cache_forget('theme_config_' . $slug);
+                        cache_forget('theme_settings_' . $slug);
+                    }
+                }
+            }
+        }
     }
 }
 

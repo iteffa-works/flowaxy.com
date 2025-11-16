@@ -189,22 +189,24 @@ abstract class BasePlugin {
     
     /**
      * Подключение CSS файла плагина
+     * Использует хук theme_head для подключения стилей
      */
     public function enqueueStyle($handle, $file, $dependencies = []) {
         $url = $this->getPluginUrl() . $file;
         
-        addHook('wp_head', function() use ($url, $handle) {
+        addHook('theme_head', function() use ($url, $handle) {
             echo "<link rel='stylesheet' id='{$handle}-css' href='{$url}' type='text/css' media='all' />\n";
         });
     }
     
     /**
      * Подключение JS файла плагина
+     * Использует хук theme_footer для подключения скриптов
      */
     public function enqueueScript($handle, $file, $dependencies = [], $inFooter = true) {
         $url = $this->getPluginUrl() . $file;
         
-        $hookName = $inFooter ? 'wp_footer' : 'wp_head';
+        $hookName = $inFooter ? 'theme_footer' : 'theme_head';
         
         addHook($hookName, function() use ($url, $handle) {
             echo "<script id='{$handle}-js' src='{$url}'></script>\n";
@@ -225,8 +227,8 @@ abstract class BasePlugin {
      */
     protected function localizeScript($handle, $objectName, $data) {
         // Добавляем JavaScript переменную
-        addHook('wp_footer', function() use ($objectName, $data) {
-            echo "<script>var {$objectName} = " . json_encode($data) . ";</script>\n";
+        addHook('theme_footer', function() use ($objectName, $data) {
+            echo "<script>var {$objectName} = " . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . ";</script>\n";
         });
     }
     

@@ -28,16 +28,17 @@ class CustomizerPage extends AdminPage {
     
     /**
      * Проверка поддержки кастоматизации
+     * Использует оптимизированный метод ThemeManager
      */
     private function checkCustomizationSupport($activeTheme) {
         if (!$activeTheme) {
             return [false, null];
         }
         
-        $themePath = themeManager()->getThemePath($activeTheme['slug']);
-        $customizerFile = $themePath . 'customizer.php';
+        $supports = themeManager()->supportsCustomization($activeTheme['slug']);
+        $themePath = $supports ? themeManager()->getThemePath($activeTheme['slug']) : null;
         
-        return [file_exists($customizerFile), $themePath];
+        return [$supports, $themePath];
     }
     
     public function __construct() {
@@ -346,9 +347,8 @@ class CustomizerPage extends AdminPage {
         // Удаляем все настройки темы из БД (они будут браться из default_settings)
         $this->db->prepare("DELETE FROM theme_settings WHERE theme_slug = ?")->execute([$activeTheme['slug']]);
         
-        // Очищаем кеш
-        cache_forget('theme_settings');
-        cache_forget('site_settings');
+        // Очищаем кеш темы
+        themeManager()->clearThemeCache($activeTheme['slug']);
         
         echo json_encode([
             'success' => true,
@@ -439,8 +439,8 @@ class CustomizerPage extends AdminPage {
             $result = themeManager()->setSettings($validatedSettings);
             
             if ($result) {
-                cache_forget('theme_settings');
-                cache_forget('site_settings');
+                // Очищаем кеш темы
+                themeManager()->clearThemeCache($activeTheme['slug']);
                 
                 return [
                     'success' => true,

@@ -32,19 +32,7 @@ class ThemesPage extends AdminPage {
         }
         
         // Очищаем кеш тем для получения актуальной информации об активности
-        cache_forget('all_themes_filesystem');
-        cache_forget('active_theme');
-        cache_forget('active_theme_slug');
-        
-        // Очищаем кеш проверки активности для всех тем
-        $themesDir = dirname(__DIR__, 3) . '/themes/';
-        if (is_dir($themesDir)) {
-            $directories = glob($themesDir . '*', GLOB_ONLYDIR);
-            foreach ($directories as $dir) {
-                $themeSlug = basename($dir);
-                cache_forget('active_theme_check_' . md5($themeSlug));
-            }
-        }
+        themeManager()->clearThemeCache();
         
         // Получение всех тем
         $themes = themeManager()->getAllThemes();
@@ -92,27 +80,19 @@ class ThemesPage extends AdminPage {
         
         if (themeManager()->activateTheme($themeSlug)) {
             // Очищаем все кеши после успешной активации
-            cache_forget('site_settings');
-            cache_forget('active_theme');
-            cache_forget('active_theme_slug');
-            cache_forget('all_themes_filesystem');
+            themeManager()->clearThemeCache();
             
-            // Очищаем все варианты кеша меню админки
-            cache_forget('admin_menu_items_0');
-            cache_forget('admin_menu_items_1');
-            cache_forget('admin_menu_items_0_0');
-            cache_forget('admin_menu_items_0_1');
-            cache_forget('admin_menu_items_1_0');
-            cache_forget('admin_menu_items_1_1');
-            
-            // Очищаем кеш проверки активности для всех тем
-            $themesDir = dirname(__DIR__, 3) . '/themes/';
-            if (is_dir($themesDir)) {
-                $directories = glob($themesDir . '*', GLOB_ONLYDIR);
-                foreach ($directories as $dir) {
-                    $slug = basename($dir);
-                    cache_forget('active_theme_check_' . md5($slug));
-                }
+            // Очищаем кеш меню админки (все варианты)
+            $cachePatterns = [
+                'admin_menu_items_0',
+                'admin_menu_items_1',
+                'admin_menu_items_0_0',
+                'admin_menu_items_0_1',
+                'admin_menu_items_1_0',
+                'admin_menu_items_1_1'
+            ];
+            foreach ($cachePatterns as $pattern) {
+                cache_forget($pattern);
             }
             
             $this->setMessage('Тему успішно активовано', 'success');

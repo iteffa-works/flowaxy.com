@@ -6,36 +6,18 @@
 
 /**
  * Проверка поддержки кастоматизации активной темой
+ * Использует оптимизированный метод ThemeManager
  */
 function themeSupportsCustomization() {
-    $activeTheme = themeManager()->getActiveTheme();
-    if (!$activeTheme) {
-        return false;
-    }
-    
-    $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
-    if (isset($themeConfig['supports_customization'])) {
-        return (bool)$themeConfig['supports_customization'];
-    }
-    
-    // Fallback: проверяем наличие customizer.php
-    $themePath = themeManager()->getThemePath($activeTheme['slug']);
-    $customizerFile = $themePath . 'customizer.php';
-    
-    return file_exists($customizerFile);
+    return themeManager()->supportsCustomization();
 }
 
 /**
  * Проверка поддержки навигации активной темой
+ * Использует оптимизированный метод ThemeManager
  */
 function themeSupportsNavigation() {
-    $activeTheme = themeManager()->getActiveTheme();
-    if (!$activeTheme) {
-        return false;
-    }
-    
-    $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
-    return (bool)($themeConfig['supports_navigation'] ?? false);
+    return themeManager()->supportsNavigation();
 }
 
 function getMenuItems() {
@@ -44,14 +26,6 @@ function getMenuItems() {
     
     // Создаем уникальный ключ кеша на основе поддержки функций темы
     $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0') . '_' . ($supportsNavigation ? '1' : '0');
-    
-    // Очищаем старые варианты кеша
-    cache_forget('admin_menu_items_0');
-    cache_forget('admin_menu_items_1');
-    cache_forget('admin_menu_items_0_0');
-    cache_forget('admin_menu_items_0_1');
-    cache_forget('admin_menu_items_1_0');
-    cache_forget('admin_menu_items_1_1');
     
     return cache_remember($cacheKey, function() use ($supportsCustomization, $supportsNavigation) {
     
