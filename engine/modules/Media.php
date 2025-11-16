@@ -201,7 +201,11 @@ class Media extends BaseModule {
         
         // Збереження інформації в БД
         $title = $title ?: $originalName;
-        $stmt = $this->db->prepare("
+        $db = $this->getDB();
+        if (!$db) {
+            return ['success' => false, 'error' => 'База даних недоступна'];
+        }
+        $stmt = $db->prepare("
             INSERT INTO media_files (
                 filename, original_name, file_path, file_url, file_size, 
                 mime_type, media_type, width, height, title, description, alt_text,
@@ -229,7 +233,7 @@ class Media extends BaseModule {
                 $uploadedBy
             ]);
             
-            $mediaId = $this->db->lastInsertId();
+            $mediaId = $db->lastInsertId();
             
             return [
                 'success' => true,
@@ -261,7 +265,11 @@ class Media extends BaseModule {
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT file_path FROM media_files WHERE id = ?");
+            $db = $this->getDB();
+            if (!$db) {
+                return ['success' => false, 'error' => 'База даних недоступна'];
+            }
+            $stmt = $db->prepare("SELECT file_path FROM media_files WHERE id = ?");
             $stmt->execute([$mediaId]);
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -274,7 +282,7 @@ class Media extends BaseModule {
                 @unlink($fullPath);
             }
             
-            $stmt = $this->db->prepare("DELETE FROM media_files WHERE id = ?");
+            $stmt = $db->prepare("DELETE FROM media_files WHERE id = ?");
             $stmt->execute([$mediaId]);
             
             return ['success' => true];
@@ -296,7 +304,11 @@ class Media extends BaseModule {
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT * FROM media_files WHERE id = ?");
+            $db = $this->getDB();
+            if (!$db) {
+                return null;
+            }
+            $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
             $stmt->execute([$mediaId]);
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -349,7 +361,12 @@ class Media extends BaseModule {
             
             $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
             
-            $countStmt = $this->db->prepare("SELECT COUNT(*) FROM media_files $whereClause");
+            $db = $this->getDB();
+            if (!$db) {
+                return ['files' => [], 'total' => 0, 'page' => $page, 'per_page' => $perPage];
+            }
+            
+            $countStmt = $db->prepare("SELECT COUNT(*) FROM media_files $whereClause");
             $countStmt->execute($params);
             $total = (int)$countStmt->fetchColumn();
             
@@ -363,7 +380,7 @@ class Media extends BaseModule {
                 : 'uploaded_at';
             $orderDir = strtoupper($filters['order_dir'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
             
-            $stmt = $this->db->prepare("
+            $stmt = $db->prepare("
                 SELECT * FROM media_files 
                 $whereClause 
                 ORDER BY $orderBy $orderDir 
@@ -428,8 +445,12 @@ class Media extends BaseModule {
             }
             
             $params[] = $mediaId;
+            $db = $this->getDB();
+            if (!$db) {
+                return ['success' => false, 'error' => 'База даних недоступна'];
+            }
             $sql = "UPDATE media_files SET " . implode(', ', $fields) . " WHERE id = ?";
-            $stmt = $this->db->prepare($sql);
+            $stmt = $db->prepare($sql);
             $stmt->execute($params);
             
             return ['success' => true];
@@ -446,12 +467,16 @@ class Media extends BaseModule {
      */
     public function getStats() {
         try {
-            $stmt = $this->db->query("
+            $db = $this->getDB();
+            if (!$db) {
+                return ['total_files' => 0, 'total_size' => 0, 'by_type' => []];
+            }
+            $stmt = $db->query("
                 SELECT 
                     COUNT(*) as total_files,
                     COALESCE(SUM(file_size), 0) as total_size,
                     media_type,
-                    COUNT(*) as count
+                    COUNT(*) as type_count
                 FROM media_files 
                 GROUP BY media_type
             ");
@@ -463,10 +488,10 @@ class Media extends BaseModule {
             ];
             
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $count = (int)$row['count'];
+                $count = (int)($row['type_count'] ?? 0);
                 $stats['total_files'] += $count;
-                $stats['total_size'] += (int)$row['total_size'];
-                $stats['by_type'][$row['media_type']] = $count;
+                $stats['total_size'] += (int)($row['total_size'] ?? 0);
+                $stats['by_type'][$row['media_type'] ?? 'unknown'] = $count;
             }
             
             return $stats;
@@ -509,7 +534,7 @@ class Media extends BaseModule {
      */
     private function generateFileName($originalName, $extension) {
         $name = $this->sanitizeFileName($originalName);
-        $fileName = $name . '-' . time() . '-' . substr(md5(uniqid(rand(), true)), 0, 8) . '.' . $extension;
+        $fileName = $name . '-' . time() . '-' . substr(md5(uniqid((string)rand(), true)), 0, 8) . '.' . $extension;
         return $fileName;
     }
     
