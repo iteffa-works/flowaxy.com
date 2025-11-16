@@ -340,12 +340,45 @@ class MailClientAdminPage extends AdminPage {
                     }
                 }
                 
-                // Отримуємо вкладення (якщо таблиця існує)
+                // Отримуємо всю цепочку писем (thread)
+                $threadEmails = [];
+                $threadId = $email['thread_id'] ?: $email['id'];
+                
+                // Отримуємо всі листи з цієї цепочки
+                $threadStmt = $this->db->prepare("
+                    SELECT * FROM mail_client_emails 
+                    WHERE (thread_id = ? OR id = ?)
+                    AND is_deleted = 0
+                    ORDER BY date_received ASC, id ASC
+                ");
+                $threadStmt->execute([$threadId, $threadId]);
+                $threadEmails = $threadStmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Якщо це відповідь, додаємо також батьківські листи
+                if (!empty($email['in_reply_to'])) {
+                    $parentStmt = $this->db->prepare("
+                        SELECT * FROM mail_client_emails 
+                        WHERE message_id = ? AND is_deleted = 0
+                        LIMIT 1
+                    ");
+                    $parentStmt->execute([$email['in_reply_to']]);
+                    $parent = $parentStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($parent && !in_array($parent['id'], array_column($threadEmails, 'id'))) {
+                        // Додаємо батьківський лист на початок
+                        array_unshift($threadEmails, $parent);
+                    }
+                }
+                
+                // Отримуємо вкладення для всіх листів у thread
                 $email['attachments'] = [];
+                $email['thread'] = [];
+                
                 try {
                     // Перевіряємо чи існує таблиця вкладень
                     $tableCheck = $this->db->query("SHOW TABLES LIKE 'mail_client_attachments'");
                     if ($tableCheck && $tableCheck->rowCount() > 0) {
+                        // Вкладення для поточного листа
                         $attachmentsStmt = $this->db->prepare("
                             SELECT id, filename, original_filename, file_path, mime_type, file_size 
                             FROM mail_client_attachments 
@@ -353,12 +386,27 @@ class MailClientAdminPage extends AdminPage {
                         ");
                         $attachmentsStmt->execute([$id]);
                         $email['attachments'] = $attachmentsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                        
+                        // Вкладення для всіх листів у thread
+                        foreach ($threadEmails as &$threadEmail) {
+                            $attStmt = $this->db->prepare("
+                                SELECT id, filename, original_filename, file_path, mime_type, file_size 
+                                FROM mail_client_attachments 
+                                WHERE email_id = ?
+                            ");
+                            $attStmt->execute([$threadEmail['id']]);
+                            $threadEmail['attachments'] = $attStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                        }
+                        unset($threadEmail);
                     }
                 } catch (Exception $e) {
                     error_log("Error getting attachments: " . $e->getMessage());
                     // Якщо помилка з вкладеннями, просто встановлюємо порожній масив
                     $email['attachments'] = [];
                 }
+                
+                // Додаємо thread до відповіді
+                $email['thread'] = $threadEmails;
                 
                 // Переконуємося, що всі поля є рядками для JSON
                 $email['from'] = (string)($email['from'] ?? '');
@@ -410,6 +458,7 @@ class MailClientAdminPage extends AdminPage {
         $subject = sanitizeInput($_POST['subject'] ?? '');
         $body = $_POST['body'] ?? '';
         $isHtml = isset($_POST['is_html']) ? (bool)$_POST['is_html'] : true;
+        $replyTo = isset($_POST['reply_to']) ? (int)$_POST['reply_to'] : 0;
         
         if (empty($to) || empty($subject)) {
             echo json_encode(['success' => false, 'error' => 'Отримувач та тема обов\'язкові'], JSON_UNESCAPED_UNICODE);
@@ -427,6 +476,21 @@ class MailClientAdminPage extends AdminPage {
             exit;
         }
         
+        // Визначаємо thread_id та in_reply_to якщо це відповідь
+        $threadId = null;
+        $inReplyTo = null;
+        if ($replyTo > 0 && $this->db) {
+            $replyStmt = $this->db->prepare("SELECT id, message_id, thread_id FROM mail_client_emails WHERE id = ? LIMIT 1");
+            $replyStmt->execute([$replyTo]);
+            $replyEmail = $replyStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($replyEmail) {
+                $inReplyTo = $replyEmail['message_id'] ?? null;
+                // Якщо батьківський лист має thread_id, використовуємо його, інакше - id батьківського листа
+                $threadId = $replyEmail['thread_id'] ?: $replyEmail['id'];
+            }
+        }
+        
         try {
             $result = $mailModule->sendEmail($toForSend, $subject, $body, ['is_html' => $isHtml]);
             
@@ -435,8 +499,8 @@ class MailClientAdminPage extends AdminPage {
                 if ($this->db) {
                     $stmt = $this->db->prepare("
                         INSERT INTO mail_client_emails 
-                        (message_id, folder, `from`, `to`, subject, body, body_html, date_sent, date_received, is_read)
-                        VALUES (?, 'sent', ?, ?, ?, ?, ?, NOW(), NOW(), 1)
+                        (message_id, folder, `from`, `to`, subject, body, body_html, date_sent, date_received, is_read, thread_id, in_reply_to)
+                        VALUES (?, 'sent', ?, ?, ?, ?, ?, NOW(), NOW(), 1, ?, ?)
                     ");
                     $settings = $mailModule->getSettings();
                     $from = $settings['from_email'] ?? '';
@@ -447,7 +511,9 @@ class MailClientAdminPage extends AdminPage {
                         $toForDb, // Зберігаємо з іменами для відображення
                         $subject,
                         strip_tags($body),
-                        $isHtml ? $body : null
+                        $isHtml ? $body : null,
+                        $threadId ?: null,
+                        $inReplyTo ?: null
                     ]);
                     
                     // Очищаємо кеш статистики
@@ -734,6 +800,55 @@ class MailClientAdminPage extends AdminPage {
                             $messageId = md5(strtolower(trim($from)) . '|' . trim($subject) . '|' . trim($date));
                         }
                         
+                        // Визначаємо чи це відповідь (для thread)
+                        $inReplyTo = null;
+                        $threadId = null;
+                        $referencesHeader = null;
+                        
+                        if (!empty($emailData['headers'])) {
+                            $headers = is_array($emailData['headers']) ? $emailData['headers'] : json_decode($emailData['headers'], true);
+                            
+                            if (is_array($headers)) {
+                                $inReplyTo = $headers['in-reply-to'] ?? $headers['in_reply_to'] ?? null;
+                                $referencesHeader = $headers['references'] ?? null;
+                                
+                                // Нормалізуємо in-reply-to (видаляємо углові дужки)
+                                if (!empty($inReplyTo)) {
+                                    $inReplyTo = trim($inReplyTo, '<>');
+                                    
+                                    // Шукаємо батьківський лист по in-reply-to
+                                    $parentStmt = $this->db->prepare("SELECT id, thread_id FROM mail_client_emails WHERE message_id = ? LIMIT 1");
+                                    $parentStmt->execute([$inReplyTo]);
+                                    $parent = $parentStmt->fetch(PDO::FETCH_ASSOC);
+                                    
+                                    if ($parent) {
+                                        // Якщо батьківський лист має thread_id, використовуємо його
+                                        // Інакше використовуємо id батьківського листа
+                                        $threadId = $parent['thread_id'] ?: $parent['id'];
+                                    }
+                                }
+                                
+                                // Якщо не знайшли по in-reply-to, спробуємо по References
+                                if (!$threadId && !empty($referencesHeader)) {
+                                    // References може містити кілька message-id через пробіли
+                                    $refIds = preg_split('/\s+/', trim($referencesHeader));
+                                    foreach ($refIds as $refId) {
+                                        $refId = trim($refId, '<>');
+                                        if (empty($refId)) continue;
+                                        
+                                        $refStmt = $this->db->prepare("SELECT id, thread_id FROM mail_client_emails WHERE message_id = ? LIMIT 1");
+                                        $refStmt->execute([$refId]);
+                                        $refEmail = $refStmt->fetch(PDO::FETCH_ASSOC);
+                                        
+                                        if ($refEmail) {
+                                            $threadId = $refEmail['thread_id'] ?: $refEmail['id'];
+                                            break; // Використовуємо перший знайдений
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
                         // Перевіряємо чи вже є такий лист по message_id
                         $checkStmt = $this->db->prepare("SELECT id FROM mail_client_emails WHERE message_id = ? LIMIT 1");
                         $checkStmt->execute([$messageId]);
@@ -780,8 +895,8 @@ class MailClientAdminPage extends AdminPage {
                         // Зберігаємо лист
                         $stmt = $this->db->prepare("
                             INSERT INTO mail_client_emails 
-                            (message_id, folder, `from`, `to`, cc, bcc, subject, body, body_html, date_received, is_read, headers)
-                            VALUES (?, 'inbox', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+                            (message_id, folder, `from`, `to`, cc, bcc, subject, body, body_html, date_received, is_read, headers, thread_id, in_reply_to, references_header)
+                            VALUES (?, 'inbox', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
                         ");
                         
                         $dateReceived = null;
@@ -806,6 +921,12 @@ class MailClientAdminPage extends AdminPage {
                         
                         $headersJson = !empty($emailData['headers']) ? json_encode($emailData['headers'], JSON_UNESCAPED_UNICODE) : null;
                         
+                        // Нормалізуємо references_header
+                        $refHeader = null;
+                        if (!empty($referencesHeader)) {
+                            $refHeader = is_string($referencesHeader) ? $referencesHeader : json_encode($referencesHeader);
+                        }
+                        
                         $stmt->execute([
                             $messageId,
                             $emailData['from'] ?? '',
@@ -816,7 +937,10 @@ class MailClientAdminPage extends AdminPage {
                             $bodyText,
                             $bodyHtml ?: null,
                             $dateReceived,
-                            $headersJson
+                            $headersJson,
+                            $threadId ?: null,
+                            $inReplyTo ?: null,
+                            $refHeader
                         ]);
                         
                         $emailId = $this->db->lastInsertId();

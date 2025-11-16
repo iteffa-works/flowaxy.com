@@ -90,13 +90,19 @@ class MailClientPlugin extends BasePlugin {
                 is_deleted TINYINT(1) DEFAULT 0,
                 attachments TEXT,
                 headers TEXT,
+                thread_id INT,
+                in_reply_to VARCHAR(255),
+                references_header TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_folder (folder),
                 INDEX idx_is_read (is_read),
                 INDEX idx_is_starred (is_starred),
                 INDEX idx_is_deleted (is_deleted),
-                INDEX idx_date_received (date_received)
+                INDEX idx_date_received (date_received),
+                INDEX idx_thread_id (thread_id),
+                INDEX idx_in_reply_to (in_reply_to),
+                FOREIGN KEY (thread_id) REFERENCES mail_client_emails(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             
             // Таблиця для папок (якщо потрібно розширення)
@@ -223,6 +229,24 @@ class MailClientPlugin extends BasePlugin {
             $bccCheck = $this->db->query("SHOW COLUMNS FROM mail_client_emails LIKE 'bcc'");
             if (!$bccCheck || $bccCheck->rowCount() === 0) {
                 $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN bcc VARCHAR(255) AFTER cc");
+            }
+            
+            // Перевіряємо чи є поля для thread (цепочки писем)
+            $threadIdCheck = $this->db->query("SHOW COLUMNS FROM mail_client_emails LIKE 'thread_id'");
+            if (!$threadIdCheck || $threadIdCheck->rowCount() === 0) {
+                // Додаємо поля для thread
+                $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN thread_id INT AFTER headers");
+                $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN in_reply_to VARCHAR(255) AFTER thread_id");
+                $this->db->exec("ALTER TABLE mail_client_emails ADD COLUMN references_header TEXT AFTER in_reply_to");
+                // Додаємо індекси
+                $this->db->exec("ALTER TABLE mail_client_emails ADD INDEX idx_thread_id (thread_id)");
+                $this->db->exec("ALTER TABLE mail_client_emails ADD INDEX idx_in_reply_to (in_reply_to)");
+                // Додаємо foreign key (якщо підтримується)
+                try {
+                    $this->db->exec("ALTER TABLE mail_client_emails ADD FOREIGN KEY (thread_id) REFERENCES mail_client_emails(id) ON DELETE SET NULL");
+                } catch (Exception $e) {
+                    // Ігноруємо помилку якщо foreign key вже існує або не підтримується
+                }
             }
         } catch (Exception $e) {
             error_log("MailClientPlugin updateTables error: " . $e->getMessage());

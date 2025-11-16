@@ -352,103 +352,124 @@ const MailClient = {
         }
         
         try {
-            const date = this.formatDate(email.date_received || email.date_sent || email.created_at);
-            const from = this.extractEmailName(email.from || '');
-            const fromEmail = this.extractEmail(email.from || '');
-            const to = email.to || '';
-            const cc = email.cc || '';
+            // Отримуємо всю цепочку писем (thread)
+            const threadEmails = email.thread && Array.isArray(email.thread) && email.thread.length > 0 
+                ? email.thread 
+                : [email];
             
-            let body = email.body_html || email.body || '(Порожнє повідомлення)';
-        
-        // Декодуємо Base64, якщо потрібно (на випадок, якщо не декодувалося на сервері)
-        if (body && typeof body === 'string') {
-            // Перевіряємо, чи це може бути Base64
-            const trimmed = body.trim();
-            if (/^[A-Za-z0-9+\/]+=*$/.test(trimmed) && trimmed.length % 4 === 0 && trimmed.length > 50) {
-                try {
-                    const decoded = atob(trimmed);
-                    // Перевіряємо, чи декодований текст виглядає як HTML або текст
-                    if (decoded.includes('<') || decoded.length > 0) {
-                        body = decoded;
-                    }
-                } catch (e) {
-                    // Не Base64, залишаємо як є
-                }
-            }
-        }
-        
-        // Якщо HTML, відображаємо в iframe для безпеки
-        if (email.body_html || (body && body.includes('<'))) {
-            // Очищаємо HTML від потенційно небезпечних елементів
-            const cleanBody = this.sanitizeHtml(body);
-            const iframeId = 'email-body-' + email.id;
-            body = `<div class="email-html-content" style="padding: 20px; max-width: 100%; overflow-x: auto;">
-                ${cleanBody}
-            </div>`;
-        } else {
-            body = '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit; padding: 20px;">' + this.escapeHtml(body) + '</pre>';
-        }
-        
-        // Формуємо список вкладень
-        let attachmentsHtml = '';
-        if (email.attachments && email.attachments.length > 0) {
-            attachmentsHtml = '<div class="mail-attachments mt-3 p-3 bg-light rounded">';
-            attachmentsHtml += '<h6 class="mb-2"><i class="fas fa-paperclip me-2"></i>Вкладення (' + email.attachments.length + '):</h6>';
-            attachmentsHtml += '<div class="d-flex flex-wrap gap-2">';
+            // Формуємо HTML для всієї цепочки
+            let threadHtml = '';
             
-            email.attachments.forEach(att => {
-                const fileName = att.original_filename || att.filename || 'attachment';
-                const fileSize = this.formatFileSize(att.file_size || 0);
-                const fileIcon = this.getFileIcon(att.mime_type || '');
+            threadEmails.forEach((threadEmail, index) => {
+                const date = this.formatDate(threadEmail.date_received || threadEmail.date_sent || threadEmail.created_at);
+                const from = this.extractEmailName(threadEmail.from || '');
+                const fromEmail = this.extractEmail(threadEmail.from || '');
+                const to = threadEmail.to || '';
+                const cc = threadEmail.cc || '';
                 
-                attachmentsHtml += `
-                    <div class="attachment-item p-2 border rounded bg-white" style="min-width: 200px;">
-                        <div class="d-flex align-items-center">
-                            <i class="${fileIcon} me-2 text-primary" style="font-size: 1.5rem;"></i>
-                            <div class="flex-grow-1" style="min-width: 0;">
-                                <div class="text-truncate fw-bold" title="${this.escapeHtml(fileName)}">${this.escapeHtml(fileName)}</div>
-                                <small class="text-muted">${fileSize}</small>
+                let body = threadEmail.body_html || threadEmail.body || '(Порожнє повідомлення)';
+                
+                // Декодуємо Base64, якщо потрібно
+                if (body && typeof body === 'string') {
+                    const trimmed = body.trim();
+                    if (/^[A-Za-z0-9+\/]+=*$/.test(trimmed) && trimmed.length % 4 === 0 && trimmed.length > 50) {
+                        try {
+                            const decoded = atob(trimmed);
+                            if (decoded.includes('<') || decoded.length > 0) {
+                                body = decoded;
+                            }
+                        } catch (e) {
+                            // Не Base64, залишаємо як є
+                        }
+                    }
+                }
+                
+                // Відображаємо HTML або текст
+                let bodyHtml = '';
+                if (threadEmail.body_html || (body && body.includes('<'))) {
+                    const cleanBody = this.sanitizeHtml(body);
+                    bodyHtml = `<div class="email-html-content" style="padding: 20px; max-width: 100%; overflow-x: auto;">
+                        ${cleanBody}
+                    </div>`;
+                } else {
+                    bodyHtml = '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit; padding: 20px;">' + this.escapeHtml(body) + '</pre>';
+                }
+                
+                // Вкладення для цього листа
+                let attachmentsHtml = '';
+                if (threadEmail.attachments && threadEmail.attachments.length > 0) {
+                    attachmentsHtml = '<div class="mail-attachments mt-3 p-3 bg-light rounded">';
+                    attachmentsHtml += '<h6 class="mb-2"><i class="fas fa-paperclip me-2"></i>Вкладення (' + threadEmail.attachments.length + '):</h6>';
+                    attachmentsHtml += '<div class="d-flex flex-wrap gap-2">';
+                    
+                    threadEmail.attachments.forEach(att => {
+                        const fileName = att.original_filename || att.filename || 'attachment';
+                        const fileSize = this.formatFileSize(att.file_size || 0);
+                        const fileIcon = this.getFileIcon(att.mime_type || '');
+                        
+                        attachmentsHtml += `
+                            <div class="attachment-item p-2 border rounded bg-white" style="min-width: 200px;">
+                                <div class="d-flex align-items-center">
+                                    <i class="${fileIcon} me-2 text-primary" style="font-size: 1.5rem;"></i>
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        <div class="text-truncate fw-bold" title="${this.escapeHtml(fileName)}">${this.escapeHtml(fileName)}</div>
+                                        <small class="text-muted">${fileSize}</small>
+                                    </div>
+                                    <a href="${this.getAttachmentUrl(att.id)}" class="btn btn-sm btn-outline-primary ms-2" download title="Завантажити">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                </div>
                             </div>
-                            <a href="${this.getAttachmentUrl(att.id)}" class="btn btn-sm btn-outline-primary ms-2" download title="Завантажити">
-                                <i class="fas fa-download"></i>
-                            </a>
+                        `;
+                    });
+                    
+                    attachmentsHtml += '</div></div>';
+                }
+                
+                // Додаємо розділювач між листами (крім першого)
+                const separator = index > 0 ? '<div class="thread-separator my-4" style="border-top: 2px solid #e0e0e0; padding-top: 20px;"></div>' : '';
+                
+                threadHtml += `
+                    ${separator}
+                    <div class="thread-email ${index === threadEmails.length - 1 ? 'thread-email-last' : ''}" data-email-id="${threadEmail.id}">
+                        <div class="mail-view-header">
+                            <div class="mail-view-subject">${this.escapeHtml(threadEmail.subject || '(Без теми)')}</div>
+                            <div class="mail-view-meta">
+                                <div class="mail-view-info">
+                                    <div class="mail-view-from">${this.escapeHtml(from)}</div>
+                                    ${fromEmail ? `<div class="mail-view-to">${this.escapeHtml(fromEmail)}</div>` : ''}
+                                    ${to ? `<div class="mail-view-to">Кому: ${this.escapeHtml(to)}</div>` : ''}
+                                    ${cc ? `<div class="mail-view-cc">Копія: ${this.escapeHtml(cc)}</div>` : ''}
+                                    <div class="mail-view-date">${date}</div>
+                                </div>
+                                ${index === threadEmails.length - 1 ? `
+                                <div class="mail-view-actions">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="MailClient.replyEmail(${email.id})" title="Відповісти">
+                                        <i class="fas fa-reply me-1"></i>Відповісти
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="MailClient.forwardEmail(${email.id})" title="Переслати">
+                                        <i class="fas fa-share me-1"></i>Переслати
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="MailClient.deleteEmail(${email.id})" title="Видалити">
+                                        <i class="fas fa-trash me-1"></i>Видалити
+                                    </button>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${attachmentsHtml}
+                        <div class="mail-view-body">
+                            ${bodyHtml}
                         </div>
                     </div>
                 `;
             });
             
-            attachmentsHtml += '</div></div>';
-        }
-        
-        view.innerHTML = `
-            <div class="mail-view-header">
-                <div class="mail-view-subject">${this.escapeHtml(email.subject || '(Без теми)')}</div>
-                <div class="mail-view-meta">
-                    <div class="mail-view-info">
-                        <div class="mail-view-from">${this.escapeHtml(from)}</div>
-                        ${fromEmail ? `<div class="mail-view-to">${this.escapeHtml(fromEmail)}</div>` : ''}
-                        ${to ? `<div class="mail-view-to">Кому: ${this.escapeHtml(to)}</div>` : ''}
-                        ${cc ? `<div class="mail-view-cc">Копія: ${this.escapeHtml(cc)}</div>` : ''}
-                        <div class="mail-view-date">${date}</div>
-                    </div>
-                    <div class="mail-view-actions">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="MailClient.replyEmail(${email.id})" title="Відповісти">
-                            <i class="fas fa-reply me-1"></i>Відповісти
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="MailClient.forwardEmail(${email.id})" title="Переслати">
-                            <i class="fas fa-share me-1"></i>Переслати
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="MailClient.deleteEmail(${email.id})" title="Видалити">
-                            <i class="fas fa-trash me-1"></i>Видалити
-                        </button>
-                    </div>
+            view.innerHTML = `
+                <div class="mail-thread-container">
+                    ${threadHtml}
                 </div>
-            </div>
-            ${attachmentsHtml}
-            <div class="mail-view-body">
-                ${body}
-            </div>
-        `;
+            `;
         } catch (error) {
             console.error('Error rendering email:', error, email);
             view.innerHTML = `
@@ -469,22 +490,47 @@ const MailClient = {
      * Підтримує формати: "Ім'я <email@example.com>" або "email@example.com"
      */
     normalizeEmail: function(emailString) {
-        if (!emailString) return '';
+        if (!emailString) return null;
         
         emailString = emailString.trim();
+        if (!emailString) return null;
+        
+        // Нормалізуємо пробіли
+        emailString = emailString.replace(/\s+/g, ' ');
         
         // Якщо формат "Ім'я <email@example.com>"
-        const match = emailString.match(/^(.+?)\s*<(.+?)>$/);
-        if (match) {
-            const name = match[1].trim();
-            const email = match[2].trim();
+        // Шукаємо останню пару углових дужок (на випадок якщо в імені є < або >)
+        const lastBracketOpen = emailString.lastIndexOf('<');
+        const lastBracketClose = emailString.lastIndexOf('>');
+        
+        if (lastBracketOpen !== -1 && lastBracketClose !== -1 && lastBracketOpen < lastBracketClose) {
+            // Є углові дужки
+            const name = emailString.substring(0, lastBracketOpen).trim();
+            let email = emailString.substring(lastBracketOpen + 1, lastBracketClose).trim();
+            
+            // Очищаємо email від можливих невидимих символів та зайвих пробілів
+            email = email.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+            
+            // Відладка
+            console.log('Parsed name:', name, 'email:', email, 'email length:', email.length);
+            
             // Валідуємо email
-            if (this.isValidEmail(email)) {
-                return name ? `${name} <${email}>` : email;
+            if (email && email.length > 0 && this.isValidEmail(email)) {
+                // Якщо ім'я порожнє, повертаємо тільки email
+                if (!name || name.length === 0) {
+                    return email;
+                }
+                // Повертаємо нормалізований формат
+                return `${name} <${email}>`;
+            } else {
+                // Відладка: чому email невалідний
+                console.warn('Email validation failed for:', email, 'isValidEmail result:', this.isValidEmail(email));
             }
+            // Якщо email невалідний
+            return null;
         }
         
-        // Якщо просто email
+        // Якщо просто email (без углових дужок)
         if (this.isValidEmail(emailString)) {
             return emailString;
         }
@@ -496,8 +542,67 @@ const MailClient = {
      * Валідація email адреси
      */
     isValidEmail: function(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+        if (!email || typeof email !== 'string') {
+            return false;
+        }
+        
+        // Очищаємо від невидимих символів та пробілів
+        email = email.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+        
+        if (!email || email.length === 0) {
+            return false;
+        }
+        
+        // Більш гнучка валідація email
+        // Дозволяємо букви, цифри, точки, дефіси, підкреслення, плюси до @
+        // Після @ дозволяємо домен з крапками
+        const emailRegex = /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const result = emailRegex.test(email);
+        
+        // Відладка якщо невалідний
+        if (!result) {
+            console.warn('Email validation failed:', email, 'regex test:', emailRegex.test(email));
+        }
+        
+        return result;
+    },
+    
+    /**
+     * Розділення рядка з кількома email адресами (враховуючи коми всередині углових дужок)
+     */
+    splitEmailAddresses: function(emailString) {
+        if (!emailString) return [];
+        
+        const addresses = [];
+        let current = '';
+        let inBrackets = false;
+        
+        for (let i = 0; i < emailString.length; i++) {
+            const char = emailString[i];
+            
+            if (char === '<') {
+                inBrackets = true;
+                current += char;
+            } else if (char === '>') {
+                inBrackets = false;
+                current += char;
+            } else if (char === ',' && !inBrackets) {
+                // Кома поза угловими дужками - розділювач адрес
+                if (current.trim()) {
+                    addresses.push(current.trim());
+                }
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        
+        // Додаємо останню адресу
+        if (current.trim()) {
+            addresses.push(current.trim());
+        }
+        
+        return addresses.filter(addr => addr.length > 0);
     },
     
     /**
@@ -509,7 +614,7 @@ const MailClient = {
         emailString = emailString.trim();
         
         // Якщо формат "Ім'я <email@example.com>"
-        const match = emailString.match(/^(.+?)\s*<(.+?)>$/);
+        const match = emailString.match(/^(.+?)\s*<([^>]+)>$/);
         if (match) {
             return match[2].trim();
         }
@@ -522,6 +627,7 @@ const MailClient = {
         const form = document.getElementById('composeForm');
         const toField = document.getElementById('composeTo');
         const toValue = toField.value.trim();
+        const replyTo = form.dataset.replyTo || null;
         
         // Валідуємо та нормалізуємо адреси
         if (!toValue) {
@@ -531,14 +637,21 @@ const MailClient = {
         }
         
         // Розділяємо кілька адрес через кому
-        const addresses = toValue.split(',').map(addr => addr.trim()).filter(addr => addr);
+        // Але враховуємо, що кома може бути всередині углових дужок (в імені)
+        const addresses = this.splitEmailAddresses(toValue);
         const normalizedAddresses = [];
         const errors = [];
         
         for (let i = 0; i < addresses.length; i++) {
-            const normalized = this.normalizeEmail(addresses[i]);
+            const addr = addresses[i].trim();
+            if (!addr) continue;
+            
+            // Додаткова очистка адреси
+            const cleanAddr = addr.replace(/\s+/g, ' ').trim();
+            
+            const normalized = this.normalizeEmail(cleanAddr);
             if (!normalized) {
-                errors.push(`Невірний формат адреси: "${addresses[i]}"`);
+                errors.push(`Невірний формат адреси: "${cleanAddr}"`);
             } else {
                 normalizedAddresses.push(normalized);
             }
@@ -555,6 +668,9 @@ const MailClient = {
         // Створюємо FormData з нормалізованими адресами
         const formData = new FormData(form);
         formData.set('to', normalizedAddresses.join(', '));
+        if (replyTo) {
+            formData.append('reply_to', replyTo);
+        }
         
         const sendBtn = form.querySelector('button[type="submit"]');
         const originalText = sendBtn.innerHTML;
@@ -786,11 +902,20 @@ const MailClient = {
         }
     },
     
-    showComposeModal: function(to = '', subject = '') {
+    showComposeModal: function(to = '', subject = '', replyTo = null) {
         document.getElementById('composeTo').value = to;
         document.getElementById('composeSubject').value = subject;
         document.getElementById('composeBody').value = '';
         document.getElementById('composeIsHtml').checked = true;
+        
+        // Зберігаємо reply_to в dataset форми
+        const form = document.getElementById('composeForm');
+        if (replyTo) {
+            form.dataset.replyTo = replyTo;
+        } else {
+            delete form.dataset.replyTo;
+        }
+        
         const modal = new bootstrap.Modal(document.getElementById('composeModal'));
         modal.show();
     },
@@ -817,7 +942,7 @@ const MailClient = {
                     }
                 }
                 
-                this.showComposeModal(formattedFrom, replySubject);
+                this.showComposeModal(formattedFrom, replySubject, emailId);
             }
         });
     },
