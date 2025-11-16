@@ -27,7 +27,14 @@ if (!defined('DB_CHARSET')) {
 }
 
 // Подключаем улучшенный класс Database
-require_once dirname(__DIR__) . '/engine/classes/Database.php';
+// Пробуем загрузить из новой структуры
+$databaseFile = dirname(__DIR__) . '/engine/classes/data/Database.php';
+if (file_exists($databaseFile)) {
+    require_once $databaseFile;
+} else {
+    // Обратная совместимость - старая структура
+    require_once dirname(__DIR__) . '/engine/classes/Database.php';
+}
 
 /**
  * Глобальная функция для получения подключения к БД
