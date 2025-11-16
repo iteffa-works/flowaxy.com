@@ -11,12 +11,26 @@ require_once __DIR__ . '/../skins/includes/Router.php';
 // Убеждаемся, что необходимые классы загружены для menu-items.php
 // Cache нужен для функций cache_remember(), cache_forget()
 if (!class_exists('Cache')) {
-    require_once dirname(__DIR__) . '/classes/Cache.php';
+    // Пробуем загрузить из новой структуры
+    $cacheFile = dirname(__DIR__) . '/classes/data/Cache.php';
+    if (file_exists($cacheFile)) {
+        require_once $cacheFile;
+    } else {
+        // Обратная совместимость - старая структура
+        require_once dirname(__DIR__) . '/classes/Cache.php';
+    }
 }
 
 // ThemeManager нужен для функции themeManager() и themeSupportsCustomization()
 if (!class_exists('ThemeManager')) {
-    require_once dirname(__DIR__) . '/classes/ThemeManager.php';
+    // Пробуем загрузить из новой структуры
+    $themeManagerFile = dirname(__DIR__) . '/classes/managers/ThemeManager.php';
+    if (file_exists($themeManagerFile)) {
+        require_once $themeManagerFile;
+    } else {
+        // Обратная совместимость - старая структура
+        require_once dirname(__DIR__) . '/classes/ThemeManager.php';
+    }
 }
 
 // Модули загружаются лениво - только когда они нужны для конкретной страницы

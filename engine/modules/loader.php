@@ -93,11 +93,18 @@ class ModuleLoader {
      */
     private static function loadModuleFile(string $moduleFile, string $moduleName): ?BaseModule {
         try {
-            // Убеждаемся, что BaseModule загружен
+            // Убеждаемся, что BaseModule загружен (автозагрузчик должен загрузить)
             if (!class_exists('BaseModule')) {
-                $baseModuleFile = dirname(self::$modulesDir) . '/classes/BaseModule.php';
+                // Пробуем загрузить из новой структуры
+                $baseModuleFile = dirname(self::$modulesDir) . '/classes/base/BaseModule.php';
                 if (file_exists($baseModuleFile)) {
                     require_once $baseModuleFile;
+                } else {
+                    // Обратная совместимость - старая структура
+                    $baseModuleFile = dirname(self::$modulesDir) . '/classes/BaseModule.php';
+                    if (file_exists($baseModuleFile)) {
+                        require_once $baseModuleFile;
+                    }
                 }
             }
             

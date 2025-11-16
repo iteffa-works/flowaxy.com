@@ -1,17 +1,17 @@
 <?php
 /**
- * Класс для работы с JSON файлами
- * Чтение, запись и валидация JSON данных
+ * Клас для роботи з JSON файлами
+ * Читання, запис та валідація JSON даних
  * 
- * @package Engine\Classes
- * @version 1.0.0
+ * @package Engine\Classes\Files
+ * @version 1.1.0
  */
 
 declare(strict_types=1);
 
 class Json {
-    private string $filePath;
-    private $data = null;
+    private string $filePath = '';
+    private mixed $data = null;
     private bool $hasData = false;
     private int $encodeFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT;
     private int $decodeFlags = JSON_BIGINT_AS_STRING;
@@ -19,7 +19,7 @@ class Json {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к JSON файлу
+     * @param string|null $filePath Шлях до JSON файлу
      */
     public function __construct(?string $filePath = null) {
         if ($filePath !== null) {
@@ -28,15 +28,15 @@ class Json {
     }
     
     /**
-     * Установка пути к файлу
+     * Встановлення шляху до файлу
      * 
-     * @param string $filePath Путь к JSON файлу
+     * @param string $filePath Шлях до JSON файлу
      * @return self
-     * @throws Exception Если файл существует, но недоступен для чтения
+     * @throws Exception Якщо файл існує, але недоступний для читання
      */
     public function setFile(string $filePath): self {
         if (!is_readable($filePath) && file_exists($filePath)) {
-            throw new Exception("JSON файл существует, но недоступен для чтения: {$filePath}");
+            throw new Exception("JSON файл існує, але недоступний для читання: {$filePath}");
         }
         
         $this->filePath = $filePath;
@@ -51,33 +51,32 @@ class Json {
     }
     
     /**
-     * Загрузка данных из JSON файла
+     * Завантаження даних з JSON файлу
      * 
-     * @param bool $assoc Преобразовывать ли в ассоциативный массив
-     * @param int $depth Максимальная глубина вложенности
+     * @param bool $assoc Перетворювати в асоціативний масив
+     * @param int $depth Максимальна глибина вкладеності
      * @return self
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
     public function load(bool $assoc = true, int $depth = 512): self {
         if (empty($this->filePath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
         if (!file_exists($this->filePath)) {
-            throw new Exception("JSON файл не существует: {$this->filePath}");
+            throw new Exception("JSON файл не існує: {$this->filePath}");
         }
         
         if (!is_readable($this->filePath)) {
-            throw new Exception("JSON файл недоступен для чтения: {$this->filePath}");
+            throw new Exception("JSON файл недоступний для читання: {$this->filePath}");
         }
         
         $content = @file_get_contents($this->filePath);
         
         if ($content === false) {
-            throw new Exception("Не удалось прочитать JSON файл: {$this->filePath}");
+            throw new Exception("Не вдалося прочитати JSON файл: {$this->filePath}");
         }
         
-        // Проверяем, не пустой ли файл
         $content = trim($content);
         if ($content === '') {
             $this->data = $assoc ? [] : new stdClass();
@@ -88,8 +87,7 @@ class Json {
         $data = json_decode($content, $assoc, $depth, $this->decodeFlags);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $error = json_last_error_msg();
-            throw new Exception("Ошибка парсинга JSON файла '{$this->filePath}': {$error}");
+            throw new Exception("Помилка парсингу JSON файлу '{$this->filePath}': " . json_last_error_msg());
         }
         
         $this->data = $data;
@@ -99,47 +97,40 @@ class Json {
     }
     
     /**
-     * Сохранение данных в JSON файл
+     * Збереження даних у JSON файл
      * 
-     * @param string|null $filePath Путь к файлу (если null, используется текущий)
-     * @param mixed|null $data Данные для сохранения (если null, используются текущие)
-     * @param int|null $encodeFlags Флаги кодирования (если null, используются текущие)
+     * @param string|null $filePath Шлях до файлу (якщо null, використовується поточний)
+     * @param mixed|null $data Дані для збереження (якщо null, використовуються поточні)
+     * @param int|null $encodeFlags Прапорці кодування (якщо null, використовуються поточні)
      * @return bool
-     * @throws Exception Если не удалось сохранить файл
+     * @throws Exception Якщо не вдалося зберегти файл
      */
-    public function save(?string $filePath = null, $data = null, ?int $encodeFlags = null): bool {
+    public function save(?string $filePath = null, mixed $data = null, ?int $encodeFlags = null): bool {
         $targetPath = $filePath ?? $this->filePath;
         $dataToSave = $data ?? $this->data;
         $flags = $encodeFlags ?? $this->encodeFlags;
         
         if (empty($targetPath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
-        // Создаем директорию, если её нет
         $dir = dirname($targetPath);
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
-            }
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
         }
         
         $json = json_encode($dataToSave, $flags);
         
         if ($json === false) {
-            $error = json_last_error_msg();
-            throw new Exception("Ошибка кодирования JSON: {$error}");
+            throw new Exception("Помилка кодування JSON: " . json_last_error_msg());
         }
         
-        $result = @file_put_contents($targetPath, $json, LOCK_EX);
-        
-        if ($result === false) {
-            throw new Exception("Не удалось сохранить JSON файл: {$targetPath}");
+        if (@file_put_contents($targetPath, $json, LOCK_EX) === false) {
+            throw new Exception("Не вдалося зберегти JSON файл: {$targetPath}");
         }
         
         @chmod($targetPath, 0644);
         
-        // Обновляем текущие данные
         if ($filePath === null) {
             $this->data = $dataToSave;
             $this->hasData = true;
@@ -149,27 +140,23 @@ class Json {
     }
     
     /**
-     * Получение данных
+     * Отримання даних
      * 
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function get($default = null) {
-        if (!$this->hasData) {
-            return $default;
-        }
-        
-        return $this->data;
+    public function get(mixed $default = null): mixed {
+        return $this->hasData ? $this->data : $default;
     }
     
     /**
-     * Получение значения по пути (точечная нотация)
+     * Отримання значення за шляхом (крапкова нотація)
      * 
-     * @param string $path Путь к значению (например, "user.name" или "users.0.email")
-     * @param mixed $default Значение по умолчанию
+     * @param string $path Шлях до значення (наприклад, "user.name" або "users.0.email")
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function getPath(string $path, $default = null) {
+    public function getPath(string $path, mixed $default = null): mixed {
         if (!$this->hasData) {
             return $default;
         }
@@ -178,18 +165,10 @@ class Json {
         $value = $this->data;
         
         foreach ($keys as $key) {
-            if (is_array($value)) {
-                if (isset($value[$key])) {
-                    $value = $value[$key];
-                } else {
-                    return $default;
-                }
-            } elseif (is_object($value)) {
-                if (isset($value->$key)) {
-                    $value = $value->$key;
-                } else {
-                    return $default;
-                }
+            if (is_array($value) && isset($value[$key])) {
+                $value = $value[$key];
+            } elseif (is_object($value) && isset($value->$key)) {
+                $value = $value->$key;
             } else {
                 return $default;
             }
@@ -199,25 +178,25 @@ class Json {
     }
     
     /**
-     * Установка данных
+     * Встановлення даних
      * 
-     * @param mixed $data Данные
+     * @param mixed $data Дані
      * @return self
      */
-    public function set($data): self {
+    public function set(mixed $data): self {
         $this->data = $data;
         $this->hasData = true;
         return $this;
     }
     
     /**
-     * Установка значения по пути (точечная нотация)
+     * Встановлення значення за шляхом (крапкова нотація)
      * 
-     * @param string $path Путь к значению
-     * @param mixed $value Значение
+     * @param string $path Шлях до значення
+     * @param mixed $value Значення
      * @return self
      */
-    public function setPath(string $path, $value): self {
+    public function setPath(string $path, mixed $value): self {
         if (!$this->hasData) {
             $this->data = [];
             $this->hasData = true;
@@ -239,7 +218,6 @@ class Json {
                 }
                 $target = &$target->$key;
             } else {
-                // Преобразуем в массив
                 $target = (array)$target;
                 if (!isset($target[$key])) {
                     $target[$key] = [];
@@ -260,9 +238,9 @@ class Json {
     }
     
     /**
-     * Удаление значения по пути
+     * Видалення значення за шляхом
      * 
-     * @param string $path Путь к значению
+     * @param string $path Шлях до значення
      * @return self
      */
     public function removePath(string $path): self {
@@ -275,15 +253,9 @@ class Json {
         $target = &$this->data;
         
         foreach ($keys as $key) {
-            if (is_array($target)) {
-                if (!isset($target[$key])) {
-                    return $this;
-                }
+            if (is_array($target) && isset($target[$key])) {
                 $target = &$target[$key];
-            } elseif (is_object($target)) {
-                if (!isset($target->$key)) {
-                    return $this;
-                }
+            } elseif (is_object($target) && isset($target->$key)) {
                 $target = &$target->$key;
             } else {
                 return $this;
@@ -300,9 +272,9 @@ class Json {
     }
     
     /**
-     * Проверка наличия значения по пути
+     * Перевірка наявності значення за шляхом
      * 
-     * @param string $path Путь к значению
+     * @param string $path Шлях до значення
      * @return bool
      */
     public function hasPath(string $path): bool {
@@ -314,15 +286,9 @@ class Json {
         $value = $this->data;
         
         foreach ($keys as $key) {
-            if (is_array($value)) {
-                if (!isset($value[$key])) {
-                    return false;
-                }
+            if (is_array($value) && isset($value[$key])) {
                 $value = $value[$key];
-            } elseif (is_object($value)) {
-                if (!isset($value->$key)) {
-                    return false;
-                }
+            } elseif (is_object($value) && isset($value->$key)) {
                 $value = $value->$key;
             } else {
                 return false;
@@ -333,7 +299,7 @@ class Json {
     }
     
     /**
-     * Очистка всех данных
+     * Очищення всіх даних
      * 
      * @return self
      */
@@ -344,7 +310,7 @@ class Json {
     }
     
     /**
-     * Проверка, загружены ли данные
+     * Перевірка, чи завантажені дані
      * 
      * @return bool
      */
@@ -353,7 +319,7 @@ class Json {
     }
     
     /**
-     * Получение пути к файлу
+     * Отримання шляху до файлу
      * 
      * @return string
      */
@@ -362,9 +328,9 @@ class Json {
     }
     
     /**
-     * Установка флагов кодирования
+     * Встановлення прапорців кодування
      * 
-     * @param int $flags Флаги кодирования
+     * @param int $flags Прапорці кодування
      * @return self
      */
     public function setEncodeFlags(int $flags): self {
@@ -373,9 +339,9 @@ class Json {
     }
     
     /**
-     * Установка флагов декодирования
+     * Встановлення прапорців декодування
      * 
-     * @param int $flags Флаги декодирования
+     * @param int $flags Прапорці декодування
      * @return self
      */
     public function setDecodeFlags(int $flags): self {
@@ -384,7 +350,7 @@ class Json {
     }
     
     /**
-     * Получение флагов кодирования
+     * Отримання прапорців кодування
      * 
      * @return int
      */
@@ -393,7 +359,7 @@ class Json {
     }
     
     /**
-     * Получение флагов декодирования
+     * Отримання прапорців декодування
      * 
      * @return int
      */
@@ -402,69 +368,56 @@ class Json {
     }
     
     /**
-     * Валидация JSON строки
+     * Валідація JSON рядка
      * 
-     * @param string $json JSON строка
-     * @param bool $assoc Преобразовывать ли в ассоциативный массив
+     * @param string $json JSON рядок
+     * @param bool $assoc Перетворювати в асоціативний масив
      * @return array ['valid' => bool, 'data' => mixed|null, 'error' => string|null]
      */
     public static function validate(string $json, bool $assoc = true): array {
         $json = trim($json);
         
         if ($json === '') {
-            return [
-                'valid' => false,
-                'data' => null,
-                'error' => 'Пустая строка'
-            ];
+            return ['valid' => false, 'data' => null, 'error' => 'Порожній рядок'];
         }
         
         $data = json_decode($json, $assoc);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return [
-                'valid' => false,
-                'data' => null,
-                'error' => json_last_error_msg()
-            ];
+            return ['valid' => false, 'data' => null, 'error' => json_last_error_msg()];
         }
         
-        return [
-            'valid' => true,
-            'data' => $data,
-            'error' => null
-        ];
+        return ['valid' => true, 'data' => $data, 'error' => null];
     }
     
     /**
-     * Кодирование данных в JSON строку
+     * Кодування даних у JSON рядок
      * 
-     * @param mixed $data Данные
-     * @param int $flags Флаги кодирования
+     * @param mixed $data Дані
+     * @param int $flags Прапорці кодування
      * @return string
-     * @throws Exception Если не удалось закодировать
+     * @throws Exception Якщо не вдалося закодувати
      */
-    public static function encode($data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): string {
+    public static function encode(mixed $data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): string {
         $json = json_encode($data, $flags);
         
         if ($json === false) {
-            $error = json_last_error_msg();
-            throw new Exception("Ошибка кодирования JSON: {$error}");
+            throw new Exception("Помилка кодування JSON: " . json_last_error_msg());
         }
         
         return $json;
     }
     
     /**
-     * Декодирование JSON строки
+     * Декодування JSON рядка
      * 
-     * @param string $json JSON строка
-     * @param bool $assoc Преобразовывать ли в ассоциативный массив
-     * @param int $depth Максимальная глубина вложенности
+     * @param string $json JSON рядок
+     * @param bool $assoc Перетворювати в асоціативний масив
+     * @param int $depth Максимальна глибина вкладеності
      * @return mixed
-     * @throws Exception Если не удалось декодировать
+     * @throws Exception Якщо не вдалося декодувати
      */
-    public static function decode(string $json, bool $assoc = true, int $depth = 512) {
+    public static function decode(string $json, bool $assoc = true, int $depth = 512): mixed {
         $json = trim($json);
         
         if ($json === '') {
@@ -474,104 +427,97 @@ class Json {
         $data = json_decode($json, $assoc, $depth);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $error = json_last_error_msg();
-            throw new Exception("Ошибка декодирования JSON: {$error}");
+            throw new Exception("Помилка декодування JSON: " . json_last_error_msg());
         }
         
         return $data;
     }
     
     /**
-     * Чтение JSON файла (статический метод)
+     * Читання JSON файлу (статичний метод)
      * 
-     * @param string $filePath Путь к файлу
-     * @param bool $assoc Преобразовывать ли в ассоциативный массив
+     * @param string $filePath Шлях до файлу
+     * @param bool $assoc Перетворювати в асоціативний масив
      * @return mixed
      */
-    public static function read(string $filePath, bool $assoc = true) {
-        $json = new self($filePath);
-        $json->load($assoc);
-        return $json->get();
+    public static function read(string $filePath, bool $assoc = true): mixed {
+        return (new self($filePath))->load($assoc)->get();
     }
     
     /**
-     * Запись JSON файла (статический метод)
+     * Запис JSON файлу (статичний метод)
      * 
-     * @param string $filePath Путь к файлу
-     * @param mixed $data Данные
-     * @param int $flags Флаги кодирования
+     * @param string $filePath Шлях до файлу
+     * @param mixed $data Дані
+     * @param int $flags Прапорці кодування
      * @return bool
      */
-    public static function write(string $filePath, $data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): bool {
-        $json = new self();
-        return $json->save($filePath, $data, $flags);
+    public static function write(string $filePath, mixed $data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): bool {
+        return (new self())->save($filePath, $data, $flags);
     }
     
     /**
-     * Статический метод: Парсинг JSON строки
+     * Парсинг JSON рядка
      * 
-     * @param string $json JSON строка
-     * @param bool $assoc Преобразовывать ли в ассоциативный массив
-     * @param int $depth Максимальная глубина вложенности
+     * @param string $json JSON рядок
+     * @param bool $assoc Перетворювати в асоціативний масив
+     * @param int $depth Максимальна глибина вкладеності
      * @return mixed
-     * @throws Exception Если не удалось декодировать
+     * @throws Exception Якщо не вдалося декодувати
      */
-    public static function parse(string $json, bool $assoc = true, int $depth = 512) {
+    public static function parse(string $json, bool $assoc = true, int $depth = 512): mixed {
         return self::decode($json, $assoc, $depth);
     }
     
     /**
-     * Статический метод: Преобразование данных в JSON строку
+     * Перетворення даних у JSON рядок
      * 
-     * @param mixed $data Данные
-     * @param int $flags Флаги кодирования
+     * @param mixed $data Дані
+     * @param int $flags Прапорці кодування
      * @return string
-     * @throws Exception Если не удалось закодировать
+     * @throws Exception Якщо не вдалося закодувати
      */
-    public static function stringify($data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): string {
+    public static function stringify(mixed $data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): string {
         return self::encode($data, $flags);
     }
     
     /**
-     * Статический метод: Проверка, является ли строка валидным JSON
+     * Перевірка, чи є рядок валідним JSON
      * 
-     * @param string $json JSON строка
+     * @param string $json JSON рядок
      * @return bool
      */
     public static function isValid(string $json): bool {
-        $result = self::validate($json);
-        return $result['valid'];
+        return self::validate($json)['valid'];
     }
     
     /**
-     * Статический метод: Минификация JSON (удаление пробелов и переносов строк)
+     * Мініфікація JSON (видалення пробілів та переносів рядків)
      * 
-     * @param string $json JSON строка
+     * @param string $json JSON рядок
      * @return string
-     * @throws Exception Если не удалось обработать
+     * @throws Exception Якщо не вдалося обробити
      */
     public static function minify(string $json): string {
-        $data = self::decode($json);
-        return self::encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return self::encode(self::decode($json), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
     
     /**
-     * Статический метод: Форматирование JSON (добавление отступов)
+     * Форматування JSON (додавання відступів)
      * 
-     * @param string $json JSON строка
-     * @param int $flags Флаги кодирования
+     * @param string $json JSON рядок
+     * @param int $flags Прапорці кодування
      * @return string
-     * @throws Exception Если не удалось обработать
+     * @throws Exception Якщо не вдалося обробити
      */
     public static function format(string $json, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): string {
-        $data = self::decode($json);
-        return self::encode($data, $flags);
+        return self::encode(self::decode($json), $flags);
     }
     
     /**
-     * Статический метод: Слияние JSON данных
+     * Злиття JSON даних
      * 
-     * @param array ...$jsonData Массивы JSON данных для слияния
+     * @param array ...$jsonData Масиви JSON даних для злиття
      * @return array
      */
     public static function merge(array ...$jsonData): array {
@@ -579,37 +525,34 @@ class Json {
     }
     
     /**
-     * Статический метод: Сравнение двух JSON структур
+     * Порівняння двох JSON структур
      * 
-     * @param mixed $data1 Первые данные
-     * @param mixed $data2 Вторые данные
-     * @param bool $strict Строгое сравнение (учитывать порядок ключей)
+     * @param mixed $data1 Перші дані
+     * @param mixed $data2 Другі дані
+     * @param bool $strict Строге порівняння (враховувати порядок ключів)
      * @return bool
      */
-    public static function equals($data1, $data2, bool $strict = false): bool {
+    public static function equals(mixed $data1, mixed $data2, bool $strict = false): bool {
         if ($strict) {
             return $data1 === $data2;
         }
         
-        // Нормализуем данные через JSON для сравнения
         try {
-            $json1 = self::encode($data1, JSON_UNESCAPED_UNICODE);
-            $json2 = self::encode($data2, JSON_UNESCAPED_UNICODE);
-            return $json1 === $json2;
+            return self::encode($data1, JSON_UNESCAPED_UNICODE) === self::encode($data2, JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             return false;
         }
     }
     
     /**
-     * Статический метод: Получение значения по пути из JSON данных
+     * Отримання значення за шляхом з JSON даних
      * 
-     * @param array|object $data JSON данные
-     * @param string $path Путь (точечная нотация, например "user.name")
-     * @param mixed $default Значение по умолчанию
+     * @param array|object|string $data JSON дані
+     * @param string $path Шлях (крапкова нотація, наприклад "user.name")
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public static function getValue($data, string $path, $default = null) {
+    public static function getValue(array|object|string $data, string $path, mixed $default = null): mixed {
         if (is_string($data)) {
             try {
                 $data = self::decode($data);
@@ -622,18 +565,10 @@ class Json {
         $value = $data;
         
         foreach ($keys as $key) {
-            if (is_array($value)) {
-                if (isset($value[$key])) {
-                    $value = $value[$key];
-                } else {
-                    return $default;
-                }
-            } elseif (is_object($value)) {
-                if (isset($value->$key)) {
-                    $value = $value->$key;
-                } else {
-                    return $default;
-                }
+            if (is_array($value) && isset($value[$key])) {
+                $value = $value[$key];
+            } elseif (is_object($value) && isset($value->$key)) {
+                $value = $value->$key;
             } else {
                 return $default;
             }
@@ -643,14 +578,14 @@ class Json {
     }
     
     /**
-     * Статический метод: Установка значения по пути в JSON данных
+     * Встановлення значення за шляхом у JSON даних
      * 
-     * @param array $data JSON данные (массив)
-     * @param string $path Путь (точечная нотация)
-     * @param mixed $value Значение
+     * @param array $data JSON дані (масив)
+     * @param string $path Шлях (крапкова нотація)
+     * @param mixed $value Значення
      * @return array
      */
-    public static function setValue(array $data, string $path, $value): array {
+    public static function setValue(array $data, string $path, mixed $value): array {
         $keys = explode('.', $path);
         $lastKey = array_pop($keys);
         $target = &$data;

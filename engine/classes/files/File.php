@@ -1,10 +1,10 @@
 <?php
 /**
- * Класс для работы с файлами
- * Общие операции с файлами: чтение, запись, копирование, удаление, переименование
+ * Клас для роботи з файлами
+ * Загальні операції з файлами: читання, запис, копіювання, видалення, перейменування
  * 
  * @package Engine\Classes\Files
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 declare(strict_types=1);
@@ -15,18 +15,18 @@ class File {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к файлу
+     * @param string|null $filePath Шлях до файла
      */
     public function __construct(?string $filePath = null) {
         if ($filePath !== null) {
-            $this->setPath($filePath);
+            $this->filePath = $filePath;
         }
     }
     
     /**
-     * Установка пути к файлу
+     * Встановлення шляху до файла
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файла
      * @return self
      */
     public function setPath(string $filePath): self {
@@ -35,7 +35,7 @@ class File {
     }
     
     /**
-     * Получение пути к файлу
+     * Отримання шляху до файла
      * 
      * @return string
      */
@@ -44,7 +44,7 @@ class File {
     }
     
     /**
-     * Проверка существования файла
+     * Перевірка існування файла
      * 
      * @return bool
      */
@@ -53,149 +53,124 @@ class File {
     }
     
     /**
-     * Чтение содержимого файла
+     * Читання вмісту файла
      * 
-     * @return string|false
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @return string
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
-    public function read() {
+    public function read(): string {
         if (!$this->exists()) {
-            throw new Exception("Файл не существует: {$this->filePath}");
+            throw new Exception("Файл не існує: {$this->filePath}");
         }
         
         if (!is_readable($this->filePath)) {
-            throw new Exception("Файл недоступен для чтения: {$this->filePath}");
+            throw new Exception("Файл недоступний для читання: {$this->filePath}");
         }
         
         $content = @file_get_contents($this->filePath);
         
         if ($content === false) {
-            throw new Exception("Не удалось прочитать файл: {$this->filePath}");
+            throw new Exception("Не вдалося прочитати файл: {$this->filePath}");
         }
         
         return $content;
     }
     
     /**
-     * Запись содержимого в файл
+     * Запис вмісту в файл
      * 
-     * @param string $content Содержимое для записи
-     * @param bool $append Добавлять ли в конец файла (false = перезаписать)
+     * @param string $content Вміст для запису
+     * @param bool $append Додавати в кінець файла (false = перезаписати)
      * @return bool
-     * @throws Exception Если не удалось записать файл
+     * @throws Exception Якщо не вдалося записати файл
      */
     public function write(string $content, bool $append = false): bool {
-        // Создаем директорию, если её нет
-        $dir = dirname($this->filePath);
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
-            }
-        }
+        $this->ensureDirectory();
         
         $flags = $append ? FILE_APPEND | LOCK_EX : LOCK_EX;
         $result = @file_put_contents($this->filePath, $content, $flags);
         
         if ($result === false) {
-            throw new Exception("Не удалось записать файл: {$this->filePath}");
+            throw new Exception("Не вдалося записати файл: {$this->filePath}");
         }
         
         @chmod($this->filePath, 0644);
-        
         return true;
     }
     
     /**
-     * Копирование файла
+     * Копіювання файла
      * 
-     * @param string $destinationPath Путь назначения
+     * @param string $destinationPath Шлях призначення
      * @return bool
-     * @throws Exception Если не удалось скопировать
+     * @throws Exception Якщо не вдалося скопіювати
      */
     public function copy(string $destinationPath): bool {
         if (!$this->exists()) {
-            throw new Exception("Исходный файл не существует: {$this->filePath}");
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
         }
         
-        // Создаем директорию назначения, если её нет
-        $dir = dirname($destinationPath);
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
-            }
-        }
+        $this->ensureDirectory($destinationPath);
         
         if (!@copy($this->filePath, $destinationPath)) {
-            throw new Exception("Не удалось скопировать файл из '{$this->filePath}' в '{$destinationPath}'");
+            throw new Exception("Не вдалося скопіювати файл з '{$this->filePath}' в '{$destinationPath}'");
         }
         
         @chmod($destinationPath, 0644);
-        
         return true;
     }
     
     /**
-     * Перемещение/переименование файла
+     * Переміщення/перейменування файла
      * 
-     * @param string $destinationPath Путь назначения
+     * @param string $destinationPath Шлях призначення
      * @return bool
-     * @throws Exception Если не удалось переместить
+     * @throws Exception Якщо не вдалося перемістити
      */
     public function move(string $destinationPath): bool {
         if (!$this->exists()) {
-            throw new Exception("Исходный файл не существует: {$this->filePath}");
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
         }
         
-        // Создаем директорию назначения, если её нет
-        $dir = dirname($destinationPath);
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
-            }
-        }
+        $this->ensureDirectory($destinationPath);
         
         if (!@rename($this->filePath, $destinationPath)) {
-            throw new Exception("Не удалось переместить файл из '{$this->filePath}' в '{$destinationPath}'");
+            throw new Exception("Не вдалося перемістити файл з '{$this->filePath}' в '{$destinationPath}'");
         }
         
         $this->filePath = $destinationPath;
-        
         return true;
     }
     
     /**
-     * Удаление файла
+     * Видалення файла
      * 
      * @return bool
-     * @throws Exception Если не удалось удалить
+     * @throws Exception Якщо не вдалося видалити
      */
     public function delete(): bool {
         if (!$this->exists()) {
-            return true; // Файл уже не существует
+            return true;
         }
         
         if (!@unlink($this->filePath)) {
-            throw new Exception("Не удалось удалить файл: {$this->filePath}");
+            throw new Exception("Не вдалося видалити файл: {$this->filePath}");
         }
         
         return true;
     }
     
     /**
-     * Получение размера файла
+     * Отримання розміру файла
      * 
-     * @return int Размер в байтах
+     * @return int Розмір в байтах
      */
     public function getSize(): int {
-        if (!$this->exists()) {
-            return 0;
-        }
-        
-        return filesize($this->filePath);
+        return $this->exists() ? filesize($this->filePath) : 0;
     }
     
     /**
-     * Получение MIME типа файла
+     * Отримання MIME типу файла
      * 
      * @return string|false
      */
@@ -205,12 +180,16 @@ class File {
         }
         
         if (function_exists('mime_content_type')) {
-            return mime_content_type($this->filePath);
+            return @mime_content_type($this->filePath);
         }
         
         if (function_exists('finfo_file')) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mimeType = finfo_file($finfo, $this->filePath);
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo === false) {
+                return false;
+            }
+            
+            $mimeType = @finfo_file($finfo, $this->filePath);
             finfo_close($finfo);
             return $mimeType;
         }
@@ -219,33 +198,25 @@ class File {
     }
     
     /**
-     * Получение времени последнего изменения
+     * Отримання часу останньої зміни
      * 
      * @return int|false Unix timestamp
      */
     public function getMTime() {
-        if (!$this->exists()) {
-            return false;
-        }
-        
-        return filemtime($this->filePath);
+        return $this->exists() ? @filemtime($this->filePath) : false;
     }
     
     /**
-     * Получение времени создания
+     * Отримання часу створення
      * 
      * @return int|false Unix timestamp
      */
     public function getCTime() {
-        if (!$this->exists()) {
-            return false;
-        }
-        
-        return filectime($this->filePath);
+        return $this->exists() ? @filectime($this->filePath) : false;
     }
     
     /**
-     * Получение расширения файла
+     * Отримання розширення файла
      * 
      * @return string
      */
@@ -254,7 +225,7 @@ class File {
     }
     
     /**
-     * Получение имени файла без расширения
+     * Отримання імені файла з розширенням
      * 
      * @return string
      */
@@ -263,7 +234,7 @@ class File {
     }
     
     /**
-     * Получение имени файла без пути
+     * Отримання імені файла без шляху та розширення
      * 
      * @return string
      */
@@ -272,7 +243,7 @@ class File {
     }
     
     /**
-     * Получение директории файла
+     * Отримання директорії файла
      * 
      * @return string
      */
@@ -281,7 +252,7 @@ class File {
     }
     
     /**
-     * Проверка, является ли файл читаемым
+     * Перевірка, чи є файл читабельним
      * 
      * @return bool
      */
@@ -290,7 +261,7 @@ class File {
     }
     
     /**
-     * Проверка, является ли файл записываемым
+     * Перевірка, чи є файл доступним для запису
      * 
      * @return bool
      */
@@ -299,37 +270,29 @@ class File {
     }
     
     /**
-     * Установка прав доступа к файлу
+     * Встановлення прав доступу до файла
      * 
-     * @param int $mode Права доступа (например, 0644)
+     * @param int $mode Права доступу (наприклад, 0644)
      * @return bool
      */
     public function chmod(int $mode): bool {
-        if (!$this->exists()) {
-            return false;
-        }
-        
-        return @chmod($this->filePath, $mode);
+        return $this->exists() && @chmod($this->filePath, $mode);
     }
     
     /**
-     * Создание пустого файла
+     * Створення порожнього файла
      * 
      * @return bool
-     * @throws Exception Если не удалось создать
+     * @throws Exception Якщо не вдалося створити
      */
     public function create(): bool {
-        if ($this->exists()) {
-            return true; // Файл уже существует
-        }
-        
-        return $this->write('');
+        return $this->exists() ? true : $this->write('');
     }
     
     /**
-     * Добавление содержимого в конец файла
+     * Додавання вмісту в кінець файла
      * 
-     * @param string $content Содержимое для добавления
+     * @param string $content Вміст для додавання
      * @return bool
      */
     public function append(string $content): bool {
@@ -337,9 +300,24 @@ class File {
     }
     
     /**
-     * Статический метод: Проверка существования файла
+     * Переконатися, що директорія існує
      * 
-     * @param string $filePath Путь к файлу
+     * @param string|null $filePath Шлях до файла (якщо null, використовується поточний)
+     * @return void
+     * @throws Exception Якщо не вдалося створити директорію
+     */
+    private function ensureDirectory(?string $filePath = null): void {
+        $dir = dirname($filePath ?? $this->filePath);
+        
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+    }
+    
+    /**
+     * Статичний метод: Перевірка існування файла
+     * 
+     * @param string $filePath Шлях до файла
      * @return bool
      */
     public static function exists(string $filePath): bool {
@@ -347,15 +325,14 @@ class File {
     }
     
     /**
-     * Статический метод: Чтение файла
+     * Статичний метод: Читання файла
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файла
      * @return string|false
      */
     public static function read(string $filePath) {
-        $file = new self($filePath);
         try {
-            return $file->read();
+            return (new self($filePath))->read();
         } catch (Exception $e) {
             error_log("File::read error: " . $e->getMessage());
             return false;
@@ -363,17 +340,16 @@ class File {
     }
     
     /**
-     * Статический метод: Запись в файл
+     * Статичний метод: Запис в файл
      * 
-     * @param string $filePath Путь к файлу
-     * @param string $content Содержимое
-     * @param bool $append Добавлять ли в конец
+     * @param string $filePath Шлях до файла
+     * @param string $content Вміст
+     * @param bool $append Додавати в кінець
      * @return bool
      */
     public static function write(string $filePath, string $content, bool $append = false): bool {
-        $file = new self($filePath);
         try {
-            return $file->write($content, $append);
+            return (new self($filePath))->write($content, $append);
         } catch (Exception $e) {
             error_log("File::write error: " . $e->getMessage());
             return false;
@@ -381,16 +357,15 @@ class File {
     }
     
     /**
-     * Статический метод: Копирование файла
+     * Статичний метод: Копіювання файла
      * 
-     * @param string $sourcePath Исходный путь
-     * @param string $destinationPath Путь назначения
+     * @param string $sourcePath Вихідний шлях
+     * @param string $destinationPath Шлях призначення
      * @return bool
      */
     public static function copy(string $sourcePath, string $destinationPath): bool {
-        $file = new self($sourcePath);
         try {
-            return $file->copy($destinationPath);
+            return (new self($sourcePath))->copy($destinationPath);
         } catch (Exception $e) {
             error_log("File::copy error: " . $e->getMessage());
             return false;
@@ -398,15 +373,14 @@ class File {
     }
     
     /**
-     * Статический метод: Удаление файла
+     * Статичний метод: Видалення файла
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файла
      * @return bool
      */
     public static function delete(string $filePath): bool {
-        $file = new self($filePath);
         try {
-            return $file->delete();
+            return (new self($filePath))->delete();
         } catch (Exception $e) {
             error_log("File::delete error: " . $e->getMessage());
             return false;
@@ -414,25 +388,22 @@ class File {
     }
     
     /**
-     * Статический метод: Получение размера файла
+     * Статичний метод: Отримання розміру файла
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файла
      * @return int
      */
     public static function size(string $filePath): int {
-        $file = new self($filePath);
-        return $file->getSize();
+        return (new self($filePath))->getSize();
     }
     
     /**
-     * Статический метод: Получение MIME типа
+     * Статичний метод: Отримання MIME типу
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файла
      * @return string|false
      */
     public static function mimeType(string $filePath) {
-        $file = new self($filePath);
-        return $file->getMimeType();
+        return (new self($filePath))->getMimeType();
     }
 }
-

@@ -109,13 +109,89 @@ define('ADMIN_SESSION_NAME', 'cms_admin_logged_in');
 define('CSRF_TOKEN_NAME', 'csrf_token');
 define('PASSWORD_MIN_LENGTH', 8);
 
-// Автозагрузка классов (современный подход с проверками)
+// Автозагрузка классов (современный подход с проверками и поддержкой подкаталогов)
 spl_autoload_register(function (string $className): void {
     // Проверяем только классы из нашего пространства имен
     if (strpos($className, '\\') === false) {
-        $classFile = __DIR__ . '/../engine/classes/' . $className . '.php';
+        $classesDir = __DIR__ . '/../engine/classes/';
+        
+        // Сначала проверяем модули (Config теперь в modules)
+        $modulesDir = __DIR__ . '/../engine/modules/';
+        if ($className === 'Config' || in_array($className, ['Logger', 'Media', 'Menu', 'PluginManager'])) {
+            $moduleFile = $modulesDir . $className . '.php';
+            if (file_exists($moduleFile) && is_readable($moduleFile)) {
+                require_once $moduleFile;
+                return;
+            }
+        }
+        
+        // Определяем подкаталог на основе имени класса
+            $subdirectories = [
+                'BaseModule' => 'base',
+                'BasePlugin' => 'base',
+                'ThemePlugin' => 'base',
+            'Ini' => 'files',
+            'Json' => 'files',
+            'Zip' => 'files',
+            'File' => 'files',
+            'Xml' => 'files',
+            'Csv' => 'files',
+            'Yaml' => 'files',
+            'Image' => 'files',
+            'Directory' => 'files',
+            'Upload' => 'files',
+            'MimeType' => 'files',
+            'Cache' => 'data',
+            'Database' => 'data',
+            'MenuManager' => 'managers',
+            'ThemeManager' => 'managers',
+            'ScssCompiler' => 'compilers',
+            'Validator' => 'validators',
+            // Новые классы для CMS
+            'Security' => 'security',
+            'Hash' => 'security',
+            'Encryption' => 'security',
+            'Session' => 'security',
+            'Cookie' => 'http',
+            'Response' => 'http',
+            'Request' => 'http',
+            'View' => 'view',
+            'Mail' => 'mail',
+        ];
+        
+        $subdir = $subdirectories[$className] ?? '';
+        
+        // Пробуем найти файл в подкаталоге
+        if ($subdir) {
+            $classFile = $classesDir . $subdir . '/' . $className . '.php';
+            if (file_exists($classFile) && is_readable($classFile)) {
+                require_once $classFile;
+                return;
+            }
+        }
+        
+        // Если не найдено в подкаталоге, ищем в корне (для обратной совместимости)
+        $classFile = $classesDir . $className . '.php';
         if (file_exists($classFile) && is_readable($classFile)) {
             require_once $classFile;
+            return;
+        }
+        
+        // Также пробуем найти в любом подкаталоге (для будущих классов)
+        $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail'];
+        foreach ($subdirs as $dir) {
+            $classFile = $classesDir . $dir . '/' . $className . '.php';
+            if (file_exists($classFile) && is_readable($classFile)) {
+                require_once $classFile;
+                return;
+            }
+        }
+        
+        // Также пробуем найти в modules
+        $moduleFile = $modulesDir . $className . '.php';
+        if (file_exists($moduleFile) && is_readable($moduleFile)) {
+            require_once $moduleFile;
+            return;
         }
     }
 });
@@ -128,7 +204,7 @@ require_once __DIR__ . '/../engine/init.php';
 
 // Загрузка системных модулей
 require_once __DIR__ . '/../engine/modules/loader.php';
-require_once __DIR__ . '/../engine/classes/BaseModule.php';
+// BaseModule теперь загружается через автозагрузчик из base/BaseModule.php
 ModuleLoader::init();
 
 

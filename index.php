@@ -52,19 +52,33 @@ if ($handled === true) {
 // Cache нужен для ThemeManager, который использует cache_remember()
 // Функции cache_remember(), cache_forget() и др. определены в Cache.php
 if (!class_exists('Cache')) {
-    require_once __DIR__ . '/engine/classes/Cache.php';
+    // Пробуем загрузить из новой структуры
+    $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
+    if (file_exists($cacheFile)) {
+        require_once $cacheFile;
+    } else {
+        // Обратная совместимость - старая структура
+        require_once __DIR__ . '/engine/classes/Cache.php';
+    }
 }
 
 // Убеждаемся, что класс ThemeManager загружен (для функции themeManager())
 // Функция themeManager() определена в том же файле, что и класс ThemeManager
 if (!class_exists('ThemeManager')) {
-    require_once __DIR__ . '/engine/classes/ThemeManager.php';
+    // Пробуем загрузить из новой структуры
+    $themeManagerFile = __DIR__ . '/engine/classes/managers/ThemeManager.php';
+    if (file_exists($themeManagerFile)) {
+        require_once $themeManagerFile;
+    } else {
+        // Обратная совместимость - старая структура
+        require_once __DIR__ . '/engine/classes/ThemeManager.php';
+    }
 }
 
 // Получаем активную тему
 if (!function_exists('themeManager')) {
     error_log("Error: themeManager() function not found after loading ThemeManager class");
-    die("System error: ThemeManager not available. Please check engine/classes/ThemeManager.php");
+    die("System error: ThemeManager not available. Please check engine/classes/managers/ThemeManager.php");
 }
 
 $themeManager = themeManager();

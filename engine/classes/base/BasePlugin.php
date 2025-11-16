@@ -1,7 +1,12 @@
 <?php
 /**
- * Базовый класс для всех плагинов
+ * Базовий клас для всіх плагінів
+ * 
+ * @package Engine\Classes\Base
+ * @version 1.0.0
  */
+
+declare(strict_types=1);
 
 abstract class BasePlugin {
     protected $pluginData;

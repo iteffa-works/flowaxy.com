@@ -8,8 +8,9 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/classes/BaseModule.php';
-require_once dirname(__DIR__) . '/classes/MenuManager.php';
+// BaseModule и MenuManager теперь загружаются через автозагрузчик
+// BaseModule: base/BaseModule.php
+// MenuManager: managers/MenuManager.php
 
 class Menu extends BaseModule {
     

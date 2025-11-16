@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/classes/BaseModule.php';
+// BaseModule теперь загружается через автозагрузчик из base/BaseModule.php
 
 class Media extends BaseModule {
     private $uploadsDir;
