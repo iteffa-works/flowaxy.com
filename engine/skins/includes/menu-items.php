@@ -159,18 +159,31 @@ function getMenuItems() {
         }
     }
     
-    // Видаляємо меню "Налаштування плагінів" якщо підменю порожнє
+    // Видаляємо меню "Налаштування плагінів" якщо підменю порожнє або немає пунктів
+    $menuKeysToRemove = [];
     foreach ($menu as $key => $item) {
         if (isset($item['page']) && $item['page'] === 'plugin-settings') {
-            if (empty($item['submenu']) || !is_array($item['submenu']) || count($item['submenu']) === 0) {
-                unset($menu[$key]);
+            $submenuCount = 0;
+            if (isset($item['submenu']) && is_array($item['submenu'])) {
+                $submenuCount = count($item['submenu']);
             }
-            break;
+            
+            // Удаляем меню, если нет пунктов в подменю
+            if ($submenuCount === 0) {
+                $menuKeysToRemove[] = $key;
+            }
         }
     }
     
+    // Удаляем найденные меню
+    foreach ($menuKeysToRemove as $key) {
+        unset($menu[$key]);
+    }
+    
     // Переиндексируем массив после удаления
-    $menu = array_values($menu);
+    if (!empty($menuKeysToRemove)) {
+        $menu = array_values($menu);
+    }
     
         // Повертаємо меню
         return $menu;
