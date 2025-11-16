@@ -8,26 +8,27 @@
  */
 
 // Реєструємо базові маршрути адмінки
-$router->add('', 'DashboardPage');
-$router->add('dashboard', 'DashboardPage');
-$router->add('login', 'LoginPage');
-$router->add('logout', 'LogoutPage');
-$router->add('settings', 'SettingsPage');
-$router->add('profile', 'ProfilePage');
-$router->add('plugins', 'PluginsPage');
-$router->add('themes', 'ThemesPage');
-$router->add('system', 'SystemPage');
-$router->add('theme-editor', 'ThemeEditorPage');
+// Увага: всі сторінки адмінки повинні підтримувати GET та POST для AJAX запитів
+$router->add(['GET', 'POST'], '', 'DashboardPage');
+$router->add(['GET', 'POST'], 'dashboard', 'DashboardPage');
+$router->add(['GET', 'POST'], 'login', 'LoginPage');
+$router->add(['GET', 'POST'], 'logout', 'LogoutPage');
+$router->add(['GET', 'POST'], 'settings', 'SettingsPage');
+$router->add(['GET', 'POST'], 'profile', 'ProfilePage');
+$router->add(['GET', 'POST'], 'plugins', 'PluginsPage');
+$router->add(['GET', 'POST'], 'themes', 'ThemesPage');
+$router->add(['GET', 'POST'], 'system', 'SystemPage');
+$router->add(['GET', 'POST'], 'theme-editor', 'ThemeEditorPage');
 
 // Реєструємо маршрут кастомізатора тільки якщо активна тема підтримує кастомізацію
 require_once __DIR__ . '/menu-items.php';
 if (themeSupportsCustomization()) {
-    $router->add('customizer', 'CustomizerPage');
+    $router->add(['GET', 'POST'], 'customizer', 'CustomizerPage');
 }
 
 // Реєструємо маршрут меню тільки якщо активна тема підтримує навігацію
 if (themeSupportsNavigation()) {
-    $router->add('menus', 'MenusPage');
+    $router->add(['GET', 'POST'], 'menus', 'MenusPage');
 }
 
 // Хук для реєстрації маршрутів модулів та плагінів
@@ -53,11 +54,11 @@ foreach ($activePlugins as $slug => $plugin) {
         $file = new File($adminPageFile);
         if ($file->exists()) {
             require_once $adminPageFile;
-            $router->add($slug, $className);
+            $router->add(['GET', 'POST'], $slug, $className);
         }
     } elseif (file_exists($adminPageFile)) {
         require_once $adminPageFile;
-        $router->add($slug, $className);
+        $router->add(['GET', 'POST'], $slug, $className);
     }
 }
 
