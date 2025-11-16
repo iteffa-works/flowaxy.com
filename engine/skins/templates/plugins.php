@@ -52,6 +52,11 @@
                                         <button class="btn btn-warning" onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', false)">
                                             <i class="fas fa-pause me-1"></i>Деактивувати
                                         </button>
+                                        <?php if (!empty($plugin['has_settings'])): ?>
+                                            <a href="<?= adminUrl($plugin['slug'] . '-settings') ?>" class="btn btn-secondary" title="Налаштування плагіна">
+                                                <i class="fas fa-cog"></i>
+                                            </a>
+                                        <?php endif; ?>
                                     <?php else: ?>
                                         <button class="btn btn-success" onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', true)">
                                             <i class="fas fa-play me-1"></i>Активувати
@@ -187,11 +192,24 @@ function resetFilters() {
     padding: 0;
 }
 
+.plugins-list .row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.plugins-list .plugin-item {
+    display: flex;
+    flex-direction: column;
+}
+
 .plugin-card {
     background: #fff;
     border: 1px solid #e0e0e0;
     padding: 20px;
     margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .plugin-header {
@@ -248,12 +266,14 @@ function resetFilters() {
     font-size: 0.9rem;
     margin: 0 0 16px 0;
     line-height: 1.5;
+    flex-grow: 1;
 }
 
 .plugin-actions {
     display: flex;
     gap: 8px;
     align-items: center;
+    margin-top: auto;
 }
 
 .plugin-actions .btn {
@@ -262,6 +282,20 @@ function resetFilters() {
     padding: 8px 16px;
     font-weight: 500;
     font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    height: 38px;
+    min-height: 38px;
+    box-sizing: border-box;
+}
+
+.plugin-actions .btn i {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
 }
 
 .plugin-actions .btn-primary {
@@ -311,6 +345,17 @@ function resetFilters() {
 .plugin-actions .btn-danger:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.plugin-actions .btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+}
+
+.plugin-actions .btn-secondary:hover {
+    background: #5a6268;
+    border-color: #5a6268;
 }
 
 .plugins-empty-state {

@@ -170,6 +170,9 @@ class PluginsPage extends AdminPage {
                         $isInstalled = isset($dbPlugins[$pluginSlug]);
                         $isActive = $isInstalled && isset($dbPlugins[$pluginSlug]['is_active']) && $dbPlugins[$pluginSlug]['is_active'];
                         
+                        // Проверяем наличие страницы настроек
+                        $hasSettings = $this->pluginHasSettings($pluginSlug, $dir);
+                        
                         $allPlugins[] = [
                             'slug' => $pluginSlug,
                             'name' => $config['name'] ?? $pluginSlug,
@@ -178,6 +181,7 @@ class PluginsPage extends AdminPage {
                             'author' => $config['author'] ?? '',
                             'is_installed' => $isInstalled,
                             'is_active' => $isActive,
+                            'has_settings' => $hasSettings,
                             'settings' => $isInstalled && isset($dbPlugins[$pluginSlug]) ? ($dbPlugins[$pluginSlug]['settings'] ?? null) : null
                         ];
                     } else {
@@ -188,6 +192,51 @@ class PluginsPage extends AdminPage {
         }
         
         return $allPlugins;
+    }
+    
+    /**
+     * Проверка наличия настроек у плагина
+     */
+    private function pluginHasSettings(string $pluginSlug, string $pluginDir): bool {
+        // Проверяем наличие файла страницы настроек
+        $settingsFiles = [
+            $pluginDir . '/admin/SettingsPage.php',
+            $pluginDir . '/admin/' . ucfirst($pluginSlug) . 'SettingsPage.php',
+            $pluginDir . '/SettingsPage.php'
+        ];
+        
+        foreach ($settingsFiles as $file) {
+            if (file_exists($file)) {
+                return true;
+            }
+        }
+        
+        // Проверяем наличие файла плагина и ищем регистрацию маршрута настроек
+        $pluginFile = $pluginDir . '/' . $this->getPluginClassName($pluginSlug) . '.php';
+        if (file_exists($pluginFile)) {
+            $content = @file_get_contents($pluginFile);
+            if ($content && (
+                strpos($content, '-settings') !== false ||
+                strpos($content, 'SettingsPage') !== false ||
+                strpos($content, 'registerAdminRoute') !== false
+            )) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Получение имени класса плагина
+     */
+    private function getPluginClassName(string $pluginSlug): string {
+        $parts = explode('-', $pluginSlug);
+        $className = '';
+        foreach ($parts as $part) {
+            $className .= ucfirst($part);
+        }
+        return $className . 'Plugin';
     }
     
     /**

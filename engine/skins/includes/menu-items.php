@@ -96,6 +96,14 @@ function getMenuItems() {
         ],
         [
             'href' => '#',
+            'icon' => 'fas fa-sliders-h',
+            'text' => 'Налаштування плагінів',
+            'page' => 'plugin-settings',
+            'order' => 55,
+            'submenu' => []
+        ],
+        [
+            'href' => '#',
             'icon' => 'fas fa-code',
             'text' => 'Для розробника',
             'page' => 'developer',
@@ -139,6 +147,30 @@ function getMenuItems() {
         $orderB = $b['order'] ?? 50;
         return $orderA - $orderB;
     });
+    
+    // Сортуємо подменю для пунктів с подменю
+    foreach ($menu as $key => $item) {
+        if (isset($item['submenu']) && is_array($item['submenu'])) {
+            usort($menu[$key]['submenu'], function($a, $b) {
+                $orderA = $a['order'] ?? 50;
+                $orderB = $b['order'] ?? 50;
+                return $orderA - $orderB;
+            });
+        }
+    }
+    
+    // Видаляємо меню "Налаштування плагінів" якщо підменю порожнє
+    foreach ($menu as $key => $item) {
+        if (isset($item['page']) && $item['page'] === 'plugin-settings') {
+            if (empty($item['submenu']) || !is_array($item['submenu']) || count($item['submenu']) === 0) {
+                unset($menu[$key]);
+            }
+            break;
+        }
+    }
+    
+    // Переиндексируем массив после удаления
+    $menu = array_values($menu);
     
         // Повертаємо меню
         return $menu;
