@@ -572,25 +572,7 @@ class PluginManager extends BaseModule {
             }
             
             // Очищаем кеш меню после активации плагина
-            // Меню обновится автоматически при следующем запросе благодаря новому ключу кеша с учетом плагинов
-            // Очищаем все возможные комбинации поддержки темы для старого и нового состояния плагинов
-            $activePlugins = $this->getActivePlugins();
-            $pluginsHash = md5(implode(',', array_keys($activePlugins)));
-            
-            // Очищаем все возможные комбинации поддержки темы
-            for ($custom = 0; $custom <= 1; $custom++) {
-                for ($nav = 0; $nav <= 1; $nav++) {
-                    // Очищаем с новым хешем плагинов
-                    $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
-                    cache_forget($key);
-                }
-            }
-            
-            // Также очищаем старые ключи (для обратной совместимости)
-            cache_forget('admin_menu_items_0_0');
-            cache_forget('admin_menu_items_0_1');
-            cache_forget('admin_menu_items_1_0');
-            cache_forget('admin_menu_items_1_1');
+            $this->clearMenuCache();
             
             // Логируем активацию плагина
             doHook('plugin_activated', $pluginSlug);
@@ -623,22 +605,7 @@ class PluginManager extends BaseModule {
             unset($this->plugins[$pluginSlug]);
             
             // Очищаем кеш меню после изменения плагинов
-            $activePlugins = $this->getActivePlugins();
-            $pluginsHash = md5(implode(',', array_keys($activePlugins)));
-            
-            // Очищаем все возможные комбинации поддержки темы
-            for ($custom = 0; $custom <= 1; $custom++) {
-                for ($nav = 0; $nav <= 1; $nav++) {
-                    $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
-                    cache_forget($key);
-                }
-            }
-            
-            // Также очищаем старые ключи (для обратной совместимости)
-            cache_forget('admin_menu_items_0_0');
-            cache_forget('admin_menu_items_0_1');
-            cache_forget('admin_menu_items_1_0');
-            cache_forget('admin_menu_items_1_1');
+            $this->clearMenuCache();
             
             // Логируем деактивацию плагина
             doHook('plugin_deactivated', $pluginSlug);
@@ -749,6 +716,23 @@ class PluginManager extends BaseModule {
         } catch (Exception $e) {
             error_log("SQL file execution error ({$sqlFile}): " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Очистка кеша меню администратора
+     * Очищает все возможные комбинации ключей кеша меню
+     */
+    private function clearMenuCache(): void {
+        $activePlugins = $this->getActivePlugins();
+        $pluginsHash = md5(implode(',', array_keys($activePlugins)));
+        
+        // Очищаем все возможные комбинации поддержки темы
+        for ($custom = 0; $custom <= 1; $custom++) {
+            for ($nav = 0; $nav <= 1; $nav++) {
+                $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
+                cache_forget($key);
+            }
         }
     }
 }
