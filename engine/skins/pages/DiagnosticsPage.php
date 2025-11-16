@@ -276,10 +276,51 @@ class DiagnosticsPage extends AdminPage {
         $checks['version'] = [
             'name' => 'Версія PHP',
             'value' => $phpVersion,
-            'status' => version_compare($phpVersion, '7.4.0', '>=') ? 'success' : 'error',
-            'message' => version_compare($phpVersion, '7.4.0', '>=') ? 
+            'status' => version_compare($phpVersion, '8.3.0', '>=') ? 'success' : 'error',
+            'message' => version_compare($phpVersion, '8.3.0', '>=') ? 
                 'Версія PHP достатня' : 
-                'Рекомендується PHP 7.4 або вище'
+                'Потрібно PHP 8.3 або вище'
+        ];
+        
+        // Display errors
+        $displayErrors = ini_get('display_errors');
+        $checks['display_errors'] = [
+            'name' => 'Display Errors',
+            'value' => $displayErrors ? 'Увімкнено' : 'Вимкнено',
+            'status' => !$displayErrors ? 'success' : 'warning',
+            'message' => $displayErrors ? 
+                'Рекомендується вимкнути в продакшн' : 
+                'Помилки приховані (рекомендовано)'
+        ];
+        
+        // Error reporting
+        $errorReporting = ini_get('error_reporting');
+        $checks['error_reporting'] = [
+            'name' => 'Error Reporting',
+            'value' => '0x' . dechex((int)$errorReporting),
+            'status' => 'info',
+            'message' => 'Рівень звітування про помилки'
+        ];
+        
+        // Max execution time
+        $maxExecTime = ini_get('max_execution_time');
+        $checks['max_execution_time'] = [
+            'name' => 'Max Execution Time',
+            'value' => $maxExecTime . ' сек',
+            'status' => (int)$maxExecTime >= 30 ? 'success' : 'info',
+            'message' => 'Максимальний час виконання скрипта'
+        ];
+        
+        // Post max size vs upload max
+        $postMax = ini_get('post_max_size');
+        $uploadMax = ini_get('upload_max_filesize');
+        $checks['post_vs_upload'] = [
+            'name' => 'POST vs Upload',
+            'value' => "POST: {$postMax}, Upload: {$uploadMax}",
+            'status' => $this->convertToBytes($postMax) >= $this->convertToBytes($uploadMax) ? 'success' : 'warning',
+            'message' => $this->convertToBytes($postMax) >= $this->convertToBytes($uploadMax) ? 
+                'POST достатньо великий для upload' : 
+                'POST має бути >= Upload max'
         ];
         
         // Memory limit
