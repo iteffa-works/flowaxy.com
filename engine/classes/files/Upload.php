@@ -1,0 +1,371 @@
+<?php
+/**
+ * Класс для загрузки файлов
+ * Безопасная загрузка файлов с валидацией, проверкой типов и размера
+ * 
+ * @package Engine\Classes\Files
+ * @version 1.0.0
+ */
+
+declare(strict_types=1);
+
+class Upload {
+    private array $allowedExtensions = [];
+    private array $allowedMimeTypes = [];
+    private int $maxFileSize = 10485760; // 10 MB по умолчанию
+    private string $uploadDir = '';
+    private bool $createDirectories = true;
+    private bool $overwriteExisting = false;
+    private string $namingStrategy = 'original'; // 'original', 'random', 'timestamp'
+    
+    /**
+     * Конструктор
+     * 
+     * @param string|null $uploadDir Директория для загрузки
+     */
+    public function __construct(?string $uploadDir = null) {
+        if ($uploadDir !== null) {
+            $this->setUploadDir($uploadDir);
+        }
+    }
+    
+    /**
+     * Установка директории для загрузки
+     * 
+     * @param string $uploadDir Путь к директории
+     * @return self
+     */
+    public function setUploadDir(string $uploadDir): self {
+        $this->uploadDir = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR;
+        return $this;
+    }
+    
+    /**
+     * Установка разрешенных расширений
+     * 
+     * @param array $extensions Массив расширений (например, ['jpg', 'png', 'pdf'])
+     * @return self
+     */
+    public function setAllowedExtensions(array $extensions): self {
+        $this->allowedExtensions = array_map('strtolower', $extensions);
+        return $this;
+    }
+    
+    /**
+     * Установка разрешенных MIME типов
+     * 
+     * @param array $mimeTypes Массив MIME типов
+     * @return self
+     */
+    public function setAllowedMimeTypes(array $mimeTypes): self {
+        $this->allowedMimeTypes = $mimeTypes;
+        return $this;
+    }
+    
+    /**
+     * Установка максимального размера файла
+     * 
+     * @param int $size Размер в байтах
+     * @return self
+     */
+    public function setMaxFileSize(int $size): self {
+        $this->maxFileSize = $size;
+        return $this;
+    }
+    
+    /**
+     * Установка стратегии именования файлов
+     * 
+     * @param string $strategy 'original', 'random', 'timestamp'
+     * @return self
+     */
+    public function setNamingStrategy(string $strategy): self {
+        $this->namingStrategy = $strategy;
+        return $this;
+    }
+    
+    /**
+     * Разрешить перезапись существующих файлов
+     * 
+     * @param bool $overwrite
+     * @return self
+     */
+    public function setOverwrite(bool $overwrite): self {
+        $this->overwriteExisting = $overwrite;
+        return $this;
+    }
+    
+    /**
+     * Загрузка файла
+     * 
+     * @param array $file Массив $_FILES['field_name']
+     * @param string|null $customName Пользовательское имя файла
+     * @return array ['success' => bool, 'file' => string, 'error' => string]
+     */
+    public function upload(array $file, ?string $customName = null): array {
+        // Проверка наличия файла
+        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Файл не был загружен через HTTP POST'
+            ];
+        }
+        
+        // Проверка ошибок загрузки
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => $this->getUploadError($file['error'])
+            ];
+        }
+        
+        // Проверка размера файла
+        if ($file['size'] > $this->maxFileSize) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Размер файла превышает максимально допустимый (' . $this->formatSize($this->maxFileSize) . ')'
+            ];
+        }
+        
+        // Получаем расширение и MIME тип
+        $originalName = $file['name'];
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $mimeType = $file['type'];
+        
+        // Проверка расширения
+        if (!empty($this->allowedExtensions) && !in_array($extension, $this->allowedExtensions, true)) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Расширение файла не разрешено. Разрешенные: ' . implode(', ', $this->allowedExtensions)
+            ];
+        }
+        
+        // Проверка MIME типа
+        if (!empty($this->allowedMimeTypes) && !in_array($mimeType, $this->allowedMimeTypes, true)) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Тип файла не разрешен'
+            ];
+        }
+        
+        // Дополнительная проверка MIME типа по содержимому файла
+        $realMimeType = $this->getRealMimeType($file['tmp_name']);
+        if (!empty($this->allowedMimeTypes) && !in_array($realMimeType, $this->allowedMimeTypes, true)) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Тип файла не соответствует содержимому'
+            ];
+        }
+        
+        // Генерируем имя файла
+        if ($customName !== null) {
+            $fileName = $customName . ($extension ? '.' . $extension : '');
+        } else {
+            $fileName = $this->generateFileName($originalName, $extension);
+        }
+        
+        $destinationPath = $this->uploadDir . $fileName;
+        
+        // Проверяем, существует ли файл
+        if (file_exists($destinationPath) && !$this->overwriteExisting) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Файл с таким именем уже существует'
+            ];
+        }
+        
+        // Создаем директорию, если её нет
+        if ($this->createDirectories) {
+            $dir = dirname($destinationPath);
+            if (!is_dir($dir)) {
+                if (!@mkdir($dir, 0755, true)) {
+                    return [
+                        'success' => false,
+                        'file' => '',
+                        'error' => 'Не удалось создать директорию для загрузки'
+                    ];
+                }
+            }
+        }
+        
+        // Перемещаем файл
+        if (!@move_uploaded_file($file['tmp_name'], $destinationPath)) {
+            return [
+                'success' => false,
+                'file' => '',
+                'error' => 'Не удалось переместить загруженный файл'
+            ];
+        }
+        
+        @chmod($destinationPath, 0644);
+        
+        return [
+            'success' => true,
+            'file' => $destinationPath,
+            'name' => $fileName,
+            'size' => $file['size'],
+            'mime_type' => $realMimeType,
+            'extension' => $extension
+        ];
+    }
+    
+    /**
+     * Загрузка нескольких файлов
+     * 
+     * @param array $files Массив файлов (например, $_FILES['field_name'])
+     * @return array Массив результатов загрузки
+     */
+    public function uploadMultiple(array $files): array {
+        $results = [];
+        
+        // Нормализуем массив файлов
+        $normalizedFiles = $this->normalizeFilesArray($files);
+        
+        foreach ($normalizedFiles as $file) {
+            $results[] = $this->upload($file);
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Нормализация массива файлов
+     * 
+     * @param array $files Массив файлов
+     * @return array
+     */
+    private function normalizeFilesArray(array $files): array {
+        $normalized = [];
+        
+        if (isset($files['tmp_name']) && is_array($files['tmp_name'])) {
+            // Множественная загрузка
+            $count = count($files['tmp_name']);
+            
+            for ($i = 0; $i < $count; $i++) {
+                if (isset($files['tmp_name'][$i]) && $files['tmp_name'][$i] !== '') {
+                    $normalized[] = [
+                        'name' => $files['name'][$i] ?? '',
+                        'type' => $files['type'][$i] ?? '',
+                        'tmp_name' => $files['tmp_name'][$i],
+                        'error' => $files['error'][$i] ?? UPLOAD_ERR_OK,
+                        'size' => $files['size'][$i] ?? 0
+                    ];
+                }
+            }
+        } else {
+            // Один файл
+            $normalized[] = $files;
+        }
+        
+        return $normalized;
+    }
+    
+    /**
+     * Генерация имени файла
+     * 
+     * @param string $originalName Оригинальное имя
+     * @param string $extension Расширение
+     * @return string
+     */
+    private function generateFileName(string $originalName, string $extension): string {
+        $nameWithoutExt = pathinfo($originalName, PATHINFO_FILENAME);
+        
+        switch ($this->namingStrategy) {
+            case 'random':
+                return uniqid('', true) . ($extension ? '.' . $extension : '');
+                
+            case 'timestamp':
+                return date('Y-m-d_H-i-s') . '_' . $nameWithoutExt . ($extension ? '.' . $extension : '');
+                
+            case 'original':
+            default:
+                // Очищаем имя от небезопасных символов
+                $name = preg_replace('/[^a-zA-Z0-9._-]/', '_', $nameWithoutExt);
+                return $name . ($extension ? '.' . $extension : '');
+        }
+    }
+    
+    /**
+     * Получение реального MIME типа файла
+     * 
+     * @param string $filePath Путь к файлу
+     * @return string
+     */
+    private function getRealMimeType(string $filePath): string {
+        if (function_exists('mime_content_type')) {
+            return mime_content_type($filePath);
+        }
+        
+        if (function_exists('finfo_file')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $filePath);
+            finfo_close($finfo);
+            return $mimeType;
+        }
+        
+        return 'application/octet-stream';
+    }
+    
+    /**
+     * Получение описания ошибки загрузки
+     * 
+     * @param int $errorCode Код ошибки
+     * @return string
+     */
+    private function getUploadError(int $errorCode): string {
+        $errors = [
+            UPLOAD_ERR_INI_SIZE => 'Размер файла превышает максимально допустимый в PHP',
+            UPLOAD_ERR_FORM_SIZE => 'Размер файла превышает максимально допустимый в форме',
+            UPLOAD_ERR_PARTIAL => 'Файл был загружен частично',
+            UPLOAD_ERR_NO_FILE => 'Файл не был загружен',
+            UPLOAD_ERR_NO_TMP_DIR => 'Отсутствует временная директория',
+            UPLOAD_ERR_CANT_WRITE => 'Не удалось записать файл на диск',
+            UPLOAD_ERR_EXTENSION => 'Расширение PHP остановило загрузку файла'
+        ];
+        
+        return $errors[$errorCode] ?? 'Неизвестная ошибка загрузки';
+    }
+    
+    /**
+     * Форматирование размера файла
+     * 
+     * @param int $bytes Размер в байтах
+     * @return string
+     */
+    private function formatSize(int $bytes): string {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        
+        $bytes /= (1 << (10 * $pow));
+        
+        return round($bytes, 2) . ' ' . $units[$pow];
+    }
+    
+    /**
+     * Статический метод: Быстрая загрузка файла
+     * 
+     * @param array $file Массив $_FILES
+     * @param string $uploadDir Директория для загрузки
+     * @param array $allowedExtensions Разрешенные расширения
+     * @return array
+     */
+    public static function quickUpload(array $file, string $uploadDir, array $allowedExtensions = []): array {
+        $upload = new self($uploadDir);
+        
+        if (!empty($allowedExtensions)) {
+            $upload->setAllowedExtensions($allowedExtensions);
+        }
+        
+        return $upload->upload($file);
+    }
+}
+
