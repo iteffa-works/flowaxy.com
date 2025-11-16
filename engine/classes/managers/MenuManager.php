@@ -187,6 +187,9 @@ class MenuManager {
             $result = $stmt->execute([$name, $slug, $description, $location]);
             
             if ($result) {
+                // Сохраняем расположение меню в настройках темы
+                $this->saveMenuLocationToTheme($location);
+                
                 // Очищаем кеш
                 cache_forget('all_menus');
             }
@@ -219,6 +222,9 @@ class MenuManager {
             $result = $stmt->execute([$name, $slug, $description, $location, $id]);
             
             if ($result) {
+                // Сохраняем расположение меню в настройках темы
+                $this->saveMenuLocationToTheme($location);
+                
                 // Очищаем кеш
                 cache_forget('all_menus');
                 if ($oldMenu && isset($oldMenu['slug'])) {
@@ -489,6 +495,42 @@ class MenuManager {
         $html .= '</li>';
         
         return $html;
+    }
+    
+    /**
+     * Сохранение расположения меню в настройках темы
+     * 
+     * @param string $location Расположение меню
+     * @return void
+     */
+    private function saveMenuLocationToTheme(string $location): void {
+        if (!$this->db) {
+            return;
+        }
+        
+        try {
+            // Получаем активную тему
+            $activeTheme = themeManager()->getActiveTheme();
+            if (!$activeTheme || !isset($activeTheme['slug'])) {
+                return;
+            }
+            
+            $themeSlug = $activeTheme['slug'];
+            
+            // Сохраняем расположение меню в theme_settings
+            $stmt = $this->db->prepare("
+                INSERT INTO theme_settings (theme_slug, setting_key, setting_value) 
+                VALUES (?, 'menu_location', ?) 
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+            ");
+            
+            $stmt->execute([$themeSlug, $location]);
+            
+            // Очищаем кеш настроек темы
+            cache_forget('theme_settings_' . $themeSlug);
+        } catch (Exception $e) {
+            error_log("MenuManager saveMenuLocationToTheme error: " . $e->getMessage());
+        }
     }
 }
 

@@ -6,6 +6,12 @@
     "author": "Flowaxy CMS",
     "supports_customization": true,
     "supports_navigation": true,
+    "menu_locations": {
+        "header": {
+            "label": "Меню в хедері",
+            "description": "Основне меню навігації в верхній частині сайту"
+        }
+    },
     "default_settings": {
         "site_logo": "",
         "site_favicon": "",

@@ -55,7 +55,16 @@ class MenusPage extends AdminPage {
         
         // Получение доступных расположений из активной темы
         $menuLocations = [];
-        if (class_exists('ModuleLoader')) {
+        
+        // Получаем активную тему
+        $activeTheme = themeManager()->getActiveTheme();
+        if ($activeTheme) {
+            $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
+            $menuLocations = $themeConfig['menu_locations'] ?? [];
+        }
+        
+        // Если в теме нет расположений, пробуем получить через модуль Menu
+        if (empty($menuLocations) && class_exists('ModuleLoader')) {
             // Загружаем модуль Menu если не загружен
             if (!ModuleLoader::isModuleLoaded('Menu')) {
                 ModuleLoader::loadModule('Menu');
@@ -67,7 +76,7 @@ class MenusPage extends AdminPage {
             }
         }
         
-        // Если тема не поддерживает навигацию, используем стандартные расположения
+        // Если тема не поддерживает навигацию или нет расположений, используем стандартные расположения
         if (empty($menuLocations)) {
             $menuLocations = [
                 'primary' => ['label' => 'Основне меню (primary)', 'description' => 'Основне меню навігації'],

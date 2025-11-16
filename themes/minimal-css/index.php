@@ -148,7 +148,13 @@ if (!empty($customSiteTagline)) {
                     <?php endif; ?>
                 </a>
                 <nav class="nav">
-                    <?php doHook('theme_menu'); ?>
+                    <?php 
+                    // Загружаем модуль Menu если не загружен
+                    if (class_exists('ModuleLoader') && !ModuleLoader::isModuleLoaded('Menu')) {
+                        ModuleLoader::loadModule('Menu');
+                    }
+                    doHook('theme_menu'); 
+                    ?>
                 </nav>
             </div>
         </div>

@@ -34,6 +34,9 @@ class Menu extends BaseModule {
         // Реєстрація віджетів меню
         addHook('theme_widgets', [$this, 'registerMenuWidgets']);
         
+        // Реєстрація хука для виведення меню в хедері
+        addHook('theme_menu', [$this, 'renderHeaderMenu']);
+        
         // Реєстрація хука для вбудовування меню в футер
         addHook('theme_footer', [$this, 'renderFooterMenus']);
     }
@@ -83,15 +86,17 @@ class Menu extends BaseModule {
             return [];
         }
         
-        $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
-        $menuLocations = $themeConfig['menu_locations'] ?? [];
+        $themeSlug = $activeTheme['slug'];
+        $themeConfig = themeManager()->getThemeConfig($themeSlug);
         
         // Якщо тема не підтримує навігацію, повертаємо порожній масив
         if (!($themeConfig['supports_navigation'] ?? false)) {
             return [];
         }
         
-        return $menuLocations;
+        // Получаем расположения из theme.json
+        // Возвращаем все доступные расположения для выбора в админке
+        return $themeConfig['menu_locations'] ?? [];
     }
     
     /**
@@ -271,6 +276,94 @@ class Menu extends BaseModule {
         }
         
         return $widgets;
+    }
+    
+    /**
+     * Рендеринг меню в хедері
+     * 
+     * @return void
+     */
+    public function renderHeaderMenu(): void {
+        $menuManager = menuManager();
+        
+        // Получаем сохраненное расположение меню из настроек темы
+        $savedLocation = themeManager()->getSetting('menu_location');
+        
+        // Если есть сохраненное расположение, используем его
+        // Иначе ищем меню с расположением 'header'
+        $location = !empty($savedLocation) ? $savedLocation : 'header';
+        
+        $menu = $this->getMenuByLocation($location);
+        
+        if ($menu) {
+            $menuItems = $menuManager->getMenuItems($menu['id']);
+            if (!empty($menuItems)) {
+                echo $this->renderMenuItems($menuItems);
+            }
+        }
+    }
+    
+    /**
+     * Рендеринг пунктів меню
+     * 
+     * @param array $menuItems Масив пунктів меню
+     * @param int|null $parentId ID батьківського пункту (для рекурсивного виведення)
+     * @return string HTML меню
+     */
+    private function renderMenuItems(array $menuItems, ?int $parentId = null): string {
+        // Фільтруємо пункти за parent_id
+        $filteredItems = array_filter($menuItems, function($item) use ($parentId) {
+            $itemParentId = isset($item['parent_id']) && $item['parent_id'] !== null ? (int)$item['parent_id'] : null;
+            return $itemParentId === $parentId && ($item['is_active'] == '1' || $item['is_active'] == 1);
+        });
+        
+        if (empty($filteredItems)) {
+            return '';
+        }
+        
+        // Сортуємо по order_num
+        usort($filteredItems, function($a, $b) {
+            $orderA = isset($a['order_num']) ? (int)$a['order_num'] : 0;
+            $orderB = isset($b['order_num']) ? (int)$b['order_num'] : 0;
+            return $orderA - $orderB;
+        });
+        
+        $html = '<ul class="menu menu-header">';
+        
+        foreach ($filteredItems as $item) {
+            $target = !empty($item['target']) ? ' target="' . htmlspecialchars($item['target']) . '"' : '';
+            $cssClasses = !empty($item['css_classes']) ? ' class="' . htmlspecialchars($item['css_classes']) . '"' : '';
+            $icon = !empty($item['icon']) ? '<i class="' . htmlspecialchars($item['icon']) . '"></i> ' : '';
+            
+            $itemId = isset($item['id']) ? (int)$item['id'] : null;
+            
+            // Проверяем, есть ли дочерние элементы
+            $hasChildren = false;
+            if ($itemId !== null) {
+                foreach ($menuItems as $childItem) {
+                    $childParentId = isset($childItem['parent_id']) && $childItem['parent_id'] !== null ? (int)$childItem['parent_id'] : null;
+                    if ($childParentId === $itemId && ($childItem['is_active'] == '1' || $childItem['is_active'] == 1)) {
+                        $hasChildren = true;
+                        break;
+                    }
+                }
+            }
+            
+            $html .= '<li class="menu-item' . ($hasChildren ? ' has-submenu' : '') . '">';
+            $html .= '<a href="' . htmlspecialchars($item['url'] ?? '#') . '"' . $target . $cssClasses . '>';
+            $html .= $icon . htmlspecialchars($item['title'] ?? '');
+            $html .= '</a>';
+            
+            // Рекурсивно выводим дочерние элементы
+            if ($hasChildren && $itemId !== null) {
+                $html .= $this->renderMenuItems($menuItems, $itemId);
+            }
+            
+            $html .= '</li>';
+        }
+        
+        $html .= '</ul>';
+        return $html;
     }
     
     /**

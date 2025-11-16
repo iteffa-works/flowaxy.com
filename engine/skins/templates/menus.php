@@ -560,7 +560,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="menuLocation" class="form-label">Розташування</label>
-                        <select class="form-select" id="menuLocation" name="location">
+                        <select class="form-select" id="menuLocation" name="location" required>
                             <?php if (!empty($menuLocations)): ?>
                                 <?php foreach ($menuLocations as $locationKey => $locationInfo): ?>
                                     <option value="<?= htmlspecialchars($locationKey) ?>" 
@@ -575,7 +575,7 @@
                                 <option value="custom">Произвольне меню (custom)</option>
                             <?php endif; ?>
                         </select>
-                        <div class="form-text" id="locationDescription"></div>
+                        <div class="form-text" id="menuLocationDescription"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1201,13 +1201,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обновление описания расположения при выборе
     const locationSelect = document.getElementById('menuLocation');
-    const locationDescription = document.getElementById('locationDescription');
+    const locationDescription = document.getElementById('menuLocationDescription');
     
     if (locationSelect && locationDescription) {
         function updateLocationDescription() {
             const selectedOption = locationSelect.options[locationSelect.selectedIndex];
-            const description = selectedOption ? selectedOption.dataset.description : '';
-            locationDescription.textContent = description || '';
+            const description = selectedOption ? (selectedOption.getAttribute('data-description') || '') : '';
+            if (description) {
+                locationDescription.textContent = description;
+                locationDescription.style.display = 'block';
+            } else {
+                locationDescription.style.display = 'none';
+            }
         }
         
         locationSelect.addEventListener('change', updateLocationDescription);
