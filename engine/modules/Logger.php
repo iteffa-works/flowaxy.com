@@ -230,7 +230,13 @@ class Logger extends BaseModule {
             'log_info' => $this->getSetting('log_info', '1') === '1',
             'log_success' => $this->getSetting('log_success', '1') === '1',
             'log_debug' => $this->getSetting('log_debug', '0') === '1',
+            // Настройки логирования БД
             'log_db_queries' => $this->getSetting('log_db_queries', '0') === '1',
+            'log_db_errors' => $this->getSetting('log_db_errors', '1') === '1',
+            'log_slow_queries' => $this->getSetting('log_slow_queries', '1') === '1',
+            'slow_query_threshold' => (float)$this->getSetting('slow_query_threshold', '1.0'),
+            'log_query_params' => $this->getSetting('log_query_params', '0') === '1',
+            // Другие настройки
             'log_file_operations' => $this->getSetting('log_file_operations', '0') === '1',
             'log_plugin_events' => $this->getSetting('log_plugin_events', '1') === '1',
             'log_module_events' => $this->getSetting('log_module_events', '1') === '1',
@@ -241,10 +247,20 @@ class Logger extends BaseModule {
      * Регистрация автоматического логирования системных событий
      */
     private function registerAutoLogging(): void {
-        // Логирование ошибок БД
+        // Логирование запросов БД
         if ($this->getSetting('log_db_queries', '0') === '1') {
-            addHook('db_error', [$this, 'handleDbError']);
             addHook('db_query', [$this, 'handleDbQuery']);
+        }
+        
+        // Логирование ошибок БД
+        if ($this->getSetting('log_db_errors', '1') === '1') {
+            addHook('db_error', [$this, 'handleDbError']);
+            addHook('db_slow_query', [$this, 'handleSlowQuery']);
+        }
+        
+        // Логирование медленных запросов
+        if ($this->getSetting('log_slow_queries', '1') === '1') {
+            addHook('db_slow_query', [$this, 'handleSlowQuery']);
         }
         
         // Логирование операций с файлами
@@ -283,11 +299,54 @@ class Logger extends BaseModule {
      * Обработчик запросов БД
      */
     public function handleDbQuery($query): void {
-        if ($this->getSetting('log_debug', '0') === '1') {
-            $this->logDebug('Database Query', [
-                'type' => 'database',
-                'query' => is_string($query) ? $query : json_encode($query)
-            ]);
+        if ($this->getSetting('log_debug', '0') !== '1') {
+            return;
+        }
+        
+        $logQuery = is_string($query) ? $query : ($query['query'] ?? '');
+        $logParams = [];
+        
+        // Логируем параметры только если включено
+        if ($this->getSetting('log_query_params', '0') === '1' && isset($query['params'])) {
+            $logParams = $query['params'];
+        }
+        
+        $context = [
+            'type' => 'database_query',
+            'query' => $logQuery
+        ];
+        
+        if (!empty($logParams)) {
+            $context['params'] = $logParams;
+        }
+        
+        if (isset($query['time'])) {
+            $context['execution_time'] = round($query['time'], 4);
+        }
+        
+        $this->logDebug('Database query', $context);
+    }
+    
+    /**
+     * Обработчик медленных запросов БД
+     */
+    public function handleSlowQuery($query): void {
+        $threshold = (float)$this->getSetting('slow_query_threshold', '1.0');
+        $executionTime = $query['execution_time'] ?? ($query['time'] ?? 0);
+        
+        if ($executionTime >= $threshold) {
+            $context = [
+                'type' => 'slow_database_query',
+                'query' => $query['query'] ?? '',
+                'execution_time' => round($executionTime, 4),
+                'threshold' => $threshold
+            ];
+            
+            if ($this->getSetting('log_query_params', '0') === '1' && isset($query['params'])) {
+                $context['params'] = $query['params'];
+            }
+            
+            $this->logWarning('Slow database query detected', $context);
         }
     }
     
