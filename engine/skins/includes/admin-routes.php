@@ -19,6 +19,9 @@ $router->add(['GET', 'POST'], 'plugins', 'PluginsPage');
 $router->add(['GET', 'POST'], 'themes', 'ThemesPage');
 $router->add(['GET', 'POST'], 'system', 'SystemPage');
 $router->add(['GET', 'POST'], 'theme-editor', 'ThemeEditorPage');
+$router->add(['GET', 'POST'], 'api', 'ApiPage');
+$router->add(['GET', 'POST'], 'diagnostics', 'DiagnosticsPage');
+$router->add(['GET', 'POST'], 'documentation', 'DocumentationPage');
 
 // Реєструємо маршрут кастомізатора тільки якщо активна тема підтримує кастомізацію
 require_once __DIR__ . '/menu-items.php';

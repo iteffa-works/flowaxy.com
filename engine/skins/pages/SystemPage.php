@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница системной информации
+ * Сторінка системної інформації
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -10,29 +10,29 @@ class SystemPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Система - Landing CMS';
+        $this->pageTitle = 'Системна інформація - Landing CMS';
         $this->templateName = 'system';
         
         $this->setPageHeader(
-            'Система',
+            'Системна інформація',
             'Інформація про систему та сервер',
             'fas fa-server'
         );
     }
     
     public function handle() {
-        // Обработка действий с кешем
+        // Обробка дій з кешем
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cache_action'])) {
             $this->handleCacheAction();
         }
         
-        // Получение системной информации
+        // Отримання системної інформації
         $systemInfo = $this->getSystemInfo();
         
-        // Получение информации о кеше
+        // Отримання інформації про кеш
         $cacheInfo = $this->getCacheInfo();
         
-        // Рендерим страницу
+        // Рендеримо сторінку
         $this->render([
             'systemInfo' => $systemInfo,
             'cacheInfo' => $cacheInfo
@@ -40,7 +40,7 @@ class SystemPage extends AdminPage {
     }
     
     /**
-     * Обработка действий с кешем
+     * Обробка дій з кешем
      */
     private function handleCacheAction(): void {
         if (!$this->verifyCsrf()) {
@@ -82,7 +82,7 @@ class SystemPage extends AdminPage {
     }
     
     /**
-     * Получение информации о кеше
+     * Отримання інформації про кеш
      */
     private function getCacheInfo(): array {
         $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
@@ -137,16 +137,16 @@ class SystemPage extends AdminPage {
     }
     
     /**
-     * Получение системной информации
+     * Отримання системної інформації
      */
     private function getSystemInfo() {
         $info = [];
         
-        // PHP версия
+        // Версія PHP
         $info['php_version'] = PHP_VERSION;
         $info['php_sapi'] = php_sapi_name();
         
-        // MySQL версия (кешируем на 1 час)
+        // Версія MySQL (кешуємо на 1 годину)
         $info['mysql_version'] = cache_remember('mysql_version', function() {
             try {
                 $db = getDB(false);
@@ -167,29 +167,29 @@ class SystemPage extends AdminPage {
         $info['server_software'] = $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
         $info['server_name'] = $_SERVER['SERVER_NAME'] ?? 'Unknown';
         
-        // Версия CMS
+        // Версія CMS
         $info['cms_version'] = '1.0.0';
         
-        // Память
+        // Пам'ять
         $info['memory_limit'] = ini_get('memory_limit');
         $info['memory_usage'] = round(memory_get_usage() / 1024 / 1024, 2) . ' MB';
         $info['memory_peak'] = round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB';
         
-        // Время сервера
+        // Час сервера
         $info['server_time'] = date('d.m.Y H:i:s');
         $info['timezone'] = date_default_timezone_get();
         
-        // Права папок
+        // Права доступу до папок
         $info['folders'] = $this->checkFolderPermissions();
         
-        // Расширения PHP
+        // Розширення PHP
         $info['extensions'] = $this->getImportantExtensions();
         
         return $info;
     }
     
     /**
-     * Проверка прав доступа к папкам
+     * Перевірка прав доступу до папок
      */
     private function checkFolderPermissions() {
         $baseDir = dirname(__DIR__, 2);
@@ -203,12 +203,12 @@ class SystemPage extends AdminPage {
         
         $permissions = [];
         foreach ($folders as $name => $path) {
-            // Нормализуем путь (убираем лишние слеши)
+            // Нормалізуємо шлях (прибираємо зайві слеші)
             $path = str_replace(['\\', '//'], ['/', '/'], $path);
             $path = rtrim($path, '/');
             
             if (file_exists($path) && is_dir($path)) {
-                // Получаем права доступа
+                // Отримуємо права доступу
                 $perms = @fileperms($path);
                 if ($perms !== false) {
                     $permsStr = substr(sprintf('%o', $perms), -4);
@@ -225,15 +225,15 @@ class SystemPage extends AdminPage {
                     'writable' => $writable,
                     'readable' => $readable,
                     'status' => $writable && $readable ? 'ok' : ($readable ? 'warning' : 'error')
-                ];
-            } else {
-                // Пытаемся создать директорию, если её нет
-                if (!file_exists($path)) {
-                    @mkdir($path, 0755, true);
-                }
-                
-                // Проверяем снова после попытки создания
-                if (file_exists($path) && is_dir($path)) {
+                    ];
+                } else {
+                    // Намагаємося створити директорію, якщо її немає
+                    if (!file_exists($path)) {
+                        @mkdir($path, 0755, true);
+                    }
+                    
+                    // Перевіряємо знову після спроби створення
+                    if (file_exists($path) && is_dir($path)) {
                     $perms = @fileperms($path);
                     $permsStr = $perms !== false ? substr(sprintf('%o', $perms), -4) : 'N/A';
                     $writable = is_writable($path);
@@ -262,7 +262,7 @@ class SystemPage extends AdminPage {
     }
     
     /**
-     * Получение важных расширений PHP
+     * Отримання важливих розширень PHP
      */
     private function getImportantExtensions() {
         $important = ['pdo', 'pdo_mysql', 'json', 'mbstring', 'gd', 'zip', 'curl', 'openssl', 'fileinfo'];
