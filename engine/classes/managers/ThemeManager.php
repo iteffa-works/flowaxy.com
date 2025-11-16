@@ -353,14 +353,18 @@ class ThemeManager {
                 }
             }
             
-            // Удаляем скомпилированный CSS файл предыдущей темы (если была активна другая тема)
+            // Удаляем скомпилированный CSS файл предыдущей темы только если она поддерживает SCSS
+            // (тобто style.css був згенерований з SCSS)
             if ($previousThemeSlug && $previousThemeSlug !== $slug) {
-                $previousThemePath = $this->getThemePath($previousThemeSlug);
-                if (!empty($previousThemePath)) {
-                    $previousCssFile = $previousThemePath . 'assets/css/style.css';
-                    if (file_exists($previousCssFile) && is_file($previousCssFile)) {
-                        @unlink($previousCssFile);
-                        error_log("ThemeManager: Deleted compiled CSS file for deactivated theme: {$previousThemeSlug}");
+                // Перевіряємо, чи попередня тема підтримує SCSS
+                if ($this->hasScssSupport($previousThemeSlug)) {
+                    $previousThemePath = $this->getThemePath($previousThemeSlug);
+                    if (!empty($previousThemePath)) {
+                        $previousCssFile = $previousThemePath . 'assets/css/style.css';
+                        if (file_exists($previousCssFile) && is_file($previousCssFile)) {
+                            @unlink($previousCssFile);
+                            error_log("ThemeManager: Deleted compiled CSS file for deactivated theme with SCSS: {$previousThemeSlug}");
+                        }
                     }
                 }
             }
