@@ -146,15 +146,22 @@ class SystemPage extends AdminPage {
         $info['php_version'] = PHP_VERSION;
         $info['php_sapi'] = php_sapi_name();
         
-        // MySQL версия
-        try {
-            $db = getDB();
-            $stmt = $db->query("SELECT VERSION() as version");
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $info['mysql_version'] = $result['version'] ?? 'Unknown';
-        } catch (Exception $e) {
-            $info['mysql_version'] = 'Error: ' . $e->getMessage();
-        }
+        // MySQL версия (кешируем на 1 час)
+        $info['mysql_version'] = cache_remember('mysql_version', function() {
+            try {
+                $db = getDB(false);
+                if (!$db) {
+                    return 'Unknown';
+                }
+                
+                $stmt = $db->query("SELECT VERSION() as version");
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $result['version'] ?? 'Unknown';
+            } catch (Exception $e) {
+                error_log("MySQL version error: " . $e->getMessage());
+                return 'Error: ' . $e->getMessage();
+            }
+        }, 3600);
         
         // Сервер
         $info['server_software'] = $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';

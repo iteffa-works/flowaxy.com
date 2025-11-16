@@ -21,8 +21,27 @@ class AdminPage {
         // Проверка авторизации
         requireAdmin();
         
-        // Подключение к БД
-        $this->db = getDB();
+        // Подключение к БД с обработкой ошибок
+        try {
+            $this->db = getDB(true);
+            if ($this->db === null) {
+                // Если подключение не удалось, getDB() уже показал страницу ошибки
+                exit;
+            }
+        } catch (Exception $e) {
+            // Показываем страницу ошибки
+            if (function_exists('showDatabaseError')) {
+                showDatabaseError([
+                    'host' => DB_HOST ?? 'unknown',
+                    'database' => DB_NAME ?? 'unknown',
+                    'error' => $e->getMessage(),
+                    'code' => $e->getCode()
+                ]);
+            } else {
+                die('Database connection error: ' . htmlspecialchars($e->getMessage()));
+            }
+            exit;
+        }
     }
     
     /**

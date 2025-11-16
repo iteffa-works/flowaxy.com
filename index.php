@@ -10,8 +10,31 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config/config.php';
 
+// Проверка доступности БД перед загрузкой системы
+if (!isDatabaseAvailable()) {
+    showDatabaseError([
+        'host' => DB_HOST,
+        'database' => DB_NAME,
+        'error' => 'Не вдалося підключитися до бази даних. Перевірте налаштування підключення.'
+    ]);
+    exit;
+}
+
 // Инициализация плагинов (для регистрации хуков)
-pluginManager()->initializePlugins();
+try {
+    pluginManager()->initializePlugins();
+} catch (Exception $e) {
+    // Если ошибка связана с БД, показываем страницу ошибки
+    if (strpos($e->getMessage(), 'database') !== false || strpos($e->getMessage(), 'PDO') !== false) {
+        showDatabaseError([
+            'host' => DB_HOST,
+            'database' => DB_NAME,
+            'error' => $e->getMessage()
+        ]);
+        exit;
+    }
+    throw $e;
+}
 
 // Загрузка модуля Menu для обработки шорткодов
 if (class_exists('ModuleLoader')) {

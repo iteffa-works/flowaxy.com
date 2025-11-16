@@ -34,32 +34,44 @@ class DashboardPage extends AdminPage {
     }
     
     /**
-     * Получение статистики
+     * Получение статистики с кешированием
      */
     private function getStats() {
-        $stats = [
-            'plugins' => 0,
-            'media' => 0
-        ];
+        if (!$this->db || !isDatabaseAvailable()) {
+            return [
+                'plugins' => 0,
+                'media' => 0
+            ];
+        }
         
-        if ($this->db && isDatabaseAvailable()) {
+        // Кешируем статистику на 5 минут
+        return cache_remember('dashboard_stats', function() {
+            $stats = [
+                'plugins' => 0,
+                'media' => 0
+            ];
+            
+            $db = getDB();
+            if (!$db) {
+                return $stats;
+            }
+            
             try {
-                // Плагины
-                $stmt = $this->db->query("SHOW TABLES LIKE 'plugins'");
-                if ($stmt->rowCount() > 0) {
-                    $stats['plugins'] = $this->db->query("SELECT COUNT(*) FROM plugins WHERE is_active = 1")->fetchColumn();
+                // Проверяем существование таблиц и получаем статистику одним запросом
+                $stmt = $db->prepare("SELECT COUNT(*) as count FROM plugins WHERE is_active = 1");
+                if ($stmt->execute()) {
+                    $stats['plugins'] = (int)$stmt->fetchColumn();
                 }
                 
-                // Медиа файлы
-                $stmt = $this->db->query("SHOW TABLES LIKE 'media_files'");
-                if ($stmt->rowCount() > 0) {
-                    $stats['media'] = $this->db->query("SELECT COUNT(*) FROM media_files")->fetchColumn();
+                $stmt = $db->prepare("SELECT COUNT(*) as count FROM media_files");
+                if ($stmt->execute()) {
+                    $stats['media'] = (int)$stmt->fetchColumn();
                 }
             } catch (Exception $e) {
                 error_log("Dashboard stats error: " . $e->getMessage());
             }
-        }
-        
-        return $stats;
+            
+            return $stats;
+        }, 300); // Кеш на 5 минут
     }
 }

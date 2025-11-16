@@ -15,7 +15,8 @@ class Database {
     private bool $isConnected = false;
     private int $connectionAttempts = 0;
     private const MAX_CONNECTION_ATTEMPTS = 3;
-    private const CONNECTION_TIMEOUT = 30;
+    private const CONNECTION_TIMEOUT = 3; // Уменьшено до 3 секунд для быстрой проверки
+    private const HOST_CHECK_TIMEOUT = 1; // Таймаут проверки хоста в секундах
     
     // Статистика запросов
     private array $queryList = [];
@@ -84,6 +85,51 @@ class Database {
     }
     
     /**
+     * Быстрая проверка доступности хоста
+     * 
+     * @param string $host Хост
+     * @param int $port Порт (по умолчанию 3306 для MySQL)
+     * @return bool
+     */
+    private function checkHostAvailability(string $host, int $port = 3306): bool {
+        // Разбираем хост:port если указано
+        if (strpos($host, ':') !== false) {
+            list($host, $port) = explode(':', $host, 2);
+            $port = (int)$port;
+        }
+        
+        // Пытаемся быстро проверить доступность хоста
+        $timeStart = $this->getRealTime();
+        
+        try {
+            // Используем stream_socket_client с коротким таймаутом
+            $context = stream_context_create([
+                'socket' => [
+                    'connect_timeout' => self::HOST_CHECK_TIMEOUT
+                ]
+            ]);
+            
+            $socket = @stream_socket_client(
+                "tcp://{$host}:{$port}",
+                $errno,
+                $errstr,
+                self::HOST_CHECK_TIMEOUT,
+                STREAM_CLIENT_CONNECT,
+                $context
+            );
+            
+            if ($socket !== false) {
+                fclose($socket);
+                return true;
+            }
+            
+            return false;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
      * Подключение к базе данных
      * 
      * @return void
@@ -99,10 +145,38 @@ class Database {
         $this->connectionAttempts++;
         $timeStart = $this->getRealTime();
         
+        // Быстрая проверка доступности хоста перед подключением PDO
+        $host = DB_HOST;
+        $port = 3306;
+        
+        // Разбираем хост:port если указано
+        if (strpos($host, ':') !== false) {
+            list($host, $port) = explode(':', $host, 2);
+            $port = (int)$port;
+        }
+        
+        // Проверяем доступность хоста
+        if (!$this->checkHostAvailability($host, $port)) {
+            $connectionTime = $this->getRealTime() - $timeStart;
+            $error = "Сервер бази даних недоступен (хост: {$host}, порт: {$port})";
+            
+            $errorContext = [
+                'error' => $error,
+                'host' => $host,
+                'port' => $port,
+                'attempt' => $this->connectionAttempts,
+                'connection_time' => round($connectionTime, 4)
+            ];
+            
+            $this->logError('Database host unavailable', $errorContext);
+            throw new Exception($error);
+        }
+        
         try {
             $dsn = sprintf(
-                "mysql:host=%s;dbname=%s;charset=%s",
-                DB_HOST,
+                "mysql:host=%s;port=%d;dbname=%s;charset=%s",
+                $host,
+                $port,
                 DB_NAME,
                 DB_CHARSET
             );
@@ -118,7 +192,16 @@ class Database {
                 PDO::ATTR_STRINGIFY_FETCHES => false,
             ];
             
-            $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+            // Устанавливаем короткий таймаут через ini_set для socket
+            $oldTimeout = ini_get('default_socket_timeout');
+            ini_set('default_socket_timeout', (string)self::CONNECTION_TIMEOUT);
+            
+            try {
+                $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+            } finally {
+                // Восстанавливаем предыдущий таймаут
+                ini_set('default_socket_timeout', $oldTimeout);
+            }
             $this->isConnected = true;
             $this->connectionAttempts = 0;
             
@@ -148,24 +231,42 @@ class Database {
             $this->connection = null;
             $connectionTime = $this->getRealTime() - $timeStart;
             
+            // Определяем причину ошибки
+            $errorMessage = $e->getMessage();
+            $errorCode = $e->getCode();
+            
+            // Если таймаут или хост недоступен, не повторяем попытки
+            $isTimeout = strpos($errorMessage, 'timeout') !== false 
+                      || strpos($errorMessage, 'timed out') !== false
+                      || strpos($errorMessage, 'Connection refused') !== false
+                      || $errorCode == 2002 // SQLSTATE[HY000] [2002] Connection refused
+                      || $errorCode == 2003; // SQLSTATE[HY000] [2003] Can't connect to MySQL server
+            
             $errorContext = [
-                'error' => $e->getMessage(),
-                'code' => $e->getCode(),
+                'error' => $errorMessage,
+                'code' => $errorCode,
                 'attempt' => $this->connectionAttempts,
                 'connection_time' => round($connectionTime, 4),
-                'host' => DB_HOST,
+                'host' => $host,
+                'port' => $port,
                 'database' => DB_NAME
             ];
             
             $this->logError('Database connection error', $errorContext);
-            error_log("Database connection error (attempt {$this->connectionAttempts}): " . $e->getMessage());
+            error_log("Database connection error (attempt {$this->connectionAttempts}): " . $errorMessage);
             
-            if ($this->connectionAttempts >= self::MAX_CONNECTION_ATTEMPTS) {
-                throw new Exception("Ошибка подключения к базе данных после " . self::MAX_CONNECTION_ATTEMPTS . " попыток: " . $e->getMessage());
+            // Если таймаут или хост недоступен, или превышено количество попыток - выбрасываем исключение сразу
+            if ($isTimeout || $this->connectionAttempts >= self::MAX_CONNECTION_ATTEMPTS) {
+                $finalError = $isTimeout 
+                    ? "Сервер бази даних недоступен (таймаут подключения: {$host}:{$port})"
+                    : "Ошибка подключения к базе данных после " . self::MAX_CONNECTION_ATTEMPTS . " попыток: " . $errorMessage;
+                
+                throw new Exception($finalError);
             }
             
-            // Повторная попытка подключения
-            sleep(1);
+            // Повторная попытка подключения только если не таймаут
+            // Уменьшаем задержку для быстрого ответа
+            usleep(100000); // 0.1 секунды вместо 1 секунды
             $this->connect();
         }
     }

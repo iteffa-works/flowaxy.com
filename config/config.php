@@ -258,7 +258,7 @@ function getSiteSettings(): array {
     }
     
     return cache_remember('site_settings', function(): array {
-        $db = getDB();
+        $db = getDB(false); // Не показываем ошибку, если БД недоступна
         if ($db === null) {
             return [];
         }
