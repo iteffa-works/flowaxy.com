@@ -156,7 +156,8 @@ class ThemeManager {
                         }
                         
                         // Проверяем активность темы из site_settings
-                        $isActive = $this->isThemeActive($themeSlug);
+                        // Используем slug из конфига для проверки, так как в БД хранится slug из конфига
+                        $isActive = $this->isThemeActive($config['slug'] ?? $themeSlug);
                         
                         // Формируем массив темы в формате БД для совместимости
                         $theme = [
@@ -278,24 +279,57 @@ class ThemeManager {
             return false;
         }
         
-        // Проверяем существование темы в файловой системе напрямую (без кеша)
+        // Проверяем существование темы в файловой системе
+        // Сначала пробуем найти по slug из конфига (ищем папку с таким slug в конфиге)
         $themesDir = dirname(__DIR__, 2) . '/themes/';
-        $themePath = $themesDir . $slug . '/';
+        $themeFolderSlug = null;
+        
+        // Ищем папку темы по slug из конфига
+        $directories = glob($themesDir . '*', GLOB_ONLYDIR);
+        foreach ($directories as $dir) {
+            $folderName = basename($dir);
+            $configFile = $dir . '/theme.json';
+            if (file_exists($configFile)) {
+                $config = json_decode(file_get_contents($configFile), true);
+                if ($config && isset($config['slug']) && $config['slug'] === $slug) {
+                    $themeFolderSlug = $folderName;
+                    break;
+                }
+            }
+        }
+        
+        // Если не найдено по slug из конфига, пробуем найти по имени папки
+        if ($themeFolderSlug === null) {
+            $themePath = $themesDir . $slug . '/';
+            $themeJsonFile = $themePath . 'theme.json';
+            if (is_dir($themePath) && file_exists($themeJsonFile)) {
+                $themeFolderSlug = $slug;
+            }
+        }
+        
+        // Проверяем, что тема найдена
+        if ($themeFolderSlug === null) {
+            error_log("ThemeManager: Theme not found: {$slug}");
+            return false;
+        }
+        
+        // Проверяем существование папки и конфига
+        $themePath = $themesDir . $themeFolderSlug . '/';
         $themeJsonFile = $themePath . 'theme.json';
         
         if (!is_dir($themePath) || !file_exists($themeJsonFile)) {
-            error_log("ThemeManager: Theme not found in filesystem: {$slug}");
+            error_log("ThemeManager: Theme folder not found: {$themeFolderSlug}");
             return false;
         }
         
         try {
-            // Сохраняем активную тему в site_settings
+            // Сохраняем активную тему в site_settings (используем slug из конфига)
             $stmt = $this->db->prepare("
                 INSERT INTO site_settings (setting_key, setting_value) 
                 VALUES ('active_theme', ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
             ");
-            $result = $stmt->execute([$slug]);
+            $result = $stmt->execute([$slug]); // Сохраняем slug из конфига, а не имя папки
             
             if (!$result) {
                 error_log("ThemeManager: Failed to save active theme to database");
@@ -309,7 +343,11 @@ class ThemeManager {
             $this->loadActiveTheme();
             
             // Инициализируем настройки по умолчанию, если их еще нет
-            $this->initializeDefaultSettings($slug);
+            // Используем имя папки для загрузки конфига, но slug из конфига для инициализации
+            $themeConfig = $this->getThemeConfig($slug);
+            if (!empty($themeConfig)) {
+                $this->initializeDefaultSettings($slug);
+            }
             
             return true;
         } catch (Exception $e) {

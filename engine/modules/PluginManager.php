@@ -129,7 +129,17 @@ class PluginManager extends BaseModule {
             
             $className = $this->getPluginClassName($slug);
             if (class_exists($className)) {
-                $this->plugins[$slug] = new $className();
+                $plugin = new $className();
+                $this->plugins[$slug] = $plugin;
+                
+                // Инициализируем плагин, чтобы зарегистрировать хуки
+                if (method_exists($plugin, 'init')) {
+                    try {
+                        $plugin->init();
+                    } catch (Exception $e) {
+                        error_log("Plugin init error for {$slug}: " . $e->getMessage());
+                    }
+                }
             } else {
                 error_log("Plugin class {$className} not found for plugin: {$slug}");
             }
@@ -197,13 +207,19 @@ class PluginManager extends BaseModule {
      * Выполнение хука
      */
     public function doHook(string $hookName, $data = null) {
-        if (empty($hookName) || !isset($this->hooks[$hookName])) {
+        if (empty($hookName)) {
             return $data;
         }
         
-        // Загружаем модули для admin_menu (нужны для отображения меню)
+        // Для admin_menu всегда загружаем модули ДО проверки хуков
+        // Это гарантирует, что модули зарегистрируют свои хуки независимо от порядка загрузки плагинов
         if ($hookName === 'admin_menu' && class_exists('ModuleLoader')) {
             $this->loadAdminModules(true);
+        }
+        
+        // Проверяем наличие хуков после загрузки модулей
+        if (!isset($this->hooks[$hookName])) {
+            return $data;
         }
         
         // Определяем тип хука: объектные хуки (admin_register_routes) vs данные (admin_menu)
@@ -240,10 +256,13 @@ class PluginManager extends BaseModule {
         static $adminModulesLoaded = false;
         static $allModulesLoaded = false;
         
-        // Для admin_menu всегда загружаем все модули (но только один раз)
+        // Для admin_menu всегда загружаем все модули (но только один раз в рамках одного запроса)
         if ($forceLoadAll) {
             if ($allModulesLoaded) {
-                return; // Уже загружены все модули
+                // Модули уже загружены в этом запросе, но проверяем, что хуки зарегистрированы
+                // Это важно на случай, если модули были загружены до инициализации PluginManager
+                $this->ensureModulesHooksRegistered();
+                return;
             }
         } else {
             // Для admin_register_routes загружаем только если нужно
@@ -272,24 +291,76 @@ class PluginManager extends BaseModule {
             foreach ($modules as $moduleFile) {
                 $moduleName = basename($moduleFile, '.php');
                 
-                // Пропускаем служебные файлы и уже загруженные модули
+                // Пропускаем служебные файлы
                 if ($moduleName === 'loader' || 
                     $moduleName === 'compatibility' || 
-                    $moduleName === 'PluginManager' ||
-                    ModuleLoader::isModuleLoaded($moduleName)) {
+                    $moduleName === 'PluginManager') {
                     continue;
                 }
                 
-                // Загружаем модуль
-                ModuleLoader::loadModule($moduleName);
+                // Загружаем модуль, если он еще не загружен
+                if (!ModuleLoader::isModuleLoaded($moduleName)) {
+                    ModuleLoader::loadModule($moduleName);
+                }
             }
         }
+        
+        // Убеждаемся, что хуки всех модулей зарегистрированы
+        $this->ensureModulesHooksRegistered();
         
         if ($forceLoadAll) {
             $allModulesLoaded = true;
         } else {
             $adminModulesLoaded = true;
         }
+    }
+    
+    /**
+     * Убеждается, что хуки всех загруженных модулей зарегистрированы
+     */
+    private function ensureModulesHooksRegistered(): void {
+        if (!class_exists('ModuleLoader')) {
+            return;
+        }
+        
+        $loadedModules = ModuleLoader::getLoadedModules();
+        foreach ($loadedModules as $moduleName => $module) {
+            if (is_object($module) && method_exists($module, 'registerHooks')) {
+                // Проверяем, зарегистрированы ли хуки для admin_menu
+                // Если нет, вызываем registerHooks() еще раз
+                // Это безопасно, так как addHook() просто добавляет хуки, а не заменяет их
+                if (!isset($this->hooks['admin_menu']) || 
+                    !$this->hasModuleHook($moduleName, 'admin_menu')) {
+                    try {
+                        $module->registerHooks();
+                    } catch (Exception $e) {
+                        error_log("Error registering hooks for module {$moduleName}: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Проверяет, зарегистрирован ли хук для конкретного модуля
+     */
+    private function hasModuleHook(string $moduleName, string $hookName): bool {
+        if (!isset($this->hooks[$hookName])) {
+            return false;
+        }
+        
+        foreach ($this->hooks[$hookName] as $hook) {
+            if (is_array($hook['callback']) && 
+                isset($hook['callback'][0]) && 
+                is_object($hook['callback'][0])) {
+                $objectClass = get_class($hook['callback'][0]);
+                if ($objectClass === $moduleName || strpos($objectClass, $moduleName) !== false) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -488,17 +559,38 @@ class PluginManager extends BaseModule {
             }
             
             cache_forget('active_plugins');
+            cache_forget('active_plugins_hash'); // Очищаем хеш плагинов при активации
             
             // Загружаем и активируем плагин
             $plugin = $this->getPluginInstance($pluginSlug);
             if ($plugin) {
+                // Вызываем activate() для логики активации
                 if (method_exists($plugin, 'activate')) {
                     $plugin->activate();
                 }
-                if (method_exists($plugin, 'init')) {
-                    $plugin->init();
+                // init() уже вызывается в loadPlugin(), не нужно вызывать повторно
+            }
+            
+            // Очищаем кеш меню после активации плагина
+            // Меню обновится автоматически при следующем запросе благодаря новому ключу кеша с учетом плагинов
+            // Очищаем все возможные комбинации поддержки темы для старого и нового состояния плагинов
+            $activePlugins = $this->getActivePlugins();
+            $pluginsHash = md5(implode(',', array_keys($activePlugins)));
+            
+            // Очищаем все возможные комбинации поддержки темы
+            for ($custom = 0; $custom <= 1; $custom++) {
+                for ($nav = 0; $nav <= 1; $nav++) {
+                    // Очищаем с новым хешем плагинов
+                    $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
+                    cache_forget($key);
                 }
             }
+            
+            // Также очищаем старые ключи (для обратной совместимости)
+            cache_forget('admin_menu_items_0_0');
+            cache_forget('admin_menu_items_0_1');
+            cache_forget('admin_menu_items_1_0');
+            cache_forget('admin_menu_items_1_1');
             
             // Логируем активацию плагина
             doHook('plugin_activated', $pluginSlug);
@@ -527,7 +619,26 @@ class PluginManager extends BaseModule {
             }
             
             cache_forget('active_plugins');
+            cache_forget('active_plugins_hash'); // Очищаем хеш плагинов при деактивации
             unset($this->plugins[$pluginSlug]);
+            
+            // Очищаем кеш меню после изменения плагинов
+            $activePlugins = $this->getActivePlugins();
+            $pluginsHash = md5(implode(',', array_keys($activePlugins)));
+            
+            // Очищаем все возможные комбинации поддержки темы
+            for ($custom = 0; $custom <= 1; $custom++) {
+                for ($nav = 0; $nav <= 1; $nav++) {
+                    $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
+                    cache_forget($key);
+                }
+            }
+            
+            // Также очищаем старые ключи (для обратной совместимости)
+            cache_forget('admin_menu_items_0_0');
+            cache_forget('admin_menu_items_0_1');
+            cache_forget('admin_menu_items_1_0');
+            cache_forget('admin_menu_items_1_1');
             
             // Логируем деактивацию плагина
             doHook('plugin_deactivated', $pluginSlug);

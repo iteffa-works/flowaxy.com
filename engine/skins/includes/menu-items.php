@@ -24,8 +24,14 @@ function getMenuItems() {
     $supportsCustomization = themeSupportsCustomization();
     $supportsNavigation = themeSupportsNavigation();
     
-    // Создаем уникальный ключ кеша на основе поддержки функций темы
-    $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0') . '_' . ($supportsNavigation ? '1' : '0');
+    // Создаем уникальный ключ кеша на основе поддержки функций темы и активных плагинов
+    // Кешируем хеш плагинов, чтобы не вычислять его каждый раз
+    $pluginsHash = cache_remember('active_plugins_hash', function() {
+        $activePlugins = pluginManager()->getActivePlugins();
+        return md5(implode(',', array_keys($activePlugins)));
+    }, 3600); // Кешируем хеш плагинов на 1 час
+    
+    $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0') . '_' . ($supportsNavigation ? '1' : '0') . '_' . $pluginsHash;
     
     return cache_remember($cacheKey, function() use ($supportsCustomization, $supportsNavigation) {
     
@@ -118,7 +124,7 @@ function getMenuItems() {
     
         // Возвращаем меню
         return $menu;
-    }, 60); // Кешируем на 1 минуту (короткое время для быстрого обновления при смене темы)
+    }, 3600); // Кешируем на 1 час (меню меняется редко, только при изменении плагинов или темы)
 }
 
 /**
