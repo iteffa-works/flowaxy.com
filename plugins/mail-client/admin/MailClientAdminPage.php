@@ -21,15 +21,25 @@ class MailClientAdminPage extends AdminPage {
             'fas fa-envelope'
         );
         
-        // Завантажуємо модуль Mail
-        if (function_exists('mailModule')) {
-            $this->mailModule = mailModule();
-        }
+        // НЕ завантажуємо модуль Mail тут - тільки коли потрібно (lazy loading)
         
-        // Додаємо CSS та JS
+        // Додаємо CSS та JS з версією плагіна (для кешування)
         $pluginUrl = $this->getPluginUrl();
-        $this->additionalCSS[] = $pluginUrl . '/assets/css/style.css?v=' . time();
-        $this->additionalJS[] = $pluginUrl . '/assets/js/mail-client.js?v=' . time();
+        $version = '1.0.0'; // Версія плагіна
+        $this->additionalCSS[] = $pluginUrl . '/assets/css/style.css?v=' . $version;
+        $this->additionalJS[] = $pluginUrl . '/assets/js/mail-client.js?v=' . $version;
+    }
+    
+    /**
+     * Lazy loading модуля Mail
+     */
+    private function getMailModule() {
+        if ($this->mailModule === null) {
+            if (function_exists('mailModule')) {
+                $this->mailModule = mailModule();
+            }
+        }
+        return $this->mailModule;
     }
     
     /**
@@ -47,16 +57,14 @@ class MailClientAdminPage extends AdminPage {
             return;
         }
         
-        // Отримуємо папки
+        // Отримуємо тільки папки (легкий запит)
         $folders = $this->getFolders();
         
-        // Отримуємо статистику по папках
-        $stats = $this->getFolderStats();
-        
+        // Статистику завантажуємо через AJAX (не блокуємо завантаження сторінки)
         // Рендеримо сторінку
         $this->render([
             'folders' => $folders,
-            'stats' => $stats
+            'stats' => [] // Пуста статистика, завантажиться через AJAX
         ]);
     }
     
@@ -114,6 +122,10 @@ class MailClientAdminPage extends AdminPage {
                     $this->ajaxGetFolders();
                     break;
                     
+                case 'get_folder_stats':
+                    $this->ajaxGetFolderStats();
+                    break;
+                    
                 default:
                     echo json_encode(['success' => false, 'error' => 'Невідома дія: ' . $action], JSON_UNESCAPED_UNICODE);
                     exit;
@@ -152,14 +164,44 @@ class MailClientAdminPage extends AdminPage {
     }
     
     /**
-     * Отримання статистики по папках
+     * Отримання статистики по папках (з кешуванням)
      */
     private function getFolderStats(): array {
         if (!$this->db) {
             return [];
         }
         
+        // Кешуємо статистику на 30 секунд
+        $cacheKey = 'mail_client_folder_stats';
+        if (function_exists('cache_remember')) {
+            $stats = cache_remember($cacheKey, 30, function() {
+                return $this->fetchFolderStats();
+            });
+            return $stats ?: [];
+        }
+        
+        return $this->fetchFolderStats();
+    }
+    
+    /**
+     * Очищення кешу статистики
+     */
+    private function clearFolderStatsCache(): void {
+        if (function_exists('cache_forget')) {
+            cache_forget('mail_client_folder_stats');
+        }
+    }
+    
+    /**
+     * Отримання статистики з БД
+     */
+    private function fetchFolderStats(): array {
+        if (!$this->db) {
+            return [];
+        }
+        
         try {
+            // Оптимізований запит з індексами
             $stmt = $this->db->query("
                 SELECT 
                     folder,
@@ -295,7 +337,8 @@ class MailClientAdminPage extends AdminPage {
             exit;
         }
         
-        if (!$this->mailModule) {
+        $mailModule = $this->getMailModule();
+        if (!$mailModule) {
             echo json_encode(['success' => false, 'error' => 'Модуль пошти не завантажено'], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -311,7 +354,7 @@ class MailClientAdminPage extends AdminPage {
         }
         
         try {
-            $result = $this->mailModule->sendEmail($to, $subject, $body, ['is_html' => $isHtml]);
+            $result = $mailModule->sendEmail($to, $subject, $body, ['is_html' => $isHtml]);
             
             if ($result) {
                 // Зберігаємо копію в надіслані
@@ -321,7 +364,7 @@ class MailClientAdminPage extends AdminPage {
                         (message_id, folder, `from`, `to`, subject, body, body_html, date_sent, date_received, is_read)
                         VALUES (?, 'sent', ?, ?, ?, ?, ?, NOW(), NOW(), 1)
                     ");
-                    $settings = $this->mailModule->getSettings();
+                    $settings = $mailModule->getSettings();
                     $from = $settings['from_email'] ?? '';
                     $messageId = md5($to . $subject . time());
                     $stmt->execute([
@@ -332,6 +375,9 @@ class MailClientAdminPage extends AdminPage {
                         strip_tags($body),
                         $isHtml ? $body : null
                     ]);
+                    
+                    // Очищаємо кеш статистики
+                    $this->clearFolderStatsCache();
                 }
                 
                 echo json_encode(['success' => true, 'message' => 'Лист успішно відправлено'], JSON_UNESCAPED_UNICODE);
@@ -372,6 +418,9 @@ class MailClientAdminPage extends AdminPage {
                 $stmt = $this->db->prepare("UPDATE mail_client_emails SET is_deleted = 1, folder = 'trash' WHERE id = ?");
                 $stmt->execute([$id]);
             }
+            
+            // Очищаємо кеш статистики
+            $this->clearFolderStatsCache();
             
             echo json_encode(['success' => true, 'message' => 'Лист видалено'], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
@@ -423,6 +472,9 @@ class MailClientAdminPage extends AdminPage {
             $stmt = $this->db->prepare("UPDATE mail_client_emails SET is_read = 1 WHERE id IN ({$placeholders})");
             $stmt->execute($ids);
             
+            // Очищаємо кеш статистики
+            $this->clearFolderStatsCache();
+            
             echo json_encode(['success' => true, 'updated' => count($ids)], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             error_log("Error marking as read: " . $e->getMessage());
@@ -450,6 +502,10 @@ class MailClientAdminPage extends AdminPage {
         try {
             $stmt = $this->db->prepare("UPDATE mail_client_emails SET is_read = 0 WHERE id = ?");
             $stmt->execute([$id]);
+            
+            // Очищаємо кеш статистики
+            $this->clearFolderStatsCache();
+            
             echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'error' => 'Помилка'], JSON_UNESCAPED_UNICODE);
@@ -548,6 +604,10 @@ class MailClientAdminPage extends AdminPage {
         try {
             $stmt = $this->db->prepare("UPDATE mail_client_emails SET folder = ? WHERE id = ?");
             $stmt->execute([$folder, $id]);
+            
+            // Очищаємо кеш статистики
+            $this->clearFolderStatsCache();
+            
             echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'error' => 'Помилка'], JSON_UNESCAPED_UNICODE);
@@ -564,14 +624,15 @@ class MailClientAdminPage extends AdminPage {
             exit;
         }
         
-        if (!$this->mailModule || !$this->db) {
+        $mailModule = $this->getMailModule();
+        if (!$mailModule || !$this->db) {
             echo json_encode(['success' => false, 'error' => 'Модуль пошти не завантажено'], JSON_UNESCAPED_UNICODE);
             exit;
         }
         
         try {
             // Отримуємо листи через POP3
-            $result = $this->mailModule->receiveEmails(50);
+            $result = $mailModule->receiveEmails(50);
             
             if ($result['success'] && !empty($result['emails'])) {
                 $imported = 0;
@@ -625,6 +686,11 @@ class MailClientAdminPage extends AdminPage {
                     }
                 }
                 
+                // Очищаємо кеш статистики після імпорту
+                if ($imported > 0) {
+                    $this->clearFolderStatsCache();
+                }
+                
                 echo json_encode([
                     'success' => true,
                     'message' => "Отримано {$imported} нових листів",
@@ -653,6 +719,19 @@ class MailClientAdminPage extends AdminPage {
         echo json_encode([
             'success' => true,
             'folders' => $folders,
+            'stats' => $stats
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    
+    /**
+     * AJAX: Отримати статистику папок
+     */
+    private function ajaxGetFolderStats() {
+        $stats = $this->getFolderStats();
+        
+        echo json_encode([
+            'success' => true,
             'stats' => $stats
         ], JSON_UNESCAPED_UNICODE);
         exit;

@@ -11,12 +11,13 @@ declare(strict_types=1);
 
 class MailModule extends BaseModule {
     private $settings = [];
+    private $settingsLoaded = false;
     
     /**
      * Ініціалізація модуля
      */
     protected function init(): void {
-        $this->loadSettings();
+        // НЕ завантажуємо налаштування при ініціалізації - тільки коли потрібно (lazy loading)
     }
     
     /**
@@ -102,12 +103,36 @@ class MailModule extends BaseModule {
     }
     
     /**
-     * Завантаження налаштувань
+     * Завантаження налаштувань (lazy loading з кешуванням)
      */
     private function loadSettings(): void {
-        $db = $this->getDB();
-        if (!$db) {
+        if ($this->settingsLoaded) {
+            return; // Вже завантажені
+        }
+        
+        // Спробуємо завантажити з кешу
+        if (function_exists('cache_remember')) {
+            $this->settings = cache_remember('mail_module_settings', function() {
+                return $this->fetchSettings();
+            }, 3600);
+            $this->settingsLoaded = true;
             return;
+        }
+        
+        // Якщо кеш недоступний, завантажуємо напряму
+        $this->settings = $this->fetchSettings();
+        $this->settingsLoaded = true;
+    }
+    
+    /**
+     * Отримання налаштувань з БД
+     */
+    private function fetchSettings(): array {
+        $db = $this->getDB();
+        $settings = [];
+        
+        if (!$db) {
+            return $this->getDefaultSettings();
         }
         
         try {
@@ -116,14 +141,20 @@ class MailModule extends BaseModule {
             
             foreach ($settingsData as $setting) {
                 $key = str_replace('mail_', '', $setting['setting_key']);
-                $this->settings[$key] = $setting['setting_value'];
+                $settings[$key] = $setting['setting_value'];
             }
         } catch (Exception $e) {
             error_log("Mail module: Failed to load settings: " . $e->getMessage());
         }
         
-        // Значення за замовчуванням
-        $defaults = [
+        return array_merge($this->getDefaultSettings(), $settings);
+    }
+    
+    /**
+     * Значення за замовчуванням
+     */
+    private function getDefaultSettings(): array {
+        return [
             'smtp_host' => '',
             'smtp_port' => '587',
             'smtp_encryption' => 'tls',
@@ -143,8 +174,6 @@ class MailModule extends BaseModule {
             'from_name' => '',
             'domain_mx' => 'mx.services'
         ];
-        
-        $this->settings = array_merge($defaults, $this->settings);
     }
     
     /**
@@ -153,6 +182,7 @@ class MailModule extends BaseModule {
      * @return array
      */
     public function getSettings(): array {
+        $this->loadSettings(); // Завантажуємо якщо ще не завантажені
         return $this->settings;
     }
     
@@ -182,8 +212,13 @@ class MailModule extends BaseModule {
             }
             
             $db->commit();
-            $this->loadSettings(); // Перезавантажуємо налаштування
-            cache_forget('site_settings');
+            
+            // Очищаємо кеш та перезавантажуємо налаштування
+            if (function_exists('cache_forget')) {
+                cache_forget('mail_module_settings');
+            }
+            $this->settingsLoaded = false;
+            $this->loadSettings();
             
             return true;
         } catch (Exception $e) {
@@ -205,6 +240,8 @@ class MailModule extends BaseModule {
      * @return bool
      */
     public function sendEmail(string $to, string $subject, string $body, array $options = []): bool {
+        $this->loadSettings(); // Завантажуємо налаштування якщо потрібно
+        
         // Використовуємо налаштування модуля
         $smtpHost = $this->settings['smtp_host'] ?? '';
         $smtpPort = (int)($this->settings['smtp_port'] ?? 587);
@@ -449,6 +486,8 @@ class MailModule extends BaseModule {
      * @return array
      */
     public function testSmtpConnection(): array {
+        $this->loadSettings(); // Завантажуємо налаштування якщо потрібно
+        
         $host = $this->settings['smtp_host'] ?? '';
         $port = (int)($this->settings['smtp_port'] ?? 587);
         $encryption = $this->settings['smtp_encryption'] ?? 'tls';
@@ -528,6 +567,8 @@ class MailModule extends BaseModule {
      * @return array
      */
     public function receiveEmails(int $limit = 10): array {
+        $this->loadSettings(); // Завантажуємо налаштування якщо потрібно
+        
         $host = $this->settings['pop3_host'] ?? '';
         $port = (int)($this->settings['pop3_port'] ?? 995);
         $encryption = $this->settings['pop3_encryption'] ?? 'ssl';
@@ -772,6 +813,8 @@ class MailModule extends BaseModule {
      * @return array
      */
     public function testPop3Connection(): array {
+        $this->loadSettings(); // Завантажуємо налаштування якщо потрібно
+        
         $host = $this->settings['pop3_host'] ?? '';
         $port = (int)($this->settings['pop3_port'] ?? 995);
         $encryption = $this->settings['pop3_encryption'] ?? 'ssl';
@@ -821,6 +864,8 @@ class MailModule extends BaseModule {
      * @return array
      */
     public function testImapConnection(): array {
+        $this->loadSettings(); // Завантажуємо налаштування якщо потрібно
+        
         $host = $this->settings['imap_host'] ?? '';
         $port = (int)($this->settings['imap_port'] ?? 993);
         $encryption = $this->settings['imap_encryption'] ?? 'ssl';

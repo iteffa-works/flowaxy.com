@@ -14,37 +14,20 @@ const MailClient = {
         this.setupEventListeners();
         this.loadFolder('inbox');
         
-        // Автоматичне оновлення кожні 5 хвилин
+        // Завантажуємо статистику папок через AJAX (не блокуємо завантаження)
+        this.updateFolderStats();
+        
+        // Автоматичне оновлення кожні 10 хвилин (збільшено з 5 для зменшення навантаження)
         setInterval(() => {
             if (this.currentFolder === 'inbox' && !this.isLoading) {
                 this.loadFolder('inbox', true);
             }
-        }, 300000);
+        }, 600000);
         
-        // Автоматична спроба отримати пошту при першому відкритті, якщо папка порожня
-        setTimeout(() => {
-            if (this.currentFolder === 'inbox') {
-                this.checkAndReceiveEmails();
-            }
-        }, 1000);
+        // НЕ завантажуємо пошту автоматично - тільки по кнопці або запиту користувача
     },
     
-    checkAndReceiveEmails: async function() {
-        try {
-            const baseUrl = window.location.href.split('?')[0];
-            const response = await fetch(`${baseUrl}?action=get_emails&folder=inbox&page=1`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            
-            const data = await response.json();
-            if (data.success && data.emails.length === 0) {
-                // Папка порожня, спробуємо отримати пошту
-                await this.receiveEmails(true);
-            }
-        } catch (error) {
-            console.error('Error checking emails:', error);
-        }
-    },
+    // Видалено автоматичну перевірку - тільки по запиту користувача
     
     setupEventListeners: function() {
         // Форма відправки листа
@@ -681,7 +664,7 @@ const MailClient = {
     updateFolderStats: async function() {
         try {
             const baseUrl = window.location.href.split('?')[0];
-            const response = await fetch(`${baseUrl}?action=get_folders`, {
+            const response = await fetch(`${baseUrl}?action=get_folder_stats`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             

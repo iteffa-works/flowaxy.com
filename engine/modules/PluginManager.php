@@ -20,7 +20,7 @@ class PluginManager extends BaseModule {
      */
     protected function init(): void {
         $this->pluginsDir = dirname(__DIR__, 2) . '/plugins/';
-        $this->loadPlugins();
+        // НЕ завантажуємо плагіни при ініціалізації - тільки коли потрібно (lazy loading)
     }
     
     /**
@@ -63,38 +63,134 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Ручна ініціалізація плагінів
+     * Ручна ініціалізація плагінів (викликається тільки один раз)
      */
     public function initializePlugins(): void {
-        foreach ($this->plugins as $plugin) {
+        static $initialized = false;
+        
+        if ($initialized) {
+            return; // Вже ініціалізовано
+        }
+        
+        // Завантажуємо плагіни якщо ще не завантажені
+        $this->loadPlugins('handle_early_request');
+        
+        // Ініціалізуємо тільки ще не ініціалізовані плагіни
+        foreach ($this->plugins as $slug => $plugin) {
+            // Перевіряємо, чи плагін вже ініціалізований (через статичну змінну)
+            static $initializedPlugins = [];
+            if (isset($initializedPlugins[$slug])) {
+                continue;
+            }
+            
             if (method_exists($plugin, 'init')) {
                 try {
                     $plugin->init();
+                    $initializedPlugins[$slug] = true;
                 } catch (Exception $e) {
-                    error_log("Plugin init error: " . $e->getMessage());
+                    error_log("Plugin init error for {$slug}: " . $e->getMessage());
                 }
             }
         }
+        
+        $initialized = true;
     }
     
     /**
-     * Завантаження активних плагінів
+     * Завантаження активних плагінів (lazy loading)
+     * Завантажує тільки для конкретного хука, якщо потрібно
      */
-    private function loadPlugins(): void {
+    private function loadPlugins(string $forHook = null): void {
+        static $pluginsLoaded = false;
+        static $hooksChecked = [];
+        
+        // Якщо плагіни вже завантажені, не завантажуємо знову
+        if ($pluginsLoaded) {
+            return;
+        }
+        
+        // Якщо це не admin хуки, не завантажуємо плагіни
+        if ($forHook && !in_array($forHook, ['admin_menu', 'admin_register_routes', 'handle_early_request'])) {
+            return;
+        }
+        
+        // Перевіряємо, чи вже перевіряли цей хук
+        if ($forHook && isset($hooksChecked[$forHook])) {
+            return;
+        }
+        
         $db = $this->getDB();
         if (!$db) {
             return;
         }
         
         try {
-            $stmt = $db->query("SELECT * FROM plugins WHERE is_active = 1 ORDER BY name ASC");
-            $pluginData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Кешуємо список активних плагінів
+            $cacheKey = 'active_plugins_list';
+            $pluginData = null;
             
-            foreach ($pluginData as $plugin) {
-                $this->loadPlugin($plugin);
+            if (function_exists('cache_remember')) {
+                $pluginData = cache_remember($cacheKey, function() use ($db) {
+                    $stmt = $db->query("SELECT slug FROM plugins WHERE is_active = 1");
+                    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+                }, 300); // Кеш на 5 хвилин
+            } else {
+                $stmt = $db->query("SELECT slug FROM plugins WHERE is_active = 1");
+                $pluginData = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            }
+            
+            // Завантажуємо плагіни тільки якщо вони ще не завантажені
+            foreach ($pluginData as $slug) {
+                if (!isset($this->plugins[$slug])) {
+                    $this->loadPluginFull($slug);
+                }
+            }
+            
+            $pluginsLoaded = true;
+            if ($forHook) {
+                $hooksChecked[$forHook] = true;
             }
         } catch (Exception $e) {
             error_log("Error loading plugins: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Завантаження повних даних плагіна (з кешуванням метаданих)
+     */
+    private function loadPluginFull(string $slug): void {
+        // Перевіряємо, чи плагін вже завантажений
+        if (isset($this->plugins[$slug])) {
+            return;
+        }
+        
+        $db = $this->getDB();
+        if (!$db) {
+            return;
+        }
+        
+        try {
+            // Кешуємо метадані плагіна
+            $cacheKey = 'plugin_data_' . $slug;
+            $pluginData = null;
+            
+            if (function_exists('cache_remember')) {
+                $pluginData = cache_remember($cacheKey, function() use ($db, $slug) {
+                    $stmt = $db->prepare("SELECT * FROM plugins WHERE slug = ? AND is_active = 1");
+                    $stmt->execute([$slug]);
+                    return $stmt->fetch(PDO::FETCH_ASSOC);
+                }, 300); // Кеш на 5 хвилин
+            } else {
+                $stmt = $db->prepare("SELECT * FROM plugins WHERE slug = ? AND is_active = 1");
+                $stmt->execute([$slug]);
+                $pluginData = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            
+            if ($pluginData) {
+                $this->loadPlugin($pluginData);
+            }
+        } catch (Exception $e) {
+            error_log("Error loading plugin full data for {$slug}: " . $e->getMessage());
         }
     }
     
@@ -111,11 +207,16 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Завантаження конкретного плагіна
+     * Завантаження конкретного плагіна (без виклику init - він викликається окремо)
      */
     private function loadPlugin(array $pluginData): void {
         $slug = $pluginData['slug'] ?? '';
         if (empty($slug)) {
+            return;
+        }
+        
+        // Перевіряємо, чи плагін вже завантажений
+        if (isset($this->plugins[$slug])) {
             return;
         }
         
@@ -133,14 +234,8 @@ class PluginManager extends BaseModule {
                 $plugin = new $className();
                 $this->plugins[$slug] = $plugin;
                 
-                // Ініціалізуємо плагін, щоб зареєструвати хуки
-                if (method_exists($plugin, 'init')) {
-                    try {
-                        $plugin->init();
-                    } catch (Exception $e) {
-                        error_log("Plugin init error for {$slug}: " . $e->getMessage());
-                    }
-                }
+                // НЕ викликаємо init() тут - він викликається окремо через initializePlugins()
+                // Це дозволяє контролювати, коли саме ініціалізувати плагіни
             } else {
                 error_log("Plugin class {$className} not found for plugin: {$slug}");
             }
@@ -217,15 +312,30 @@ class PluginManager extends BaseModule {
             return $data;
         }
         
-        // Для admin_menu та admin_register_routes завжди завантажуємо модулі ДО перевірки хуків
-        // Це гарантує, що модулі зареєструють свої хуки незалежно від порядку завантаження плагінів
+        // Для admin_menu та admin_register_routes завантажуємо модулі тільки якщо потрібно
+        // НЕ завантажуємо всі модулі при кожному виклику
         if (($hookName === 'admin_menu' || $hookName === 'admin_register_routes') && class_exists('ModuleLoader')) {
-            $this->loadAdminModules(true);
+            static $adminModulesChecked = false;
+            if (!$adminModulesChecked) {
+                $this->loadAdminModules(false); // Не форсуємо завантаження всіх
+                $adminModulesChecked = true;
+            }
         }
         
-        // Перевіряємо наявність хуків після завантаження модулів
+        // Завантажуємо плагіни тільки для admin хуків і тільки один раз
         if (!isset($this->hooks[$hookName])) {
-            return $data;
+            // Якщо це admin хуки, завантажуємо плагіни щоб вони могли зареєструвати хуки
+            if ($hookName === 'admin_menu' || $hookName === 'admin_register_routes' || $hookName === 'handle_early_request') {
+                $this->loadPlugins($hookName);
+                // Ініціалізуємо плагіни тільки один раз
+                $this->initializePlugins();
+                // Перевіряємо знову після завантаження
+                if (!isset($this->hooks[$hookName])) {
+                    return $data;
+                }
+            } else {
+                return $data;
+            }
         }
         
         // Визначаємо тип хука: об'єктні хуки (admin_register_routes) vs дані (admin_menu)
@@ -290,24 +400,35 @@ class PluginManager extends BaseModule {
         }
         
         // Завантажуємо тільки модулі, які реєструють хуки для адмінки
-        $modulesDir = dirname(__DIR__) . '/modules';
-        $modules = glob($modulesDir . '/*.php');
+        // Кешуємо список модулів щоб не виконувати glob при кожному виклику
+        static $modulesList = null;
         
-        if ($modules !== false) {
-            foreach ($modules as $moduleFile) {
-                $moduleName = basename($moduleFile, '.php');
-                
-                // Пропускаємо службові файли
-                if ($moduleName === 'loader' || 
-                    $moduleName === 'compatibility' || 
-                    $moduleName === 'PluginManager') {
-                    continue;
+        if ($modulesList === null) {
+            $modulesDir = dirname(__DIR__) . '/modules';
+            $modules = glob($modulesDir . '/*.php');
+            $modulesList = [];
+            
+            if ($modules !== false) {
+                foreach ($modules as $moduleFile) {
+                    $moduleName = basename($moduleFile, '.php');
+                    
+                    // Пропускаємо службові файли
+                    if ($moduleName === 'loader' || 
+                        $moduleName === 'compatibility' || 
+                        $moduleName === 'PluginManager') {
+                        continue;
+                    }
+                    
+                    $modulesList[] = $moduleName;
                 }
-                
-                // Завантажуємо модуль, якщо він ще не завантажений
-                if (!ModuleLoader::isModuleLoaded($moduleName)) {
-                    ModuleLoader::loadModule($moduleName);
-                }
+            }
+        }
+        
+        // Завантажуємо модулі з кешованого списку
+        foreach ($modulesList as $moduleName) {
+            // Завантажуємо модуль, якщо він ще не завантажений
+            if (!ModuleLoader::isModuleLoaded($moduleName)) {
+                ModuleLoader::loadModule($moduleName);
             }
         }
         
@@ -443,12 +564,25 @@ class PluginManager extends BaseModule {
             return 0;
         }
         
+        // Создаем таблицу для отслеживания удаленных плагинов, если её нет
+        $this->ensureDeletedPluginsTable();
+        
         foreach ($allPlugins as $slug => $config) {
             try {
+                // Проверяем, не был ли плагин удален пользователем
+                $deletedStmt = $db->prepare("SELECT id FROM deleted_plugins WHERE slug = ?");
+                $deletedStmt->execute([$slug]);
+                if ($deletedStmt->fetch()) {
+                    // Плагин был удален пользователем, пропускаем его
+                    continue;
+                }
+                
+                // Проверяем, установлен ли плагин
                 $stmt = $db->prepare("SELECT id FROM plugins WHERE slug = ?");
                 $stmt->execute([$slug]);
                 
                 if (!$stmt->fetch()) {
+                    // Плагин не установлен и не был удален - устанавливаем
                     if ($this->installPlugin($slug)) {
                         $installedCount++;
                     }
@@ -459,6 +593,29 @@ class PluginManager extends BaseModule {
         }
         
         return $installedCount;
+    }
+    
+    /**
+     * Создание таблицы для отслеживания удаленных плагинов
+     */
+    private function ensureDeletedPluginsTable(): void {
+        $db = $this->getDB();
+        if (!$db) {
+            return;
+        }
+        
+        try {
+            $db->exec("
+                CREATE TABLE IF NOT EXISTS deleted_plugins (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    slug VARCHAR(100) UNIQUE NOT NULL,
+                    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_slug (slug)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+        } catch (Exception $e) {
+            error_log("Error creating deleted_plugins table: " . $e->getMessage());
+        }
     }
     
     /**
@@ -529,7 +686,13 @@ class PluginManager extends BaseModule {
                 $config['version'] ?? '1.0.0',
                 $config['author'] ?? ''
             ])) {
-                cache_forget('active_plugins');
+                // Очищаємо кеш
+                if (function_exists('cache_forget')) {
+                    cache_forget('active_plugins');
+                    cache_forget('active_plugins_hash');
+                }
+                $this->clearMenuCache();
+                
                 // Логируем установку плагина
                 doHook('plugin_installed', $pluginSlug);
                 return true;
@@ -543,7 +706,8 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Видалення плагіна
+     * Видалення плагіна (тільки записи з БД, файли не видаляються)
+     * Можна видалити тільки якщо плагін деактивований
      */
     public function uninstallPlugin(string $pluginSlug): bool {
         try {
@@ -561,19 +725,43 @@ class PluginManager extends BaseModule {
                 return false;
             }
             
-            // Викликаємо метод видалення плагіна
+            // Перевіряємо, чи плагін деактивований
+            if (!empty($pluginData['is_active']) && $pluginData['is_active'] == 1) {
+                // Плагін активний, спочатку потрібно деактивувати
+                return false;
+            }
+            
+            // Викликаємо метод видалення плагіна (якщо він завантажений)
             $plugin = $this->getPlugin($pluginSlug);
             if ($plugin && method_exists($plugin, 'uninstall')) {
                 $plugin->uninstall();
             }
             
-            // Деактивуємо плагін
-            $this->deactivatePlugin($pluginSlug);
-            
-            // Видаляємо плагін з бази даних
+            // Видаляємо плагін з бази даних (тільки записи, файли залишаються)
             $stmt = $db->prepare("DELETE FROM plugins WHERE slug = ?");
             if ($stmt->execute([$pluginSlug])) {
-                cache_forget('active_plugins');
+                // Создаем таблицу для удаленных плагинов, если её нет
+                $this->ensureDeletedPluginsTable();
+                
+                // Добавляем плагин в список удаленных, чтобы он не переустанавливался автоматически
+                try {
+                    $deletedStmt = $db->prepare("INSERT IGNORE INTO deleted_plugins (slug) VALUES (?)");
+                    $deletedStmt->execute([$pluginSlug]);
+                } catch (Exception $e) {
+                    error_log("Error adding to deleted_plugins: " . $e->getMessage());
+                }
+                
+                // Очищаємо кеш ПЕРЕД clearMenuCache, чтобы хеш пересчитался правильно
+                if (function_exists('cache_forget')) {
+                    cache_forget('active_plugins');
+                    cache_forget('active_plugins_hash');
+                    cache_forget('active_plugins_list');
+                    cache_forget('plugin_data_' . $pluginSlug);
+                }
+                
+                // Очищаємо ВСЕ варианты кеша меню (включая файловый)
+                $this->clearAllMenuCache();
+                
                 // Логуємо видалення плагіна
                 doHook('plugin_uninstalled', $pluginSlug);
                 return true;
@@ -601,8 +789,13 @@ class PluginManager extends BaseModule {
                 return false;
             }
             
-            cache_forget('active_plugins');
-            cache_forget('active_plugins_hash'); // Очищаємо хеш плагінів при активації
+            // Очищаємо кеш перед активацией
+            if (function_exists('cache_forget')) {
+                cache_forget('active_plugins');
+                cache_forget('active_plugins_hash');
+                cache_forget('active_plugins_list');
+                cache_forget('plugin_data_' . $pluginSlug);
+            }
             
             // Завантажуємо та активуємо плагін
             $plugin = $this->getPluginInstance($pluginSlug);
@@ -614,10 +807,12 @@ class PluginManager extends BaseModule {
                 // init() вже викликається в loadPlugin(), не потрібно викликати повторно
             }
             
-            // Очищаємо кеш меню після активації плагіна
-            $this->clearMenuCache();
+            // Очищаємо кеш конкретного плагина
+            $this->clearPluginCache($pluginSlug);
             
-            // Логуємо активацію плагіна
+            // Очищаємо кеш меню після активації плагіна (включая файловый кеш)
+            $this->clearAllMenuCache();
+            
             doHook('plugin_activated', $pluginSlug);
             
             return true;
@@ -648,14 +843,25 @@ class PluginManager extends BaseModule {
                 return false;
             }
             
-            cache_forget('active_plugins');
-            cache_forget('active_plugins_hash'); // Очищаємо хеш плагінів при деактивації
-            unset($this->plugins[$pluginSlug]);
+            // Очищаємо кеш перед деактивацией
+            if (function_exists('cache_forget')) {
+                cache_forget('active_plugins');
+                cache_forget('active_plugins_hash');
+                cache_forget('active_plugins_list');
+                cache_forget('plugin_data_' . $pluginSlug);
+            }
             
-            // Очищаємо кеш меню після зміни плагінів
-            $this->clearMenuCache();
+            // Видаляємо плагін з пам'яті
+            if (isset($this->plugins[$pluginSlug])) {
+                unset($this->plugins[$pluginSlug]);
+            }
             
-            // Логуємо деактивацію плагіна
+            // Очищаємо кеш конкретного плагина
+            $this->clearPluginCache($pluginSlug);
+            
+            // Очищаємо кеш меню після деактивації плагіна (включая файловый кеш)
+            $this->clearAllMenuCache();
+            
             doHook('plugin_deactivated', $pluginSlug);
             
             return true;
@@ -781,14 +987,21 @@ class PluginManager extends BaseModule {
      * Очищає всі можливі комбінації ключів кешу меню
      */
     private function clearMenuCache(): void {
+        // Сначала очищаем хеш плагинов, чтобы он пересчитался
+        if (function_exists('cache_forget')) {
+            cache_forget('active_plugins_hash');
+        }
+        
         $activePlugins = $this->getActivePlugins();
         $pluginsHash = md5(implode(',', array_keys($activePlugins)));
         
-        // Очищаємо всі можливі комбінації підтримки теми
+        // Очищаємо всі можливі комбінації підтримки теми з новим хешем
         for ($custom = 0; $custom <= 1; $custom++) {
             for ($nav = 0; $nav <= 1; $nav++) {
                 $key = 'admin_menu_items_' . $custom . '_' . $nav . '_' . $pluginsHash;
-                cache_forget($key);
+                if (function_exists('cache_forget')) {
+                    cache_forget($key);
+                }
             }
         }
         
@@ -802,11 +1015,38 @@ class PluginManager extends BaseModule {
             'admin_menu_items_1_1'
         ];
         foreach ($oldPatterns as $pattern) {
-            cache_forget($pattern);
+            if (function_exists('cache_forget')) {
+                cache_forget($pattern);
+            }
         }
         
-        // Очищаємо кеш хешу плагінів
-        cache_forget('active_plugins_hash');
+        // Очищаємо файловый кеш меню (на случай если используется файловый кеш)
+        $this->clearMenuFileCache();
+    }
+    
+    /**
+     * Очищення файлового кешу меню
+     */
+    private function clearMenuFileCache(): void {
+        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
+        
+        if (is_dir($cacheDir)) {
+            // Удаляем все файлы кеша меню
+            $files = glob($cacheDir . 'admin_menu_items_*.cache');
+            if ($files !== false) {
+                foreach ($files as $file) {
+                    @unlink($file);
+                }
+            }
+            
+            // Также удаляем файлы с хешем плагинов
+            $hashFiles = glob($cacheDir . 'active_plugins_hash*.cache');
+            if ($hashFiles !== false) {
+                foreach ($hashFiles as $file) {
+                    @unlink($file);
+                }
+            }
+        }
     }
     
     /**
@@ -814,8 +1054,12 @@ class PluginManager extends BaseModule {
      * Використовується при видаленні модулів або зміні структури меню
      */
     public function clearAllMenuCache(): void {
-        $cache = cache();
-        $cacheDir = CACHE_DIR ?? dirname(__DIR__, 2) . '/storage/cache/';
+        // Очищаємо хеш плагинов сначала
+        if (function_exists('cache_forget')) {
+            cache_forget('active_plugins_hash');
+        }
+        
+        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
         
         // Видаляємо всі файли кешу, що починаються з admin_menu_items_
         if (is_dir($cacheDir)) {
@@ -825,10 +1069,70 @@ class PluginManager extends BaseModule {
                     @unlink($file);
                 }
             }
+            
+            // Также удаляем файлы с хешем плагинов
+            $hashFiles = glob($cacheDir . 'active_plugins_hash*.cache');
+            if ($hashFiles !== false) {
+                foreach ($hashFiles as $file) {
+                    @unlink($file);
+                }
+            }
         }
         
-        // Очищаємо кеш хешу плагінів
-        cache_forget('active_plugins_hash');
+        // Очищаємо все возможные варианты кеша меню через cache_forget
+        // Очищаем старые ключи без хеша
+        $oldPatterns = [
+            'admin_menu_items_0',
+            'admin_menu_items_1',
+            'admin_menu_items_0_0',
+            'admin_menu_items_0_1',
+            'admin_menu_items_1_0',
+            'admin_menu_items_1_1'
+        ];
+        foreach ($oldPatterns as $pattern) {
+            if (function_exists('cache_forget')) {
+                cache_forget($pattern);
+            }
+        }
+        
+        // Также вызываем clearMenuFileCache для полной очистки
+        $this->clearMenuFileCache();
+    }
+    
+    /**
+     * Очищення кешу конкретного плагіна
+     * 
+     * @param string $pluginSlug Slug плагіна
+     */
+    private function clearPluginCache(string $pluginSlug): void {
+        if (empty($pluginSlug)) {
+            return;
+        }
+        
+        // Очищаємо кеш даних плагіна
+        if (function_exists('cache_forget')) {
+            cache_forget('plugin_data_' . $pluginSlug);
+        }
+        
+        // Очищаємо файловый кеш плагіна (если есть)
+        $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
+        if (is_dir($cacheDir)) {
+            // Удаляем файлы кеша плагина
+            $pluginCacheFiles = glob($cacheDir . 'plugin_' . $pluginSlug . '_*.cache');
+            if ($pluginCacheFiles !== false) {
+                foreach ($pluginCacheFiles as $file) {
+                    @unlink($file);
+                }
+            }
+            
+            // Также удаляем файлы с префиксом плагина
+            $pluginCacheFiles2 = glob($cacheDir . $pluginSlug . '_*.cache');
+            if ($pluginCacheFiles2 !== false) {
+                foreach ($pluginCacheFiles2 as $file) {
+                    @unlink($file);
+                }
+            }
+        }
     }
 }
 

@@ -21,9 +21,15 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-// Ініціалізація плагінів
+// НЕ ініціалізуємо плагіни тут - вони завантажуються лениво через хуки
+// Ініціалізація плагінів відбувається автоматично при виклику хуків
 try {
-    pluginManager()->initializePlugins();
+    // Тільки перевіряємо доступність PluginManager
+    if (!function_exists('pluginManager')) {
+        throw new Exception('PluginManager не доступний');
+    }
+    
+    // НЕ викликаємо initializePlugins() тут - це робиться автоматично в doHook()
 } catch (Exception $e) {
     if (strpos($e->getMessage(), 'database') !== false || strpos($e->getMessage(), 'PDO') !== false) {
         showDatabaseError([

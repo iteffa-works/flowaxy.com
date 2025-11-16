@@ -173,11 +173,21 @@
                                 </div>
                                 
                                 <?php if ($plugin['is_installed']): ?>
-                                    <button class="btn btn-outline-danger btn-sm" 
-                                            onclick="uninstallPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')"
-                                            title="Видалити плагін">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <?php if ($plugin['is_active']): ?>
+                                        <!-- Плагин активен - кнопка неактивна -->
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                disabled
+                                                title="Спочатку деактивуйте плагін перед видаленням">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <!-- Плагин неактивен - можно удалить -->
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                onclick="uninstallPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')"
+                                                title="Видалити плагін">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>

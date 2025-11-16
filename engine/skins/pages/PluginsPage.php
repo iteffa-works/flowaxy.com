@@ -21,21 +21,28 @@ class PluginsPage extends AdminPage {
     }
     
     public function handle() {
-        // Автоматическое обнаружение новых плагинов при загрузке страницы
-        if (empty($_POST)) {
+        // Обработка действий
+        if ($_POST) {
+            $this->handleAction();
+        }
+        
+        // Автоматическое обнаружение новых плагинов ТОЛЬКО по запросу пользователя
+        // (через параметр ?discover=1 или через POST)
+        if (isset($_GET['discover']) && $_GET['discover'] == '1') {
             try {
                 $discovered = pluginManager()->autoDiscoverPlugins();
                 if ($discovered > 0) {
                     $this->setMessage("Обнаружено и установлено новых плагинов: {$discovered}", 'success');
+                } else {
+                    $this->setMessage("Новых плагинов не обнаружено", 'info');
                 }
+                // Перенаправляем без параметра discover
+                Response::redirectStatic(adminUrl('plugins'));
+                return;
             } catch (Exception $e) {
                 error_log("Auto-discover plugins error: " . $e->getMessage());
+                $this->setMessage("Ошибка при обнаружении плагинов: " . $e->getMessage(), 'danger');
             }
-        }
-        
-        // Обработка действий
-        if ($_POST) {
-            $this->handleAction();
         }
         
         // Получение списка плагинов
@@ -78,8 +85,24 @@ class PluginsPage extends AdminPage {
                     break;
                     
                 case 'uninstall':
-                    pluginManager()->uninstallPlugin($pluginSlug);
-                    $this->setMessage('Плагін видалено', 'success');
+                    // Проверяем, деактивирован ли плагин
+                    $db = $this->db;
+                    if ($db) {
+                        $stmt = $db->prepare("SELECT is_active FROM plugins WHERE slug = ?");
+                        $stmt->execute([$pluginSlug]);
+                        $plugin = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($plugin && !empty($plugin['is_active']) && $plugin['is_active'] == 1) {
+                            $this->setMessage('Спочатку деактивуйте плагін перед видаленням', 'warning');
+                            break;
+                        }
+                    }
+                    
+                    if (pluginManager()->uninstallPlugin($pluginSlug)) {
+                        $this->setMessage('Плагін видалено', 'success');
+                    } else {
+                        $this->setMessage('Помилка видалення плагіна. Переконайтеся, що плагін деактивований', 'danger');
+                    }
                     break;
             }
         } catch (Exception $e) {
