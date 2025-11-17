@@ -144,23 +144,37 @@ class Upload {
             ];
         }
         
-        // Проверка MIME типа
-        if (!empty($this->allowedMimeTypes) && !in_array($mimeType, $this->allowedMimeTypes, true)) {
-            return [
-                'success' => false,
-                'file' => '',
-                'error' => 'Тип файла не разрешен'
-            ];
-        }
-        
-        // Дополнительная проверка MIME типа по содержимому файла
-        $realMimeType = $this->getRealMimeType($file['tmp_name']);
-        if (!empty($this->allowedMimeTypes) && !in_array($realMimeType, $this->allowedMimeTypes, true)) {
-            return [
-                'success' => false,
-                'file' => '',
-                'error' => 'Тип файла не соответствует содержимому'
-            ];
+        // Проверка MIME типа (только если расширение не прошло проверку или MIME типы установлены)
+        // Если расширение разрешено, но MIME тип не совпадает - это предупреждение, но не ошибка
+        // Но если MIME типы явно установлены, проверяем их строго
+        if (!empty($this->allowedMimeTypes)) {
+            $mimeTypeAllowed = in_array($mimeType, $this->allowedMimeTypes, true);
+            
+            // Дополнительная проверка MIME типа по содержимому файла
+            $realMimeType = $this->getRealMimeType($file['tmp_name']);
+            $realMimeTypeAllowed = in_array($realMimeType, $this->allowedMimeTypes, true);
+            
+            // Если оба MIME типи не дозволені, але розширення дозволене - це попередження
+            // Але якщо розширення не дозволене, то це помилка
+            if (!$mimeTypeAllowed && !$realMimeTypeAllowed) {
+                // Перевіряємо, чи розширення дозволене
+                $extensionAllowed = !empty($this->allowedExtensions) && in_array($extension, $this->allowedExtensions, true);
+                
+                if (!$extensionAllowed) {
+                    // Розширення не дозволене - це помилка
+                    $allowedTypes = implode(', ', array_slice($this->allowedMimeTypes, 0, 5));
+                    if (count($this->allowedMimeTypes) > 5) {
+                        $allowedTypes .= '...';
+                    }
+                    return [
+                        'success' => false,
+                        'file' => '',
+                        'error' => 'Тип файла не разрешен. Загруженный тип: ' . $mimeType . '. Разрешенные типы: ' . $allowedTypes
+                    ];
+                }
+                // Якщо розширення дозволене, але MIME тип не співпадає - це попередження, але дозволяємо
+                // (може бути помилка браузера в визначенні MIME типу)
+            }
         }
         
         // Генерируем имя файла
