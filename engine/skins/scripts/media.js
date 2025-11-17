@@ -15,8 +15,37 @@
     
     // Глобальний стан
     const state = {
-        filesToUpload: []
+        filesToUpload: [],
+        filtersInitialized: false,
+        sortInitialized: false,
+        toolbarInitialized: false,
+        viewToggleInitialized: false,
+        searchTimeout: null,
+        currentPage: 1,
+        totalPages: 1,
+        isLoading: false,
+        hasMore: true
     };
+    
+    /**
+     * Показ повідомлення про кінець списку
+     */
+    function showEndMessage(mediaGrid) {
+        if (!mediaGrid) return;
+        
+        // Перевіряємо, чи вже є повідомлення
+        let endMessage = document.getElementById('loadMoreEndMessage');
+        if (endMessage) {
+            return;
+        }
+        
+        // Створюємо повідомлення
+        endMessage = document.createElement('div');
+        endMessage.id = 'loadMoreEndMessage';
+        endMessage.className = 'load-more-end-message';
+        endMessage.innerHTML = '<div class="load-more-end-content"><i class="fas fa-check-circle"></i><span>Всі файли завантажено</span></div>';
+        mediaGrid.parentNode.appendChild(endMessage);
+    }
     
     /**
      * Ініціалізація при завантаженні DOM
@@ -28,6 +57,31 @@
         initDeleteButtons();
         initViewToggle();
         initDragAndDrop();
+        initToolbarButtons();
+        initSortSelect();
+        initMediaCheckboxes();
+        initFilters();
+        
+        // Ініціалізуємо стан пагінації при завантаженні
+        const mediaGrid = document.getElementById('mediaGrid');
+        if (mediaGrid) {
+            const totalPages = parseInt(mediaGrid.dataset.totalPages || '1');
+            const currentPage = parseInt(mediaGrid.dataset.currentPage || '1');
+            state.currentPage = currentPage;
+            state.totalPages = totalPages;
+            state.hasMore = currentPage < totalPages;
+            console.log('Initial pagination state:', { currentPage, totalPages, hasMore: state.hasMore });
+            
+            // Якщо файлів більше немає, показуємо повідомлення
+            if (!state.hasMore && totalPages > 0) {
+                showEndMessage(mediaGrid);
+            }
+        }
+        
+        // Невелика затримка для ініціалізації lazy loading після повного завантаження DOM
+        setTimeout(() => {
+            initLazyLoading();
+        }, 100);
     });
     
     /**
@@ -207,11 +261,33 @@
         }
         
         uploadBtn.disabled = false;
+        if (uploadProgress) {
+            uploadProgress.classList.add('d-none');
+        }
         
-        if (!hasError && uploaded === total) {
-            setTimeout(() => {
-                location.reload();
-            }, 500);
+        if (uploaded > 0) {
+            const uploadModal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+            if (uploadModal) {
+                uploadModal.hide();
+            }
+            resetUploadForm();
+            
+            if (typeof showNotification !== 'undefined') {
+                if (uploaded === total && !hasError) {
+                    showNotification(`Успішно завантажено ${uploaded} файл(ів)`, 'success');
+                } else {
+                    showNotification(`Завантажено ${uploaded} з ${total} файлів${hasError ? '. Деякі файли не вдалося завантажити.' : ''}`, hasError ? 'warning' : 'info');
+                }
+            }
+            
+            // Оновлюємо список через AJAX
+            loadMediaFiles();
+        } else if (hasError) {
+            if (typeof showNotification !== 'undefined') {
+                showNotification('Не вдалося завантажити файли', 'danger');
+            } else {
+                alert('Не вдалося завантажити файли');
+            }
         }
     }
     
@@ -269,7 +345,7 @@
      * Рендеринг перегляду медіафайлу
      */
     function renderMediaView(file) {
-        let html = '<div class="row">';
+        let html = '<div class="media-view-container">';
         
         // Медіа контент
         function toProtocolRelativeUrl(url) {
@@ -283,39 +359,87 @@
         
         const fileUrl = toProtocolRelativeUrl(file.file_url);
         
+        // Ліва частина - медіа контент
+        html += '<div class="media-view-preview">';
         if (file.media_type === 'image') {
-            html += `<div class="col-md-8"><img src="${escapeHtml(fileUrl)}" class="media-view-image img-fluid" alt="${escapeHtml(file.alt_text || file.title || '')}"></div>`;
+            html += `<div class="media-preview-wrapper"><img src="${escapeHtml(fileUrl)}" class="media-preview-content" alt="${escapeHtml(file.alt_text || file.title || '')}"></div>`;
         } else if (file.media_type === 'video') {
-            html += `<div class="col-md-8"><video src="${escapeHtml(fileUrl)}" class="media-view-image img-fluid" controls></video></div>`;
+            html += `<div class="media-preview-wrapper"><video src="${escapeHtml(fileUrl)}" class="media-preview-content" controls></video></div>`;
         } else if (file.media_type === 'audio') {
-            html += `<div class="col-md-8"><audio src="${escapeHtml(fileUrl)}" class="w-100" controls></audio></div>`;
+            html += `<div class="media-preview-wrapper audio-wrapper"><audio src="${escapeHtml(fileUrl)}" class="media-preview-content" controls></audio></div>`;
         } else {
-            html += `<div class="col-md-8"><div class="text-center p-5"><i class="fas fa-file fa-5x text-muted"></i><p class="mt-3">${escapeHtml(file.original_name)}</p></div></div>`;
+            html += `<div class="media-preview-wrapper"><div class="media-file-icon"><i class="fas fa-file fa-5x"></i><p class="mt-3">${escapeHtml(file.original_name)}</p></div></div>`;
+        }
+        html += '</div>';
+        
+        // Права частина - інформація про файл
+        html += '<div class="media-view-details">';
+        html += '<div class="media-details-header">';
+        html += '<h6 class="media-details-title">Деталі файлу</h6>';
+        html += '</div>';
+        
+        html += '<div class="media-details-content">';
+        html += '<div class="media-detail-item">';
+        html += '<div class="media-detail-label">Назва</div>';
+        html += `<div class="media-detail-value">${escapeHtml(file.title || file.original_name)}</div>`;
+        html += '</div>';
+        
+        if (file.description) {
+            html += '<div class="media-detail-item">';
+            html += '<div class="media-detail-label">Опис</div>';
+            html += `<div class="media-detail-value">${escapeHtml(file.description)}</div>`;
+            html += '</div>';
         }
         
-        // Інформація про файл
-        html += '<div class="col-md-4">';
-        html += '<table class="table media-info-table">';
-        html += `<tr><td>Назва:</td><td>${escapeHtml(file.title || file.original_name)}</td></tr>`;
-        if (file.description) {
-            html += `<tr><td>Опис:</td><td>${escapeHtml(file.description)}</td></tr>`;
-        }
         if (file.alt_text) {
-            html += `<tr><td>Alt текст:</td><td>${escapeHtml(file.alt_text)}</td></tr>`;
+            html += '<div class="media-detail-item">';
+            html += '<div class="media-detail-label">Alt текст</div>';
+            html += `<div class="media-detail-value">${escapeHtml(file.alt_text)}</div>`;
+            html += '</div>';
         }
+        
         if (file.width && file.height) {
-            html += `<tr><td>Розміри:</td><td>${file.width} × ${file.height} px</td></tr>`;
+            html += '<div class="media-detail-item">';
+            html += '<div class="media-detail-label">Розміри</div>';
+            html += `<div class="media-detail-value">${file.width} × ${file.height} px</div>`;
+            html += '</div>';
         }
-        html += `<tr><td>Розмір файлу:</td><td>${formatFileSize(file.file_size)}</td></tr>`;
-        html += `<tr><td>Тип:</td><td>${escapeHtml(file.mime_type)}</td></tr>`;
-        html += `<tr><td>Завантажено:</td><td>${new Date(file.uploaded_at).toLocaleString('uk-UA')}</td></tr>`;
-        html += `<tr><td>URL:</td><td><input type="text" class="form-control form-control-sm" value="${escapeHtml(fileUrl)}" readonly></td></tr>`;
-        html += '</table>';
-        html += '<div class="mt-3">';
-        html += `<button class="btn btn-primary btn-sm copy-url" data-url="${escapeHtml(fileUrl)}"><i class="fas fa-copy me-2"></i>Копіювати URL</button>`;
+        
+        html += '<div class="media-detail-item">';
+        html += '<div class="media-detail-label">Розмір файлу</div>';
+        html += `<div class="media-detail-value">${formatFileSize(file.file_size)}</div>`;
+        html += '</div>';
+        
+        html += '<div class="media-detail-item">';
+        html += '<div class="media-detail-label">Тип</div>';
+        html += `<div class="media-detail-value">${escapeHtml(file.mime_type)}</div>`;
+        html += '</div>';
+        
+        html += '<div class="media-detail-item">';
+        html += '<div class="media-detail-label">Завантажено</div>';
+        html += `<div class="media-detail-value">${new Date(file.uploaded_at).toLocaleString('uk-UA')}</div>`;
+        html += '</div>';
+        
+        html += '<div class="media-detail-item media-detail-url">';
+        html += '<div class="media-detail-label">URL</div>';
+        html += '<div class="media-url-input-group">';
+        html += `<input type="text" class="media-url-input" value="${escapeHtml(fileUrl)}" readonly>`;
+        html += `<button class="btn btn-copy-url copy-url" data-url="${escapeHtml(fileUrl)}" title="Копіювати URL">`;
+        html += '<i class="fas fa-copy"></i>';
+        html += '</button>';
         html += '</div>';
         html += '</div>';
+        
+        html += '</div>'; // media-details-content
+        
+        html += '<div class="media-details-footer">';
+        html += `<button class="btn btn-copy-url-full copy-url" data-url="${escapeHtml(fileUrl)}">`;
+        html += '<i class="fas fa-copy me-2"></i>Копіювати URL';
+        html += '</button>';
         html += '</div>';
+        
+        html += '</div>'; // media-view-details
+        html += '</div>'; // media-view-container
         
         return html;
     }
@@ -324,22 +448,60 @@
      * Ініціалізація кнопки копіювання URL
      */
     function initCopyUrlButton() {
-        const copyBtn = document.querySelector('.copy-url');
-        if (copyBtn) {
+        const copyBtns = document.querySelectorAll('.copy-url');
+        copyBtns.forEach(copyBtn => {
             copyBtn.addEventListener('click', async function() {
                 const url = this.dataset.url;
                 try {
                     await navigator.clipboard.writeText(url);
+                    
+                    // Показуємо успішне повідомлення
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification('URL скопійовано в буфер обміну', 'success', 3000);
+                    }
+                    
+                    // Оновлюємо іконку кнопки
                     const originalHtml = this.innerHTML;
-                    this.innerHTML = '<i class="fas fa-check me-2"></i>Скопійовано!';
+                    if (this.classList.contains('btn-copy-url-full')) {
+                        this.innerHTML = '<i class="fas fa-check me-2"></i>Скопійовано!';
+                    } else {
+                        this.innerHTML = '<i class="fas fa-check"></i>';
+                    }
+                    
+                    // Повертаємо оригінальний вигляд через 2 секунди
                     setTimeout(() => {
                         this.innerHTML = originalHtml;
                     }, 2000);
                 } catch (error) {
                     console.error('Copy error:', error);
+                    
+                    // Fallback для старих браузерів
+                    const urlInput = document.querySelector('.media-url-input');
+                    if (urlInput) {
+                        urlInput.select();
+                        urlInput.setSelectionRange(0, 99999);
+                        try {
+                            document.execCommand('copy');
+                            if (typeof showNotification !== 'undefined') {
+                                showNotification('URL скопійовано в буфер обміну', 'success', 3000);
+                            }
+                        } catch (e) {
+                            if (typeof showNotification !== 'undefined') {
+                                showNotification('Не вдалося скопіювати URL', 'danger', 3000);
+                            } else {
+                                alert('Не вдалося скопіювати URL');
+                            }
+                        }
+                    } else {
+                        if (typeof showNotification !== 'undefined') {
+                            showNotification('Не вдалося скопіювати URL', 'danger', 3000);
+                        } else {
+                            alert('Не вдалося скопіювати URL');
+                        }
+                    }
                 }
             });
-        }
+        });
     }
     
     /**
@@ -425,10 +587,24 @@
             const data = await response.json();
             
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                location.reload();
+                const editModalEl = document.getElementById('editModal');
+                if (editModalEl) {
+                    const editModal = bootstrap.Modal.getInstance(editModalEl);
+                    if (editModal) {
+                        editModal.hide();
+                    }
+                }
+                if (typeof showNotification !== 'undefined') {
+                    showNotification('Файл успішно оновлено', 'success');
+                }
+                // Оновлюємо список через AJAX
+                loadMediaFiles();
             } else {
-                alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
+                if (typeof showNotification !== 'undefined') {
+                    showNotification('Помилка збереження: ' + (data.error || 'Невідома помилка'), 'danger');
+                } else {
+                    alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
+                }
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalHtml;
             }
@@ -476,9 +652,17 @@
             const data = await response.json();
             
             if (data.success) {
-                location.reload();
+                if (typeof showNotification !== 'undefined') {
+                    showNotification('Файл успішно видалено', 'success');
+                }
+                // Оновлюємо список через AJAX
+                loadMediaFiles();
             } else {
-                alert('Помилка видалення: ' + (data.error || 'Невідома помилка'));
+                if (typeof showNotification !== 'undefined') {
+                    showNotification('Помилка видалення: ' + (data.error || 'Невідома помилка'), 'danger');
+                } else {
+                    alert('Помилка видалення: ' + (data.error || 'Невідома помилка'));
+                }
             }
         } catch (error) {
             console.error('Delete error:', error);
@@ -490,32 +674,40 @@
      * Перемикання вигляду (сітка/список)
      */
     function initViewToggle() {
-        const viewButtons = document.querySelectorAll('[data-view]');
-        const mediaGrid = document.getElementById('mediaGrid');
+        if (state.viewToggleInitialized) return;
+        state.viewToggleInitialized = true;
         
+        const mediaGrid = document.getElementById('mediaGrid');
         if (!mediaGrid) return;
         
-        viewButtons.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const view = this.dataset.view;
-                
-                viewButtons.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                if (view === 'list') {
-                    mediaGrid.classList.add('media-list-view');
-                    localStorage.setItem('mediaView', 'list');
-                } else {
-                    mediaGrid.classList.remove('media-list-view');
-                    localStorage.setItem('mediaView', 'grid');
-                }
-            });
+        // Використовуємо делегування подій
+        document.addEventListener('click', function(e) {
+            const viewBtn = e.target.closest('[data-view]');
+            if (!viewBtn) return;
+            
+            e.preventDefault();
+            const view = viewBtn.dataset.view;
+            const viewButtons = document.querySelectorAll('[data-view]');
+            
+            // Оновлюємо активну кнопку
+            viewButtons.forEach(b => b.classList.remove('active'));
+            viewBtn.classList.add('active');
+            
+            // Перемикаємо вигляд
+            if (view === 'list') {
+                mediaGrid.classList.add('media-list-view');
+                localStorage.setItem('mediaView', 'list');
+            } else {
+                mediaGrid.classList.remove('media-list-view');
+                localStorage.setItem('mediaView', 'grid');
+            }
         });
         
-        // Відновлення збереженого вигляду
+        // Відновлюємо збережений вигляд при завантаженні
         const savedView = localStorage.getItem('mediaView');
         if (savedView === 'list') {
             mediaGrid.classList.add('media-list-view');
+            const viewButtons = document.querySelectorAll('[data-view]');
             viewButtons.forEach(btn => {
                 if (btn.dataset.view === 'list') {
                     btn.classList.add('active');
@@ -602,6 +794,660 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    /**
+     * Ініціалізація кнопок панелі інструментів
+     */
+    function initToolbarButtons() {
+        if (state.toolbarInitialized) return;
+        state.toolbarInitialized = true;
+        
+        // Використовуємо делегування подій для всіх кнопок панелі інструментів
+        document.addEventListener('click', function(e) {
+            // Кнопка оновлення
+            if (e.target.closest('#refreshBtn')) {
+                e.preventDefault();
+                const btn = e.target.closest('#refreshBtn');
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.add('fa-spin');
+                }
+                loadMediaFiles();
+                setTimeout(() => {
+                    if (icon) {
+                        icon.classList.remove('fa-spin');
+                    }
+                }, 500);
+                return;
+            }
+            
+            // Кнопка вибрати все
+            if (e.target.closest('#selectAllBtn')) {
+                e.preventDefault();
+                const checkboxes = document.querySelectorAll('.media-checkbox:not(:checked)');
+                checkboxes.forEach(cb => {
+                    cb.checked = true;
+                    cb.dispatchEvent(new Event('change'));
+                });
+                return;
+            }
+            
+            // Кнопка скасувати вибір
+            if (e.target.closest('#deselectAllBtn')) {
+                e.preventDefault();
+                const checkboxes = document.querySelectorAll('.media-checkbox:checked');
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                    cb.dispatchEvent(new Event('change'));
+                });
+                return;
+            }
+            
+            // Кнопка масового видалення
+            if (e.target.closest('#bulkDeleteBtn')) {
+                e.preventDefault();
+                const selected = getSelectedMediaIds();
+                if (selected.length === 0) {
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification('Виберіть файли для видалення', 'warning');
+                    } else {
+                        alert('Виберіть файли для видалення');
+                    }
+                    return;
+                }
+                
+                if (!confirm(`Ви впевнені, що хочете видалити ${selected.length} файл(ів)?`)) {
+                    return;
+                }
+                
+                deleteSelectedFiles(selected);
+                return;
+            }
+        });
+    }
+    
+    /**
+     * Ініціалізація селекту сортування
+     */
+    function initSortSelect() {
+        if (state.sortInitialized) return;
+        state.sortInitialized = true;
+        
+        // Використовуємо делегування подій для динамічних елементів
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'sortSelect') {
+                const value = e.target.value;
+                // Розбиваємо значення: останнє підкреслення розділяє поле та напрямок
+                // Наприклад: "uploaded_at_desc" -> orderBy="uploaded_at", orderDir="DESC"
+                // "file_size_asc" -> orderBy="file_size", orderDir="ASC"
+                const lastUnderscore = value.lastIndexOf('_');
+                if (lastUnderscore === -1) {
+                    console.error('Invalid sort value:', value);
+                    return;
+                }
+                const orderBy = value.substring(0, lastUnderscore);
+                const orderDir = value.substring(lastUnderscore + 1).toUpperCase();
+                
+                // Перевіряємо валідність напрямку
+                if (orderDir !== 'ASC' && orderDir !== 'DESC') {
+                    console.error('Invalid sort direction:', orderDir);
+                    return;
+                }
+                
+                loadMediaFiles({
+                    order_by: orderBy,
+                    order_dir: orderDir
+                });
+            }
+        });
+    }
+    
+    /**
+     * Ініціалізація чекбоксів медіафайлів
+     */
+    function initMediaCheckboxes() {
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('media-checkbox')) {
+                updateBulkActionsVisibility();
+                updateCardSelection(e.target);
+            }
+        });
+        
+        // Початкова перевірка
+        updateBulkActionsVisibility();
+    }
+    
+    /**
+     * Оновлення видимості масових дій
+     */
+    function updateBulkActionsVisibility() {
+        const bulkActions = document.getElementById('bulkActions');
+        const selected = getSelectedMediaIds();
+        
+        if (bulkActions) {
+            if (selected.length > 0) {
+                bulkActions.style.display = 'flex';
+            } else {
+                bulkActions.style.display = 'none';
+            }
+        }
+    }
+    
+    /**
+     * Оновлення вигляду картки при виборі
+     */
+    function updateCardSelection(checkbox) {
+        const card = checkbox.closest('.media-card');
+        if (card) {
+            if (checkbox.checked) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+    }
+    
+    /**
+     * Отримання ID вибраних файлів
+     */
+    function getSelectedMediaIds() {
+        const checkboxes = document.querySelectorAll('.media-checkbox:checked');
+        return Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+    }
+    
+    /**
+     * Видалення вибраних файлів
+     */
+    async function deleteSelectedFiles(ids) {
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.disabled = true;
+            bulkDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Видалення...';
+        }
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const id of ids) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('media_id', id);
+                formData.append('csrf_token', getCsrfToken());
+                
+                const response = await fetch(config.uploadUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    successCount++;
+                    // Видаляємо картку з DOM
+                    const mediaItem = document.querySelector(`.media-item[data-id="${id}"]`);
+                    if (mediaItem) {
+                        mediaItem.style.opacity = '0';
+                        setTimeout(() => {
+                            mediaItem.remove();
+                            updateBulkActionsVisibility();
+                        }, 200);
+                    }
+                } else {
+                    errorCount++;
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                errorCount++;
+            }
+        }
+        
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.disabled = false;
+            bulkDeleteBtn.innerHTML = '<i class="fas fa-trash"></i><span class="d-none d-md-inline ms-1">Видалити</span>';
+        }
+        
+        // Показуємо результат
+        if (typeof showNotification !== 'undefined') {
+            if (errorCount === 0) {
+                showNotification(`Успішно видалено ${successCount} файл(ів)`, 'success');
+            } else {
+                showNotification(`Видалено ${successCount} файл(ів), помилок: ${errorCount}`, 'warning');
+            }
+        } else {
+            alert(`Видалено ${successCount} файл(ів)${errorCount > 0 ? ', помилок: ' + errorCount : ''}`);
+        }
+        
+        // Оновлюємо список через AJAX
+        if (successCount > 0) {
+            loadMediaFiles();
+        }
+    }
+    
+    /**
+     * Завантаження медіафайлів через AJAX
+     */
+    function loadMediaFiles(additionalParams = {}) {
+        const mediaGrid = document.getElementById('mediaGrid');
+        if (!mediaGrid) return;
+        
+        // Отримуємо поточні параметри фільтрації
+        const urlParams = new URLSearchParams(window.location.search);
+        const params = {
+            action: 'load_files',
+            type: urlParams.get('type') || '',
+            search: urlParams.get('search') || '',
+            order_by: urlParams.get('order_by') || 'uploaded_at',
+            order_dir: urlParams.get('order_dir') || 'DESC',
+            page: urlParams.get('page') || '1',
+            ...additionalParams
+        };
+        
+        // Показуємо індикатор завантаження
+        mediaGrid.style.opacity = '0.5';
+        mediaGrid.style.pointerEvents = 'none';
+        
+        const queryString = new URLSearchParams(params).toString();
+        
+        return fetch(`${config.uploadUrl}?${queryString}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Оновлюємо контент
+                mediaGrid.innerHTML = data.html;
+                
+                // Оновлюємо стан пагінації
+                state.currentPage = data.page || 1;
+                state.totalPages = data.pages || 1;
+                state.hasMore = state.currentPage < state.totalPages;
+                
+                // Оновлюємо URL без перезагрузки
+                const newUrl = new URL(window.location);
+                Object.keys(params).forEach(key => {
+                    if (key !== 'action' && params[key]) {
+                        newUrl.searchParams.set(key, params[key]);
+                    } else if (key !== 'action') {
+                        newUrl.searchParams.delete(key);
+                    }
+                });
+                window.history.pushState({}, '', newUrl);
+                
+                // Оновлюємо значення в селектах та інпутах
+                const sortSelect = document.getElementById('sortSelect');
+                if (sortSelect && params.order_by && params.order_dir) {
+                    const sortValue = `${params.order_by}_${params.order_dir.toLowerCase()}`;
+                    // Перевіряємо, чи існує така опція
+                    const optionExists = Array.from(sortSelect.options).some(opt => opt.value === sortValue);
+                    if (optionExists) {
+                        sortSelect.value = sortValue;
+                    }
+                }
+                
+                const typeSelect = document.querySelector('.media-filter-select');
+                if (typeSelect && params.type !== undefined) {
+                    typeSelect.value = params.type;
+                }
+                
+                const searchInput = document.querySelector('.media-search-input');
+                if (searchInput && params.search !== undefined) {
+                    searchInput.value = params.search;
+                }
+                
+                // Реініціалізуємо обробники подій
+                initViewModal();
+                initEditModal();
+                initDeleteButtons();
+                initMediaCheckboxes();
+                initLazyLoading();
+                // initSortSelect(), initFilters(), initToolbarButtons() та initViewToggle() використовують делегування подій, тому не потрібна реініціалізація
+                
+                // Відновлюємо активний стан кнопок виду
+                const savedView = localStorage.getItem('mediaView');
+                if (savedView === 'list') {
+                    mediaGrid.classList.add('media-list-view');
+                    document.querySelectorAll('[data-view]').forEach(btn => {
+                        if (btn.dataset.view === 'list') {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                } else {
+                    mediaGrid.classList.remove('media-list-view');
+                    document.querySelectorAll('[data-view]').forEach(btn => {
+                        if (btn.dataset.view === 'grid') {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                }
+            } else {
+                if (typeof showNotification !== 'undefined') {
+                    showNotification(data.error || 'Помилка завантаження', 'danger');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Load files error:', error);
+            if (typeof showNotification !== 'undefined') {
+                showNotification('Помилка завантаження файлів', 'danger');
+            }
+        })
+        .finally(() => {
+            mediaGrid.style.opacity = '1';
+            mediaGrid.style.pointerEvents = 'auto';
+        });
+    }
+    
+    /**
+     * Ініціалізація ленивої завантаження (infinite scroll)
+     */
+    function initLazyLoading() {
+        // Видаляємо старий observer, якщо він існує
+        if (state.intersectionObserver) {
+            state.intersectionObserver.disconnect();
+            state.intersectionObserver = null;
+        }
+        
+        // Створюємо індикатор завантаження, якщо його немає
+        const mediaGrid = document.getElementById('mediaGrid');
+        if (!mediaGrid) return;
+        
+        // Перевіряємо, чи є ще сторінки для завантаження
+        if (!state.hasMore) {
+            const existingIndicator = document.getElementById('loadMoreIndicator');
+            if (existingIndicator) {
+                existingIndicator.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Видаляємо старе повідомлення про кінець, якщо воно є
+        const existingEndMessage = document.getElementById('loadMoreEndMessage');
+        if (existingEndMessage) {
+            existingEndMessage.remove();
+        }
+        
+        let loadMoreIndicator = document.getElementById('loadMoreIndicator');
+        if (!loadMoreIndicator) {
+            loadMoreIndicator = document.createElement('div');
+            loadMoreIndicator.id = 'loadMoreIndicator';
+            loadMoreIndicator.className = 'load-more-indicator';
+            loadMoreIndicator.innerHTML = '<div class="load-more-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+            mediaGrid.parentNode.appendChild(loadMoreIndicator);
+        }
+        
+        // Показуємо індикатор, якщо є ще сторінки
+        if (state.hasMore) {
+            loadMoreIndicator.style.display = 'block';
+            console.log('Load more indicator created and visible', { currentPage: state.currentPage, totalPages: state.totalPages });
+        } else {
+            loadMoreIndicator.style.display = 'none';
+            // Показуємо повідомлення про кінець
+            showEndMessage(mediaGrid);
+            return;
+        }
+        
+        // Створюємо Intersection Observer
+        state.intersectionObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                console.log('Intersection observer triggered', { isIntersecting: entry.isIntersecting, isLoading: state.isLoading, hasMore: state.hasMore });
+                if (entry.isIntersecting && !state.isLoading && state.hasMore) {
+                    console.log('Loading more files...', { currentPage: state.currentPage, totalPages: state.totalPages, hasMore: state.hasMore });
+                    loadMoreFiles();
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '300px',
+            threshold: 0.01
+        });
+        
+        // Спостерігаємо за індикатором
+        try {
+            state.intersectionObserver.observe(loadMoreIndicator);
+            console.log('Observer attached to load more indicator');
+        } catch (error) {
+            console.error('Error attaching observer:', error);
+        }
+    }
+    
+    /**
+     * Завантаження наступної сторінки файлів
+     */
+    function loadMoreFiles() {
+        if (state.isLoading || !state.hasMore) return;
+        
+        const nextPage = state.currentPage + 1;
+        if (nextPage > state.totalPages) {
+            state.hasMore = false;
+            return;
+        }
+        
+        state.isLoading = true;
+        const loadMoreIndicator = document.getElementById('loadMoreIndicator');
+        if (loadMoreIndicator) {
+            loadMoreIndicator.style.display = 'block';
+        }
+        
+        // Отримуємо поточні параметри фільтрації
+        const urlParams = new URLSearchParams(window.location.search);
+        const params = {
+            action: 'load_files',
+            type: urlParams.get('type') || '',
+            search: urlParams.get('search') || '',
+            order_by: urlParams.get('order_by') || 'uploaded_at',
+            order_dir: urlParams.get('order_dir') || 'DESC',
+            page: nextPage.toString()
+        };
+        
+        const queryString = new URLSearchParams(params).toString();
+        
+        fetch(`${config.uploadUrl}?${queryString}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.html) {
+                const mediaGrid = document.getElementById('mediaGrid');
+                if (mediaGrid) {
+                    // Знаходимо контейнер з файлами
+                    let rowContainer = mediaGrid.querySelector('.row');
+                    if (!rowContainer) {
+                        // Якщо контейнера немає, створюємо його
+                        rowContainer = document.createElement('div');
+                        rowContainer.className = 'row g-3';
+                        mediaGrid.appendChild(rowContainer);
+                    }
+                    
+                    // Створюємо тимчасовий контейнер для нового HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data.html;
+                    const newRowContainer = tempDiv.querySelector('.row');
+                    
+                    if (newRowContainer) {
+                        // Додаємо нові файли до існуючих
+                        newRowContainer.querySelectorAll('.media-item').forEach(item => {
+                            rowContainer.appendChild(item);
+                        });
+                    }
+                }
+                
+                state.currentPage = nextPage;
+                state.totalPages = data.pages || 1;
+                state.hasMore = nextPage < state.totalPages;
+                
+                console.log('Files loaded', { currentPage: state.currentPage, totalPages: state.totalPages, hasMore: state.hasMore });
+                
+                // Реініціалізуємо обробники подій для нових елементів
+                initViewModal();
+                initEditModal();
+                initDeleteButtons();
+                initMediaCheckboxes();
+                
+                // Відновлюємо вигляд (grid/list)
+                const savedView = localStorage.getItem('mediaView');
+                if (savedView === 'list') {
+                    mediaGrid.classList.add('media-list-view');
+                }
+                
+                // Переініціалізуємо lazy loading для нової сторінки
+                if (state.hasMore) {
+                    initLazyLoading();
+                } else {
+                    if (loadMoreIndicator) {
+                        loadMoreIndicator.style.display = 'none';
+                    }
+                    // Показуємо повідомлення про кінець
+                    showEndMessage(mediaGrid);
+                }
+            } else {
+                state.hasMore = false;
+                if (loadMoreIndicator) {
+                    loadMoreIndicator.style.display = 'none';
+                }
+                showEndMessage(mediaGrid);
+            }
+        })
+        .catch(error => {
+            console.error('Load more error:', error);
+            state.hasMore = false;
+            if (loadMoreIndicator) {
+                loadMoreIndicator.style.display = 'none';
+            }
+            showEndMessage(mediaGrid);
+        })
+        .finally(() => {
+            state.isLoading = false;
+        });
+    }
+    
+    /**
+     * Ініціалізація фільтрів та пошуку
+     */
+    function initFilters() {
+        if (state.filtersInitialized) return;
+        state.filtersInitialized = true;
+        
+        // Використовуємо делегування подій
+        // Пошук в реальному часі
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.classList.contains('media-search-input')) {
+                // Очищаємо попередній таймер
+                if (state.searchTimeout) {
+                    clearTimeout(state.searchTimeout);
+                }
+                
+                const searchInput = e.target;
+                const searchGroup = searchInput.closest('.media-search-group');
+                const searchBtn = searchGroup ? searchGroup.querySelector('.media-search-btn') : null;
+                
+                // Показуємо індикатор завантаження
+                if (searchBtn) {
+                    const icon = searchBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-search');
+                        icon.classList.add('fa-spinner', 'fa-spin');
+                    }
+                }
+                
+                // Встановлюємо новий таймер для debounce (500ms)
+                state.searchTimeout = setTimeout(function() {
+                    const typeSelect = document.querySelector('.media-filter-select');
+                    const searchValue = searchInput ? searchInput.value.trim() : '';
+                    const typeValue = typeSelect ? typeSelect.value : '';
+                    
+                    loadMediaFiles({
+                        search: searchValue,
+                        type: typeValue,
+                        page: '1'
+                    }).finally(function() {
+                        // Повертаємо іконку пошуку після завершення
+                        if (searchBtn) {
+                            const icon = searchBtn.querySelector('i');
+                            if (icon) {
+                                icon.classList.remove('fa-spinner', 'fa-spin');
+                                icon.classList.add('fa-search');
+                            }
+                        }
+                    });
+                }, 500);
+            }
+        });
+        
+        // Обробка форми пошуку (кнопка пошуку)
+        document.addEventListener('submit', function(e) {
+            const searchForm = e.target.closest('.media-filters');
+            if (searchForm) {
+                e.preventDefault();
+                
+                // Очищаємо таймер, якщо він активний
+                if (state.searchTimeout) {
+                    clearTimeout(state.searchTimeout);
+                }
+                
+                const searchInput = searchForm.querySelector('.media-search-input');
+                const searchGroup = searchInput ? searchInput.closest('.media-search-group') : null;
+                const searchBtn = searchGroup ? searchGroup.querySelector('.media-search-btn') : null;
+                const typeSelect = searchForm.querySelector('.media-filter-select') || document.querySelector('.media-filter-select');
+                const searchValue = searchInput ? searchInput.value.trim() : '';
+                const typeValue = typeSelect ? typeSelect.value : '';
+                
+                // Показуємо індикатор завантаження
+                if (searchBtn) {
+                    const icon = searchBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-search');
+                        icon.classList.add('fa-spinner', 'fa-spin');
+                    }
+                }
+                
+                loadMediaFiles({
+                    search: searchValue,
+                    type: typeValue,
+                    page: '1'
+                }).finally(function() {
+                    // Повертаємо іконку пошуку після завершення
+                    if (searchBtn) {
+                        const icon = searchBtn.querySelector('i');
+                        if (icon) {
+                            icon.classList.remove('fa-spinner', 'fa-spin');
+                            icon.classList.add('fa-search');
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Фільтр по типу
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('media-filter-select')) {
+                // Очищаємо таймер пошуку, якщо він активний
+                if (state.searchTimeout) {
+                    clearTimeout(state.searchTimeout);
+                }
+                
+                const searchInput = document.querySelector('.media-search-input');
+                const searchValue = searchInput ? searchInput.value.trim() : '';
+                loadMediaFiles({
+                    type: e.target.value,
+                    search: searchValue,
+                    page: '1'
+                });
+            }
+        });
     }
     
     /**

@@ -355,16 +355,23 @@ class Media extends BaseModule {
             $perPage = max(1, min(100, (int)$perPage));
             $offset = ($page - 1) * $perPage;
             
-            $allowedOrderBy = ['uploaded_at', 'title', 'file_size', 'media_type'];
-            $orderBy = in_array($filters['order_by'] ?? 'uploaded_at', $allowedOrderBy) 
-                ? $filters['order_by'] 
-                : 'uploaded_at';
+            // Дозволені поля для сортування
+            $allowedOrderBy = [
+                'uploaded_at' => 'uploaded_at',
+                'title' => 'title',
+                'file_size' => 'file_size',
+                'media_type' => 'media_type'
+            ];
+            
+            $orderByField = $filters['order_by'] ?? 'uploaded_at';
+            $orderBy = $allowedOrderBy[$orderByField] ?? 'uploaded_at';
             $orderDir = strtoupper($filters['order_dir'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
             
+            // Використовуємо бібліотеку Database для безпечного формування запиту
             $stmt = $db->prepare("
                 SELECT * FROM media_files 
                 $whereClause 
-                ORDER BY $orderBy $orderDir 
+                ORDER BY `$orderBy` $orderDir 
                 LIMIT ? OFFSET ?
             ");
             

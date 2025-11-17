@@ -43,95 +43,75 @@ if (!function_exists('formatFileSize')) {
     </div>
 <?php endif; ?>
 
-<!-- Статистика -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card border-left-primary">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                    Всього файлів
-                </div>
-                <div class="h4 mb-0 font-weight-bold"><?= $stats['total_files'] ?? 0 ?></div>
-            </div>
+<!-- Панель інструментів - строгий плоский дизайн -->
+<div class="media-toolbar">
+    <div class="media-toolbar-left">
+        <div class="media-view-toggle">
+            <button type="button" class="media-view-btn active" data-view="grid" title="Сітка">
+                <i class="fas fa-th"></i>
+            </button>
+            <button type="button" class="media-view-btn" data-view="list" title="Список">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
+        <div class="media-toolbar-divider"></div>
+        <div class="media-bulk-actions" id="bulkActions" style="display: none;">
+            <button type="button" class="media-toolbar-btn" id="selectAllBtn" title="Вибрати все">
+                <i class="fas fa-check-square"></i>
+                <span class="d-none d-md-inline ms-1">Вибрати все</span>
+            </button>
+            <button type="button" class="media-toolbar-btn" id="deselectAllBtn" title="Скасувати вибір">
+                <i class="fas fa-square"></i>
+                <span class="d-none d-md-inline ms-1">Скасувати</span>
+            </button>
+            <button type="button" class="media-toolbar-btn media-toolbar-btn-danger" id="bulkDeleteBtn" title="Видалити вибрані">
+                <i class="fas fa-trash"></i>
+                <span class="d-none d-md-inline ms-1">Видалити</span>
+            </button>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card border-left-info">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                    Зображення
-                </div>
-                <div class="h4 mb-0 font-weight-bold"><?= $stats['by_type']['image'] ?? 0 ?></div>
-            </div>
+    <div class="media-toolbar-right">
+        <div class="media-toolbar-actions">
+            <button type="button" class="media-toolbar-btn" id="refreshBtn" title="Оновити">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <div class="media-toolbar-divider"></div>
+            <select name="sort" class="media-sort-select" id="sortSelect">
+                <option value="uploaded_at_desc" <?= ($filters['order_by'] ?? 'uploaded_at') === 'uploaded_at' && ($filters['order_dir'] ?? 'DESC') === 'DESC' ? 'selected' : '' ?>>Новіші спочатку</option>
+                <option value="uploaded_at_asc" <?= ($filters['order_by'] ?? 'uploaded_at') === 'uploaded_at' && ($filters['order_dir'] ?? 'DESC') === 'ASC' ? 'selected' : '' ?>>Старіші спочатку</option>
+                <option value="title_asc" <?= ($filters['order_by'] ?? '') === 'title' && ($filters['order_dir'] ?? '') === 'ASC' ? 'selected' : '' ?>>Назва А-Я</option>
+                <option value="title_desc" <?= ($filters['order_by'] ?? '') === 'title' && ($filters['order_dir'] ?? '') === 'DESC' ? 'selected' : '' ?>>Назва Я-А</option>
+                <option value="file_size_desc" <?= ($filters['order_by'] ?? '') === 'file_size' && ($filters['order_dir'] ?? '') === 'DESC' ? 'selected' : '' ?>>Розмір (більші)</option>
+                <option value="file_size_asc" <?= ($filters['order_by'] ?? '') === 'file_size' && ($filters['order_dir'] ?? '') === 'ASC' ? 'selected' : '' ?>>Розмір (менші)</option>
+            </select>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-left-success">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                    Відео
-                </div>
-                <div class="h4 mb-0 font-weight-bold"><?= $stats['by_type']['video'] ?? 0 ?></div>
+        <form method="GET" action="" class="media-filters">
+            <select name="type" class="media-filter-select">
+                <option value="">Всі типи</option>
+                <option value="image" <?= ($filters['media_type'] ?? '') === 'image' ? 'selected' : '' ?>>Зображення</option>
+                <option value="video" <?= ($filters['media_type'] ?? '') === 'video' ? 'selected' : '' ?>>Відео</option>
+                <option value="audio" <?= ($filters['media_type'] ?? '') === 'audio' ? 'selected' : '' ?>>Аудіо</option>
+                <option value="document" <?= ($filters['media_type'] ?? '') === 'document' ? 'selected' : '' ?>>Документи</option>
+            </select>
+            <div class="media-search-group">
+                <input type="text" name="search" class="media-search-input" placeholder="Пошук..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>" aria-label="Пошук файлів">
+                <button type="submit" class="media-search-btn" aria-label="Виконати пошук">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-left-warning">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                    Документи
-                </div>
-                <div class="h4 mb-0 font-weight-bold"><?= ($stats['by_type']['document'] ?? 0) + ($stats['by_type']['audio'] ?? 0) ?></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Панель инструментов -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <div class="btn-toolbar" role="toolbar">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                        <i class="fas fa-upload me-2"></i>Завантажити файли
-                    </button>
-                    <div class="btn-group ms-2" role="group">
-                        <button type="button" class="btn btn-outline-secondary active" data-view="grid">
-                            <i class="fas fa-th"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" data-view="list">
-                            <i class="fas fa-list"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <form method="GET" action="" class="d-flex">
-                    <select name="type" class="form-select me-2" style="max-width: 150px;">
-                        <option value="">Всі типи</option>
-                        <option value="image" <?= ($filters['media_type'] ?? '') === 'image' ? 'selected' : '' ?>>Зображення</option>
-                        <option value="video" <?= ($filters['media_type'] ?? '') === 'video' ? 'selected' : '' ?>>Відео</option>
-                        <option value="audio" <?= ($filters['media_type'] ?? '') === 'audio' ? 'selected' : '' ?>>Аудіо</option>
-                        <option value="document" <?= ($filters['media_type'] ?? '') === 'document' ? 'selected' : '' ?>>Документи</option>
-                    </select>
-                    <input type="text" name="search" class="form-control me-2" placeholder="Пошук..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>" aria-label="Пошук файлів">
-                    <button type="submit" class="btn btn-outline-primary" aria-label="Виконати пошук">
-                        <i class="fas fa-search" aria-hidden="true"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
 
 <!-- Сетка медиафайлов -->
-<div class="media-grid" id="mediaGrid">
+<div class="media-grid" id="mediaGrid" data-loading="false" data-current-page="<?= $page ?? 1 ?>" data-total-pages="<?= $pages ?? 1 ?>">
     <?php if (empty($files)): ?>
-        <div class="text-center py-5">
-            <i class="fas fa-images fa-4x text-muted mb-3"></i>
-            <h4>Медіафайлів не знайдено</h4>
-            <p class="text-muted">Завантажте перший файл, щоб почати</p>
+        <div class="media-empty-state">
+            <div class="media-empty-icon">
+                <i class="fas fa-images"></i>
+            </div>
+            <h4 class="media-empty-title">Медіафайлів не знайдено</h4>
+            <p class="media-empty-description">Завантажте перший файл, щоб почати роботу з медіа-бібліотекою</p>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
                 <i class="fas fa-upload me-2"></i>Завантажити файли
             </button>
@@ -141,6 +121,10 @@ if (!function_exists('formatFileSize')) {
             <?php foreach ($files as $file): ?>
                 <div class="col-md-2 col-sm-3 col-6 media-item" data-id="<?= $file['id'] ?>">
                     <div class="card media-card">
+                        <div class="media-checkbox-wrapper">
+                            <input type="checkbox" class="media-checkbox" data-id="<?= $file['id'] ?>" id="media-<?= $file['id'] ?>">
+                            <label for="media-<?= $file['id'] ?>" class="media-checkbox-label"></label>
+                        </div>
                         <div class="media-thumbnail">
                             <?php if ($file['media_type'] === 'image'): ?>
                                 <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
@@ -167,100 +151,64 @@ if (!function_exists('formatFileSize')) {
                                     <i class="fas fa-file fa-3x"></i>
                                 </div>
                             <?php endif; ?>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="media-title" title="<?= htmlspecialchars($file['title'] ?? $file['original_name']) ?>">
-                                <?= htmlspecialchars(mb_substr($file['title'] ?? $file['original_name'], 0, 20)) ?>
-                                <?= mb_strlen($file['title'] ?? $file['original_name']) > 20 ? '...' : '' ?>
-                            </div>
-                            <div class="media-actions">
-                                <button class="btn btn-sm btn-outline-primary view-media" 
+                            <div class="media-actions-overlay">
+                                <button class="media-action-btn view-media" 
                                         data-id="<?= $file['id'] ?>"
                                         title="Переглянути">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-info edit-media" 
+                                <button class="media-action-btn edit-media" 
                                         data-id="<?= $file['id'] ?>"
                                         title="Редагувати">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger delete-media" 
+                                <button class="media-action-btn delete-media" 
                                         data-id="<?= $file['id'] ?>"
                                         title="Видалити">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>
+                        <div class="card-body">
+                            <div class="media-title" title="<?= htmlspecialchars($file['title'] ?? $file['original_name']) ?>">
+                                <?= htmlspecialchars(mb_substr($file['title'] ?? $file['original_name'], 0, 25)) ?>
+                                <?= mb_strlen($file['title'] ?? $file['original_name']) > 25 ? '...' : '' ?>
+                            </div>
+                            <div class="media-info-content">
+                                <small class="text-muted">
+                                    <?php 
+                                    $extension = strtoupper(pathinfo($file['original_name'], PATHINFO_EXTENSION));
+                                    if ($file['media_type'] === 'image' && $file['width'] && $file['height']): ?>
+                                        <?= $extension ?> • <?= $file['width'] ?> × <?= $file['height'] ?>
+                                    <?php else: ?>
+                                        <?= $extension ?> • <?= formatFileSize($file['file_size']) ?>
+                                    <?php endif; ?>
+                                </small>
+                            </div>
+                        </div>
                         <div class="media-info">
-                            <small class="text-muted">
-                                <?php if ($file['media_type'] === 'image' && $file['width'] && $file['height']): ?>
-                                    <?= $file['width'] ?> × <?= $file['height'] ?>
-                                <?php else: ?>
-                                    <?= formatFileSize($file['file_size']) ?>
-                                <?php endif; ?>
-                            </small>
+                            <div class="media-actions-list">
+                                <button class="media-action-btn-list view-media" 
+                                        data-id="<?= $file['id'] ?>"
+                                        title="Переглянути">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="media-action-btn-list edit-media" 
+                                        data-id="<?= $file['id'] ?>"
+                                        title="Редагувати">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="media-action-btn-list delete-media" 
+                                        data-id="<?= $file['id'] ?>"
+                                        title="Видалити">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
-        
-        <!-- Пагінація -->
-        <?php if ($pages > 1): ?>
-            <nav aria-label="Навігація по сторінкам" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    <?php if ($page > 1): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=<?= $page - 1 ?>&type=<?= htmlspecialchars(urlencode($filters['media_type'] ?? '')) ?>&search=<?= htmlspecialchars(urlencode($filters['search'] ?? '')) ?>" aria-label="Попередня сторінка">
-                                <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    
-                    <?php 
-                    $startPage = max(1, $page - 2);
-                    $endPage = min($pages, $page + 2);
-                    
-                    if ($startPage > 1): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1&type=<?= htmlspecialchars(urlencode($filters['media_type'] ?? '')) ?>&search=<?= htmlspecialchars(urlencode($filters['search'] ?? '')) ?>">1</a>
-                        </li>
-                        <?php if ($startPage > 2): ?>
-                            <li class="page-item disabled">
-                                <span class="page-link">...</span>
-                            </li>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                    
-                    <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                        <li class="page-item <?= $i == $page ? 'active' : '' ?>">
-                            <a class="page-link" href="?page=<?= $i ?>&type=<?= htmlspecialchars(urlencode($filters['media_type'] ?? '')) ?>&search=<?= htmlspecialchars(urlencode($filters['search'] ?? '')) ?>">
-                                <?= $i ?>
-                            </a>
-                        </li>
-                    <?php endfor; ?>
-                    
-                    <?php if ($endPage < $pages): ?>
-                        <?php if ($endPage < $pages - 1): ?>
-                            <li class="page-item disabled">
-                                <span class="page-link">...</span>
-                            </li>
-                        <?php endif; ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=<?= $pages ?>&type=<?= htmlspecialchars(urlencode($filters['media_type'] ?? '')) ?>&search=<?= htmlspecialchars(urlencode($filters['search'] ?? '')) ?>"><?= $pages ?></a>
-                        </li>
-                    <?php endif; ?>
-                    
-                    <?php if ($page < $pages): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=<?= $page + 1 ?>&type=<?= htmlspecialchars(urlencode($filters['media_type'] ?? '')) ?>&search=<?= htmlspecialchars(urlencode($filters['search'] ?? '')) ?>" aria-label="Наступна сторінка">
-                                <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </nav>
-        <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -311,13 +259,13 @@ if (!function_exists('formatFileSize')) {
 
 <!-- Модальне вікно перегляду -->
 <div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="viewModalLabel">Деталі файлу</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
-            <div class="modal-body" id="viewModalBody">
+            <div class="modal-body p-4" id="viewModalBody">
                 <!-- Контент завантажується через AJAX -->
             </div>
         </div>

@@ -21,10 +21,15 @@ class MediaPage extends AdminPage {
         $this->pageTitle = 'Медіафайли - Flowaxy CMS';
         $this->templateName = 'media';
         
+        $headerButtons = '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="fas fa-upload me-1"></i>Завантажити файли
+        </button>';
+        
         $this->setPageHeader(
             'Медіафайли',
             'Керування медіафайлами системи',
-            'fas fa-images'
+            'fas fa-images',
+            $headerButtons
         );
         
         $this->mediaModule = mediaModule();
@@ -66,17 +71,13 @@ class MediaPage extends AdminPage {
         // Отримання файлів
         $result = $this->mediaModule->getFiles($filters, $page, $perPage);
         
-        // Отримання статистики
-        $stats = $this->mediaModule->getStats();
-        
-        // Рендеринг сторінки
+        // Рендеринг сторінки (без статистики)
         $this->render([
             'files' => $result['files'],
             'total' => $result['total'],
             'page' => $result['page'],
             'pages' => $result['pages'],
-            'filters' => $filters,
-            'stats' => $stats
+            'filters' => $filters
         ]);
     }
     
@@ -106,10 +107,53 @@ class MediaPage extends AdminPage {
                 $this->handleGetFile();
                 break;
                 
+            case 'load_files':
+                $this->handleLoadFiles();
+                break;
+                
             default:
                 echo json_encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE);
                 exit;
         }
+    }
+    
+    /**
+     * Завантаження списку файлів (AJAX)
+     */
+    private function handleLoadFiles() {
+        $filters = [
+            'media_type' => SecurityHelper::sanitizeInput($_GET['type'] ?? ''),
+            'search' => SecurityHelper::sanitizeInput($_GET['search'] ?? ''),
+            'date_from' => SecurityHelper::sanitizeInput($_GET['date_from'] ?? ''),
+            'date_to' => SecurityHelper::sanitizeInput($_GET['date_to'] ?? ''),
+            'order_by' => SecurityHelper::sanitizeInput($_GET['order_by'] ?? 'uploaded_at'),
+            'order_dir' => SecurityHelper::sanitizeInput($_GET['order_dir'] ?? 'DESC')
+        ];
+        
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $perPage = 24;
+        
+        $result = $this->mediaModule->getFiles($filters, $page, $perPage);
+        
+        // Передаємо дані в шаблон
+        $files = $result['files'];
+        $total = $result['total'];
+        $page = $result['page'];
+        $pages = $result['pages'];
+        
+        // Рендеринг HTML для файлів
+        ob_start();
+        include __DIR__ . '/../templates/media-items.php';
+        $html = ob_get_clean();
+        
+        echo json_encode([
+            'success' => true,
+            'html' => $html,
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'pages' => $result['pages']
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
     
     /**
