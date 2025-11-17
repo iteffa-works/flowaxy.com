@@ -376,9 +376,49 @@
         } else if (file.media_type === 'video') {
             html += `<div class="media-preview-wrapper"><video src="${escapeHtml(fileUrl)}" class="media-preview-content" controls></video></div>`;
         } else if (file.media_type === 'audio') {
-            html += `<div class="media-preview-wrapper audio-wrapper"><audio src="${escapeHtml(fileUrl)}" class="media-preview-content" controls></audio></div>`;
+            html += `<div class="media-preview-wrapper audio-wrapper">`;
+            html += `<div class="audio-preview-container">`;
+            html += `<div class="audio-icon-large"><i class="fas fa-music"></i></div>`;
+            html += `<audio src="${escapeHtml(fileUrl)}" class="media-preview-content audio-player" controls controlsList="nodownload"></audio>`;
+            html += `<div class="audio-info">`;
+            html += `<div class="audio-title">${escapeHtml(file.title || file.original_name)}</div>`;
+            html += `<div class="audio-meta">${formatFileSize(file.file_size)} • ${escapeHtml(file.mime_type)}</div>`;
+            html += `</div>`;
+            html += `</div>`;
+            html += `</div>`;
         } else {
-            html += `<div class="media-preview-wrapper"><div class="media-file-icon"><i class="fas fa-file fa-5x"></i><p class="mt-3">${escapeHtml(file.original_name)}</p></div></div>`;
+            // Определяем тип документа и иконку
+            const extension = (file.original_name || '').split('.').pop().toLowerCase();
+            let docIcon = 'fa-file';
+            let docColor = '#6c757d';
+            
+            if (extension === 'pdf') {
+                docIcon = 'fa-file-pdf';
+                docColor = '#dc2626';
+            } else if (['doc', 'docx'].includes(extension)) {
+                docIcon = 'fa-file-word';
+                docColor = '#2563eb';
+            } else if (['xls', 'xlsx'].includes(extension)) {
+                docIcon = 'fa-file-excel';
+                docColor = '#16a34a';
+            } else if (['ppt', 'pptx'].includes(extension)) {
+                docIcon = 'fa-file-powerpoint';
+                docColor = '#ea580c';
+            } else if (extension === 'txt') {
+                docIcon = 'fa-file-lines';
+                docColor = '#6b7280';
+            }
+            
+            html += `<div class="media-preview-wrapper document-wrapper">`;
+            html += `<div class="document-preview-container">`;
+            html += `<div class="document-icon-large" style="color: ${docColor};">`;
+            html += `<i class="fas ${docIcon}"></i>`;
+            html += `</div>`;
+            html += `<div class="document-info">`;
+            html += `<div class="document-extension">${extension.toUpperCase()}</div>`;
+            html += `</div>`;
+            html += `</div>`;
+            html += `</div>`;
         }
         html += '</div>';
         
@@ -443,9 +483,9 @@
         html += '</div>'; // media-details-content
         
         html += '<div class="media-details-footer">';
-        html += `<button class="btn btn-copy-url-full copy-url" data-url="${escapeHtml(fileUrl)}">`;
-        html += '<i class="fas fa-copy me-2"></i>Копіювати URL';
-        html += '</button>';
+        html += `<a href="${escapeHtml(fileUrl)}" class="btn btn-download-file" download="${escapeHtml(file.original_name)}">`;
+        html += '<i class="fas fa-download me-2"></i>Завантажити файл';
+        html += '</a>';
         html += '</div>';
         
         html += '</div>'; // media-view-details
