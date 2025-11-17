@@ -16,10 +16,7 @@
             
             <!-- Логотип -->
             <a class="navbar-brand d-none d-md-flex align-items-center header-logo" href="<?= UrlHelper::admin('dashboard') ?>">
-                <div class="admin-logo-icon me-2">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <span class="logo-text">Flowaxy CMS</span>
+                <img src="<?= UrlHelper::admin('images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="admin-logo-img">
             </a>
         </div>
 
@@ -97,10 +94,7 @@
     <!-- Заголовок мобильной панели -->
     <div class="mobile-sidebar-header">
         <div class="mobile-sidebar-logo">
-            <div class="admin-logo-icon">
-                <i class="fas fa-cog"></i>
-            </div>
-            <span class="mobile-sidebar-title">Flowaxy CMS</span>
+            <img src="<?= UrlHelper::admin('images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="mobile-logo-img">
         </div>
         <button class="mobile-sidebar-close" onclick="toggleMobileSidebar()">
             <i class="fas fa-times"></i>

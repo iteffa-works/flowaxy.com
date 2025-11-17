@@ -154,7 +154,7 @@ abstract class ThemePlugin extends BasePlugin {
         }
         
         try {
-            return $this->themeManager->getThemeSetting($key, $default);
+            return $this->themeManager->getSetting($key, $default);
         } catch (Exception $e) {
             error_log("ThemePlugin getThemeSetting error: " . $e->getMessage());
             return $default;
@@ -174,7 +174,7 @@ abstract class ThemePlugin extends BasePlugin {
         }
         
         try {
-            return $this->themeManager->setThemeSetting($key, $value);
+            return $this->themeManager->setSetting($key, $value);
         } catch (Exception $e) {
             error_log("ThemePlugin setThemeSetting error: " . $e->getMessage());
             return false;

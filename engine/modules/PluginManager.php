@@ -100,7 +100,7 @@ class PluginManager extends BaseModule {
      * Завантаження активних плагінів (lazy loading)
      * Завантажує тільки для конкретного хука, якщо потрібно
      */
-    private function loadPlugins(string $forHook = null): void {
+    private function loadPlugins(?string $forHook = null): void {
         static $pluginsLoaded = false;
         static $hooksChecked = [];
         

@@ -53,25 +53,28 @@ class SettingsPage extends AdminPage {
         
         $settings = $_POST['settings'] ?? [];
         
+        // Санитизация значений
+        $sanitizedSettings = [];
+        foreach ($settings as $key => $value) {
+            $sanitizedSettings[$key] = SecurityHelper::sanitizeInput($value);
+        }
+        
         try {
-            $this->db->beginTransaction();
-            
-            foreach ($settings as $key => $value) {
-                $stmt = $this->db->prepare("
-                    INSERT INTO site_settings (setting_key, setting_value) 
-                    VALUES (?, ?) 
-                    ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
-                ");
-                $stmt->execute([$key, SecurityHelper::sanitizeInput($value)]);
+            // Используем SettingsManager для сохранения настроек
+            if (class_exists('SettingsManager')) {
+                $settingsManager = settingsManager();
+                $result = $settingsManager->setMultiple($sanitizedSettings);
+                
+                if ($result) {
+                    $this->setMessage('Налаштування успішно збережено', 'success');
+                } else {
+                    $this->setMessage('Помилка при збереженні налаштувань', 'danger');
+                }
+            } else {
+                throw new Exception('SettingsManager не доступний');
             }
-            
-            $this->db->commit();
-            // Очищаємо кеш налаштувань сайту
-            cache_forget('site_settings');
-            $this->setMessage('Налаштування успішно збережено', 'success');
         } catch (Exception $e) {
-            $this->db->rollBack();
-            $this->setMessage('Помилка при збереженні налаштувань', 'danger');
+            $this->setMessage('Помилка при збереженні налаштувань: ' . $e->getMessage(), 'danger');
             error_log("Settings save error: " . $e->getMessage());
         }
     }
@@ -80,22 +83,6 @@ class SettingsPage extends AdminPage {
      * Отримання налаштувань
      */
     private function getSettings() {
-        $settings = [];
-        
-        try {
-            $stmt = $this->db->query("SHOW TABLES LIKE 'site_settings'");
-            if ($stmt->rowCount() > 0) {
-                $stmt = $this->db->query("SELECT setting_key, setting_value FROM site_settings");
-                $settingsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                foreach ($settingsData as $setting) {
-                    $settings[$setting['setting_key']] = $setting['setting_value'];
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Settings load error: " . $e->getMessage());
-        }
-        
         // Значення за замовчуванням
         $defaultSettings = [
             'admin_email' => 'admin@example.com',
@@ -111,6 +98,18 @@ class SettingsPage extends AdminPage {
             'logging_retention_days' => '30'
         ];
         
-        return array_merge($defaultSettings, $settings);
+        // Используем SettingsManager для получения настроек
+        if (class_exists('SettingsManager')) {
+            try {
+                $settingsManager = settingsManager();
+                $settings = $settingsManager->all();
+                return array_merge($defaultSettings, $settings);
+            } catch (Exception $e) {
+                error_log("Settings load error: " . $e->getMessage());
+                return $defaultSettings;
+            }
+        }
+        
+        return $defaultSettings;
     }
 }

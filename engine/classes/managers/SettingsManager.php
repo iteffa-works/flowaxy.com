@@ -267,3 +267,17 @@ function settingsManager(): SettingsManager {
     return SettingsManager::getInstance();
 }
 
+/**
+ * Глобальная функция для получения настройки сайта
+ * 
+ * @param string $key Ключ настройки
+ * @param string $default Значение по умолчанию
+ * @return string
+ */
+function getSetting(string $key, string $default = ''): string {
+    if (class_exists('SettingsManager')) {
+        return settingsManager()->get($key, $default);
+    }
+    return $default;
+}
+

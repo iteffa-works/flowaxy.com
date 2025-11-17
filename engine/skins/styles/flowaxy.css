@@ -57,22 +57,28 @@ body {
 }
 
 /* Логотип */
-.admin-logo-icon {
-    width: 24px;
-    height: 24px;
-    background-color: var(--primary-color);
-    border-radius: 3px;
+.header-logo {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 14px;
+    padding: 4px 0;
+    text-decoration: none;
 }
 
-.logo-text {
-    font-size: 16px;
-    color: #a0a5aa;
-    font-weight: 500;
+.admin-logo-img {
+    height: 28px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+    display: block;
+    border-radius: 6px;
+    padding: 2px 8px;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.header-logo:hover .admin-logo-img {
+    opacity: 0.9;
+    transform: scale(1.02);
 }
 
 /* Общий стиль для всех кнопок в header */
@@ -194,16 +200,13 @@ body {
         min-width: auto !important;
     }
     
-    .admin-logo-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    
-    .logo-text {
-        font-size: 18px;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    /* Мобильная версия логотипа - оставляем как есть */
+    .admin-logo-img {
+        height: 32px;
+        width: auto;
+        max-width: 140px;
+        border-radius: 8px;
+        padding: 2px;
     }
     
     .header-dropdown-btn,
@@ -328,9 +331,7 @@ body {
     background: #23282d !important;
     height: calc(100vh - var(--header-height) - 3px) !important;
     width: var(--sidebar-width) !important;
-    border: 2px solid #333;
-    border-top: none;
-    border-right: none;
+    border: none;
     display: block !important;
 }
 
@@ -354,7 +355,7 @@ body {
 
 .wp-menu .nav-item {
     margin: 0;
-    border-bottom: 1px solid #32373c;
+    border-bottom: none;
 }
 
 .wp-menu .nav-link {
@@ -483,7 +484,7 @@ body {
 
 .sidebar .submenu li {
     margin: 0;
-    border-bottom: 1px solid #3c434a;
+    border-bottom: none;
 }
 
 .sidebar .submenu li:last-child {
@@ -752,6 +753,14 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
     line-height: 1;
     margin-bottom: 4px;
     color: var(--text-primary);
+}
+
+.text-gray-800 {
+    color: #2d3748;
+}
+
+.text-success {
+    color: #1cc88a !important;
 }
 
 .text-xs {
@@ -1063,24 +1072,13 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
     gap: 12px;
 }
 
-.mobile-sidebar-logo .admin-logo-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--primary-color);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.mobile-sidebar-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+.mobile-logo-img {
+    height: 40px;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    display: block;
+    border-radius: 10px;
 }
 
 .mobile-sidebar-close {
@@ -1116,7 +1114,7 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
     color: #a0a5aa;
     text-decoration: none;
     font-size: 14px;
-    border-bottom: 1px solid #32373c;
+    border-bottom: none;
 }
 
 .mobile-sidebar .nav-link:hover {
@@ -1136,7 +1134,7 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
 }
 
 .mobile-sidebar .has-submenu {
-    border-bottom: 1px solid #32373c;
+    border-bottom: none;
 }
 
 .mobile-sidebar .submenu-toggle {
@@ -1188,7 +1186,7 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
     color: #a0a5aa;
     text-decoration: none;
     font-size: 13px;
-    border-bottom: 1px solid #3c434a;
+    border-bottom: none;
 }
 
 .mobile-sidebar .submenu-link i {
