@@ -65,11 +65,11 @@ class MimeType {
         'csv' => 'text/csv',
         
         // Архивы
-        'zip' => 'application/zip',
-        'rar' => 'application/x-rar-compressed',
+        'zip' => ['application/zip', 'application/x-zip-compressed', 'application/x-zip'],
+        'rar' => ['application/x-rar-compressed', 'application/x-rar'],
         '7z' => 'application/x-7z-compressed',
         'tar' => 'application/x-tar',
-        'gz' => 'application/gzip',
+        'gz' => ['application/gzip', 'application/x-gzip'],
         
         // Другое
         'php' => 'application/x-httpd-php',
@@ -92,7 +92,40 @@ class MimeType {
             $extension = strtolower(ltrim($filePath, '.'));
         }
         
-        return self::$extensionMap[$extension] ?? false;
+        $mimeType = self::$extensionMap[$extension] ?? false;
+        
+        // Если это массив (несколько вариантов MIME типу), повертаємо перший
+        if (is_array($mimeType)) {
+            return $mimeType[0];
+        }
+        
+        return $mimeType;
+    }
+    
+    /**
+     * Отримання всіх можливих MIME типів для розширення
+     * 
+     * @param string $filePath Шлях до файлу або розширення
+     * @return array Масив MIME типів
+     */
+    public static function getAllMimeTypes(string $filePath): array {
+        // Если передан путь к файлу, извлекаем расширение
+        if (strpos($filePath, '.') !== false && file_exists($filePath)) {
+            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        } else {
+            // Предполагаем, что это расширение
+            $extension = strtolower(ltrim($filePath, '.'));
+        }
+        
+        $mimeType = self::$extensionMap[$extension] ?? false;
+        
+        // Если это массив, повертаємо всі варіанти
+        if (is_array($mimeType)) {
+            return $mimeType;
+        }
+        
+        // Якщо це один тип, повертаємо масив з одним елементом
+        return $mimeType ? [$mimeType] : [];
     }
     
     /**
@@ -230,10 +263,14 @@ class MimeType {
         $mimeType = self::get($filePath);
         $archiveTypes = [
             'application/zip',
+            'application/x-zip-compressed',
+            'application/x-zip',
             'application/x-rar-compressed',
+            'application/x-rar',
             'application/x-7z-compressed',
             'application/x-tar',
             'application/gzip',
+            'application/x-gzip',
         ];
         
         return in_array($mimeType, $archiveTypes, true);
