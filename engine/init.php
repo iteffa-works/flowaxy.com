@@ -100,8 +100,6 @@ spl_autoload_register(function (string $className): void {
             'ThemesPage' => 'skins/pages',
             'CustomizerPage' => 'skins/pages',
             'MenusPage' => 'skins/pages',
-            'DiagnosticsPage' => 'skins/pages',
-            'DocumentationPage' => 'skins/pages',
             'ThemeEditorPage' => 'skins/pages',
         ];
         

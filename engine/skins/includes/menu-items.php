@@ -88,20 +88,7 @@ function getMenuItems() {
             'text' => 'Для розробника',
             'page' => 'developer',
             'order' => 60,
-            'submenu' => [
-                [
-                    'href' => UrlHelper::admin('diagnostics'),
-                    'text' => 'Діагностика системи',
-                    'page' => 'diagnostics',
-                    'order' => 1
-                ],
-                [
-                    'href' => UrlHelper::admin('documentation'),
-                    'text' => 'Документація движка',
-                    'page' => 'documentation',
-                    'order' => 2
-                ]
-            ]
+            'submenu' => []
         ]
     ];
     
