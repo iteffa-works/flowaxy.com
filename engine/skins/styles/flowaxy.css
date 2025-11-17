@@ -157,6 +157,11 @@ body {
     background: rgba(255, 255, 255, 0.15) !important;
 }
 
+.header-quick-action-btn.active {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
 .header-quick-action-btn i {
     font-size: 14px;
     margin-right: 6px;
@@ -177,6 +182,16 @@ body {
     
     .navbar .container-fluid {
         height: var(--header-height-mobile) !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 0 12px !important;
+        width: 100% !important;
+    }
+    
+    .navbar .container-fluid > div:first-child {
+        flex-shrink: 0 !important;
+        min-width: auto !important;
     }
     
     .admin-logo-icon {
@@ -194,27 +209,84 @@ body {
     .header-dropdown-btn,
     .header-view-site-btn,
     .header-quick-action-btn {
-        width: 32px;
-        min-width: 32px;
+        width: 32px !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        height: 32px !important;
         padding: 0 !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .navbar .container-fluid > div:last-child,
+    .header-right-actions {
+        display: flex !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
+        margin-left: auto !important;
+        justify-content: flex-end !important;
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+        flex-grow: 0 !important;
+        gap: 8px !important;
+    }
+    
+    /* Убеждаемся, что все дочерние элементы выравниваются правильно */
+    .header-right-actions > * {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .header-quick-actions {
+        background: transparent !important;
+        gap: 8px !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+    
+    /* На мобильных каждая кнопка должна быть отдельной с отступами */
+    .header-quick-actions .header-quick-action-btn {
+        margin: 0 !important;
+        border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.1) !important;
     }
     
     .header-quick-action-btn {
-        border-radius: 0 !important;
+        border-radius: 8px !important;
     }
     
-    .header-quick-action-btn:first-child {
-        border-top-left-radius: 8px !important;
-        border-bottom-left-radius: 8px !important;
+    /* На мобильных все кнопки должны быть отдельными с одинаковыми скруглениями */
+    .header-quick-action-btn:first-child,
+    .header-quick-action-btn:last-child,
+    .header-quick-action-btn {
+        border-radius: 8px !important;
     }
     
-    .header-quick-action-btn:last-child {
-        border-top-right-radius: 8px !important;
-        border-bottom-right-radius: 8px !important;
+    .header-quick-action-btn:not(.active) {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    .header-quick-action-btn.active {
+        background: rgba(255, 255, 255, 0.3) !important;
+        color: #ffffff !important;
     }
     
     .header-quick-action-btn span {
         display: none !important;
+    }
+    
+    /* На мобильных убираем отступы у иконок для точного центрирования */
+    .header-quick-action-btn i {
+        margin: 0 !important;
+        line-height: 1 !important;
     }
     
     .header-logo {
