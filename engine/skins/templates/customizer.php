@@ -147,12 +147,21 @@
                                                            value="<?= htmlspecialchars($value) ?>"
                                                            placeholder="<?= htmlspecialchars($description) ?>"
                                                            readonly>
-                                                    <button type="button" 
-                                                            class="btn btn-outline-primary media-select-btn" 
-                                                            data-target="#setting_<?= htmlspecialchars($key) ?>"
-                                                            data-preview="preview_<?= htmlspecialchars($key) ?>">
-                                                        <i class="fas fa-images"></i> Вибрати
-                                                    </button>
+                                                    <?php if (!empty($mediaAvailable)): ?>
+                                                        <button type="button" 
+                                                                class="btn btn-outline-primary media-select-btn" 
+                                                                data-target="#setting_<?= htmlspecialchars($key) ?>"
+                                                                data-preview="preview_<?= htmlspecialchars($key) ?>">
+                                                            <i class="fas fa-images"></i> Вибрати
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <button type="button" 
+                                                                class="btn btn-outline-secondary" 
+                                                                disabled
+                                                                title="Плагін для роботи з медіафайлами не встановлено">
+                                                            <i class="fas fa-images"></i> Вибрати
+                                                        </button>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <?php if (!empty($value)): ?>
                                                     <div class="mt-2" id="preview_<?= htmlspecialchars($key) ?>">
@@ -198,7 +207,8 @@
     </div>
 </div>
 
-<!-- Модальное окно медиагалереи -->
+<!-- Модальное окно медиагалереи (только если есть плагин с медиа-функциональностью) -->
+<?php if (!empty($mediaAvailable)): ?>
 <div class="modal fade" id="mediaManagerModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-fullscreen-xl-down">
         <div class="modal-content">
@@ -251,6 +261,7 @@
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <input type="hidden" id="csrfToken" value="<?= SecurityHelper::csrfToken() ?>">
 
@@ -378,12 +389,18 @@
     }
     
     function initMediaGallery() {
+        // Перевіряємо, чи є модальне вікно (тобто плагін встановлено)
+        const mediaModal = document.getElementById('mediaManagerModal');
+        if (!mediaModal) {
+            return; // Плагін не встановлено, виходимо
+        }
+        
         // Обробка кнопок вибору медіа
         document.querySelectorAll('.media-select-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 currentMediaTarget = document.querySelector(this.dataset.target);
                 currentMediaPreview = document.querySelector('#' + this.dataset.preview);
-                const modal = new bootstrap.Modal(document.getElementById('mediaManagerModal'));
+                const modal = new bootstrap.Modal(mediaModal);
                 
                 // Завантажуємо медіа через AJAX тільки при відкритті модального вікна
                 if (currentMediaTarget) {
@@ -476,7 +493,8 @@
                     }
                 }
                 
-                const modal = bootstrap.Modal.getInstance(document.getElementById('mediaManagerModal'));
+                const mediaModalEl = document.getElementById('mediaManagerModal');
+                const modal = mediaModalEl ? bootstrap.Modal.getInstance(mediaModalEl) : null;
                 if (modal) {
                     modal.hide();
                 }

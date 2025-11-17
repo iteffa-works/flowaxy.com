@@ -43,7 +43,7 @@ spl_autoload_register(function (string $className): void {
         // Спочатку перевіряємо модулі (Config тепер в modules)
         $modulesDir = __DIR__ . '/modules/';
         // MailModule завантажується тільки через ModuleLoader (lazy loading)
-        if ($className === 'Config' || in_array($className, ['Media', 'Menu', 'PluginManager'])) {
+        if ($className === 'Config' || in_array($className, ['Menu', 'PluginManager'])) {
             $moduleFile = $modulesDir . $className . '.php';
             if (file_exists($moduleFile) && is_readable($moduleFile)) {
                 require_once $moduleFile;
@@ -103,7 +103,6 @@ spl_autoload_register(function (string $className): void {
             'DiagnosticsPage' => 'skins/pages',
             'DocumentationPage' => 'skins/pages',
             'ThemeEditorPage' => 'skins/pages',
-            'MediaPage' => 'skins/pages',
         ];
         
         $subdir = $subdirectories[$className] ?? '';

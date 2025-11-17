@@ -143,13 +143,25 @@ class CustomizerPage extends AdminPage {
                 }
             }
         }
+        // Перевіряємо, чи є плагін, який надає медіа-функціональність через хуки
+        $mediaAvailable = false;
+        if (function_exists('hasHook')) {
+            $mediaAvailable = hasHook('media_get_files') && hasHook('media_upload_file');
+        } elseif (function_exists('pluginManager')) {
+            $pm = pluginManager();
+            if ($pm && method_exists($pm, 'hasHook')) {
+                $mediaAvailable = $pm->hasHook('media_get_files') && $pm->hasHook('media_upload_file');
+            }
+        }
+        
         $this->render([
             'activeTheme' => $activeTheme,
             'themeConfig' => $themeConfig,
             'customizerConfig' => $customizerConfig,
             'settings' => $settings,
             'availableSettings' => $themeConfig['available_settings'] ?? [],
-            'categories' => $categories
+            'categories' => $categories,
+            'mediaAvailable' => $mediaAvailable
         ]);
     }
     
@@ -177,7 +189,27 @@ class CustomizerPage extends AdminPage {
      * @return array
      */
     public function getMediaImages(array $post, array $get, array $files): array {
-        $mediaModule = mediaModule();
+        // Перевіряємо, чи є плагін, який надає медіа-функціональність через хуки
+        $mediaAvailable = false;
+        if (function_exists('hasHook')) {
+            $mediaAvailable = hasHook('media_get_files');
+        } elseif (function_exists('pluginManager')) {
+            $pm = pluginManager();
+            if ($pm && method_exists($pm, 'hasHook')) {
+                $mediaAvailable = $pm->hasHook('media_get_files');
+            }
+        }
+        
+        // Якщо немає плагіна з медіа-функціональністю, повертаємо порожній результат
+        if (!$mediaAvailable) {
+            return [
+                'files' => [],
+                'total' => 0,
+                'page' => 1,
+                'pages' => 0
+            ];
+        }
+        
         $page = isset($get['page']) ? max(1, (int)$get['page']) : 1;
         $perPage = isset($get['per_page']) ? max(1, min(100, (int)$get['per_page'])) : 24;
         $search = SecurityHelper::sanitizeInput($get['search'] ?? '');
@@ -189,9 +221,8 @@ class CustomizerPage extends AdminPage {
             'order_dir' => 'DESC'
         ];
         
-        $result = $mediaModule->getFiles($filters, $page, $perPage);
-        
-        // Використовуємо хук для отримання файлів (якщо доступний)
+        // Використовуємо хук для отримання файлів (через плагін, який надає медіа-функціональність)
+        $result = null;
         if (function_exists('doHook')) {
             $hookResult = doHook('media_get_files', [
                 'filters' => $filters,
@@ -203,11 +234,21 @@ class CustomizerPage extends AdminPage {
             }
         }
         
+        // Fallback якщо хук не спрацював
+        if (!$result) {
+            $result = [
+                'files' => [],
+                'total' => 0,
+                'page' => $page,
+                'pages' => 0
+            ];
+        }
+        
         return [
-            'files' => $result['files'],
-            'total' => $result['total'],
-            'page' => $result['page'],
-            'pages' => $result['pages']
+            'files' => $result['files'] ?? [],
+            'total' => $result['total'] ?? 0,
+            'page' => $result['page'] ?? $page,
+            'pages' => $result['pages'] ?? 0
         ];
     }
     
@@ -220,18 +261,33 @@ class CustomizerPage extends AdminPage {
      * @return array
      */
     public function handleUpload(array $post, array $get, array $files): array {
+        // Перевіряємо, чи є плагін, який надає медіа-функціональність через хуки
+        $mediaAvailable = false;
+        if (function_exists('hasHook')) {
+            $mediaAvailable = hasHook('media_upload_file');
+        } elseif (function_exists('pluginManager')) {
+            $pm = pluginManager();
+            if ($pm && method_exists($pm, 'hasHook')) {
+                $mediaAvailable = $pm->hasHook('media_upload_file');
+            }
+        }
+        
+        // Якщо немає плагіна з медіа-функціональністю, повертаємо помилку
+        if (!$mediaAvailable) {
+            return ['success' => false, 'error' => 'Плагін для роботи з медіафайлами не встановлено'];
+        }
+        
         $file = $files['file'] ?? null;
         
         if (!$file || empty($file['tmp_name'])) {
             return ['success' => false, 'error' => 'Файл не завантажено'];
         }
         
-        $mediaModule = mediaModule();
         $title = !empty($post['title']) ? SecurityHelper::sanitizeInput($post['title']) : null;
         $description = SecurityHelper::sanitizeInput($post['description'] ?? '');
         $alt = SecurityHelper::sanitizeInput($post['alt_text'] ?? '');
         
-        // Використовуємо хук для завантаження (якщо доступний)
+        // Використовуємо хук для завантаження (через плагін, який надає медіа-функціональність)
         $result = null;
         if (function_exists('doHook')) {
             $hookResult = doHook('media_upload_file', [
@@ -245,9 +301,9 @@ class CustomizerPage extends AdminPage {
             }
         }
         
-        // Fallback на прямий виклик
+        // Fallback якщо хук не спрацював
         if (!$result) {
-            $result = $mediaModule->uploadFile($file, $title, $description, $alt);
+            $result = ['success' => false, 'error' => 'Помилка завантаження файлу'];
         }
         
         return $result;

@@ -60,13 +60,6 @@ function getMenuItems() {
     
     $menu = [
         [
-            'href' => UrlHelper::admin('media'),
-            'icon' => 'fas fa-images',
-            'text' => 'Медіа-бібліотека',
-            'page' => 'media',
-            'order' => 20
-        ],
-        [
             'href' => UrlHelper::admin('settings'),
             'icon' => 'fas fa-cog',
             'text' => 'Загальні налаштування',

@@ -180,7 +180,7 @@ class DocumentationPage extends AdminPage {
                     'description' => 'Системні модулі:',
                     'items' => [
                         'PluginManager - Керування плагінами',
-                        'Media - Керування медіафайлами',
+                        'Media Library (Plugin) - Керування медіафайлами',
                         'Menu - Керування меню',
                         'Config - Керування конфігурацією',
                         'ThemeManager - Керування темами'
@@ -368,7 +368,7 @@ class DocumentationPage extends AdminPage {
                     ]
                 ],
                 [
-                    'title' => 'Media',
+                    'title' => 'Media Library (Plugin)',
                     'description' => 'Модуль керування медіафайлами. Завантаження, видалення та отримання файлів.',
                     'methods' => [
                         'uploadFile() - Завантаження файлу',
@@ -584,7 +584,7 @@ Response::redirectStatic(\'/admin/dashboard\');'
                     'items' => [
                         'pluginManager(): PluginManager - Отримання менеджера плагінів',
                         'themeManager(): ThemeManager - Отримання менеджера тем',
-                        'mediaModule(): Media - Отримання модуля медіа',
+                        'Media Library Plugin - Плагін для керування медіафайлами (встановлюється окремо)',
                         'mailer(): Mailer - Отримання екземпляра Mailer (рекомендовано)',
                         'mailModule(): Mailer - Отримання екземпляра Mailer (зворотна сумісність)',
                         'menuModule(): Menu - Отримання модуля меню',
