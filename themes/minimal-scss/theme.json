@@ -1,0 +1,53 @@
+{
+    "slug": "minimal-scss",
+    "name": "Minimal SCSS",
+    "version": "1.0.0",
+    "description": "Мінімалістична тема-приклад з підтримкою SCSS",
+    "author": "Flowaxy CMS",
+    "supports_customization": true,
+    "supports_navigation": true,
+    "menu_locations": {
+        "header": {
+            "label": "Меню в хедері",
+            "description": "Основне меню навігації в верхній частині сайту"
+        }
+    },
+    "default_settings": {
+        "site_logo": "",
+        "site_favicon": "",
+        "site_title": "",
+        "site_tagline": "",
+        "custom_css": ""
+    },
+    "available_settings": {
+        "identity": {
+            "site_logo": {
+                "type": "media",
+                "label": "Логотип сайту",
+                "description": "Завантажте логотип для вашого сайту"
+            },
+            "site_favicon": {
+                "type": "media",
+                "label": "Фавікон",
+                "description": "Завантажте фавікон для вашого сайту (рекомендовано 32x32 або 16x16)"
+            },
+            "site_title": {
+                "type": "text",
+                "label": "Назва сайту",
+                "description": "Назва сайту, яка відображається в браузері"
+            },
+            "site_tagline": {
+                "type": "text",
+                "label": "Слоган сайту",
+                "description": "Короткий опис або слоган вашого сайту"
+            }
+        },
+        "css": {
+            "custom_css": {
+                "type": "textarea",
+                "label": "Додатковий CSS",
+                "description": "Додайте власний CSS код для кастомізації теми"
+            }
+        }
+    }
+}
