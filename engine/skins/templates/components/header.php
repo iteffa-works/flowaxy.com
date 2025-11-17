@@ -24,22 +24,25 @@
         </div>
 
         <!-- Правая часть навбара - иконки в ряд -->
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 header-right-actions">
             <!-- Иконки быстрого доступа к разделам -->
+            <?php
+            // Определяем текущую страницу
+            $currentPage = Router::getCurrentPage();
+            $isDashboard = ($currentPage === 'dashboard');
+            $isPlugins = ($currentPage === 'plugins');
+            $isThemes = ($currentPage === 'themes');
+            ?>
             <div class="header-quick-actions d-flex align-items-center">
-                <a href="<?= UrlHelper::admin('dashboard') ?>" class="header-quick-action-btn" title="Панель управління">
+                <a href="<?= UrlHelper::admin('dashboard') ?>" class="header-quick-action-btn <?= $isDashboard ? 'active' : '' ?>" title="Панель управління">
                     <i class="fas fa-home"></i>
-                    <span class="d-none d-md-inline ms-1">Панель управління</span>
+                    <span class="d-none d-md-inline ms-1">Панель</span>
                 </a>
-                <a href="<?= UrlHelper::admin('media') ?>" class="header-quick-action-btn" title="Медіа-бібліотека">
-                    <i class="fas fa-images"></i>
-                    <span class="d-none d-md-inline ms-1">Медіафайли</span>
-                </a>
-                <a href="<?= UrlHelper::admin('plugins') ?>" class="header-quick-action-btn" title="Плагіни">
+                <a href="<?= UrlHelper::admin('plugins') ?>" class="header-quick-action-btn <?= $isPlugins ? 'active' : '' ?>" title="Плагіни">
                     <i class="fas fa-puzzle-piece"></i>
                     <span class="d-none d-md-inline ms-1">Плагіни</span>
                 </a>
-                <a href="<?= UrlHelper::admin('themes') ?>" class="header-quick-action-btn" title="Теми оформлення">
+                <a href="<?= UrlHelper::admin('themes') ?>" class="header-quick-action-btn <?= $isThemes ? 'active' : '' ?>" title="Теми оформлення">
                     <i class="fas fa-palette"></i>
                     <span class="d-none d-md-inline ms-1">Теми</span>
                 </a>
