@@ -251,11 +251,96 @@ class DocumentationPage extends AdminPage {
                     'description' => 'Клас для роботи з базою даних. Використовує PDO.',
                     'methods' => [
                         'getInstance() - Отримання єдиного екземпляру',
+                        'getConnection() - Отримання PDO підключення',
                         'query() - Виконання SQL запиту',
                         'prepare() - Підготовка запиту',
                         'beginTransaction() - Початок транзакції',
                         'commit() - Підтвердження транзакції',
-                        'rollBack() - Відкат транзакції'
+                        'rollBack() - Відкат транзакції',
+                        'isAvailable() - Перевірка доступності БД'
+                    ]
+                ],
+                [
+                    'title' => 'Logger',
+                    'description' => 'Централізована система логування з підтримкою різних рівнів, ротації файлів та налаштувань.',
+                    'methods' => [
+                        'getInstance() - Отримання єдиного екземпляру (Singleton)',
+                        'logDebug($message, $context) - Логування DEBUG',
+                        'logInfo($message, $context) - Логування INFO',
+                        'logWarning($message, $context) - Логування WARNING',
+                        'logError($message, $context) - Логування ERROR',
+                        'logCritical($message, $context) - Логування CRITICAL',
+                        'logException($exception, $context) - Логування винятків',
+                        'getSettings() - Отримання налаштувань логування',
+                        'setSetting($key, $value) - Встановлення налаштування'
+                    ],
+                    'constants' => [
+                        'LEVEL_DEBUG (100) - Детальна інформація для відлагодження',
+                        'LEVEL_INFO (200) - Загальна інформація',
+                        'LEVEL_WARNING (300) - Попередження',
+                        'LEVEL_ERROR (400) - Помилки',
+                        'LEVEL_CRITICAL (500) - Критичні помилки'
+                    ]
+                ],
+                [
+                    'title' => 'SettingsManager',
+                    'description' => 'Singleton клас для управління налаштуваннями сайту з інтеграцією кешування.',
+                    'methods' => [
+                        'getInstance() - Отримання єдиного екземпляру',
+                        'get($key, $default) - Отримання налаштування',
+                        'set($key, $value) - Збереження налаштування',
+                        'setMultiple($settings) - Збереження кількох налаштувань (транзакційно)',
+                        'has($key) - Перевірка існування налаштування',
+                        'delete($key) - Видалення налаштування',
+                        'all() - Отримання всіх налаштувань',
+                        'load($force) - Завантаження налаштувань з БД'
+                    ]
+                ],
+                [
+                    'title' => 'UrlHelper',
+                    'description' => 'Статичний клас для генерації та роботи з URL.',
+                    'methods' => [
+                        'protocolRelative($path) - Протокол-відносний URL',
+                        'uploads($filePath) - URL завантажень',
+                        'admin($path) - URL адмінки',
+                        'site($path) - URL сайту',
+                        'current($withQuery) - Поточний URL',
+                        'toProtocolRelative($url) - Конвертація в протокол-відносний URL'
+                    ]
+                ],
+                [
+                    'title' => 'SecurityHelper',
+                    'description' => 'Статичний клас для роботи з безпекою та авторизацією.',
+                    'methods' => [
+                        'csrfToken() - Генерація CSRF токена',
+                        'csrfField() - Генерація CSRF поля для форми',
+                        'verifyCsrfToken($token) - Перевірка CSRF токена',
+                        'isAdminLoggedIn() - Перевірка авторизації адміна',
+                        'requireAdmin() - Вимагає авторизації (редирект на login)',
+                        'safeHtml($value, $default) - Безпечний вивід HTML',
+                        'sanitizeInput($input) - Санітизація вхідних даних'
+                    ]
+                ],
+                [
+                    'title' => 'DatabaseHelper',
+                    'description' => 'Статичний клас для отримання підключення до БД.',
+                    'methods' => [
+                        'getConnection($showError) - Отримання PDO підключення',
+                        'isAvailable($showError) - Перевірка доступності БД',
+                        'getInstance() - Отримання екземпляру Database'
+                    ]
+                ],
+                [
+                    'title' => 'Response',
+                    'description' => 'Клас для роботи з HTTP відповідями.',
+                    'methods' => [
+                        'status($code) - Встановлення статус коду',
+                        'header($name, $value) - Встановлення заголовка',
+                        'json($data, $statusCode) - Відправка JSON відповіді',
+                        'redirect($url, $statusCode) - Редірект',
+                        'setHeader($name, $value) - Статичний метод встановлення заголовка',
+                        'jsonResponse($data, $statusCode) - Статичний метод JSON відповіді',
+                        'redirectStatic($url, $statusCode) - Статичний метод редіректу'
                     ]
                 ]
             ]
@@ -382,12 +467,31 @@ $result = doHook(\'admin_menu\', $menu);'
             'sections' => [
                 [
                     'title' => 'База даних',
-                    'description' => 'Функції для роботи з базою даних:',
+                    'description' => 'Функції для роботи з базою даних (використовуйте класи):',
                     'items' => [
-                        'getDB(bool $showError = true): ?PDO - Отримання підключення до БД',
-                        'isDatabaseAvailable(bool $showError = false): bool - Перевірка доступності БД',
-                        'showDatabaseError(array $errorDetails): void - Відображення помилки БД'
-                    ]
+                        'DatabaseHelper::getConnection($showError) - Отримання підключення до БД',
+                        'DatabaseHelper::isAvailable($showError) - Перевірка доступності БД',
+                        'Database::getInstance() - Отримання екземпляру Database',
+                        'Database::getInstance()->getConnection() - Отримання PDO підключення',
+                        'Database::getInstance()->query($sql) - Виконання SQL запиту',
+                        'Database::getInstance()->prepare($sql) - Підготовка запиту'
+                    ],
+                    'code' => '// Отримання підключення
+$db = DatabaseHelper::getConnection();
+if (!$db) {
+    // БД недоступна
+    return;
+}
+
+// Виконання запиту
+$stmt = $db->prepare("SELECT * FROM table WHERE id = ?");
+$stmt->execute([$id]);
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Перевірка доступності
+if (DatabaseHelper::isAvailable()) {
+    // БД доступна
+}'
                 ],
                 [
                     'title' => 'Кешування',
@@ -403,25 +507,76 @@ $result = doHook(\'admin_menu\', $menu);'
                 ],
                 [
                     'title' => 'Безпека',
-                    'description' => 'Функції безпеки:',
+                    'description' => 'Функції безпеки (використовуйте SecurityHelper):',
                     'items' => [
-                        'generateCSRFToken(): string - Генерація CSRF токена',
-                        'verifyCSRFToken(?string $token): bool - Перевірка CSRF токена',
-                        'isAdminLoggedIn(): bool - Перевірка авторизації адміна',
-                        'requireAdmin(): void - Обов\'язкова авторизація адміна',
-                        'sanitizeInput($input): string - Очищення вводу'
-                    ]
+                        'SecurityHelper::csrfToken() - Генерація CSRF токена',
+                        'SecurityHelper::csrfField() - Генерація CSRF поля для форми',
+                        'SecurityHelper::verifyCsrfToken($token) - Перевірка CSRF токена',
+                        'SecurityHelper::isAdminLoggedIn() - Перевірка авторизації адміна',
+                        'SecurityHelper::requireAdmin() - Обов\'язкова авторизація адміна',
+                        'SecurityHelper::sanitizeInput($input) - Очищення вводу',
+                        'SecurityHelper::safeHtml($value, $default) - Безпечний вивід HTML'
+                    ],
+                    'code' => '// Генерація CSRF токена
+$token = SecurityHelper::csrfToken();
+
+// Використання в формі
+echo SecurityHelper::csrfField();
+// Результат: <input type="hidden" name="csrf_token" value="...">
+
+// Перевірка CSRF
+if (SecurityHelper::verifyCsrfToken()) {
+    // Токен валідний (автоматично перевіряє $_POST[\'csrf_token\'])
+}
+
+// Перевірка авторизації
+if (SecurityHelper::isAdminLoggedIn()) {
+    // Адмін залогінений
+}
+
+// Вимагає авторизації
+SecurityHelper::requireAdmin(); // Редирект на /admin/login якщо не залогінений
+
+// Безпечний вивід
+echo SecurityHelper::safeHtml($userInput);
+
+// Санітизація вводу
+$clean = SecurityHelper::sanitizeInput($_POST[\'data\']);'
                 ],
                 [
                     'title' => 'URL та навігація',
-                    'description' => 'Функції для роботи з URL:',
+                    'description' => 'Функції для роботи з URL (використовуйте UrlHelper):',
                     'items' => [
-                        'adminUrl(string $path = \'\'): string - Генерація URL адмінки',
-                        'getProtocolRelativeUrl(string $path = \'\'): string - Отримання протокол-відносного URL',
-                        'getUploadsUrl(string $filePath = \'\'): string - URL завантажень',
-                        'toProtocolRelativeUrl(string $url): string - Конвертація в протокол-відносний URL',
-                        'redirectTo(string $url): void - Перенаправлення'
-                    ]
+                        'UrlHelper::admin($path) - Генерація URL адмінки',
+                        'UrlHelper::site($path) - Генерація URL сайту',
+                        'UrlHelper::uploads($filePath) - URL завантажень',
+                        'UrlHelper::protocolRelative($path) - Протокол-відносний URL',
+                        'UrlHelper::current($withQuery) - Поточний URL',
+                        'UrlHelper::toProtocolRelative($url) - Конвертація в протокол-відносний URL',
+                        'Response::redirectStatic($url, $statusCode) - Перенаправлення'
+                    ],
+                    'code' => '// URL адмінки
+$url = UrlHelper::admin(\'settings\');
+// Результат: /admin/settings
+
+// URL сайту
+$url = UrlHelper::site(\'page\');
+// Результат: /page або повний URL
+
+// URL завантажень
+$url = UrlHelper::uploads(\'image.jpg\');
+// Результат: //example.com/uploads/image.jpg
+
+// Протокол-відносний URL
+$url = UrlHelper::protocolRelative(\'path/to/file\');
+// Результат: //example.com/path/to/file
+
+// Поточний URL
+$current = UrlHelper::current(true); // з query string
+$current = UrlHelper::current(false); // без query string
+
+// Редірект
+Response::redirectStatic(\'/admin/dashboard\');'
                 ],
                 [
                     'title' => 'Модулі та плагіни',
@@ -490,15 +645,109 @@ if ($result[\'success\']) {
                     ]
                 ],
                 [
-                    'title' => 'Конфігурація',
-                    'description' => 'Функції для роботи з конфігурацією:',
+                    'title' => 'Конфігурація та налаштування',
+                    'description' => 'Функції для роботи з конфігурацією (використовуйте SettingsManager):',
                     'items' => [
-                        'config_get(string $key, $default = null) - Отримання значення конфігурації',
-                        'config_set(string $key, $value): bool - Встановлення значення конфігурації',
-                        'config_has(string $key): bool - Перевірка наявності ключа',
-                        'getSiteSettings(): array - Отримання всіх налаштувань сайту',
-                        'getSetting(string $key, string $default = \'\'): string - Отримання налаштування'
-                    ]
+                        'SettingsManager::getInstance()->get($key, $default) - Отримання налаштування',
+                        'SettingsManager::getInstance()->set($key, $value) - Збереження налаштування',
+                        'SettingsManager::getInstance()->setMultiple($settings) - Збереження кількох налаштувань',
+                        'SettingsManager::getInstance()->has($key) - Перевірка існування',
+                        'SettingsManager::getInstance()->all() - Отримання всіх налаштувань',
+                        'SettingsManager::getInstance()->delete($key) - Видалення налаштування',
+                        'settingsManager() - Helper функція для отримання екземпляру'
+                    ],
+                    'code' => '// Отримання екземпляру
+$settings = SettingsManager::getInstance();
+// або
+$settings = settingsManager();
+
+// Отримання налаштування
+$siteName = $settings->get(\'site_name\', \'Default Site\');
+
+// Збереження налаштування
+$settings->set(\'site_name\', \'My Site\');
+
+// Збереження кількох налаштувань одночасно
+$settings->setMultiple([
+    \'site_name\' => \'My Site\',
+    \'site_email\' => \'admin@example.com\'
+]);
+
+// Перевірка існування
+if ($settings->has(\'site_name\')) {
+    // налаштування існує
+}
+
+// Отримання всіх налаштувань
+$all = $settings->all();'
+                ],
+                [
+                    'title' => 'Логування',
+                    'description' => 'Функції для роботи з логуванням (використовуйте Logger):',
+                    'items' => [
+                        'Logger::getInstance() - Отримання екземпляру Logger',
+                        'logger() - Helper функція для отримання екземпляру',
+                        'Logger::getInstance()->logDebug($message, $context) - Логування DEBUG',
+                        'Logger::getInstance()->logInfo($message, $context) - Логування INFO',
+                        'Logger::getInstance()->logWarning($message, $context) - Логування WARNING',
+                        'Logger::getInstance()->logError($message, $context) - Логування ERROR',
+                        'Logger::getInstance()->logCritical($message, $context) - Логування CRITICAL',
+                        'Logger::getInstance()->logException($exception, $context) - Логування винятків',
+                        'Logger::getInstance()->log($level, $message, $context) - Універсальний метод'
+                    ],
+                    'code' => '// Отримання екземпляру
+$logger = Logger::getInstance();
+// або
+$logger = logger();
+
+// Логування різних рівнів
+$logger->logDebug(\'Debug message\', [\'context\' => \'data\']);
+$logger->logInfo(\'Info message\');
+$logger->logWarning(\'Warning message\');
+$logger->logError(\'Error message\');
+$logger->logCritical(\'Critical message\');
+
+// Логування винятків
+try {
+    // код
+} catch (Exception $e) {
+    $logger->logException($e, [\'user_id\' => 123]);
+}
+
+// Універсальний метод
+$logger->log(Logger::LEVEL_INFO, \'User logged in\', [
+    \'user_id\' => 123,
+    \'ip\' => $_SERVER[\'REMOTE_ADDR\']
+]);'
+                ],
+                [
+                    'title' => 'Система уведомлень',
+                    'description' => 'JavaScript API для показу уведомлень в адмін-панелі:',
+                    'items' => [
+                        'showNotification($message, $type, $duration) - Показати уведомлення',
+                        'Notifications.success($message, $duration) - Успішне уведомлення',
+                        'Notifications.info($message, $duration) - Інформаційне уведомлення',
+                        'Notifications.warning($message, $duration) - Попередження',
+                        'Notifications.error($message, $duration) - Помилка'
+                    ],
+                    'code' => '// Базове використання
+showNotification(\'Повідомлення\', \'success\');
+showNotification(\'Помилка\', \'danger\');
+
+// З налаштуванням тривалості (в мілісекундах)
+showNotification(\'Повідомлення\', \'success\', 10000); // 10 секунд
+showNotification(\'Повідомлення\', \'success\', 0); // Без автоматичного закриття
+
+// Через об\'єкт Notifications
+Notifications.success(\'Успішно збережено\');
+Notifications.info(\'Інформаційне повідомлення\');
+Notifications.warning(\'Попередження\');
+Notifications.error(\'Помилка\');
+
+// Ручне закриття
+const closeNotification = showNotification(\'Повідомлення\', \'success\', 0);
+// Пізніше
+closeNotification();'
                 ],
                 [
                     'title' => 'Утиліти',
