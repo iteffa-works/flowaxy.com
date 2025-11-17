@@ -87,6 +87,7 @@ spl_autoload_register(function (string $className): void {
             'Response' => 'http',
             'Request' => 'http',
             'Router' => 'http',
+            'AjaxHandler' => 'http',
             'View' => 'view',
             'Mail' => 'mail',
             // Сторінки адмінки (для автозавантаження)
