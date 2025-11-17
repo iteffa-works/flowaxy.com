@@ -22,7 +22,6 @@
                         <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                             Плагіни
                         </div>
-                        <div class="h4 mb-0 font-weight-bold"><?= $stats['plugins'] ?? 0 ?></div>
                         <div class="text-xs text-muted">Активних плагінів</div>
                     </div>
                     <div class="col-auto">
@@ -41,7 +40,6 @@
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             Медіа
                         </div>
-                        <div class="h4 mb-0 font-weight-bold"><?= $stats['media'] ?? 0 ?></div>
                         <div class="text-xs text-muted">Файлів у бібліотеці</div>
                     </div>
                     <div class="col-auto">

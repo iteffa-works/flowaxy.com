@@ -42,6 +42,7 @@
                         <?php 
                         $isActive = ($theme['is_active'] == 1);
                         $supportsCustomization = isset($themesWithCustomization[$theme['slug']]) && $themesWithCustomization[$theme['slug']];
+                        $supportsNavigation = isset($themesWithNavigation[$theme['slug']]) && $themesWithNavigation[$theme['slug']];
                         $hasSettings = isset($themesWithSettings[$theme['slug']]) && $themesWithSettings[$theme['slug']];
                         $features = isset($themesFeatures[$theme['slug']]) ? $themesFeatures[$theme['slug']] : [];
                         ?>
@@ -115,25 +116,29 @@
                                             </button>
                                         </form>
                                     <?php else: ?>
-                                        <?php if ($supportsCustomization): ?>
-                                            <a href="<?= UrlHelper::admin('customizer') ?>" class="btn btn-primary">
-                                                <i class="fas fa-paint-brush me-1"></i>Налаштувати
-                                            </a>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-primary" disabled title="Ця тема не підтримує кастомізацію">
-                                                <i class="fas fa-paint-brush me-1"></i>Налаштувати
-                                            </button>
-                                        <?php endif; ?>
-                                        
-                                        <?php if ($hasSettings): ?>
-                                            <a href="<?= UrlHelper::admin($theme['slug'] . '-theme-settings') ?>" class="btn btn-secondary" title="Налаштування теми">
-                                                <i class="fas fa-cog"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                        
-                                        <button type="button" class="btn btn-danger" disabled title="Спочатку деактивуйте тему перед видаленням">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <?php 
+                                            $supportsNavigation = isset($themesWithNavigation[$theme['slug']]) && $themesWithNavigation[$theme['slug']];
+                                            ?>
+                                            
+                                            <?php if ($supportsCustomization): ?>
+                                                <a href="<?= UrlHelper::admin('customizer') ?>" class="btn btn-primary">
+                                                    <i class="fas fa-paint-brush me-1"></i>Кастомізація
+                                                </a>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($supportsNavigation): ?>
+                                                <a href="<?= UrlHelper::admin('menus') ?>" class="btn btn-primary">
+                                                    <i class="fas fa-bars me-1"></i>Навігація
+                                                </a>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($hasSettings): ?>
+                                                <a href="<?= UrlHelper::admin($theme['slug'] . '-theme-settings') ?>" class="btn btn-outline-secondary" title="Налаштування теми">
+                                                    <i class="fas fa-cog me-1"></i>Налаштування
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                     
                                     <?php if (!$isActive): ?>

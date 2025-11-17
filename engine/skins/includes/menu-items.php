@@ -21,150 +21,72 @@ function themeSupportsNavigation() {
 }
 
 function getMenuItems() {
-    $supportsCustomization = themeSupportsCustomization();
-    $supportsNavigation = themeSupportsNavigation();
-    
-    // Создаем уникальный ключ кеша на основе поддержки функций темы и активных плагинов
-    // Кешируем хеш плагинов, чтобы не вычислять его каждый раз
+    // Создаем уникальный ключ кеша на основе активных плагинов
     $pluginsHash = cache_remember('active_plugins_hash', function() {
         $activePlugins = pluginManager()->getActivePlugins();
         return md5(implode(',', array_keys($activePlugins)));
     }, 3600); // Кешируем хеш плагинов на 1 час
     
-    $cacheKey = 'admin_menu_items_' . ($supportsCustomization ? '1' : '0') . '_' . ($supportsNavigation ? '1' : '0') . '_' . $pluginsHash;
+    $cacheKey = 'admin_menu_items_' . $pluginsHash;
     
-    return cache_remember($cacheKey, function() use ($supportsCustomization, $supportsNavigation) {
-    
-    // Формуємо підменю "Дизайн" (тільки для кастомізації та навігації)
-    $designSubmenu = [];
-    
-    // Додаємо пункт кастомізації тільки якщо тема підтримує
-    if ($supportsCustomization) {
-        $designSubmenu[] = [
-            'href' => UrlHelper::admin('customizer'),
-            'text' => 'Кастомізація',
-            'page' => 'customizer',
-            'order' => 1
-        ];
-    }
-    
-    // Додаємо пункт навігації тільки якщо тема підтримує
-    if ($supportsNavigation) {
-        $designSubmenu[] = [
-            'href' => UrlHelper::admin('menus'),
-            'text' => 'Навігація',
-            'page' => 'menus',
-            'order' => 2
-        ];
-    }
-    
-    $menu = [
-        [
-            'href' => UrlHelper::admin('settings'),
-            'icon' => 'fas fa-cog',
-            'text' => 'Загальні налаштування',
-            'page' => 'settings',
-            'order' => 50
-        ],
-        [
-            'href' => '#',
-            'icon' => 'fas fa-sliders-h',
-            'text' => 'Налаштування плагінів',
-            'page' => 'plugin-settings',
-            'order' => 55,
-            'submenu' => []
-        ],
-        [
-            'href' => '#',
-            'icon' => 'fas fa-palette',
-            'text' => 'Налаштування тем',
-            'page' => 'theme-settings',
-            'order' => 56,
-            'submenu' => []
-        ],
-        [
-            'href' => '#',
-            'icon' => 'fas fa-code',
-            'text' => 'Для розробника',
-            'page' => 'developer',
-            'order' => 60,
-            'submenu' => []
-        ]
-    ];
-    
-    // Додаємо меню "Налаштування дизайну" тільки якщо є підменю (кастомізація або навігація)
-    // Розміщуємо після "Налаштування плагінів" (order 55)
-    if (!empty($designSubmenu)) {
-        $menu[] = [
-            'href' => '#',
-            'icon' => 'fas fa-paint-brush',
-            'text' => 'Налаштування дизайну',
-            'page' => 'design',
-            'order' => 57,
-            'submenu' => $designSubmenu
-        ];
-    }
-    
-    // Ініціалізуємо плагіни перед викликом хука admin_menu
-    // Це потрібно, щоб плагіни могли зареєструвати свої пункти меню
-    if (function_exists('pluginManager')) {
-        $pluginManager = pluginManager();
-        if ($pluginManager && method_exists($pluginManager, 'initializePlugins')) {
-            $pluginManager->initializePlugins();
+    return cache_remember($cacheKey, function() {
+        // Починаємо з порожнього меню - всі пункти додаються через плагіни
+        $menu = [];
+        
+        // Ініціалізуємо плагіни перед викликом хука admin_menu
+        // Це потрібно, щоб плагіни могли зареєструвати свої пункти меню
+        if (function_exists('pluginManager')) {
+            $pluginManager = pluginManager();
+            if ($pluginManager && method_exists($pluginManager, 'initializePlugins')) {
+                $pluginManager->initializePlugins();
+            }
         }
-    }
-    
-    // Застосовуємо хук для додавання пунктів меню від плагінів
-    // Модулі завантажаться тільки один раз при першому виклику
-    $menu = doHook('admin_menu', $menu);
-    
-    // Сортуємо по order
-    usort($menu, function($a, $b) {
-        $orderA = $a['order'] ?? 50;
-        $orderB = $b['order'] ?? 50;
-        return $orderA - $orderB;
-    });
-    
-    // Сортуємо подменю для пунктів с подменю
-    foreach ($menu as $key => $item) {
-        if (isset($item['submenu']) && is_array($item['submenu'])) {
-            usort($menu[$key]['submenu'], function($a, $b) {
-                $orderA = $a['order'] ?? 50;
-                $orderB = $b['order'] ?? 50;
-                return $orderA - $orderB;
-            });
-        }
-    }
-    
-    // Видаляємо меню "Налаштування плагінів" та "Налаштування тем" якщо підменю порожнє
-    $menuKeysToRemove = [];
-    foreach ($menu as $key => $item) {
-        if (isset($item['page']) && ($item['page'] === 'plugin-settings' || $item['page'] === 'theme-settings')) {
-            $submenuCount = 0;
+        
+        // Застосовуємо хук для додавання пунктів меню від плагінів
+        $menu = doHook('admin_menu', $menu);
+        
+        // Сортуємо по order
+        usort($menu, function($a, $b) {
+            $orderA = $a['order'] ?? 50;
+            $orderB = $b['order'] ?? 50;
+            return $orderA - $orderB;
+        });
+        
+        // Сортуємо подменю для пунктів с подменю
+        foreach ($menu as $key => $item) {
             if (isset($item['submenu']) && is_array($item['submenu'])) {
-                $submenuCount = count($item['submenu']);
-            }
-            
-            // Удаляем меню, если нет пунктов в подменю
-            if ($submenuCount === 0) {
-                $menuKeysToRemove[] = $key;
+                usort($menu[$key]['submenu'], function($a, $b) {
+                    $orderA = $a['order'] ?? 50;
+                    $orderB = $b['order'] ?? 50;
+                    return $orderA - $orderB;
+                });
             }
         }
-    }
-    
-    // Удаляем найденные меню
-    foreach ($menuKeysToRemove as $key) {
-        unset($menu[$key]);
-    }
-    
-    // Переиндексируем массив после удаления
-    if (!empty($menuKeysToRemove)) {
-        $menu = array_values($menu);
-    }
-    
+        
+        // Видаляємо меню з порожніми підменю
+        $menuKeysToRemove = [];
+        foreach ($menu as $key => $item) {
+            if (isset($item['submenu']) && is_array($item['submenu']) && empty($item['submenu'])) {
+                // Видаляємо тільки якщо це не прямий посилання (href !== '#')
+                if (($item['href'] ?? '#') === '#') {
+                    $menuKeysToRemove[] = $key;
+                }
+            }
+        }
+        
+        // Удаляем найденные меню
+        foreach ($menuKeysToRemove as $key) {
+            unset($menu[$key]);
+        }
+        
+        // Переиндексируем массив после удаления
+        if (!empty($menuKeysToRemove)) {
+            $menu = array_values($menu);
+        }
+        
         // Повертаємо меню
         return $menu;
-    }, 3600); // Кешуємо на 1 годину (меню змінюється рідко, тільки при зміні плагінів або теми)
+    }, 3600); // Кешуємо на 1 годину (меню змінюється рідко, тільки при зміні плагінів)
 }
 
 /**

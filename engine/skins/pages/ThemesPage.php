@@ -55,8 +55,9 @@ class ThemesPage extends AdminPage {
         $themes = themeManager()->getAllThemes();
         $activeTheme = themeManager()->getActiveTheme();
         
-        // Перевіряємо підтримку кастомізації для кожної теми (з theme.json або customizer.php)
+        // Перевіряємо підтримку кастомізації та навігації для кожної теми
         $themesWithCustomization = [];
+        $themesWithNavigation = [];
         $themesWithSettings = [];
         $themesFeatures = [];
         foreach ($themes as $theme) {
@@ -70,6 +71,14 @@ class ThemesPage extends AdminPage {
                 $themesWithCustomization[$theme['slug']] = file_exists($themePath . 'customizer.php');
             }
             
+            // Перевіряємо підтримку навігації
+            if (isset($theme['supports_navigation'])) {
+                $themesWithNavigation[$theme['slug']] = (bool)$theme['supports_navigation'];
+            } else {
+                // Fallback: перевіряємо через ThemeManager
+                $themesWithNavigation[$theme['slug']] = themeManager()->supportsNavigation($theme['slug']);
+            }
+            
             // Перевіряємо наявність налаштувань теми
             $themesWithSettings[$theme['slug']] = $this->themeHasSettings($theme['slug'], $themePath);
             
@@ -77,17 +86,14 @@ class ThemesPage extends AdminPage {
             $themesFeatures[$theme['slug']] = $this->getThemeFeatures($theme, $themePath);
         }
         
-        // Перевіряємо підтримку кастомізації активної теми
-        $activeThemeSupportsCustomization = $activeTheme ? ($themesWithCustomization[$activeTheme['slug']] ?? false) : false;
-        
         // Рендеримо сторінку
         $this->render([
             'themes' => $themes,
             'activeTheme' => $activeTheme,
             'themesWithCustomization' => $themesWithCustomization,
+            'themesWithNavigation' => $themesWithNavigation,
             'themesWithSettings' => $themesWithSettings,
-            'themesFeatures' => $themesFeatures,
-            'activeThemeSupportsCustomization' => $activeThemeSupportsCustomization
+            'themesFeatures' => $themesFeatures
         ]);
     }
     

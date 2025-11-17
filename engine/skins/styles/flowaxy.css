@@ -448,6 +448,39 @@ body {
     max-height: 300px;
 }
 
+/* Пустое состояние сайдбара */
+.sidebar-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.sidebar-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: #32373c;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 1.5rem;
+}
+
+.sidebar-empty-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #a0a5aa;
+    margin: 0 0 8px 0;
+}
+
+.sidebar-empty-hint {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.5;
+}
+
 .sidebar .submenu li {
     margin: 0;
     border-bottom: 1px solid #3c434a;
@@ -1183,6 +1216,39 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
     color: white;
     background-color: transparent;
     font-weight: 600;
+}
+
+/* Пустое состояние для мобильного меню */
+.mobile-sidebar .sidebar-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.mobile-sidebar .sidebar-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: #32373c;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 1.5rem;
+}
+
+.mobile-sidebar .sidebar-empty-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #a0a5aa;
+    margin: 0 0 8px 0;
+}
+
+.mobile-sidebar .sidebar-empty-hint {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.5;
 }
 
 @media (max-width: 767.98px) {

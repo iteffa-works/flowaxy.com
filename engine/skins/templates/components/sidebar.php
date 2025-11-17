@@ -11,9 +11,24 @@
             // Router завантажується автоматично через автозавантажувач
             $currentPage = Router::getCurrentPage();
             $menuItems = getMenuItems();
-            foreach ($menuItems as $item) {
-                renderMenuItem($item, $currentPage);
-            }
+            
+            if (empty($menuItems)):
+            ?>
+                <li class="nav-item">
+                    <div class="sidebar-empty-state">
+                        <div class="sidebar-empty-icon">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <p class="sidebar-empty-text">Розділів немає</p>
+                        <p class="sidebar-empty-hint">Встановіть плагіни для додавання розділів</p>
+                    </div>
+                </li>
+            <?php
+            else:
+                foreach ($menuItems as $item) {
+                    renderMenuItem($item, $currentPage);
+                }
+            endif;
             ?>
         </ul>
     </div>
