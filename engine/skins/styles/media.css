@@ -1040,6 +1040,83 @@
         grid-template-columns: repeat(2, 1fr);
     }
     
+    /* Адаптация таблицы для планшетов */
+    .media-list-view .media-table {
+        display: block;
+        width: 100%;
+    }
+    
+    .media-list-view .media-table thead {
+        display: none;
+    }
+    
+    .media-list-view .media-table tbody {
+        display: block;
+        width: 100%;
+    }
+    
+    .media-list-view .media-table tbody tr {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        margin-bottom: 0;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 12px;
+        background: #ffffff;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .media-list-view .media-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .media-list-view .media-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    
+    .media-list-view .media-table td {
+        display: block;
+        padding: 0;
+        border: none;
+    }
+    
+    .media-list-view .media-table td:first-child {
+        flex-shrink: 0;
+    }
+    
+    .media-list-view .media-table td:nth-child(2) {
+        flex-shrink: 0;
+    }
+    
+    .media-list-view .media-table td:nth-child(3) {
+        flex: 1;
+        min-width: 0;
+        font-weight: 400;
+    }
+    
+    .media-list-view .media-table td:nth-child(3)::before {
+        display: none;
+    }
+    
+    .media-list-view .media-table td:nth-child(4) {
+        display: none;
+    }
+    
+    .media-list-view .media-table td:last-child {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+        border-top: none;
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    .media-list-view .media-table td:last-child::before {
+        display: none;
+    }
+    
     .media-toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -1092,6 +1169,110 @@
 @media (max-width: 480px) {
     .media-grid-row {
         grid-template-columns: 1fr;
+    }
+    
+    /* Адаптация таблицы для мобильных */
+    .media-list-view .media-table tbody tr {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+        gap: 10px;
+        position: relative;
+    }
+    
+    .media-list-view .media-table td:first-child {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+    }
+    
+    .media-list-view .media-table td:nth-child(2) {
+        align-self: flex-start;
+    }
+    
+    .media-list-view .media-table td:nth-child(3) {
+        width: 100%;
+        padding-right: 40px;
+    }
+    
+    .media-list-view .media-table td:nth-child(3)::before {
+        content: 'Назва: ';
+        display: block;
+        font-weight: 600;
+        font-size: 10px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    
+    .media-list-view .media-table td:nth-child(4) {
+        display: block;
+        width: 100%;
+        font-size: 11px;
+    }
+    
+    .media-list-view .media-table td:nth-child(4)::before {
+        content: 'Інформація: ';
+        display: block;
+        font-weight: 600;
+        font-size: 10px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    
+    .media-list-view .media-table td:last-child {
+        width: 100%;
+        justify-content: flex-start;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 2px;
+    }
+    
+    .media-list-view .media-table td:last-child::before {
+        content: 'Дії: ';
+        display: inline-block;
+        font-weight: 600;
+        font-size: 10px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-right: 8px;
+        line-height: 28px;
+        vertical-align: middle;
+    }
+    
+    .media-list-view .media-thumbnail {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        min-height: 48px;
+        max-height: 48px;
+    }
+    
+    .media-list-view .media-title {
+        font-size: 13px;
+        white-space: normal;
+        line-height: 1.4;
+        font-weight: 400;
+    }
+    
+    .media-list-view .media-info-content {
+        font-size: 11px;
+    }
+    
+    .media-action-btn-list {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+    
+    .media-list-view .media-checkbox-label {
+        width: 18px;
+        height: 18px;
     }
     
     .media-toolbar {
