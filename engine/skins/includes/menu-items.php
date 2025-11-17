@@ -74,20 +74,6 @@ function getMenuItems() {
             'order' => 20
         ],
         [
-            'href' => UrlHelper::admin('plugins'),
-            'icon' => 'fas fa-puzzle-piece',
-            'text' => 'Плагіни',
-            'page' => 'plugins',
-            'order' => 30
-        ],
-        [
-            'href' => UrlHelper::admin('themes'),
-            'icon' => 'fas fa-palette',
-            'text' => 'Теми оформлення',
-            'page' => 'themes',
-            'order' => 40
-        ],
-        [
             'href' => UrlHelper::admin('settings'),
             'icon' => 'fas fa-cog',
             'text' => 'Загальні налаштування',
