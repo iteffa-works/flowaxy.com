@@ -1279,26 +1279,29 @@
 
 .file-preview-image-wrapper .remove-file {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 28px;
-    height: 28px;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
     border: none;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: #dc2626;
-    border-radius: 6px;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0;
     z-index: 10;
     padding: 0;
     line-height: 1;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(220, 38, 38, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(220, 38, 38, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.9);
 }
 
 .file-preview-icon-wrapper .remove-file {
@@ -1306,23 +1309,27 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border: none;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: #dc2626;
-    border-radius: 4px;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0;
     z-index: 10;
     padding: 0;
     line-height: 1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(220, 38, 38, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.9);
 }
 
 .file-preview-item:hover .file-preview-image-wrapper .remove-file,
@@ -1335,28 +1342,31 @@
 }
 
 .file-preview-image-wrapper .remove-file:hover {
-    background: #fee2e2;
-    color: #dc2626;
-    transform: scale(1.1);
-    box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4);
-    border-color: rgba(220, 38, 38, 0.2);
+    background: #dc2626;
+    color: #ffffff;
+    transform: scale(1.15) rotate(90deg);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5), 0 4px 10px rgba(220, 38, 38, 0.3);
+    border-color: rgba(255, 255, 255, 1);
 }
 
 .file-preview-image-wrapper .remove-file:active {
-    transform: scale(0.95);
-    background: #fecaca;
-    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    transform: scale(1.05) rotate(90deg);
+    background: #b91c1c;
+    box-shadow: 0 3px 12px rgba(220, 38, 38, 0.4);
 }
 
 .file-preview-icon-wrapper .remove-file:hover {
-    background: rgba(220, 38, 38, 0.12);
-    color: #dc2626;
-    transform: translate(-50%, -50%) scale(1.1);
+    background: #dc2626;
+    color: #ffffff;
+    transform: translate(-50%, -50%) scale(1.15) rotate(90deg);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5), 0 4px 10px rgba(220, 38, 38, 0.3);
+    border-color: rgba(255, 255, 255, 1);
 }
 
 .file-preview-icon-wrapper .remove-file:active {
-    transform: translate(-50%, -50%) scale(0.95);
-    background: rgba(220, 38, 38, 0.15);
+    transform: translate(-50%, -50%) scale(1.05) rotate(90deg);
+    background: #b91c1c;
+    box-shadow: 0 3px 12px rgba(220, 38, 38, 0.4);
 }
 
 /* Адаптивність */
