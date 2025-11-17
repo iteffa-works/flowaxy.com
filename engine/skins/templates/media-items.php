@@ -36,13 +36,88 @@ if (!function_exists('formatFileSize')) {
         <p class="media-empty-description">Завантажте перший файл, щоб почати роботу з медіа-бібліотекою.</p>
     </div>
 <?php else: ?>
+    <!-- Режим таблицы для списка -->
+    <table class="media-table" style="display: none;">
+        <tbody>
+            <?php foreach ($files as $file): ?>
+                <tr class="media-item" data-id="<?= $file['id'] ?>">
+                    <td>
+                        <input type="checkbox" class="media-checkbox" data-id="<?= $file['id'] ?>" id="media-<?= $file['id'] ?>">
+                        <label for="media-<?= $file['id'] ?>" class="media-checkbox-label"></label>
+                    </td>
+                    <td>
+                        <div class="media-thumbnail">
+                            <?php if ($file['media_type'] === 'image'): ?>
+                                <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
+                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
+                                     loading="lazy">
+                            <?php elseif ($file['media_type'] === 'video'): ?>
+                                <div class="media-icon video-icon">
+                                    <i class="fas fa-video fa-2x"></i>
+                                </div>
+                            <?php elseif ($file['media_type'] === 'audio'): ?>
+                                <div class="media-icon audio-icon">
+                                    <i class="fas fa-music fa-2x"></i>
+                                </div>
+                            <?php elseif ($file['media_type'] === 'document'): ?>
+                                <div class="media-icon document-icon">
+                                    <i class="fas fa-file fa-2x"></i>
+                                </div>
+                            <?php else: ?>
+                                <div class="media-icon other-icon">
+                                    <i class="fas fa-file fa-2x"></i>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="media-title" title="<?= htmlspecialchars($file['title'] ?? $file['original_name']) ?>">
+                            <?= htmlspecialchars($file['title'] ?? $file['original_name']) ?>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="media-info-content">
+                            <?php 
+                            $extension = strtoupper(pathinfo($file['original_name'], PATHINFO_EXTENSION));
+                            if ($file['media_type'] === 'image' && $file['width'] && $file['height']): ?>
+                                <?= $extension ?> • <?= $file['width'] ?> × <?= $file['height'] ?>
+                            <?php else: ?>
+                                <?= $extension ?> • <?= formatFileSize($file['file_size']) ?>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="media-actions-list">
+                            <button class="media-action-btn-list view-media" 
+                                    data-id="<?= $file['id'] ?>"
+                                    title="Переглянути">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="media-action-btn-list edit-media" 
+                                    data-id="<?= $file['id'] ?>"
+                                    title="Редагувати">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="media-action-btn-list delete-media" 
+                                    data-id="<?= $file['id'] ?>"
+                                    title="Видалити">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    
+    <!-- Режим сетки -->
     <div class="row media-grid-row">
         <?php foreach ($files as $file): ?>
             <div class="media-item" data-id="<?= $file['id'] ?>">
                 <div class="card media-card">
                     <div class="media-checkbox-wrapper">
-                        <input type="checkbox" class="media-checkbox" data-id="<?= $file['id'] ?>" id="media-<?= $file['id'] ?>">
-                        <label for="media-<?= $file['id'] ?>" class="media-checkbox-label"></label>
+                        <input type="checkbox" class="media-checkbox" data-id="<?= $file['id'] ?>" id="media-grid-<?= $file['id'] ?>">
+                        <label for="media-grid-<?= $file['id'] ?>" class="media-checkbox-label"></label>
                     </div>
                     <div class="media-thumbnail">
                         <?php if ($file['media_type'] === 'image'): ?>
@@ -103,25 +178,6 @@ if (!function_exists('formatFileSize')) {
                                     <?= $extension ?> • <?= formatFileSize($file['file_size']) ?>
                                 <?php endif; ?>
                             </small>
-                        </div>
-                    </div>
-                    <div class="media-info">
-                        <div class="media-actions-list">
-                            <button class="media-action-btn-list view-media" 
-                                    data-id="<?= $file['id'] ?>"
-                                    title="Переглянути">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="media-action-btn-list edit-media" 
-                                    data-id="<?= $file['id'] ?>"
-                                    title="Редагувати">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="media-action-btn-list delete-media" 
-                                    data-id="<?= $file['id'] ?>"
-                                    title="Видалити">
-                                <i class="fas fa-trash"></i>
-                            </button>
                         </div>
                     </div>
                 </div>

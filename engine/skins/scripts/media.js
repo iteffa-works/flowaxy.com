@@ -1273,25 +1273,52 @@
             if (data.success && data.html) {
                 const mediaGrid = document.getElementById('mediaGrid');
                 if (mediaGrid) {
-                    // Знаходимо контейнер з файлами
-                    let rowContainer = mediaGrid.querySelector('.media-grid-row');
-                    if (!rowContainer) {
-                        // Якщо контейнера немає, створюємо його
-                        rowContainer = document.createElement('div');
-                        rowContainer.className = 'row media-grid-row';
-                        mediaGrid.appendChild(rowContainer);
-                    }
+                    const isListView = mediaGrid.classList.contains('media-list-view');
                     
-                    // Створюємо тимчасовий контейнер для нового HTML
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = data.html;
-                    const newRowContainer = tempDiv.querySelector('.media-grid-row');
-                    
-                    if (newRowContainer) {
-                        // Додаємо нові файли до існуючих
-                        newRowContainer.querySelectorAll('.media-item').forEach(item => {
-                            rowContainer.appendChild(item);
-                        });
+                    if (isListView) {
+                        // Режим таблицы
+                        let tableBody = mediaGrid.querySelector('.media-table tbody');
+                        if (!tableBody) {
+                            const table = mediaGrid.querySelector('.media-table');
+                            if (table) {
+                                tableBody = table.querySelector('tbody');
+                            }
+                        }
+                        
+                        if (tableBody) {
+                            // Створюємо тимчасовий контейнер для нового HTML
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = data.html;
+                            const newTableBody = tempDiv.querySelector('.media-table tbody');
+                            
+                            if (newTableBody) {
+                                // Додаємо нові рядки до існуючих
+                                newTableBody.querySelectorAll('tr.media-item').forEach(row => {
+                                    tableBody.appendChild(row);
+                                });
+                            }
+                        }
+                    } else {
+                        // Режим сетки
+                        let rowContainer = mediaGrid.querySelector('.media-grid-row');
+                        if (!rowContainer) {
+                            // Якщо контейнера немає, створюємо його
+                            rowContainer = document.createElement('div');
+                            rowContainer.className = 'row media-grid-row';
+                            mediaGrid.appendChild(rowContainer);
+                        }
+                        
+                        // Створюємо тимчасовий контейнер для нового HTML
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = data.html;
+                        const newRowContainer = tempDiv.querySelector('.media-grid-row');
+                        
+                        if (newRowContainer) {
+                            // Додаємо нові файли до існуючих
+                            newRowContainer.querySelectorAll('.media-item').forEach(item => {
+                                rowContainer.appendChild(item);
+                            });
+                        }
                     }
                 }
                 
