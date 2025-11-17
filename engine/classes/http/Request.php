@@ -179,7 +179,7 @@ class Request {
      * 
      * @return string
      */
-    public static function method(): string {
+    public static function getMethod(): string {
         return self::getInstance()->method();
     }
 }
