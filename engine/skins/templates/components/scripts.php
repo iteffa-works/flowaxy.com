@@ -196,14 +196,19 @@ document.addEventListener('DOMContentLoaded', function() {
             this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Обробка...';
             this.disabled = true;
             
-            fetch('<?= UrlHelper::admin("diagnostics") ?>', {
+            fetch('<?= UrlHelper::admin("cache-view") ?>', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 // Восстанавливаем кнопку
                 this.innerHTML = originalText;
@@ -211,15 +216,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Показываем сообщение
                 if (data.success) {
-                    showNotification(data.message || 'Кеш успішно очищено', 'success');
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification(data.message || 'Кеш успішно очищено', 'success');
+                    } else {
+                        alert(data.message || 'Кеш успішно очищено');
+                    }
                 } else {
-                    showNotification(data.message || 'Помилка при очищенні кешу', 'danger');
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification(data.message || 'Помилка при очищенні кешу', 'danger');
+                    } else {
+                        alert(data.message || 'Помилка при очищенні кешу');
+                    }
                 }
                 
                 // Закрываем dropdown
-                const dropdown = bootstrap.Dropdown.getInstance(this.closest('.dropdown').querySelector('[data-bs-toggle="dropdown"]'));
-                if (dropdown) {
-                    dropdown.hide();
+                const dropdownElement = this.closest('.dropdown')?.querySelector('[data-bs-toggle="dropdown"]');
+                if (dropdownElement) {
+                    const dropdown = bootstrap.Dropdown.getInstance(dropdownElement);
+                    if (dropdown) {
+                        dropdown.hide();
+                    }
                 }
             })
             .catch(error => {
@@ -227,7 +243,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.innerHTML = originalText;
                 this.disabled = false;
                 
-                showNotification('Помилка при очищенні кешу', 'danger');
+                const errorMessage = 'Помилка при очищенні кешу: ' + (error.message || 'Невідома помилка');
+                if (typeof showNotification !== 'undefined') {
+                    showNotification(errorMessage, 'danger');
+                } else {
+                    alert(errorMessage);
+                }
                 console.error('Cache clear error:', error);
             });
         });

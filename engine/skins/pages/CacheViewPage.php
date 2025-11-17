@@ -21,7 +21,15 @@ class CacheViewPage extends AdminPage {
     }
     
     public function handle() {
-        // Обробка очистки кешу
+        // Обробка AJAX запитів для очистки кешу
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' &&
+            isset($_POST['cache_action'])) {
+            $this->handleAjaxCacheClear();
+            return;
+        }
+        
+        // Обробка очистки кешу через форму
         if ($_POST && isset($_POST['clear_cache'])) {
             $this->clearCache();
         }
@@ -35,6 +43,65 @@ class CacheViewPage extends AdminPage {
             'cacheStats' => $cacheStats,
             'cacheFiles' => $cacheFiles
         ]);
+    }
+    
+    /**
+     * Обробка AJAX запиту для очистки кешу
+     */
+    private function handleAjaxCacheClear() {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!$this->verifyCsrf()) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Помилка безпеки: невірний CSRF токен'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+        
+        $action = $_POST['cache_action'] ?? '';
+        
+        if ($action === 'clear_all') {
+            if (function_exists('cache_flush')) {
+                $result = cache_flush();
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Весь кеш успішно очищено'
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                } else {
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Помилка при очищенні кешу'
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Помилка: функція очистки кешу недоступна'
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+        } elseif ($action === 'clear_expired') {
+            if (function_exists('cache')) {
+                $cleaned = cache()->cleanup();
+                echo json_encode([
+                    'success' => true,
+                    'message' => "Очищено {$cleaned} прострочених файлів кешу"
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Помилка: функція очистки кешу недоступна'
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Невідома дія'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        
+        exit;
     }
     
     /**
