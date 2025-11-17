@@ -1,0 +1,10 @@
+{
+    "slug": "test-menu",
+    "name": "Тестове меню",
+    "version": "1.0.0",
+    "description": "Простий тестовий плагін з боковим меню",
+    "author": "Flowaxy CMS",
+    "requires": "1.0.0",
+    "tested": "1.0.0"
+}
+
