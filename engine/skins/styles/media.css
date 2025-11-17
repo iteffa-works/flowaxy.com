@@ -1,5 +1,12 @@
 /* Стилі для медіа-бібліотеки - лаконичний професійний строгий дизайн */
 
+/* Переопределение стилей Bootstrap и flowaxy.css для media cards */
+.card.media-card .card-body {
+    padding: 8px 10px !important;
+    margin: 0 !important;
+    min-height: auto !important;
+}
+
 /* Основний контейнер */
 .media-grid {
     min-height: 400px;
@@ -344,6 +351,8 @@
     padding-top: 100%;
     background: #f9fafb;
     overflow: hidden;
+    margin: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 .media-thumbnail img {
@@ -417,28 +426,34 @@
 }
 
 .media-card .card-body {
-    padding: 10px 12px;
+    padding: 8px 10px !important;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 0 !important;
+    min-height: auto !important;
 }
 
 .media-title {
     font-size: 12px;
     font-weight: 500;
     color: #111827;
-    line-height: 1.4;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin: 0;
 }
 
 .media-info-content {
     font-size: 11px;
     color: #6b7280;
-    line-height: 1.3;
+    line-height: 1.2;
     font-weight: 400;
+    margin: 0;
 }
 
 .media-info {
