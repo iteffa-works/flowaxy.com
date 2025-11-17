@@ -21,6 +21,11 @@ Thumbs.db
 *.swo
 *~
 
+# Временные директории для загрузки
+storage/temp/*
+!storage/temp/.htaccess
+!storage/temp/.gitkeep
+
 # IDE
 .idea/
 .vscode/

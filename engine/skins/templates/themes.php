@@ -739,7 +739,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
+            .then(async response => {
+                const text = await response.text();
+                if (!text || text.trim() === '') {
+                    throw new Error('Сервер повернув порожню відповідь');
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    console.error('Response text:', text);
+                    throw new Error('Не вдалося розпарсити відповідь сервера: ' + e.message);
+                }
+            })
             .then(data => {
                 clearInterval(progressInterval);
                 progressBar.style.width = '100%';

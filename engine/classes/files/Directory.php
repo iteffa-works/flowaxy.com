@@ -9,7 +9,8 @@
 
 declare(strict_types=1);
 
-class Directory {
+if (!class_exists('Directory')) {
+    class Directory {
     private string $path;
     
     /**
@@ -360,12 +361,12 @@ class Directory {
      * @param bool $recursive Рекурсивно
      * @return bool
      */
-    public static function create(string $path, int $mode = 0755, bool $recursive = true): bool {
+    public static function make(string $path, int $mode = 0755, bool $recursive = true): bool {
         $dir = new self($path);
         try {
             return $dir->create($mode, $recursive);
         } catch (Exception $e) {
-            error_log("Directory::create error: " . $e->getMessage());
+            error_log("Directory::make error: " . $e->getMessage());
             return false;
         }
     }
@@ -377,12 +378,12 @@ class Directory {
      * @param bool $recursive Рекурсивно
      * @return bool
      */
-    public static function delete(string $path, bool $recursive = true): bool {
+    public static function remove(string $path, bool $recursive = true): bool {
         $dir = new self($path);
         try {
             return $dir->delete($recursive);
         } catch (Exception $e) {
-            error_log("Directory::delete error: " . $e->getMessage());
+            error_log("Directory::remove error: " . $e->getMessage());
             return false;
         }
     }
@@ -395,12 +396,12 @@ class Directory {
      * @param bool $overwrite Перезаписывать ли
      * @return bool
      */
-    public static function copy(string $sourcePath, string $destinationPath, bool $overwrite = true): bool {
+    public static function copyDirectory(string $sourcePath, string $destinationPath, bool $overwrite = true): bool {
         $dir = new self($sourcePath);
         try {
             return $dir->copy($destinationPath, $overwrite);
         } catch (Exception $e) {
-            error_log("Directory::copy error: " . $e->getMessage());
+            error_log("Directory::copyDirectory error: " . $e->getMessage());
             return false;
         }
     }
@@ -411,8 +412,9 @@ class Directory {
      * @param string $path Путь к директории
      * @return bool
      */
-    public static function exists(string $path): bool {
+    public static function directoryExists(string $path): bool {
         return is_dir($path);
     }
+    } // Конец класса Directory
 }
 
