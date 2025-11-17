@@ -3,7 +3,7 @@
  * Компонент Sidebar
  */
 ?>
-<nav id="sidebarMenu" class="sidebar d-md-block collapse">
+<nav id="sidebarMenu" class="sidebar d-md-block show">
     <div class="position-sticky pt-3">
         <ul class="nav flex-column wp-menu">
             <?php

@@ -7,39 +7,59 @@
 <div class="header-top-bar"></div>
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container-fluid">
-        <!-- Кнопка мобильного меню -->
-        <button class="mobile-menu-btn" onclick="toggleMobileSidebar()">
-            <i class="fas fa-bars"></i>
-        </button>
-        
-        <!-- Логотип -->
-        <a class="navbar-brand d-flex align-items-center header-logo" href="<?= UrlHelper::admin('dashboard') ?>">
-            <div class="admin-logo-icon me-2">
-                <i class="fas fa-cog"></i>
-            </div>
-            <span class="logo-text">Flowaxy CMS</span>
-        </a>
+        <!-- Левая часть навбара -->
+        <div class="d-flex align-items-center">
+            <!-- Кнопка мобильного меню -->
+            <button class="mobile-menu-btn" onclick="toggleMobileSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Логотип -->
+            <a class="navbar-brand d-none d-md-flex align-items-center header-logo" href="<?= UrlHelper::admin('dashboard') ?>">
+                <div class="admin-logo-icon me-2">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <span class="logo-text">Flowaxy CMS</span>
+            </a>
+        </div>
 
-        <!-- Правая часть навбара -->
-        <div class="d-flex align-items-center gap-3">
+        <!-- Правая часть навбара - иконки в ряд -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Иконки быстрого доступа к разделам -->
+            <div class="header-quick-actions d-flex align-items-center">
+                <a href="<?= UrlHelper::admin('dashboard') ?>" class="header-quick-action-btn" title="Панель управління">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-md-inline ms-1">Панель управління</span>
+                </a>
+                <a href="<?= UrlHelper::admin('media') ?>" class="header-quick-action-btn" title="Медіа-бібліотека">
+                    <i class="fas fa-images"></i>
+                    <span class="d-none d-md-inline ms-1">Медіафайли</span>
+                </a>
+                <a href="<?= UrlHelper::admin('plugins') ?>" class="header-quick-action-btn" title="Плагіни">
+                    <i class="fas fa-puzzle-piece"></i>
+                    <span class="d-none d-md-inline ms-1">Плагіни</span>
+                </a>
+                <a href="<?= UrlHelper::admin('themes') ?>" class="header-quick-action-btn" title="Теми оформлення">
+                    <i class="fas fa-palette"></i>
+                    <span class="d-none d-md-inline ms-1">Теми</span>
+                </a>
+            </div>
+            
             <!-- Просмотр сайта -->
             <a href="<?= defined('SITE_URL') ? SITE_URL : '/' ?>" 
-               class="btn header-view-site-btn" 
+               class="header-view-site-btn" 
                target="_blank" 
-               title="Переглянути сайт"
+               title="Сайт"
                rel="noopener noreferrer">
-                <i class="fas fa-external-link-alt"></i>
-                <span class="d-none d-md-inline ms-1">Сайт</span>
+                <i class="fas fa-external-link-square-alt"></i>
             </a>
             
             <!-- Управление кешем -->
             <div class="dropdown">
-                <button class="btn header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Управління кешем">
+                <button class="header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Очистити кеш">
                     <i class="fas fa-database"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><h6 class="dropdown-header"><i class="fas fa-database me-2"></i>Управління кешем</h6></li>
-                    <li><hr class="dropdown-divider"></li>
                     <li>
                         <button type="button" class="dropdown-item cache-clear-btn" data-action="clear_all">
                             <i class="fas fa-trash me-2"></i>Очистити весь кеш
@@ -50,17 +70,13 @@
                             <i class="fas fa-clock me-2"></i>Очистити прострочений кеш
                         </button>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="<?= UrlHelper::admin('diagnostics') ?>"><i class="fas fa-info-circle me-2"></i>Діагностика</a></li>
                 </ul>
             </div>
             
             <!-- Dropdown пользователя -->
             <div class="dropdown">
-                <button class="btn header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Профіль користувача">
-                    <div class="user-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
+                <button class="header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Користувач">
+                    <i class="fas fa-user"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="<?= UrlHelper::admin('profile') ?>"><i class="fas fa-user me-2"></i>Профіль</a></li>
