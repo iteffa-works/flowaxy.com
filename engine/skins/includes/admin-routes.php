@@ -14,6 +14,8 @@ $router->add(['GET', 'POST'], 'dashboard', 'DashboardPage');
 $router->add(['GET', 'POST'], 'login', 'LoginPage');
 $router->add(['GET', 'POST'], 'logout', 'LogoutPage');
 $router->add(['GET', 'POST'], 'settings', 'SettingsPage');
+$router->add(['GET', 'POST'], 'cache-view', 'CacheViewPage');
+$router->add(['GET', 'POST'], 'logs-view', 'LogsViewPage');
 $router->add(['GET', 'POST'], 'profile', 'ProfilePage');
 $router->add(['GET', 'POST'], 'plugins', 'PluginsPage');
 $router->add(['GET', 'POST'], 'themes', 'ThemesPage');

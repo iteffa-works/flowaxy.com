@@ -13,10 +13,18 @@ class SettingsPage extends AdminPage {
         $this->pageTitle = 'Налаштування сайту - Flowaxy CMS';
         $this->templateName = 'settings';
         
+        $headerButtons = '<div class="d-flex gap-2">' .
+            '<a href="' . UrlHelper::admin('cache-view') . '" class="btn btn-outline-secondary btn-sm">' .
+            '<i class="fas fa-database me-1"></i>Переглянути кеш</a>' .
+            '<a href="' . UrlHelper::admin('logs-view') . '" class="btn btn-outline-secondary btn-sm">' .
+            '<i class="fas fa-file-alt me-1"></i>Переглянути логи</a>' .
+            '</div>';
+        
         $this->setPageHeader(
             'Налаштування сайту',
             'Основні налаштування та конфігурація',
-            'fas fa-cog'
+            'fas fa-cog',
+            $headerButtons
         );
     }
     
@@ -90,12 +98,17 @@ class SettingsPage extends AdminPage {
         
         // Значення за замовчуванням
         $defaultSettings = [
-            'site_name' => 'Flowaxy CMS',
-            'site_tagline' => 'Сучасна система керування контентом',
-            'site_description' => 'Створюйте красиві лендінги легко і швидко',
             'admin_email' => 'admin@example.com',
             'timezone' => 'Europe/Kiev',
-            'copyright' => '© 2025 Spokinoki - Усі права захищені'
+            // Настройки кеша
+            'cache_enabled' => '1',
+            'cache_default_ttl' => '3600',
+            'cache_auto_cleanup' => '1',
+            // Настройки логирования
+            'logging_enabled' => '1',
+            'logging_level' => 'INFO',
+            'logging_max_file_size' => '10485760', // 10 MB
+            'logging_retention_days' => '30'
         ];
         
         return array_merge($defaultSettings, $settings);
