@@ -53,6 +53,14 @@ class SettingsPage extends AdminPage {
         
         $settings = $_POST['settings'] ?? [];
         
+        // Обработка checkbox полей (если не отмечены, они не приходят в POST)
+        $checkboxFields = ['cache_enabled', 'cache_auto_cleanup', 'logging_enabled'];
+        foreach ($checkboxFields as $field) {
+            if (!isset($settings[$field])) {
+                $settings[$field] = '0';
+            }
+        }
+        
         // Санитизация значений
         $sanitizedSettings = [];
         foreach ($settings as $key => $value) {
@@ -66,6 +74,22 @@ class SettingsPage extends AdminPage {
                 $result = $settingsManager->setMultiple($sanitizedSettings);
                 
                 if ($result) {
+                    // Обновляем настройки в Cache и Logger
+                    if (class_exists('Cache')) {
+                        cache()->reloadSettings();
+                    }
+                    if (class_exists('Logger')) {
+                        logger()->reloadSettings();
+                    }
+                    
+                    // Применяем timezone, если он был изменен
+                    if (isset($sanitizedSettings['timezone'])) {
+                        $timezone = $sanitizedSettings['timezone'];
+                        if (!empty($timezone) && in_array($timezone, timezone_identifiers_list())) {
+                            date_default_timezone_set($timezone);
+                        }
+                    }
+                    
                     $this->setMessage('Налаштування успішно збережено', 'success');
                 } else {
                     $this->setMessage('Помилка при збереженні налаштувань', 'danger');
@@ -75,7 +99,11 @@ class SettingsPage extends AdminPage {
             }
         } catch (Exception $e) {
             $this->setMessage('Помилка при збереженні налаштувань: ' . $e->getMessage(), 'danger');
-            error_log("Settings save error: " . $e->getMessage());
+            if (function_exists('logger')) {
+                logger()->logError('Settings save error: ' . $e->getMessage());
+            } else {
+                error_log("Settings save error: " . $e->getMessage());
+            }
         }
     }
     

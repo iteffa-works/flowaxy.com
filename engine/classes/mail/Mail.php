@@ -35,6 +35,18 @@ class Mail {
             $this->body($body);
         }
         
+        // Устанавливаем отправителя из настроек, если доступно
+        if (class_exists('SettingsManager')) {
+            try {
+                $adminEmail = settingsManager()->get('admin_email', '');
+                if (!empty($adminEmail) && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+                    $this->from($adminEmail, 'Flowaxy CMS');
+                }
+            } catch (Exception $e) {
+                // В случае ошибки используем стандартный отправитель
+            }
+        }
+        
         $this->header('X-Mailer', 'PHP/' . PHP_VERSION);
         $this->header('MIME-Version', '1.0');
     }

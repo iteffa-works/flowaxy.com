@@ -84,7 +84,8 @@ class Logger {
     private function loadSettings(): void {
         // Настройки по умолчанию
         $this->settings = [
-            'min_level' => self::LEVEL_DEBUG,
+            'enabled' => true,
+            'min_level' => self::LEVEL_INFO,
             'log_to_file' => true,
             'log_to_error_log' => false,
             'log_db_queries' => false,
@@ -92,20 +93,61 @@ class Logger {
             'log_slow_queries' => true,
             'slow_query_threshold' => 1.0,
             'max_file_size' => $this->maxFileSize,
-            'max_files' => $this->maxFiles
+            'max_files' => $this->maxFiles,
+            'retention_days' => 30
         ];
         
         // Загружаем из БД, если доступна
         if (class_exists('SettingsManager')) {
             $settings = settingsManager();
-            $this->settings['min_level'] = (int)$settings->get('logger_min_level', (string)self::LEVEL_DEBUG);
-            $this->settings['log_to_file'] = $settings->get('logger_log_to_file', '1') === '1';
+            
+            // Основные настройки логирования
+            $this->settings['enabled'] = $settings->get('logging_enabled', '1') === '1';
+            
+            // Уровень логирования
+            $levelStr = $settings->get('logging_level', 'INFO');
+            $this->settings['min_level'] = match(strtoupper($levelStr)) {
+                'DEBUG' => self::LEVEL_DEBUG,
+                'INFO' => self::LEVEL_INFO,
+                'WARNING' => self::LEVEL_WARNING,
+                'ERROR' => self::LEVEL_ERROR,
+                'CRITICAL' => self::LEVEL_CRITICAL,
+                default => self::LEVEL_INFO
+            };
+            
+            // Настройки файлов
+            $this->settings['log_to_file'] = $this->settings['enabled'];
+            $maxFileSize = (int)$settings->get('logging_max_file_size', (string)$this->maxFileSize);
+            if ($maxFileSize > 0) {
+                $this->settings['max_file_size'] = $maxFileSize;
+                $this->maxFileSize = $maxFileSize;
+            }
+            
+            // Дни хранения логов
+            $retentionDays = (int)$settings->get('logging_retention_days', '30');
+            if ($retentionDays > 0) {
+                $this->settings['retention_days'] = $retentionDays;
+                // Устанавливаем max_files на основе retention_days (примерно 1 файл в день)
+                $this->settings['max_files'] = max(5, $retentionDays + 1);
+                $this->maxFiles = $this->settings['max_files'];
+            }
+            
+            // Дополнительные настройки (для совместимости)
             $this->settings['log_to_error_log'] = $settings->get('logger_log_to_error_log', '0') === '1';
             $this->settings['log_db_queries'] = $settings->get('logger_log_db_queries', '0') === '1';
             $this->settings['log_db_errors'] = $settings->get('logger_log_db_errors', '1') === '1';
             $this->settings['log_slow_queries'] = $settings->get('logger_log_slow_queries', '1') === '1';
             $this->settings['slow_query_threshold'] = (float)$settings->get('logger_slow_query_threshold', '1.0');
         }
+    }
+    
+    /**
+     * Обновление настроек (вызывается после изменения настроек)
+     * 
+     * @return void
+     */
+    public function reloadSettings(): void {
+        $this->loadSettings();
     }
     
     /**
@@ -144,6 +186,11 @@ class Logger {
      * @return void
      */
     public function log(int $level, string $message, array $context = []): void {
+        // Если логирование отключено, не логируем
+        if (!$this->settings['enabled']) {
+            return;
+        }
+        
         // Проверяем минимальный уровень
         if ($level < $this->settings['min_level']) {
             return;
@@ -213,12 +260,29 @@ class Logger {
             return;
         }
         
+        $retentionDays = $this->settings['retention_days'] ?? 30;
+        $cutoffTime = time() - ($retentionDays * 24 * 60 * 60);
+        
+        // Удаляем старые файлы по дате создания
+        foreach ($files as $file) {
+            $fileTime = @filemtime($file);
+            if ($fileTime !== false && $fileTime < $cutoffTime) {
+                @unlink($file);
+            }
+        }
+        
+        // Получаем список файлов заново после удаления
+        $files = glob($pattern);
+        if ($files === false) {
+            $files = [];
+        }
+        
         // Сортируем по дате изменения (новые первыми)
         usort($files, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
         
-        // Удаляем старые файлы
+        // Удаляем старые файлы сверх лимита
         $maxFiles = $this->settings['max_files'];
         for ($i = $maxFiles; $i < count($files); $i++) {
             @unlink($files[$i]);

@@ -13,6 +13,8 @@ class Cache {
     private string $cacheDir;
     private int $defaultTtl = 3600; // 1 час
     private array $memoryCache = []; // Кеш в памяти для текущего запроса
+    private bool $enabled = true;
+    private bool $autoCleanup = true;
     private const CACHE_FILE_EXTENSION = '.cache';
     
     /**
@@ -22,6 +24,45 @@ class Cache {
         $this->cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
         $this->cacheDir = rtrim($this->cacheDir, '/') . '/';
         $this->ensureCacheDir();
+        // Пропускаем автоматическую очистку в конструкторе, чтобы избежать циклических зависимостей
+        $this->loadSettings(true);
+    }
+    
+    /**
+     * Загрузка настроек из SettingsManager
+     * 
+     * @param bool $skipCleanup Пропустить автоматическую очистку (для избежания циклических зависимостей)
+     * @return void
+     */
+    private function loadSettings(bool $skipCleanup = false): void {
+        if (class_exists('SettingsManager')) {
+            try {
+                $settings = settingsManager();
+                $this->enabled = $settings->get('cache_enabled', '1') === '1';
+                $this->defaultTtl = (int)$settings->get('cache_default_ttl', '3600');
+                $this->autoCleanup = $settings->get('cache_auto_cleanup', '1') === '1';
+                
+                // Выполняем автоматическую очистку при необходимости (только если не в конструкторе)
+                if (!$skipCleanup && $this->autoCleanup && mt_rand(1, 1000) <= 1) { // 0.1% шанс на очистку при каждом запросе
+                    // Запускаем очистку в фоне, чтобы не блокировать запрос
+                    register_shutdown_function(function() {
+                        $this->cleanup();
+                    });
+                }
+            } catch (Exception $e) {
+                // В случае ошибки используем значения по умолчанию
+            }
+        }
+    }
+    
+    /**
+     * Обновление настроек (вызывается после изменения настроек)
+     * 
+     * @return void
+     */
+    public function reloadSettings(): void {
+        // При обновлении настроек разрешаем автоматическую очистку
+        $this->loadSettings(false);
     }
     
     /**
@@ -67,6 +108,11 @@ class Cache {
      * @return mixed
      */
     public function get(string $key, $default = null) {
+        // Если кеширование отключено, возвращаем значение по умолчанию
+        if (!$this->enabled) {
+            return $default;
+        }
+        
         // Валидация ключа
         if (empty($key)) {
             return $default;
@@ -123,6 +169,11 @@ class Cache {
      * @return bool
      */
     public function set(string $key, $data, ?int $ttl = null): bool {
+        // Если кеширование отключено, не сохраняем
+        if (!$this->enabled) {
+            return false;
+        }
+        
         // Валидация ключа
         if (empty($key)) {
             return false;
@@ -247,6 +298,16 @@ class Cache {
      * @return mixed
      */
     public function remember(string $key, callable $callback, ?int $ttl = null) {
+        // Если кеширование отключено, просто выполняем callback
+        if (!$this->enabled) {
+            try {
+                return $callback();
+            } catch (Exception $e) {
+                error_log("Cache remember callback error for key '{$key}': " . $e->getMessage());
+                throw $e;
+            }
+        }
+        
         $value = $this->get($key);
         
         if ($value !== null) {

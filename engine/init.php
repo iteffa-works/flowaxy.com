@@ -222,6 +222,21 @@ function showDatabaseError(array $errorDetails = []): void {
 require_once __DIR__ . '/modules/loader.php';
 ModuleLoader::init();
 
+// Установка часового пояса из настроек
+if (class_exists('SettingsManager')) {
+    try {
+        $timezone = settingsManager()->get('timezone', 'Europe/Kiev');
+        if (!empty($timezone) && in_array($timezone, timezone_identifiers_list())) {
+            date_default_timezone_set($timezone);
+        }
+    } catch (Exception $e) {
+        // В случае ошибки используем часовой пояс по умолчанию
+        @date_default_timezone_set('Europe/Kiev');
+    }
+} else {
+    @date_default_timezone_set('Europe/Kiev');
+}
+
 // Ініціалізація системи логування та обробки помилок
 if (class_exists('Logger')) {
     // Встановлюємо обробник помилок
