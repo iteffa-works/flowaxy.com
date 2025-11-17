@@ -18,6 +18,26 @@ body {
     padding: 0;
 }
 
+/* Убираем синее выделение у всех кнопок в header */
+.header-view-site-btn,
+.header-dropdown-btn {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.header-view-site-btn:focus,
+.header-view-site-btn:active,
+.header-view-site-btn:focus-visible,
+.header-view-site-btn:visited,
+.header-dropdown-btn:focus,
+.header-dropdown-btn:active,
+.header-dropdown-btn:focus-visible,
+.header-dropdown-btn:visited {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
 /* ========================================
    ЗАГОЛОВОК СТРАНИЦЫ
    ======================================== */
@@ -268,15 +288,97 @@ body {
 }
 
 .user-avatar {
-    width: 24px;
-    height: 24px;
-    background-color: var(--primary-color);
-    border-radius: 3px;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: white;
+    color: #a0a5aa;
+    transition: all 0.2s ease;
+}
+
+/* Кнопки в header - плоский стиль */
+.header-dropdown-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0 !important;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #a0a5aa !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+    position: relative;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.header-dropdown-btn:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.header-dropdown-btn:focus,
+.header-dropdown-btn:active,
+.header-dropdown-btn:focus-visible,
+.header-dropdown-btn:visited {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.header-dropdown-btn::after {
+    display: none !important;
+}
+
+/* Кнопка просмотра сайта - плоский стиль */
+.header-view-site-btn {
+    padding: 6px 12px !important;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px !important;
+    color: #a0a5aa !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: all 0.2s ease !important;
+    height: 32px;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.header-view-site-btn:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.header-view-site-btn:focus,
+.header-view-site-btn:active,
+.header-view-site-btn:focus-visible,
+.header-view-site-btn:visited {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.header-view-site-btn i {
+    font-size: 12px;
 }
 
 /* Мобильные стили для логотипа и элементов */
@@ -300,11 +402,21 @@ body {
     .user-avatar {
         width: 32px;
         height: 32px;
-        background: var(--primary-color);
-        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
         font-size: 14px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        border: 2px solid rgba(160,165,170,0.3);
+    }
+    
+    .header-dropdown-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px !important;
+    }
+    
+    .header-view-site-btn {
+        padding: 8px 14px !important;
+        height: 36px;
+        font-size: 14px !important;
     }
     
     .header-logo {

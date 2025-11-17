@@ -24,6 +24,10 @@ class DiagnosticsPage extends AdminPage {
         // Обробка дій з кешем (якщо є POST запит)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cache_action'])) {
             $this->handleCacheAction();
+            // Если это AJAX запрос, возвращаем JSON и выходим
+            if (!empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                return;
+            }
         }
         
         // Отримуємо результати діагностики
@@ -48,11 +52,17 @@ class DiagnosticsPage extends AdminPage {
      */
     private function handleCacheAction(): void {
         if (!$this->verifyCsrf()) {
+            if (!empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                Response::setHeader('Content-Type', 'application/json');
+                echo json_encode(['success' => false, 'message' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
             $this->setMessage('Помилка безпеки', 'danger');
             return;
         }
         
         $action = SecurityHelper::sanitizeInput($_POST['cache_action'] ?? '');
+        $isAjax = !empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
         
         try {
             $cache = cache();
@@ -60,23 +70,53 @@ class DiagnosticsPage extends AdminPage {
             switch ($action) {
                 case 'clear_all':
                     if ($cache->clear()) {
-                        $this->setMessage('Весь кеш успішно очищено', 'success');
+                        $message = 'Весь кеш успішно очищено';
+                        if ($isAjax) {
+                            Response::setHeader('Content-Type', 'application/json');
+                            echo json_encode(['success' => true, 'message' => $message], JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
+                        $this->setMessage($message, 'success');
                     } else {
-                        $this->setMessage('Помилка при очищенні кешу', 'danger');
+                        $message = 'Помилка при очищенні кешу';
+                        if ($isAjax) {
+                            Response::setHeader('Content-Type', 'application/json');
+                            echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
+                        $this->setMessage($message, 'danger');
                     }
                     break;
                     
                 case 'clear_expired':
                     $cleared = $cache->cleanup();
-                    $this->setMessage("Прострочений кеш успішно очищено ({$cleared} файлів)", 'success');
+                    $message = "Прострочений кеш успішно очищено ({$cleared} файлів)";
+                    if ($isAjax) {
+                        Response::setHeader('Content-Type', 'application/json');
+                        echo json_encode(['success' => true, 'message' => $message], JSON_UNESCAPED_UNICODE);
+                        exit;
+                    }
+                    $this->setMessage($message, 'success');
                     break;
                     
                 default:
-                    $this->setMessage('Невідома дія', 'danger');
+                    $message = 'Невідома дія';
+                    if ($isAjax) {
+                        Response::setHeader('Content-Type', 'application/json');
+                        echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
+                        exit;
+                    }
+                    $this->setMessage($message, 'danger');
             }
         } catch (Exception $e) {
-            $this->setMessage('Помилка при обробці кешу: ' . $e->getMessage(), 'danger');
+            $message = 'Помилка при обробці кешу: ' . $e->getMessage();
             error_log("Cache action error: " . $e->getMessage());
+            if ($isAjax) {
+                Response::setHeader('Content-Type', 'application/json');
+                echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $this->setMessage($message, 'danger');
         }
     }
     

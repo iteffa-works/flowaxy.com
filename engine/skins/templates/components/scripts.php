@@ -150,4 +150,86 @@ document.querySelectorAll('[data-confirm-delete]').forEach(button => {
         }
     });
 });
+
+// Обработка очистки кеша через AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.cache-clear-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const action = this.dataset.action;
+            const actionText = action === 'clear_all' 
+                ? 'Ви впевнені, що хочете очистити весь кеш?' 
+                : 'Ви впевнені, що хочете очистити прострочений кеш?';
+            
+            if (!confirm(actionText)) {
+                return;
+            }
+            
+            // Получаем CSRF токен из meta тега или скрытого поля
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (!csrfToken) {
+                // Ищем в формах на странице
+                const csrfInput = document.querySelector('input[name="csrf_token"]');
+                if (csrfInput) {
+                    csrfToken = csrfInput.value;
+                }
+            }
+            
+            if (!csrfToken) {
+                showNotification('Помилка: CSRF токен не знайдено', 'danger');
+                return;
+            }
+            
+            // Отправляем AJAX запрос
+            const formData = new FormData();
+            formData.append('cache_action', action);
+            formData.append('csrf_token', csrfToken);
+            formData.append('ajax', '1');
+            
+            // Показываем индикатор загрузки
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Обробка...';
+            this.disabled = true;
+            
+            fetch('<?= UrlHelper::admin("diagnostics") ?>', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Восстанавливаем кнопку
+                this.innerHTML = originalText;
+                this.disabled = false;
+                
+                // Показываем сообщение
+                if (data.success) {
+                    showNotification(data.message || 'Кеш успішно очищено', 'success');
+                } else {
+                    showNotification(data.message || 'Помилка при очищенні кешу', 'danger');
+                }
+                
+                // Закрываем dropdown
+                const dropdown = bootstrap.Dropdown.getInstance(this.closest('.dropdown').querySelector('[data-bs-toggle="dropdown"]'));
+                if (dropdown) {
+                    dropdown.hide();
+                }
+            })
+            .catch(error => {
+                // Восстанавливаем кнопку
+                this.innerHTML = originalText;
+                this.disabled = false;
+                
+                showNotification('Помилка при очищенні кешу', 'danger');
+                console.error('Cache clear error:', error);
+            });
+        });
+    });
+});
+
+// Функция showNotification теперь определена в notifications.php
 </script>

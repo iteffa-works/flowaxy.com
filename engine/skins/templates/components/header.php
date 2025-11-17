@@ -19,32 +19,34 @@
         </a>
 
         <!-- Правая часть навбара -->
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <!-- Просмотр сайта -->
+            <a href="<?= defined('SITE_URL') ? SITE_URL : '/' ?>" 
+               class="btn header-view-site-btn" 
+               target="_blank" 
+               title="Переглянути сайт"
+               rel="noopener noreferrer">
+                <i class="fas fa-external-link-alt"></i>
+                <span class="d-none d-md-inline ms-1">Сайт</span>
+            </a>
+            
             <!-- Управление кешем -->
             <div class="dropdown">
-                <button class="btn dropdown-toggle d-flex align-items-center header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Управління кешем">
+                <button class="btn header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Управління кешем">
                     <i class="fas fa-database"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><h6 class="dropdown-header"><i class="fas fa-database me-2"></i>Управління кешем</h6></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <form method="POST" action="<?= UrlHelper::admin('diagnostics') ?>" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                            <input type="hidden" name="cache_action" value="clear_all">
-                            <button type="submit" class="dropdown-item" onclick="return confirm('Ви впевнені, що хочете очистити весь кеш?')">
-                                <i class="fas fa-trash me-2"></i>Очистити весь кеш
-                            </button>
-                        </form>
+                        <button type="button" class="dropdown-item cache-clear-btn" data-action="clear_all">
+                            <i class="fas fa-trash me-2"></i>Очистити весь кеш
+                        </button>
                     </li>
                     <li>
-                        <form method="POST" action="<?= UrlHelper::admin('diagnostics') ?>" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                            <input type="hidden" name="cache_action" value="clear_expired">
-                            <button type="submit" class="dropdown-item">
-                                <i class="fas fa-clock me-2"></i>Очистити прострочений кеш
-                            </button>
-                        </form>
+                        <button type="button" class="dropdown-item cache-clear-btn" data-action="clear_expired">
+                            <i class="fas fa-clock me-2"></i>Очистити прострочений кеш
+                        </button>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="<?= UrlHelper::admin('diagnostics') ?>"><i class="fas fa-info-circle me-2"></i>Діагностика</a></li>
@@ -53,8 +55,8 @@
             
             <!-- Dropdown пользователя -->
             <div class="dropdown">
-                <button class="btn dropdown-toggle d-flex align-items-center header-dropdown-btn" type="button" data-bs-toggle="dropdown">
-                    <div class="user-avatar me-2">
+                <button class="btn header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Профіль користувача">
+                    <div class="user-avatar">
                         <i class="fas fa-user"></i>
                     </div>
                 </button>
