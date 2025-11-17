@@ -76,14 +76,43 @@ if (!function_exists('formatFileSize')) {
                 <i class="fas fa-sync-alt"></i>
             </button>
             <div class="media-toolbar-divider"></div>
-            <select name="sort" class="media-sort-select" id="sortSelect">
-                <option value="uploaded_at_desc" <?= ($filters['order_by'] ?? 'uploaded_at') === 'uploaded_at' && ($filters['order_dir'] ?? 'DESC') === 'DESC' ? 'selected' : '' ?>>Новіші спочатку</option>
-                <option value="uploaded_at_asc" <?= ($filters['order_by'] ?? 'uploaded_at') === 'uploaded_at' && ($filters['order_dir'] ?? 'DESC') === 'ASC' ? 'selected' : '' ?>>Старіші спочатку</option>
-                <option value="title_asc" <?= ($filters['order_by'] ?? '') === 'title' && ($filters['order_dir'] ?? '') === 'ASC' ? 'selected' : '' ?>>Назва А-Я</option>
-                <option value="title_desc" <?= ($filters['order_by'] ?? '') === 'title' && ($filters['order_dir'] ?? '') === 'DESC' ? 'selected' : '' ?>>Назва Я-А</option>
-                <option value="file_size_desc" <?= ($filters['order_by'] ?? '') === 'file_size' && ($filters['order_dir'] ?? '') === 'DESC' ? 'selected' : '' ?>>Розмір (більші)</option>
-                <option value="file_size_asc" <?= ($filters['order_by'] ?? '') === 'file_size' && ($filters['order_dir'] ?? '') === 'ASC' ? 'selected' : '' ?>>Розмір (менші)</option>
-            </select>
+            <form method="GET" action="" class="d-inline">
+                <select name="per_page" class="media-sort-select" id="perPageSelect" onchange="this.form.submit()" title="Елементів на сторінці">
+                    <option value="12" <?= (isset($_GET['per_page']) ? (int)$_GET['per_page'] : 24) === 12 ? 'selected' : '' ?>>12</option>
+                    <option value="24" <?= (isset($_GET['per_page']) ? (int)$_GET['per_page'] : 24) === 24 ? 'selected' : '' ?>>24</option>
+                    <option value="48" <?= (isset($_GET['per_page']) ? (int)$_GET['per_page'] : 24) === 48 ? 'selected' : '' ?>>48</option>
+                    <option value="96" <?= (isset($_GET['per_page']) ? (int)$_GET['per_page'] : 24) === 96 ? 'selected' : '' ?>>96</option>
+                </select>
+                <?php if (!empty($_GET['type'])): ?>
+                    <input type="hidden" name="type" value="<?= htmlspecialchars($_GET['type']) ?>">
+                <?php endif; ?>
+                <?php if (!empty($_GET['search'])): ?>
+                    <input type="hidden" name="search" value="<?= htmlspecialchars($_GET['search']) ?>">
+                <?php endif; ?>
+                <?php if (!empty($_GET['sort'])): ?>
+                    <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
+                <?php endif; ?>
+            </form>
+            <div class="media-toolbar-divider"></div>
+            <form method="GET" action="" class="d-inline">
+                <select name="sort" class="media-sort-select" id="sortSelect" onchange="this.form.submit()">
+                    <option value="uploaded_at_desc" <?= ($filters['order_by'] ?? 'uploaded_at') === 'uploaded_at' && ($filters['order_dir'] ?? 'DESC') === 'DESC' ? 'selected' : '' ?>>Новіші спочатку</option>
+                    <option value="uploaded_at_asc" <?= ($filters['order_by'] ?? 'uploaded_at') === 'uploaded_at' && ($filters['order_dir'] ?? 'DESC') === 'ASC' ? 'selected' : '' ?>>Старіші спочатку</option>
+                    <option value="title_asc" <?= ($filters['order_by'] ?? '') === 'title' && ($filters['order_dir'] ?? '') === 'ASC' ? 'selected' : '' ?>>Назва А-Я</option>
+                    <option value="title_desc" <?= ($filters['order_by'] ?? '') === 'title' && ($filters['order_dir'] ?? '') === 'DESC' ? 'selected' : '' ?>>Назва Я-А</option>
+                    <option value="file_size_desc" <?= ($filters['order_by'] ?? '') === 'file_size' && ($filters['order_dir'] ?? '') === 'DESC' ? 'selected' : '' ?>>Розмір (більші)</option>
+                    <option value="file_size_asc" <?= ($filters['order_by'] ?? '') === 'file_size' && ($filters['order_dir'] ?? '') === 'ASC' ? 'selected' : '' ?>>Розмір (менші)</option>
+                </select>
+                <?php if (!empty($_GET['type'])): ?>
+                    <input type="hidden" name="type" value="<?= htmlspecialchars($_GET['type']) ?>">
+                <?php endif; ?>
+                <?php if (!empty($_GET['search'])): ?>
+                    <input type="hidden" name="search" value="<?= htmlspecialchars($_GET['search']) ?>">
+                <?php endif; ?>
+                <?php if (!empty($_GET['per_page'])): ?>
+                    <input type="hidden" name="per_page" value="<?= htmlspecialchars($_GET['per_page']) ?>">
+                <?php endif; ?>
+            </form>
         </div>
         <form method="GET" action="" class="media-filters">
             <select name="type" class="media-filter-select">
@@ -99,6 +128,12 @@ if (!function_exists('formatFileSize')) {
                     <i class="fas fa-search"></i>
                 </button>
             </div>
+            <?php if (!empty($_GET['sort'])): ?>
+                <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
+            <?php endif; ?>
+            <?php if (!empty($_GET['per_page'])): ?>
+                <input type="hidden" name="per_page" value="<?= htmlspecialchars($_GET['per_page']) ?>">
+            <?php endif; ?>
         </form>
     </div>
 </div>
@@ -211,7 +246,9 @@ if (!function_exists('formatFileSize')) {
                         <div class="media-thumbnail">
                             <?php if ($file['media_type'] === 'image'): ?>
                                 <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
-                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>">
+                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
+                                     loading="lazy"
+                                     decoding="async">
                             <?php elseif ($file['media_type'] === 'video'): ?>
                                 <div class="media-icon video-icon">
                                     <i class="fas fa-video fa-3x"></i>
@@ -274,6 +311,114 @@ if (!function_exists('formatFileSize')) {
     <?php endif; ?>
 </div>
 
+<!-- Пагінація -->
+<?php if (!empty($files) && $pages > 1): ?>
+    <nav aria-label="Навігація по сторінкам" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <?php
+            $currentPage = $page ?? 1;
+            $totalPages = $pages ?? 1;
+            
+            // Формуємо URL з поточними параметрами
+            $baseUrl = UrlHelper::admin('media');
+            $queryParams = [];
+            if (!empty($filters['media_type'])) {
+                $queryParams['type'] = $filters['media_type'];
+            }
+            if (!empty($filters['search'])) {
+                $queryParams['search'] = $filters['search'];
+            }
+            if (!empty($filters['order_by']) && !empty($filters['order_dir'])) {
+                $queryParams['sort'] = $filters['order_by'] . '_' . strtolower($filters['order_dir']);
+            }
+            if (!empty($_GET['per_page'])) {
+                $queryParams['per_page'] = (int)$_GET['per_page'];
+            }
+            
+            $queryString = !empty($queryParams) ? '?' . http_build_query($queryParams) . '&' : '?';
+            
+            // Попередня сторінка
+            if ($currentPage > 1):
+                $prevPage = $currentPage - 1;
+                $prevUrl = $baseUrl . $queryString . 'page=' . $prevPage;
+            ?>
+                <li class="page-item">
+                    <a class="page-link" href="<?= htmlspecialchars($prevUrl) ?>" aria-label="Попередня">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link" aria-label="Попередня">
+                        <span aria-hidden="true">&laquo;</span>
+                    </span>
+                </li>
+            <?php endif; ?>
+            
+            <?php
+            // Показуємо сторінки
+            $startPage = max(1, $currentPage - 2);
+            $endPage = min($totalPages, $currentPage + 2);
+            
+            if ($startPage > 1):
+            ?>
+                <li class="page-item">
+                    <a class="page-link" href="<?= htmlspecialchars($baseUrl . $queryString . 'page=1') ?>">1</a>
+                </li>
+                <?php if ($startPage > 2): ?>
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                <?php endif; ?>
+            <?php endif; ?>
+            
+            <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                <?php if ($i == $currentPage): ?>
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link"><?= $i ?></span>
+                    </li>
+                <?php else: ?>
+                    <li class="page-item">
+                        <a class="page-link" href="<?= htmlspecialchars($baseUrl . $queryString . 'page=' . $i) ?>"><?= $i ?></a>
+                    </li>
+                <?php endif; ?>
+            <?php endfor; ?>
+            
+            <?php if ($endPage < $totalPages): ?>
+                <?php if ($endPage < $totalPages - 1): ?>
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                <?php endif; ?>
+                <li class="page-item">
+                    <a class="page-link" href="<?= htmlspecialchars($baseUrl . $queryString . 'page=' . $totalPages) ?>"><?= $totalPages ?></a>
+                </li>
+            <?php endif; ?>
+            
+            <!-- Наступна сторінка -->
+            <?php if ($currentPage < $totalPages):
+                $nextPage = $currentPage + 1;
+                $nextUrl = $baseUrl . $queryString . 'page=' . $nextPage;
+            ?>
+                <li class="page-item">
+                    <a class="page-link" href="<?= htmlspecialchars($nextUrl) ?>" aria-label="Наступна">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link" aria-label="Наступна">
+                        <span aria-hidden="true">&raquo;</span>
+                    </span>
+                </li>
+            <?php endif; ?>
+        </ul>
+        <div class="text-center mt-2 text-muted small">
+            Сторінка <?= $currentPage ?> з <?= $totalPages ?> (всього файлів: <?= $total ?? 0 ?>)
+        </div>
+    </nav>
+<?php endif; ?>
+
 <!-- Модальне вікно завантаження -->
 <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-lg">
@@ -283,7 +428,7 @@ if (!function_exists('formatFileSize')) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
             <div class="modal-body">
-                <form id="uploadForm" enctype="multipart/form-data">
+                <form id="uploadForm" method="POST" action="" enctype="multipart/form-data">
                     <div id="fileInputContainer" class="mb-3">
                         <input type="file" class="d-none" id="fileInput" name="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx" aria-describedby="fileHelp">
                     </div>
@@ -329,7 +474,11 @@ if (!function_exists('formatFileSize')) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
             <div class="modal-body p-4" id="viewModalBody">
-                <!-- Контент завантажується через AJAX -->
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Завантаження...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -344,7 +493,7 @@ if (!function_exists('formatFileSize')) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
             <div class="modal-body">
-                <form id="editForm">
+                <form id="editForm" method="POST" action="">
                     <input type="hidden" id="editMediaId" name="media_id">
                     <div class="mb-3">
                         <label for="editTitle" class="form-label">Назва</label>

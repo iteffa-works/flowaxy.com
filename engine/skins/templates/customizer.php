@@ -240,7 +240,9 @@
                     </div>
                 </div>
                 
-                <div class="row" id="mediaImagesGrid"></div>
+                <div id="mediaImagesGrid">
+                    <!-- Контент буде завантажено динамічно через JS при відкритті модального вікна -->
+                </div>
                 <div id="mediaPagination" class="mt-3"></div>
             </div>
             <div class="modal-footer">
@@ -376,22 +378,157 @@
     }
     
     function initMediaGallery() {
+        // Обробка кнопок вибору медіа
         document.querySelectorAll('.media-select-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 currentMediaTarget = document.querySelector(this.dataset.target);
                 currentMediaPreview = document.querySelector('#' + this.dataset.preview);
                 const modal = new bootstrap.Modal(document.getElementById('mediaManagerModal'));
+                
+                // Завантажуємо медіа через AJAX тільки при відкритті модального вікна
+                if (currentMediaTarget) {
+                    loadMediaSelector(currentMediaTarget.id, currentMediaPreview ? currentMediaPreview.id : '');
+                }
+                
                 modal.show();
-                loadMediaImages();
             });
         });
+        
+        // Завантаження селектора медіа
+        function loadMediaSelector(targetInputId, previewContainerId) {
+            const container = document.getElementById('mediaImagesGrid');
+            if (!container) return;
+            
+            container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
+            
+            fetch('?action=get_media_images&per_page=24', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.files) {
+                    renderMediaSelector(data.files, targetInputId, previewContainerId);
+                } else {
+                    container.innerHTML = '<div class="alert alert-warning">Не вдалося завантажити медіафайли</div>';
+                }
+            })
+            .catch(() => {
+                container.innerHTML = '<div class="alert alert-danger">Помилка завантаження</div>';
+            });
+        }
+        
+        // Рендеринг селектора медіа
+        function renderMediaSelector(files, targetInputId, previewContainerId) {
+            const container = document.getElementById('mediaImagesGrid');
+            if (!container) return;
+            
+            let html = '<div class="row">';
+            files.forEach(function(file) {
+                const fileUrl = file.file_url || '';
+                html += '<div class="col-md-2 col-sm-3 col-4 mb-3">';
+                html += '<div class="media-selector-item" style="cursor: pointer;" ';
+                html += 'data-url="' + escapeHtml(fileUrl) + '" ';
+                html += 'data-target="' + escapeHtml(targetInputId) + '" ';
+                html += 'data-preview="' + escapeHtml(previewContainerId) + '">';
+                
+                if (file.media_type === 'image') {
+                    html += '<img src="' + escapeHtml(fileUrl) + '" alt="' + escapeHtml(file.title || '') + '" class="img-thumbnail w-100">';
+                } else {
+                    const icon = file.media_type === 'video' ? 'video' : (file.media_type === 'audio' ? 'music' : 'file');
+                    html += '<div class="media-selector-icon text-center p-3"><i class="fas fa-' + icon + ' fa-3x"></i></div>';
+                }
+                html += '</div></div>';
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Обробка вибору медіа з селектора (вже відрендереного через PHP)
+        document.addEventListener('click', function(e) {
+            const selectorItem = e.target.closest('.media-selector-item');
+            if (selectorItem) {
+                const url = selectorItem.dataset.url;
+                const targetId = selectorItem.dataset.target;
+                const previewId = selectorItem.dataset.preview;
+                
+                if (url && targetId) {
+                    const targetInput = document.querySelector('#' + targetId);
+                    if (targetInput) {
+                        targetInput.value = url;
+                        saveSetting(targetInput.dataset.key, url);
+                        
+                        if (previewId) {
+                            const previewContainer = document.querySelector('#' + previewId);
+                            if (previewContainer) {
+                                previewContainer.innerHTML = '<img src="' + url + '" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 100px;">';
+                                previewContainer.style.display = 'block';
+                            }
+                        }
+                    }
+                }
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('mediaManagerModal'));
+                if (modal) {
+                    modal.hide();
+                }
+            }
+        });
+        
+        // Обробка завантаження файлів
+        const uploadBtn = document.querySelector('.media-selector-upload-btn');
+        const fileInput = document.querySelector('.media-selector-file-input');
+        
+        if (uploadBtn && fileInput) {
+            uploadBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    uploadMediaFiles(e.target.files);
+                }
+            });
+        }
+        
+        // Обробка пошуку (debounce)
+        const searchInput = document.querySelector('.media-selector-search');
+        let searchTimeout = null;
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
+                    // Можна додати AJAX пошук, але зараз використовуємо PHP рендеринг
+                    // Для оптимізації можна завантажити через AJAX тільки при необхідності
+                }, 500);
+            });
+        }
     }
     
-    function loadMediaImages(page = 1) {
-        const container = document.getElementById('mediaImagesGrid');
-        const url = '?action=get_media_images&page=' + page;
+    function uploadMediaFiles(files) {
+        const formData = new FormData();
+        Array.from(files).forEach((file, index) => {
+            formData.append('file' + index, file);
+        });
+        formData.append('action', 'upload_image');
+        formData.append('csrf_token', csrfToken);
         
-        fetch(url, {
+        const progressDiv = document.getElementById('uploadProgress');
+        if (progressDiv) {
+            progressDiv.style.display = 'block';
+        }
+        
+        fetch('', {
+            method: 'POST',
+            body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
@@ -399,53 +536,20 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                renderMediaImages(data.files);
+                // Перезавантажуємо сторінку для оновлення селектора
+                location.reload();
+            } else {
+                showAlert('Помилка завантаження: ' + (data.error || 'Невідома помилка'), 'danger');
             }
         })
-        .catch(() => {});
-    }
-    
-    function renderMediaImages(files) {
-        const container = document.getElementById('mediaImagesGrid');
-        container.innerHTML = '';
-        
-        files.forEach(file => {
-            const colDiv = document.createElement('div');
-            colDiv.className = 'col-md-2 col-sm-3 col-4 mb-3';
-            
-            const imageItem = document.createElement('div');
-            imageItem.className = 'media-image-item';
-            imageItem.style.cursor = 'pointer';
-            imageItem.dataset.url = file.file_url || '';
-            imageItem.addEventListener('click', function() {
-                selectMediaImage(this.dataset.url);
-            });
-            
-            const img = document.createElement('img');
-            img.src = file.file_url || '';
-            img.alt = file.title || '';
-            img.className = 'img-thumbnail w-100';
-            
-            imageItem.appendChild(img);
-            colDiv.appendChild(imageItem);
-            container.appendChild(colDiv);
-        });
-    }
-    
-    function selectMediaImage(url) {
-        if (currentMediaTarget && url) {
-            currentMediaTarget.value = url;
-            saveSetting(currentMediaTarget.dataset.key, url);
-            
-            if (currentMediaPreview) {
-                currentMediaPreview.innerHTML = '<img src="' + url + '" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 100px;">';
-                currentMediaPreview.style.display = 'block';
+        .catch(() => {
+            showAlert('Помилка завантаження', 'danger');
+        })
+        .finally(() => {
+            if (progressDiv) {
+                progressDiv.style.display = 'none';
             }
-        }
-        const modal = bootstrap.Modal.getInstance(document.getElementById('mediaManagerModal'));
-        if (modal) {
-            modal.hide();
-        }
+        });
     }
     
     function initResetButton() {

@@ -3,6 +3,8 @@
  * Компонент Header
  */
 ?>
+<!-- Верхняя зеленая полоска -->
+<div class="header-top-bar"></div>
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container-fluid">
         <!-- Кнопка мобильного меню -->

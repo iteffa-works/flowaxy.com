@@ -48,6 +48,45 @@
     font-weight: 400;
 }
 
+/* Анімація появи медіафайлів */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Базові стилі для медіа-елементів - анімація буде застосовуватися через inline стилі */
+.media-item {
+    will-change: opacity, transform;
+}
+
+.media-item.loaded {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+/* Для таблиці - анімація появи рядків */
+.media-table tbody tr {
+    will-change: opacity, transform;
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.media-table tbody tr.loaded {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+/* Для режиму списку - додаткова оптимізація */
+.media-list-view .media-table tbody tr {
+    will-change: opacity, transform;
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
 .load-more-end-content i {
     color: #10b981;
     font-size: 16px;

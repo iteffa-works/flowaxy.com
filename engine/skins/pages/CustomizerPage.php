@@ -65,10 +65,9 @@ class CustomizerPage extends AdminPage {
     }
     
     public function handle() {
-        // Обробка AJAX запитів
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            $this->handleAjax();
+        // Обробка AJAX запитів через AjaxHandler
+        if (AjaxHandler::isAjax()) {
+            $this->initAjaxHandler();
             return;
         }
         
@@ -171,12 +170,17 @@ class CustomizerPage extends AdminPage {
     
     /**
      * Отримання зображень з медіа-галереї (AJAX)
+     * 
+     * @param array $post POST дані
+     * @param array $get GET дані
+     * @param array $files FILES дані
+     * @return array
      */
-    private function getMediaImages() {
+    public function getMediaImages(array $post, array $get, array $files): array {
         $mediaModule = mediaModule();
-        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-        $perPage = isset($_GET['per_page']) ? max(1, min(100, (int)$_GET['per_page'])) : 24;
-        $search = SecurityHelper::sanitizeInput($_GET['search'] ?? '');
+        $page = isset($get['page']) ? max(1, (int)$get['page']) : 1;
+        $perPage = isset($get['per_page']) ? max(1, min(100, (int)$get['per_page'])) : 24;
+        $search = SecurityHelper::sanitizeInput($get['search'] ?? '');
         
         $filters = [
             'media_type' => 'image',
@@ -187,98 +191,130 @@ class CustomizerPage extends AdminPage {
         
         $result = $mediaModule->getFiles($filters, $page, $perPage);
         
-        echo json_encode([
-            'success' => true,
+        // Використовуємо хук для отримання файлів (якщо доступний)
+        if (function_exists('doHook')) {
+            $hookResult = doHook('media_get_files', [
+                'filters' => $filters,
+                'page' => $page,
+                'per_page' => $perPage
+            ]);
+            if ($hookResult && is_array($hookResult) && isset($hookResult['files'])) {
+                $result = $hookResult;
+            }
+        }
+        
+        return [
             'files' => $result['files'],
             'total' => $result['total'],
             'page' => $result['page'],
             'pages' => $result['pages']
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
+        ];
     }
     
     /**
      * Обробка завантаження зображення (AJAX)
+     * 
+     * @param array $post POST дані
+     * @param array $get GET дані
+     * @param array $files FILES дані
+     * @return array
      */
-    private function handleUpload() {
-        if (!isset($_FILES['file']) || empty($_FILES['file']['tmp_name'])) {
-            echo json_encode(['success' => false, 'error' => 'Файл не завантажено'], JSON_UNESCAPED_UNICODE);
-            exit;
+    public function handleUpload(array $post, array $get, array $files): array {
+        $file = $files['file'] ?? null;
+        
+        if (!$file || empty($file['tmp_name'])) {
+            return ['success' => false, 'error' => 'Файл не завантажено'];
         }
         
         $mediaModule = mediaModule();
-        $title = !empty($_POST['title']) ? SecurityHelper::sanitizeInput($_POST['title']) : null;
-        $description = SecurityHelper::sanitizeInput($_POST['description'] ?? '');
-        $alt = SecurityHelper::sanitizeInput($_POST['alt_text'] ?? '');
+        $title = !empty($post['title']) ? SecurityHelper::sanitizeInput($post['title']) : null;
+        $description = SecurityHelper::sanitizeInput($post['description'] ?? '');
+        $alt = SecurityHelper::sanitizeInput($post['alt_text'] ?? '');
         
-        $result = $mediaModule->uploadFile($_FILES['file'], $title, $description, $alt);
+        // Використовуємо хук для завантаження (якщо доступний)
+        $result = null;
+        if (function_exists('doHook')) {
+            $hookResult = doHook('media_upload_file', [
+                'file' => $file,
+                'title' => $title,
+                'description' => $description,
+                'alt' => $alt
+            ]);
+            if ($hookResult && is_array($hookResult) && isset($hookResult['success'])) {
+                $result = $hookResult;
+            }
+        }
         
-        echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        exit;
+        // Fallback на прямий виклик
+        if (!$result) {
+            $result = $mediaModule->uploadFile($file, $title, $description, $alt);
+        }
+        
+        return $result;
     }
     
     /**
-     * Обробка AJAX запитів
+     * Ініціалізація та обробка AJAX запитів через AjaxHandler
      */
-    private function handleAjax() {
-        // Використовуємо Response клас для встановлення заголовків
-        Response::setHeader('Content-Type', 'application/json');
+    private function initAjaxHandler(): void {
+        $ajax = new AjaxHandler();
         
-        $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        // Встановлюємо обробник авторизації
+        $ajax->setAuthCallback(function() {
+            return SecurityHelper::isAdminLoggedIn();
+        });
         
-        switch ($action) {
-            case 'get_media_images':
-                $this->getMediaImages();
-                break;
-                
-            case 'upload_image':
-                $this->handleUpload();
-                break;
-                
-            case 'save_settings':
-                $this->ajaxSaveSettings();
-                break;
-                
-            case 'save_setting':
-                $this->ajaxSaveSingleSetting();
-                break;
-                
-            case 'reset_settings':
-                $this->ajaxResetSettings();
-                break;
-                
-            default:
-                echo json_encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE);
-                exit;
-        }
+        // Реєструємо всі дії
+        $ajax->registerMultiple([
+            'get_media_images' => [
+                'handler' => [$this, 'getMediaImages'],
+                'options' => ['requireCsrf' => false, 'method' => 'GET']
+            ],
+            'upload_image' => [
+                'handler' => [$this, 'handleUpload'],
+                'options' => ['requireCsrf' => true, 'method' => 'POST']
+            ],
+            'save_settings' => [
+                'handler' => [$this, 'ajaxSaveSettings'],
+                'options' => ['requireCsrf' => true, 'method' => 'POST']
+            ],
+            'save_setting' => [
+                'handler' => [$this, 'ajaxSaveSingleSetting'],
+                'options' => ['requireCsrf' => true, 'method' => 'POST']
+            ],
+            'reset_settings' => [
+                'handler' => [$this, 'ajaxResetSettings'],
+                'options' => ['requireCsrf' => true, 'method' => 'POST']
+            ]
+        ]);
+        
+        $ajax->handle();
     }
     
     /**
      * AJAX збереження всіх налаштувань
+     * 
+     * @param array $post POST дані
+     * @param array $get GET дані
+     * @param array $files FILES дані
+     * @return array
      */
-    private function ajaxSaveSettings() {
-        if (!$this->verifyCsrf()) {
-            echo json_encode(['success' => false, 'error' => 'Помилка безпеки (CSRF токен не валідний)'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        
+    public function ajaxSaveSettings(array $post, array $get, array $files): array {
         $activeTheme = themeManager()->getActiveTheme();
         if (!$activeTheme) {
-            echo json_encode(['success' => false, 'error' => 'Тему не активовано'], JSON_UNESCAPED_UNICODE);
-            exit;
+            return ['success' => false, 'error' => 'Тему не активовано'];
         }
         
-        $settingsRaw = $_POST['settings'] ?? '';
+        $settingsRaw = $post['settings'] ?? '';
         $settings = [];
         
         if (is_string($settingsRaw) && !empty($settingsRaw)) {
             $settings = json_decode($settingsRaw, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                echo json_encode([
+                return [
                     'success' => false, 
                     'error' => 'Помилка декодування JSON: ' . json_last_error_msg()
-                ], JSON_UNESCAPED_UNICODE);
-                exit;
+                ];
             }
             $settings = $settings ?? [];
         } elseif (is_array($settingsRaw)) {
@@ -286,40 +322,34 @@ class CustomizerPage extends AdminPage {
         }
         
         if (empty($settings)) {
-            echo json_encode([
+            return [
                 'success' => false, 
                 'error' => 'Налаштування не передані'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
+            ];
         }
         
-        $result = $this->validateAndSaveSettings($settings);
-        
-        echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        exit;
+        return $this->validateAndSaveSettings($settings);
     }
     
     /**
      * AJAX збереження однієї налаштування
+     * 
+     * @param array $post POST дані
+     * @param array $get GET дані
+     * @param array $files FILES дані
+     * @return array
      */
-    private function ajaxSaveSingleSetting() {
-        if (!$this->verifyCsrf()) {
-            echo json_encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        
-        $key = SecurityHelper::sanitizeInput($_POST['key'] ?? '');
-        $value = $_POST['value'] ?? '';
+    public function ajaxSaveSingleSetting(array $post, array $get, array $files): array {
+        $key = SecurityHelper::sanitizeInput($post['key'] ?? '');
+        $value = $post['value'] ?? '';
         
         if (empty($key)) {
-            echo json_encode(['success' => false, 'error' => 'Ключ налаштування не вказано'], JSON_UNESCAPED_UNICODE);
-            exit;
+            return ['success' => false, 'error' => 'Ключ налаштування не вказано'];
         }
         
         $activeTheme = themeManager()->getActiveTheme();
         if (!$activeTheme) {
-            echo json_encode(['success' => false, 'error' => 'Тему не активовано'], JSON_UNESCAPED_UNICODE);
-            exit;
+            return ['success' => false, 'error' => 'Тему не активовано'];
         }
         
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
@@ -335,50 +365,47 @@ class CustomizerPage extends AdminPage {
         }
         
         if (!$settingConfig) {
-            echo json_encode(['success' => false, 'error' => 'Налаштування не знайдено'], JSON_UNESCAPED_UNICODE);
-            exit;
+            return ['success' => false, 'error' => 'Налаштування не знайдено'];
         }
         
         // Валідуємо та зберігаємо одну налаштування
         $validatedSettings = [];
         $validatedSettings[$key] = $this->validateSetting($key, $value, $settingConfig);
         
-        $result = $this->validateAndSaveSettings($validatedSettings);
-        
-        echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        exit;
+        return $this->validateAndSaveSettings($validatedSettings);
     }
     
     /**
      * AJAX скидання налаштувань до значень за замовчуванням
+     * 
+     * @param array $post POST дані
+     * @param array $get GET дані
+     * @param array $files FILES дані
+     * @return array
      */
-    private function ajaxResetSettings() {
-        if (!$this->verifyCsrf()) {
-            echo json_encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        
+    public function ajaxResetSettings(array $post, array $get, array $files): array {
         $activeTheme = themeManager()->getActiveTheme();
         if (!$activeTheme) {
-            echo json_encode(['success' => false, 'error' => 'Тему не активовано'], JSON_UNESCAPED_UNICODE);
-            exit;
+            return ['success' => false, 'error' => 'Тему не активовано'];
         }
         
         $themeConfig = themeManager()->getThemeConfig($activeTheme['slug']);
         $defaultSettings = $themeConfig['default_settings'] ?? [];
         
         // Видаляємо всі налаштування теми з БД (вони будуть братися з default_settings)
-        $this->db->prepare("DELETE FROM theme_settings WHERE theme_slug = ?")->execute([$activeTheme['slug']]);
+        $db = Database::getInstance()->getConnection();
+        if ($db) {
+            $db->prepare("DELETE FROM theme_settings WHERE theme_slug = ?")->execute([$activeTheme['slug']]);
+        }
         
         // Очищаємо кеш теми
         themeManager()->clearThemeCache($activeTheme['slug']);
         
-        echo json_encode([
+        return [
             'success' => true,
             'message' => 'Налаштування скинуто до значень за замовчуванням',
             'settings' => $defaultSettings
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
+        ];
     }
     
     /**

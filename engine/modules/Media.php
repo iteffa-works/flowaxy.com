@@ -10,6 +10,14 @@ declare(strict_types=1);
 
 // BaseModule тепер завантажується через автозавантажувач з base/BaseModule.php
 
+// Перевіряємо та завантажуємо клас Directory якщо потрібно
+if (!class_exists('Directory')) {
+    $directoryClassFile = __DIR__ . '/../classes/files/Directory.php';
+    if (file_exists($directoryClassFile)) {
+        require_once $directoryClassFile;
+    }
+}
+
 class Media extends BaseModule {
     private $uploadsDir;
     private $uploadsUrl;
@@ -47,6 +55,70 @@ class Media extends BaseModule {
         // Пункт меню тепер додається в базовому меню (menu-items.php)
         // Реєстрація сторінки адмінки
         addHook('admin_register_routes', [$this, 'registerAdminRoute']);
+        
+        // Реєстрація хуків для вбудовування медиагалереї в інші модулі
+        addHook('media_render_selector', [$this, 'hookRenderMediaSelector']);
+        addHook('media_get_files', [$this, 'hookGetMediaFiles']);
+        addHook('media_upload_file', [$this, 'hookUploadMediaFile']);
+    }
+    
+    /**
+     * Обробник хука для рендерингу селектора медіа
+     * 
+     * @param array $params Параметри хука
+     * @return string HTML
+     */
+    public function hookRenderMediaSelector($params = null): string {
+        if (!is_array($params)) {
+            $params = [];
+        }
+        
+        $targetInputId = $params['targetInputId'] ?? 'mediaTargetInput';
+        $previewContainerId = $params['previewContainerId'] ?? '';
+        $mediaType = $params['mediaType'] ?? 'image';
+        
+        return $this->renderMediaSelector($targetInputId, $previewContainerId, $mediaType);
+    }
+    
+    /**
+     * Обробник хука для отримання файлів
+     * 
+     * @param array $params Параметри хука
+     * @return array
+     */
+    public function hookGetMediaFiles($params = null): array {
+        if (!is_array($params)) {
+            $params = [];
+        }
+        
+        $filters = $params['filters'] ?? $params;
+        $page = $params['page'] ?? 1;
+        $perPage = $params['per_page'] ?? 24;
+        
+        return $this->getFiles($filters, $page, $perPage);
+    }
+    
+    /**
+     * Обробник хука для завантаження файлу
+     * 
+     * @param array $params Параметри хука
+     * @return array
+     */
+    public function hookUploadMediaFile($params = null): array {
+        if (!is_array($params)) {
+            return ['success' => false, 'error' => 'Невірні параметри'];
+        }
+        
+        $file = $params['file'] ?? null;
+        $title = $params['title'] ?? null;
+        $description = $params['description'] ?? '';
+        $alt = $params['alt'] ?? '';
+        
+        if (!$file || !isset($file['tmp_name'])) {
+            return ['success' => false, 'error' => 'Файл не передано'];
+        }
+        
+        return $this->uploadFile($file, $title, $description, $alt);
     }
     
     /**
@@ -90,8 +162,109 @@ class Media extends BaseModule {
             'getFile' => 'Отримання файлу за ID',
             'getFiles' => 'Отримання списку файлів з фільтрацією',
             'updateFile' => 'Оновлення інформації про файл',
-            'getStats' => 'Отримання статистики медіа'
+            'getStats' => 'Отримання статистики медіа',
+            'renderMediaItems' => 'Рендеринг HTML списку медіафайлів',
+            'renderMediaSelector' => 'Рендеринг селектора медіафайлів'
         ];
+    }
+    
+    /**
+     * Рендеринг HTML списку медіафайлів
+     * 
+     * @param array $files Масив файлів
+     * @param string $viewMode Режим відображення: 'grid' або 'list'
+     * @return string HTML
+     */
+    public function renderMediaItems(array $files, string $viewMode = 'grid'): string {
+        if (empty($files)) {
+            return '<div class="media-empty-state">
+                <div class="media-empty-icon"><i class="fas fa-images"></i></div>
+                <h4 class="media-empty-title">Медіафайли відсутні</h4>
+                <p class="media-empty-description">Завантажте перший файл, щоб почати роботу з медіа-бібліотекою.</p>
+            </div>';
+        }
+        
+        ob_start();
+        include __DIR__ . '/../skins/templates/media-items.php';
+        return ob_get_clean();
+    }
+    
+    /**
+     * Рендеринг селектора медіафайлів для вбудовування в інші модулі
+     * 
+     * @param string $targetInputId ID інпута для вставки URL
+     * @param string $previewContainerId ID контейнера для прев'ю
+     * @param string $mediaType Тип медіа ('image', 'video', 'audio' або '')
+     * @return string HTML
+     */
+    public function renderMediaSelector(string $targetInputId, string $previewContainerId = '', string $mediaType = 'image'): string {
+        // Кешування для покращення продуктивності
+        $cacheKey = 'media_selector_' . md5($targetInputId . $previewContainerId . $mediaType);
+        if (function_exists('cache_get') && function_exists('cache_set')) {
+            $cached = cache_get($cacheKey);
+            if ($cached !== false) {
+                return $cached;
+            }
+        }
+        
+        $mediaModule = $this;
+        $filters = ['media_type' => $mediaType];
+        $result = $mediaModule->getFiles($filters, 1, 24);
+        $files = $result['files'];
+        
+        ob_start();
+        ?>
+        <div class="media-selector-wrapper">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="flex-grow-1 me-3">
+                    <input type="text" 
+                           class="form-control media-selector-search" 
+                           placeholder="Пошук <?= $mediaType ?: 'файлів' ?>...">
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary media-selector-upload-btn">
+                        <i class="fas fa-upload me-2"></i>Завантажити
+                    </button>
+                    <input type="file" 
+                           class="d-none media-selector-file-input" 
+                           accept="<?= $mediaType === 'image' ? 'image/*' : ($mediaType === 'video' ? 'video/*' : ($mediaType === 'audio' ? 'audio/*' : '')) ?>" 
+                           multiple>
+                </div>
+            </div>
+            
+            <div class="row media-selector-grid">
+                <?php foreach ($files as $file): ?>
+                    <div class="col-md-2 col-sm-3 col-4 mb-3">
+                        <div class="media-selector-item" 
+                             data-url="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>"
+                             data-id="<?= $file['id'] ?>"
+                             data-target="<?= htmlspecialchars($targetInputId) ?>"
+                             data-preview="<?= htmlspecialchars($previewContainerId) ?>">
+                            <?php if ($file['media_type'] === 'image'): ?>
+                                <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
+                                     alt="<?= htmlspecialchars($file['title'] ?? '') ?>"
+                                     class="img-thumbnail w-100"
+                                     loading="lazy"
+                                     decoding="async">
+                            <?php else: ?>
+                                <div class="media-selector-icon">
+                                    <i class="fas fa-<?= $file['media_type'] === 'video' ? 'video' : ($file['media_type'] === 'audio' ? 'music' : 'file') ?> fa-3x"></i>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php
+        $html = ob_get_clean();
+        
+        // Зберігаємо в кеш на 5 хвилин
+        if (function_exists('cache_set')) {
+            cache_set($cacheKey, $html, 300);
+        }
+        
+        return $html;
     }
     
     /**
@@ -108,8 +281,40 @@ class Media extends BaseModule {
         ];
         
         foreach ($directories as $dir) {
-            if (!is_dir($dir)) {
-                @mkdir($dir, 0755, true);
+            try {
+                // Перевіряємо чи клас Directory завантажений
+                if (!class_exists('Directory')) {
+                    // Явно завантажуємо клас
+                    $directoryClassFile = __DIR__ . '/../classes/files/Directory.php';
+                    if (file_exists($directoryClassFile)) {
+                        require_once $directoryClassFile;
+                    }
+                }
+                
+                if (class_exists('Directory')) {
+                    $directory = new Directory($dir);
+                    if (method_exists($directory, 'exists') && !$directory->exists()) {
+                        if (method_exists($directory, 'create')) {
+                            $directory->create(0755, true);
+                        } else {
+                            // Fallback
+                            if (!is_dir($dir)) {
+                                @mkdir($dir, 0755, true);
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback на стандартні PHP функції
+                    if (!is_dir($dir)) {
+                        @mkdir($dir, 0755, true);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Media: Failed to create directory {$dir}: " . $e->getMessage());
+                // Fallback
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0755, true);
+                }
             }
         }
     }
@@ -134,11 +339,6 @@ class Media extends BaseModule {
             return ['success' => false, 'error' => $this->getUploadError($file['error'])];
         }
         
-        // Перевірка розміру файлу
-        if ($file['size'] > $this->maxFileSize) {
-            return ['success' => false, 'error' => 'Файл занадто великий. Максимальний розмір: ' . $this->formatFileSize($this->maxFileSize)];
-        }
-        
         // Перевірка типу файлу
         $fileInfo = pathinfo($file['name']);
         $extension = strtolower($fileInfo['extension'] ?? '');
@@ -147,35 +347,134 @@ class Media extends BaseModule {
             return ['success' => false, 'error' => 'Тип файлу не дозволено: ' . $extension];
         }
         
+        // Підготовка директорії для завантаження
+        $year = date('Y');
+        $month = date('m');
+        $uploadSubDir = $year . '/' . $month . '/';
+        $uploadDir = $this->uploadsDir . $uploadSubDir;
+        
+        // Створюємо директорію через клас Directory
+        try {
+            // Перевіряємо чи клас Directory завантажений
+            if (!class_exists('Directory')) {
+                // Явно завантажуємо клас
+                $directoryClassFile = __DIR__ . '/../classes/files/Directory.php';
+                if (file_exists($directoryClassFile)) {
+                    require_once $directoryClassFile;
+                }
+            }
+            
+            if (class_exists('Directory')) {
+                $directory = new Directory($uploadDir);
+                if (method_exists($directory, 'exists') && !$directory->exists()) {
+                    if (method_exists($directory, 'create')) {
+                        $directory->create(0755, true);
+                    } else {
+                        // Fallback
+                        if (!is_dir($uploadDir)) {
+                            @mkdir($uploadDir, 0755, true);
+                        }
+                    }
+                }
+            } else {
+                // Fallback на стандартні PHP функції
+                if (!is_dir($uploadDir)) {
+                    if (!@mkdir($uploadDir, 0755, true)) {
+                        return ['success' => false, 'error' => 'Помилка створення директорії для завантаження'];
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Media: Failed to create upload directory: " . $e->getMessage());
+            // Fallback на стандартні PHP функції
+            if (!is_dir($uploadDir)) {
+                if (!@mkdir($uploadDir, 0755, true)) {
+                    return ['success' => false, 'error' => 'Помилка створення директорії для завантаження'];
+                }
+            }
+        }
+        
+        // Використовуємо клас Upload для завантаження
+        $upload = new Upload($uploadDir);
+        $upload->setMaxFileSize($this->maxFileSize);
+        
+        // Встановлюємо дозволені розширення
+        $allowedExtensions = [];
+        foreach ($this->allowedTypes as $types) {
+            $allowedExtensions = array_merge($allowedExtensions, $types);
+        }
+        $upload->setAllowedExtensions($allowedExtensions);
+        
+        // Встановлюємо дозволені MIME типи для додаткової безпеки
+        $allowedMimeTypes = [];
+        foreach ($this->allowedTypes as $type => $extensions) {
+            foreach ($extensions as $ext) {
+                // Отримуємо всі можливі MIME типи для розширення
+                $mimeTypes = MimeType::getAllMimeTypes($ext);
+                foreach ($mimeTypes as $mimeType) {
+                    if ($mimeType) {
+                        $allowedMimeTypes[] = $mimeType;
+                    }
+                }
+            }
+        }
+        if (!empty($allowedMimeTypes)) {
+            $upload->setAllowedMimeTypes(array_unique($allowedMimeTypes));
+        }
+        
         // Генерація унікального імені файлу
         $originalName = $fileInfo['filename'] ?? 'file';
         $fileName = $this->generateFileName($originalName, $extension);
-        $year = date('Y');
-        $month = date('m');
-        $uploadPath = $year . '/' . $month . '/' . $fileName;
-        $fullPath = $this->uploadsDir . $uploadPath;
         
-        // Переміщення файлу
-        if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
-            return ['success' => false, 'error' => 'Помилка збереження файлу'];
+        // Завантаження файлу через клас Upload
+        $uploadResult = $upload->upload($file, $fileName);
+        
+        if (!$uploadResult['success']) {
+            return ['success' => false, 'error' => $uploadResult['error'] ?? 'Помилка завантаження файлу'];
         }
+        
+        $fullPath = $uploadResult['file'] ?? '';
+        if (empty($fullPath)) {
+            return ['success' => false, 'error' => 'Помилка: файл не було завантажено'];
+        }
+        
+        // Отримуємо ім'я файлу з повного шляху
+        $uploadedFileName = basename($fullPath);
+        $uploadPath = $uploadSubDir . $uploadedFileName;
         
         // Визначення типу медіа
         $mediaType = $this->getMediaType($extension);
         
-        // Отримання розмірів для зображень
+        // Отримання розмірів для зображень через клас Image
         $width = null;
         $height = null;
-        $fileSize = filesize($fullPath);
-        $mimeType = $file['type'] ?? mime_content_type($fullPath);
+        $fileSize = $file['size'] ?? filesize($fullPath);
+        $mimeType = $uploadResult['mime_type'] ?? MimeType::get($fullPath);
         
         if ($mediaType === 'image') {
-            $imageInfo = @getimagesize($fullPath);
-            if ($imageInfo) {
-                $width = $imageInfo[0];
-                $height = $imageInfo[1];
-                if (isset($imageInfo['mime'])) {
-                    $mimeType = $imageInfo['mime'];
+            try {
+                $image = new Image($fullPath);
+                $width = $image->getWidth();
+                $height = $image->getHeight();
+                $mimeType = $image->getMimeType();
+                
+                // Перевірка розміру зображення (захист від дуже великих зображень)
+                $maxImageWidth = 10000;
+                $maxImageHeight = 10000;
+                if ($width > $maxImageWidth || $height > $maxImageHeight) {
+                    error_log("Media: Image dimensions too large: {$width}x{$height}");
+                    // Можна додати автоматичне зменшення, але поки просто логуємо
+                }
+            } catch (Exception $e) {
+                error_log("Media: Failed to get image info: " . $e->getMessage());
+                // Fallback на getimagesize
+                $imageInfo = @getimagesize($fullPath);
+                if ($imageInfo) {
+                    $width = $imageInfo[0];
+                    $height = $imageInfo[1];
+                    if (isset($imageInfo['mime'])) {
+                        $mimeType = $imageInfo['mime'];
+                    }
                 }
             }
         }
@@ -184,8 +483,16 @@ class Media extends BaseModule {
         $title = $title ?: $originalName;
         $db = $this->getDB();
         if (!$db) {
+            // Видаляємо файл якщо БД недоступна
+            try {
+                $fileObj = new File($fullPath);
+                $fileObj->delete();
+            } catch (Exception $e) {
+                @unlink($fullPath);
+            }
             return ['success' => false, 'error' => 'База даних недоступна'];
         }
+        
         $stmt = $db->prepare("
             INSERT INTO media_files (
                 filename, original_name, file_path, file_url, file_size, 
@@ -199,7 +506,7 @@ class Media extends BaseModule {
         
         try {
             $stmt->execute([
-                $fileName,
+                $uploadResult['name'],
                 SecurityHelper::sanitizeInput($file['name']),
                 $uploadPath,
                 $fileUrl,
@@ -216,19 +523,31 @@ class Media extends BaseModule {
             
             $mediaId = $db->lastInsertId();
             
+            // Очищаємо кеш після додавання нового файлу
+            if (function_exists('cache_clear')) {
+                cache_clear('media_files_');
+                cache_clear('media_selector_');
+            }
+            
             return [
                 'success' => true,
                 'id' => $mediaId,
                 'file_url' => $fileUrl,
                 'file_path' => $uploadPath,
-                'filename' => $fileName,
+                'filename' => $uploadedFileName,
                 'media_type' => $mediaType,
                 'width' => $width,
                 'height' => $height,
                 'file_size' => $fileSize
             ];
         } catch (Exception $e) {
-            @unlink($fullPath);
+            // Видаляємо файл при помилці БД
+            try {
+                $fileObj = new File($fullPath);
+                $fileObj->delete();
+            } catch (Exception $fileEx) {
+                @unlink($fullPath);
+            }
             error_log("Media upload DB error: " . $e->getMessage());
             return ['success' => false, 'error' => 'Помилка збереження інформації про файл'];
         }
@@ -258,13 +577,30 @@ class Media extends BaseModule {
                 return ['success' => false, 'error' => 'Файл не знайдено'];
             }
             
+            // Видалення файлу через клас File
             $fullPath = $this->uploadsDir . $file['file_path'];
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
+            try {
+                $fileObj = new File($fullPath);
+                if ($fileObj->exists()) {
+                    $fileObj->delete();
+                }
+            } catch (Exception $e) {
+                error_log("Media: Failed to delete file using File class: " . $e->getMessage());
+                // Fallback
+                if (file_exists($fullPath)) {
+                    @unlink($fullPath);
+                }
             }
             
             $stmt = $db->prepare("DELETE FROM media_files WHERE id = ?");
             $stmt->execute([$mediaId]);
+            
+            // Очищаємо кеш після видалення файлу
+            if (function_exists('cache_clear')) {
+                cache_clear('media_files_');
+                cache_clear('media_selector_');
+                cache_clear('media_file_' . $mediaId);
+            }
             
             return ['success' => true];
         } catch (Exception $e) {
@@ -284,6 +620,15 @@ class Media extends BaseModule {
             return null;
         }
         
+        // Кешування для покращення продуктивності
+        $cacheKey = 'media_file_' . $mediaId;
+        if (function_exists('cache_get') && function_exists('cache_set')) {
+            $cached = cache_get($cacheKey);
+            if ($cached !== false) {
+                return $cached;
+            }
+        }
+        
         try {
             $db = $this->getDB();
             if (!$db) {
@@ -293,8 +638,25 @@ class Media extends BaseModule {
             $stmt->execute([$mediaId]);
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($file && !empty($file['file_url'])) {
-                $file['file_url'] = UrlHelper::toProtocolRelative($file['file_url']);
+            if ($file) {
+                // Перевіряємо, чи файл існує на диску
+                if (!empty($file['file_path'])) {
+                    $fullPath = $this->uploadsDir . $file['file_path'];
+                    if (!file_exists($fullPath)) {
+                        error_log("Media: File not found on disk: {$fullPath} (ID: {$mediaId})");
+                        // Файл видалений з диску, але запис залишився в БД
+                        // Можна додати автоматичне видалення запису, але поки просто логуємо
+                    }
+                }
+                
+                if (!empty($file['file_url'])) {
+                    $file['file_url'] = UrlHelper::toProtocolRelative($file['file_url']);
+                }
+                
+                // Зберігаємо в кеш на 5 хвилин
+                if (function_exists('cache_set')) {
+                    cache_set($cacheKey, $file, 300);
+                }
             }
             
             return $file ?: null;
@@ -312,7 +674,25 @@ class Media extends BaseModule {
      * @param int $perPage Кількість на сторінці
      * @return array Список файлів та метадані
      */
-    public function getFiles($filters = [], $page = 1, $perPage = 24) {
+    public function getFiles($filters = [], $page = 1, $perPage = 24, $skipCache = false) {
+        // Кешування для покращення продуктивності (тільки якщо не пропущено)
+        if (!$skipCache) {
+            $cacheKey = 'media_files_' . md5(serialize($filters) . $page . $perPage);
+            if (function_exists('cache_get') && function_exists('cache_set')) {
+                $cached = cache_get($cacheKey);
+                if ($cached !== false && is_array($cached)) {
+                    // Перевіряємо, чи є всі необхідні ключі
+                    if (isset($cached['files']) && isset($cached['total']) && isset($cached['page']) && isset($cached['pages'])) {
+                        return $cached;
+                    }
+                    // Якщо структура некоректна, очищаємо кеш
+                    if (function_exists('cache_delete')) {
+                        cache_delete($cacheKey);
+                    }
+                }
+            }
+        }
+        
         try {
             $where = [];
             $params = [];
@@ -344,7 +724,13 @@ class Media extends BaseModule {
             
             $db = $this->getDB();
             if (!$db) {
-                return ['files' => [], 'total' => 0, 'page' => $page, 'per_page' => $perPage];
+                return [
+                    'files' => [],
+                    'total' => 0,
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'pages' => 0
+                ];
             }
             
             $countStmt = $db->prepare("SELECT COUNT(*) FROM media_files $whereClause");
@@ -385,13 +771,21 @@ class Media extends BaseModule {
             }
             unset($file);
             
-            return [
+            $result = [
                 'files' => $files,
                 'total' => $total,
                 'page' => $page,
                 'per_page' => $perPage,
                 'pages' => $total > 0 ? ceil($total / $perPage) : 0
             ];
+            
+            // Зберігаємо в кеш на 2 хвилини (тільки якщо не пропущено)
+            if (!$skipCache && function_exists('cache_set')) {
+                $cacheKey = 'media_files_' . md5(serialize($filters) . $page . $perPage);
+                cache_set($cacheKey, $result, 120);
+            }
+            
+            return $result;
         } catch (Exception $e) {
             error_log("Media getFiles error: " . $e->getMessage());
             return [
@@ -440,6 +834,13 @@ class Media extends BaseModule {
             $sql = "UPDATE media_files SET " . implode(', ', $fields) . " WHERE id = ?";
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
+            
+            // Очищаємо кеш після оновлення файлу
+            if (function_exists('cache_clear')) {
+                cache_clear('media_files_');
+                cache_clear('media_selector_');
+                cache_clear('media_file_' . $mediaId);
+            }
             
             return ['success' => true];
         } catch (Exception $e) {

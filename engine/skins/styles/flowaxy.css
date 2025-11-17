@@ -237,6 +237,17 @@ body {
 /* ========================================
    HEADER
    ======================================== */
+/* Верхняя зеленая полоска */
+.header-top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #2d5016;
+    z-index: 1040;
+}
+
 .navbar {
     background: linear-gradient(135deg, #23282d 0%, #2c3338 100%) !important;
     height: 40px !important;
@@ -244,7 +255,9 @@ body {
     padding: 0 !important;
     border: 2px solid #333;
     border-bottom: none;
+    border-top: none;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    top: 3px !important;
 }
 
 .navbar .container-fluid {
@@ -260,7 +273,9 @@ body {
         min-height: 48px !important;
         background: linear-gradient(135deg, #23282d 0%, #2c3338 100%) !important;
         border: none !important;
+        border-top: none !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+        top: 3px !important;
     }
     
     .navbar .container-fluid {
@@ -291,7 +306,7 @@ body {
     width: 28px;
     height: 28px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -307,7 +322,7 @@ body {
     padding: 0 !important;
     border: none !important;
     background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -346,7 +361,7 @@ body {
     padding: 6px 12px !important;
     border: none !important;
     background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     color: #a0a5aa !important;
     font-size: 13px !important;
     font-weight: 500 !important;
@@ -472,13 +487,13 @@ body {
    ======================================== */
 .sidebar {
     position: fixed !important;
-    top: 40px !important;
+    top: 43px !important;
     bottom: 0;
     left: 0;
     z-index: 100;
     padding: 0 !important;
     background: #23282d !important;
-    height: calc(100vh - 40px) !important;
+    height: calc(100vh - 43px) !important;
     width: 240px !important;
     border: 2px solid #333;
     border-top: none;
@@ -649,10 +664,10 @@ body {
    ОСНОВНОЙ КОНТЕНТ
    ======================================== */
 main.col-md-9.ms-sm-auto.col-lg-10 {
-    margin-top: 40px !important;
+    margin-top: 43px !important;
     margin-left: 240px !important;
     margin-right: 0 !important;
-    min-height: calc(100vh - 40px) !important;
+    min-height: calc(100vh - 43px) !important;
     width: calc(100% - 240px) !important;
     position: relative;
     background: var(--bg-light);
@@ -1237,14 +1252,14 @@ main.col-md-9.ms-sm-auto.col-lg-10 {
     }
     
     main.col-md-9.ms-sm-auto.col-lg-10 {
-        margin-top: 48px !important;
+        margin-top: 51px !important;
         margin-left: 0 !important;
         width: 100% !important;
     }
     
     .admin-content-container {
         padding: 20px 16px;
-        min-height: calc(100vh - 48px);
+        min-height: calc(100vh - 51px);
     }
     
     .mobile-menu-btn {

@@ -122,7 +122,9 @@ if (!function_exists('formatFileSize')) {
                         <?php if ($file['media_type'] === 'image'): ?>
                             <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
                                  alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
-                                 class="img-fluid">
+                                 class="img-fluid"
+                                 loading="lazy"
+                                 decoding="async">
                         <?php elseif ($file['media_type'] === 'video'): ?>
                             <div class="media-icon video-icon">
                                 <i class="fas fa-video fa-3x"></i>
