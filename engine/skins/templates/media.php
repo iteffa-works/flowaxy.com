@@ -302,7 +302,7 @@ if (!function_exists('formatFileSize')) {
                             <input type="text" class="form-control" id="fileAlt" name="alt_text" placeholder="Альтернативний текст для зображення">
                         </div>
                     </div>
-                    <div id="fileHelp" class="form-text text-center mt-3">Максимальний розмір файлу: 10 MB</div>
+                    <div id="fileHelp" class="form-text text-center mt-1 mb-2">Максимальний розмір файлу: 10 MB</div>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(SecurityHelper::csrfToken()) ?>">
                     <input type="hidden" name="action" value="upload">
                 </form>

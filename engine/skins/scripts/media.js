@@ -182,18 +182,40 @@
         item.className = 'file-preview-item';
         item.dataset.fileName = file.name;
         
+        let imageWrapper = null;
+        
+        // Назва файлу (создаем заранее, добавим после изображения/иконки)
+        const fileName = document.createElement('div');
+        fileName.className = 'file-name';
+        fileName.textContent = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
+        
         // Прев'ю для зображень
         if (file.type.startsWith('image/')) {
+            imageWrapper = document.createElement('div');
+            imageWrapper.className = 'file-preview-image-wrapper';
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = document.createElement('img');
                 img.src = e.target.result;
                 img.alt = file.name;
-                item.appendChild(img);
+                imageWrapper.appendChild(img);
+                item.appendChild(imageWrapper);
+                
+                // Добавляем название после изображения
+                item.appendChild(fileName);
+                
+                // Добавляем кнопку удаления в wrapper после добавления изображения
+                const removeBtn = item.querySelector('.remove-file');
+                if (removeBtn && removeBtn.parentNode === item) {
+                    item.removeChild(removeBtn);
+                    imageWrapper.appendChild(removeBtn);
+                }
             };
             reader.readAsDataURL(file);
         } else {
             // Іконка для інших файлів
+            const iconWrapper = document.createElement('div');
+            iconWrapper.className = 'file-preview-icon-wrapper';
             const icon = document.createElement('i');
             if (file.type.startsWith('video/')) {
                 icon.className = 'fas fa-video';
@@ -206,14 +228,12 @@
             } else {
                 icon.className = 'fas fa-file';
             }
-            item.appendChild(icon);
+            iconWrapper.appendChild(icon);
+            item.appendChild(iconWrapper);
+            
+            // Добавляем название после иконки
+            item.appendChild(fileName);
         }
-        
-        // Назва файлу
-        const fileName = document.createElement('div');
-        fileName.className = 'file-name';
-        fileName.textContent = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
-        item.appendChild(fileName);
         
         // Кнопка видалення
         const removeBtn = document.createElement('button');
@@ -230,7 +250,19 @@
                 uploadFields.classList.remove('active');
             }
         });
-        item.appendChild(removeBtn);
+        
+        // Если это не изображение, добавляем кнопку в icon wrapper, иначе в item (потом переместится в image wrapper)
+        if (!file.type.startsWith('image/')) {
+            const iconWrapper = item.querySelector('.file-preview-icon-wrapper');
+            if (iconWrapper) {
+                iconWrapper.appendChild(removeBtn);
+            } else {
+                item.appendChild(removeBtn);
+            }
+        } else {
+            // Для изображений кнопка будет добавлена в wrapper после загрузки изображения
+            item.appendChild(removeBtn);
+        }
         
         return item;
     }
