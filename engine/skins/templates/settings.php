@@ -176,11 +176,8 @@
         <!-- Кнопки действий -->
         <div class="col-12">
             <div class="d-flex gap-2 justify-content-end pt-2">
-                <a href="<?= UrlHelper::admin('settings') ?>" class="btn btn-outline-secondary">
-                    <i class="fas fa-times me-1"></i>Скасувати
-                </a>
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save me-1"></i>Зберегти налаштування
+                    Зберегти налаштування
                 </button>
             </div>
         </div>
@@ -268,6 +265,13 @@
     font-weight: 500;
     border: 1px solid transparent;
     transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    line-height: 1.5;
+    vertical-align: middle;
+    text-decoration: none;
 }
 
 .settings-form .btn-primary {
@@ -279,21 +283,19 @@
 .settings-form .btn-primary:hover {
     background-color: #005a87;
     border-color: #005a87;
+    color: #ffffff;
 }
 
 .settings-form .btn-outline-secondary {
     color: #6c757d;
     border-color: #dee2e6;
     background-color: #ffffff;
+    min-height: 38px;
 }
 
 .settings-form .btn-outline-secondary:hover {
     background-color: #f8f9fa;
     border-color: #adb5bd;
     color: #495057;
-}
-
-.settings-form .btn i {
-    font-size: 0.8125rem;
 }
 </style>
