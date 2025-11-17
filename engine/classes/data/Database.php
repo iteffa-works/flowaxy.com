@@ -102,7 +102,7 @@ class Database {
     private function checkHostAvailability(string $host, int $port = 3306): bool {
         // Разбираем хост:port если указано
         if (strpos($host, ':') !== false) {
-            list($host, $port) = explode(':', $host, 2);
+            [$host, $port] = explode(':', $host, 2);
             $port = (int)$port;
         }
         
@@ -159,7 +159,7 @@ class Database {
         
         // Разбираем хост:port если указано
         if (strpos($host, ':') !== false) {
-            list($host, $port) = explode(':', $host, 2);
+            [$host, $port] = explode(':', $host, 2);
             $port = (int)$port;
         }
         
@@ -515,7 +515,7 @@ class Database {
      * Получение реального времени (микросекунды)
      */
     private function getRealTime(): float {
-        list($seconds, $microSeconds) = explode(' ', microtime());
+        [$seconds, $microSeconds] = explode(' ', microtime());
         return ((float)$seconds + (float)$microSeconds);
     }
     
@@ -531,10 +531,10 @@ class Database {
             return $value !== null ? (string)$value : $default;
         }
         
-        // Fallback на глобальную функцию
-        if (function_exists('getSetting')) {
+        // Fallback на SettingsManager
+        if (class_exists('SettingsManager')) {
             $settingKey = 'logger_' . $key;
-            return getSetting($settingKey, $default);
+            return settingsManager()->get($settingKey, $default);
         }
         
         return $default;

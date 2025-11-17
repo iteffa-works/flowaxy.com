@@ -537,7 +537,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="menuForm">
-                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                 <input type="hidden" name="action" id="menuAction" value="create_menu">
                 <input type="hidden" name="menu_id" id="menuFormId" value="">
                 <div class="modal-header">
@@ -592,7 +592,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="menuItemForm">
-                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                 <input type="hidden" name="action" id="menuItemAction" value="create_menu_item">
                 <input type="hidden" name="menu_id" id="menuItemMenuId" value="">
                 <input type="hidden" name="item_id" id="menuItemId" value="">
@@ -747,7 +747,7 @@ const MenusApp = {
         document.getElementById('menuEditor').innerHTML = '<div class="loading">Завантаження</div>';
         
         try {
-            const baseUrl = '<?= adminUrl('menus') ?>';
+            const baseUrl = '<?= UrlHelper::admin('menus') ?>';
             
             // Загружаем меню и пункты
             const [menuResponse, itemsResponse] = await Promise.all([
@@ -934,9 +934,9 @@ const MenusApp = {
             formData.append('action', 'update_menu_order');
             formData.append('menu_id', this.currentMenuId);
             formData.append('items', JSON.stringify(order));
-            formData.append('csrf_token', '<?= generateCSRFToken() ?>');
+            formData.append('csrf_token', '<?= SecurityHelper::csrfToken() ?>');
             
-            const response = await fetch('<?= adminUrl('menus') ?>', {
+            const response = await fetch('<?= UrlHelper::admin('menus') ?>', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -962,7 +962,7 @@ const MenusApp = {
     },
     
     getMenu: async function(menuId) {
-        const response = await fetch(`<?= adminUrl('menus') ?>?action=get_menu&menu_id=${menuId}`, {
+        const response = await fetch(`<?= UrlHelper::admin('menus') ?>?action=get_menu&menu_id=${menuId}`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
@@ -998,7 +998,7 @@ const MenusApp = {
         const action = formData.get('action');
         
         try {
-            const response = await fetch('<?= adminUrl('menus') ?>', {
+            const response = await fetch('<?= UrlHelper::admin('menus') ?>', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -1030,9 +1030,9 @@ const MenusApp = {
             const formData = new FormData();
             formData.append('action', 'delete_menu');
             formData.append('menu_id', menuId);
-            formData.append('csrf_token', '<?= generateCSRFToken() ?>');
+            formData.append('csrf_token', '<?= SecurityHelper::csrfToken() ?>');
             
-            const response = await fetch('<?= adminUrl('menus') ?>', {
+            const response = await fetch('<?= UrlHelper::admin('menus') ?>', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -1115,7 +1115,7 @@ const MenusApp = {
         const action = formData.get('action');
         
         try {
-            const response = await fetch('<?= adminUrl('menus') ?>', {
+            const response = await fetch('<?= UrlHelper::admin('menus') ?>', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -1154,9 +1154,9 @@ const MenusApp = {
             formData.append('action', 'delete_menu_item');
             formData.append('item_id', itemId);
             formData.append('menu_id', this.currentMenuId);
-            formData.append('csrf_token', '<?= generateCSRFToken() ?>');
+            formData.append('csrf_token', '<?= SecurityHelper::csrfToken() ?>');
             
-            const response = await fetch('<?= adminUrl('menus') ?>', {
+            const response = await fetch('<?= UrlHelper::admin('menus') ?>', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }

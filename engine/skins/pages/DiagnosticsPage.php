@@ -52,7 +52,7 @@ class DiagnosticsPage extends AdminPage {
             return;
         }
         
-        $action = sanitizeInput($_POST['cache_action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_POST['cache_action'] ?? '');
         
         try {
             $cache = cache();
@@ -152,6 +152,53 @@ class DiagnosticsPage extends AdminPage {
         $info['server_time'] = date('d.m.Y H:i:s');
         $info['timezone'] = date_default_timezone_get();
         
+        // PHP версія
+        $info['php_version'] = PHP_VERSION;
+        $info['php_sapi'] = php_sapi_name();
+        
+        // Інформація про логування
+        if (class_exists('Logger')) {
+            $logger = Logger::getInstance();
+            $logStats = $logger->getStats();
+            $info['logger'] = [
+                'enabled' => true,
+                'total_files' => $logStats['total_files'] ?? 0,
+                'total_size' => $logStats['total_size'] ?? 0,
+                'latest_file' => $logStats['latest_file'] ?? null
+            ];
+        } else {
+            $info['logger'] = ['enabled' => false];
+        }
+        
+        // Статистика БД
+        if (class_exists('Database')) {
+            try {
+                $db = Database::getInstance();
+                $dbStats = $db->getStats();
+                $info['database'] = [
+                    'connected' => $dbStats['connected'] ?? false,
+                    'query_count' => $dbStats['query_count'] ?? 0,
+                    'total_query_time' => $dbStats['total_query_time'] ?? 0,
+                    'average_query_time' => $dbStats['average_query_time'] ?? 0,
+                    'slow_queries' => $dbStats['slow_queries'] ?? 0,
+                    'error_count' => $dbStats['error_count'] ?? 0
+                ];
+            } catch (Exception $e) {
+                $info['database'] = ['error' => $e->getMessage()];
+            }
+        }
+        
+        // Статистика кешу
+        if (function_exists('cache')) {
+            try {
+                $cache = cache();
+                $cacheStats = $cache->getStats();
+                $info['cache'] = $cacheStats;
+            } catch (Exception $e) {
+                $info['cache'] = ['error' => $e->getMessage()];
+            }
+        }
+        
         return $info;
     }
     
@@ -170,7 +217,9 @@ class DiagnosticsPage extends AdminPage {
             'extensions' => $this->checkExtensions(),
             'configuration' => $this->checkConfiguration(),
             'modules' => $this->checkModules(),
-            'plugins' => $this->checkPlugins()
+            'plugins' => $this->checkPlugins(),
+            'logging' => $this->checkLogging(),
+            'security' => $this->checkSecurity()
         ];
         
         return $diagnostics;
@@ -363,7 +412,7 @@ class DiagnosticsPage extends AdminPage {
         $checks = [];
         
         try {
-            $db = getDB(false);
+            $db = DatabaseHelper::getConnection(false);
             if (!$db) {
                 $checks['connection'] = [
                     'name' => 'Підключення до БД',
@@ -635,6 +684,138 @@ class DiagnosticsPage extends AdminPage {
                 'value' => 'Не доступний',
                 'status' => 'error',
                 'message' => 'PluginManager не доступний'
+            ];
+        }
+        
+        return $checks;
+    }
+    
+    /**
+     * Перевірка логування
+     */
+    private function checkLogging() {
+        $checks = [];
+        
+        if (class_exists('Logger')) {
+            $logger = Logger::getInstance();
+            $stats = $logger->getStats();
+            
+            $checks['enabled'] = [
+                'name' => 'Система логування',
+                'value' => 'Активна',
+                'status' => 'success',
+                'message' => 'Logger клас доступний та працює'
+            ];
+            
+            $checks['total_files'] = [
+                'name' => 'Файлів логів',
+                'value' => $stats['total_files'] ?? 0,
+                'status' => 'info',
+                'message' => 'Кількість файлів логів'
+            ];
+            
+            $checks['total_size'] = [
+                'name' => 'Розмір логів',
+                'value' => formatBytes($stats['total_size'] ?? 0),
+                'status' => 'info',
+                'message' => 'Загальний розмір файлів логів'
+            ];
+            
+            $checks['latest_file'] = [
+                'name' => 'Останній файл',
+                'value' => $stats['latest_file'] ?? 'Немає',
+                'status' => 'info',
+                'message' => 'Останній створений файл логу'
+            ];
+            
+            // Перевірка директорії логів
+            $logDir = defined('LOGS_DIR') ? LOGS_DIR : dirname(__DIR__, 2) . '/storage/logs/';
+            $checks['directory'] = [
+                'name' => 'Директорія логів',
+                'value' => is_writable($logDir) ? 'Доступна для запису' : 'Недоступна',
+                'status' => is_writable($logDir) ? 'success' : 'error',
+                'message' => is_writable($logDir) ? 'Можна записувати логи' : 'Потрібні права на запис'
+            ];
+        } else {
+            $checks['error'] = [
+                'name' => 'Система логування',
+                'value' => 'Недоступна',
+                'status' => 'error',
+                'message' => 'Logger клас не знайдено'
+            ];
+        }
+        
+        return $checks;
+    }
+    
+    /**
+     * Перевірка безпеки
+     */
+    private function checkSecurity() {
+        $checks = [];
+        
+        // Перевірка display_errors
+        $displayErrors = ini_get('display_errors');
+        $checks['display_errors'] = [
+            'name' => 'Display Errors',
+            'value' => $displayErrors ? 'Увімкнено' : 'Вимкнено',
+            'status' => !$displayErrors ? 'success' : 'warning',
+            'message' => $displayErrors ? 
+                'Рекомендується вимкнути в продакшн' : 
+                'Помилки приховані (безпечно)'
+        ];
+        
+        // Перевірка HTTPS
+        $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
+                   (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https');
+        $checks['https'] = [
+            'name' => 'HTTPS',
+            'value' => $isHttps ? 'Активний' : 'Неактивний',
+            'status' => $isHttps ? 'success' : 'warning',
+            'message' => $isHttps ? 
+                'З\'єднання зашифровано' : 
+                'Рекомендується використовувати HTTPS'
+        ];
+        
+        // Перевірка сесії
+        if (class_exists('Session')) {
+            $sessionStarted = session_status() === PHP_SESSION_ACTIVE;
+            $checks['session'] = [
+                'name' => 'Сесія',
+                'value' => $sessionStarted ? 'Активна' : 'Неактивна',
+                'status' => $sessionStarted ? 'success' : 'warning',
+                'message' => $sessionStarted ? 
+                    'Сесія ініціалізована' : 
+                    'Сесія не ініціалізована'
+            ];
+        }
+        
+        // Перевірка CSRF захисту
+        if (class_exists('Security')) {
+            $checks['csrf'] = [
+                'name' => 'CSRF захист',
+                'value' => 'Доступний',
+                'status' => 'success',
+                'message' => 'Клас Security доступний для CSRF захисту'
+            ];
+        }
+        
+        // Перевірка права на запис у важливі директорії
+        $importantDirs = [
+            'uploads' => defined('UPLOADS_DIR') ? UPLOADS_DIR : dirname(__DIR__, 2) . '/uploads/',
+            'cache' => defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/',
+            'logs' => defined('LOGS_DIR') ? LOGS_DIR : dirname(__DIR__, 2) . '/storage/logs/'
+        ];
+        
+        foreach ($importantDirs as $name => $dir) {
+            $writable = is_writable($dir);
+            $checks['dir_' . $name] = [
+                'name' => 'Права на ' . $name,
+                'value' => $writable ? 'Доступні' : 'Обмежені',
+                'status' => $writable ? 'success' : 'warning',
+                'message' => $writable ? 
+                    'Директорія доступна для запису' : 
+                    'Можуть виникнути проблеми з записом'
             ];
         }
         

@@ -80,8 +80,8 @@ class ProfilePage extends AdminPage {
             return;
         }
         
-        $username = sanitizeInput($_POST['username'] ?? '');
-        $email = sanitizeInput($_POST['email'] ?? '');
+        $username = SecurityHelper::sanitizeInput($_POST['username'] ?? '');
+        $email = SecurityHelper::sanitizeInput($_POST['email'] ?? '');
         $currentPassword = $_POST['current_password'] ?? '';
         $newPassword = $_POST['new_password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';

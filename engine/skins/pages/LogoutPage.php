@@ -7,7 +7,7 @@ class LogoutPage {
     
     public function handle() {
         // Проверяем CSRF токен для безопасности
-        if (isset($_GET['token']) && verifyCSRFToken($_GET['token'])) {
+        if (isset($_GET['token']) && SecurityHelper::verifyCsrfToken($_GET['token'])) {
             $this->logout();
         } else {
             // Если токен не валиден, все равно выходим, но показываем предупреждение
@@ -28,6 +28,6 @@ class LogoutPage {
         Session::destroy();
         
         // Перенаправляємо на сторінку входу (використовуємо Response клас)
-        Response::redirectStatic(adminUrl('login'));
+        Response::redirectStatic(UrlHelper::admin('login'));
     }
 }

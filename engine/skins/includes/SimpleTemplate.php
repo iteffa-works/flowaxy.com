@@ -15,6 +15,9 @@ class SimpleTemplate {
      * Рендерить шаблон
      */
     public function render($template, $data = []) {
+        // Убеждаемся, что все необходимые классы загружены
+        $this->ensureClassesLoaded();
+        
         // Об'єднуємо дані
         $this->data = array_merge($this->data, $data);
         
@@ -23,6 +26,19 @@ class SimpleTemplate {
         
         // Підключаємо базовий layout
         include $this->templateDir . 'layout/base.php';
+    }
+    
+    /**
+     * Убеждаемся, что все необходимые классы загружены
+     */
+    private function ensureClassesLoaded(): void {
+        $classes = ['UrlHelper', 'SecurityHelper', 'DatabaseHelper', 'SettingsManager'];
+        foreach ($classes as $className) {
+            if (!class_exists($className)) {
+                // Пытаемся загрузить через автозагрузчик
+                // Автозагрузчик должен загрузить класс автоматически
+            }
+        }
     }
     
     /**

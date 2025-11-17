@@ -8,12 +8,13 @@ $themeManager = themeManager();
 $themeUrl = $themeManager->getThemeUrl();
 
 // Получаем настройки сайта из базы данных
-$siteTitle = getSetting('site_name', 'Flowaxy CMS');
-$siteTagline = getSetting('site_tagline', 'Сучасна CMS система');
-$siteDescription = getSetting('site_description', 'Сучасна CMS система для створення сайтів');
-$sitePhone = getSetting('site_phone', '');
-$adminEmail = getSetting('admin_email', '');
-$copyrightText = getSetting('copyright', '');
+$settings = settingsManager();
+$siteTitle = $settings->get('site_name', 'Flowaxy CMS');
+$siteTagline = $settings->get('site_tagline', 'Сучасна CMS система');
+$siteDescription = $settings->get('site_description', 'Сучасна CMS система для створення сайтів');
+$sitePhone = $settings->get('site_phone', '');
+$adminEmail = $settings->get('admin_email', '');
+$copyrightText = $settings->get('copyright', '');
 $copyright = !empty($copyrightText) ? $copyrightText : ('© ' . date('Y') . ' ' . $siteTitle . '. Всі права захищені.');
 
 // Получаем настройки темы из кастомайзера
@@ -61,11 +62,11 @@ if (!empty($customSiteTagline)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="<?= safe_html($siteDescription) ?>">
-    <title><?= safe_html($siteTitle) ?></title>
+    <meta name="description" content="<?= SecurityHelper::safeHtml($siteDescription) ?>">
+    <title><?= SecurityHelper::safeHtml($siteTitle) ?></title>
     
     <?php if (!empty($siteFavicon)): ?>
-        <link rel="icon" type="image/x-icon" href="<?= safe_html($siteFavicon) ?>">
+        <link rel="icon" type="image/x-icon" href="<?= SecurityHelper::safeHtml($siteFavicon) ?>">
     <?php endif; ?>
     
     <!-- Подключение CSS файла (скомпилированного из SCSS) -->
@@ -74,56 +75,56 @@ if (!empty($customSiteTagline)) {
     <!-- Динамические стили из настроек темы -->
     <style>
         :root {
-            --primary-color: <?= safe_html($primaryColor) ?>;
-            --secondary-color: <?= safe_html($secondaryColor) ?>;
-            --text-color: <?= safe_html($textColor) ?>;
-            --background-color: <?= safe_html($backgroundColor) ?>;
-            --header-bg-color: <?= safe_html($headerBgColor) ?>;
-            --header-text-color: <?= safe_html($headerTextColor) ?>;
-            --footer-bg-color: <?= safe_html($footerBgColor) ?>;
-            --footer-text-color: <?= safe_html($footerTextColor) ?>;
+            --primary-color: <?= SecurityHelper::safeHtml($primaryColor) ?>;
+            --secondary-color: <?= SecurityHelper::safeHtml($secondaryColor) ?>;
+            --text-color: <?= SecurityHelper::safeHtml($textColor) ?>;
+            --background-color: <?= SecurityHelper::safeHtml($backgroundColor) ?>;
+            --header-bg-color: <?= SecurityHelper::safeHtml($headerBgColor) ?>;
+            --header-text-color: <?= SecurityHelper::safeHtml($headerTextColor) ?>;
+            --footer-bg-color: <?= SecurityHelper::safeHtml($footerBgColor) ?>;
+            --footer-text-color: <?= SecurityHelper::safeHtml($footerTextColor) ?>;
         }
         
         body {
-            font-family: <?= safe_html($fontFamily) ?>;
-            font-size: <?= safe_html($fontSize) ?>;
-            line-height: <?= safe_html($lineHeight) ?>;
-            color: <?= safe_html($textColor) ?>;
-            background-color: <?= safe_html($backgroundColor) ?>;
+            font-family: <?= SecurityHelper::safeHtml($fontFamily) ?>;
+            font-size: <?= SecurityHelper::safeHtml($fontSize) ?>;
+            line-height: <?= SecurityHelper::safeHtml($lineHeight) ?>;
+            color: <?= SecurityHelper::safeHtml($textColor) ?>;
+            background-color: <?= SecurityHelper::safeHtml($backgroundColor) ?>;
         }
         
         h1, h2, h3, h4, h5, h6 {
-            font-family: <?= safe_html($headingFont) ?>;
+            font-family: <?= SecurityHelper::safeHtml($headingFont) ?>;
         }
         
         .header {
-            background-color: <?= safe_html($headerBgColor) ?>;
-            color: <?= safe_html($headerTextColor) ?>;
+            background-color: <?= SecurityHelper::safeHtml($headerBgColor) ?>;
+            color: <?= SecurityHelper::safeHtml($headerTextColor) ?>;
         }
         
         .header .logo,
         .header .logo h1,
         .header .nav a {
-            color: <?= safe_html($headerTextColor) ?>;
+            color: <?= SecurityHelper::safeHtml($headerTextColor) ?>;
         }
         
         .footer {
-            background-color: <?= safe_html($footerBgColor) ?>;
-            color: <?= safe_html($footerTextColor) ?>;
+            background-color: <?= SecurityHelper::safeHtml($footerBgColor) ?>;
+            color: <?= SecurityHelper::safeHtml($footerTextColor) ?>;
         }
         
         .hero {
-            background: linear-gradient(135deg, <?= safe_html($primaryColor) ?> 0%, <?= safe_html($secondaryColor) ?> 100%);
+            background: linear-gradient(135deg, <?= SecurityHelper::safeHtml($primaryColor) ?> 0%, <?= SecurityHelper::safeHtml($secondaryColor) ?> 100%);
         }
         
         .btn-primary {
-            background-color: <?= safe_html($primaryColor) ?>;
-            border-color: <?= safe_html($primaryColor) ?>;
+            background-color: <?= SecurityHelper::safeHtml($primaryColor) ?>;
+            border-color: <?= SecurityHelper::safeHtml($primaryColor) ?>;
         }
         
         .btn-primary:hover {
-            background-color: <?= safe_html($secondaryColor) ?>;
-            border-color: <?= safe_html($secondaryColor) ?>;
+            background-color: <?= SecurityHelper::safeHtml($secondaryColor) ?>;
+            border-color: <?= SecurityHelper::safeHtml($secondaryColor) ?>;
         }
         
         <?php if (!empty($customCss)): ?>
@@ -142,9 +143,9 @@ if (!empty($customSiteTagline)) {
             <div class="header-content">
                 <a href="<?= SITE_URL ?>" class="logo">
                     <?php if (!empty($siteLogo)): ?>
-                        <img src="<?= safe_html($siteLogo) ?>" alt="<?= safe_html($siteTitle) ?>" style="max-height: 50px; width: auto;">
+                        <img src="<?= SecurityHelper::safeHtml($siteLogo) ?>" alt="<?= SecurityHelper::safeHtml($siteTitle) ?>" style="max-height: 50px; width: auto;">
                     <?php else: ?>
-                        <h1><?= safe_html($siteTitle) ?></h1>
+                        <h1><?= SecurityHelper::safeHtml($siteTitle) ?></h1>
                     <?php endif; ?>
                 </a>
                        <nav class="nav">
@@ -178,7 +179,7 @@ if (!empty($customSiteTagline)) {
     
     <footer class="footer">
         <div class="container">
-            <p><?= safe_html($copyright) ?></p>
+            <p><?= SecurityHelper::safeHtml($copyright) ?></p>
         </div>
     </footer>
     

@@ -18,7 +18,7 @@ class ThemeManager {
      * Конструктор
      */
     public function __construct() {
-        $this->db = getDB();
+        $this->db = DatabaseHelper::getConnection();
         $this->loadActiveTheme();
     }
     

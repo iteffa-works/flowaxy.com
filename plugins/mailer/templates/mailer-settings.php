@@ -13,7 +13,7 @@
 <?php endif; ?>
 
 <form method="POST" id="mailerSettingsForm">
-    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
     <input type="hidden" name="save_mailer_settings" value="1">
     
     <div class="row">

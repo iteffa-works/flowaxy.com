@@ -57,7 +57,7 @@ class TestMenuPlugin extends BasePlugin {
         foreach ($menu as $key => $item) {
             if (isset($item['page']) && $item['page'] === 'plugin-settings' && isset($item['submenu'])) {
                 $menu[$key]['submenu'][] = [
-                    'href' => adminUrl('test-menu'),
+                    'href' => UrlHelper::admin('test-menu'),
                     'text' => 'Тестове меню',
                     'icon' => 'fas fa-flask',
                     'page' => 'test-menu',

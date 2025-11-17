@@ -314,7 +314,7 @@ class Menu extends BaseModule {
         
         // Если не получили через getSetting, пробуем напрямую из БД
         if (empty($savedMenuSlug)) {
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if ($db) {
                 try {
                     $stmt = $db->prepare("SELECT setting_value FROM theme_settings WHERE theme_slug = ? AND setting_key = 'menu_slug' LIMIT 1");

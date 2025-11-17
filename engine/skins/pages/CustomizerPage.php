@@ -74,7 +74,7 @@ class CustomizerPage extends AdminPage {
         
         if ($_POST && isset($_POST['save_customizer'])) {
             $this->saveSettings();
-            Response::redirectStatic(adminUrl('customizer'));
+            Response::redirectStatic(UrlHelper::admin('customizer'));
         }
         
         // Отримання активної теми та перевірка підтримки кастомізації
@@ -176,7 +176,7 @@ class CustomizerPage extends AdminPage {
         $mediaModule = mediaModule();
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $perPage = isset($_GET['per_page']) ? max(1, min(100, (int)$_GET['per_page'])) : 24;
-        $search = sanitizeInput($_GET['search'] ?? '');
+        $search = SecurityHelper::sanitizeInput($_GET['search'] ?? '');
         
         $filters = [
             'media_type' => 'image',
@@ -207,9 +207,9 @@ class CustomizerPage extends AdminPage {
         }
         
         $mediaModule = mediaModule();
-        $title = !empty($_POST['title']) ? sanitizeInput($_POST['title']) : null;
-        $description = sanitizeInput($_POST['description'] ?? '');
-        $alt = sanitizeInput($_POST['alt_text'] ?? '');
+        $title = !empty($_POST['title']) ? SecurityHelper::sanitizeInput($_POST['title']) : null;
+        $description = SecurityHelper::sanitizeInput($_POST['description'] ?? '');
+        $alt = SecurityHelper::sanitizeInput($_POST['alt_text'] ?? '');
         
         $result = $mediaModule->uploadFile($_FILES['file'], $title, $description, $alt);
         
@@ -224,7 +224,7 @@ class CustomizerPage extends AdminPage {
         // Використовуємо Response клас для встановлення заголовків
         Response::setHeader('Content-Type', 'application/json');
         
-        $action = sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         
         switch ($action) {
             case 'get_media_images':
@@ -308,7 +308,7 @@ class CustomizerPage extends AdminPage {
             exit;
         }
         
-        $key = sanitizeInput($_POST['key'] ?? '');
+        $key = SecurityHelper::sanitizeInput($_POST['key'] ?? '');
         $value = $_POST['value'] ?? '';
         
         if (empty($key)) {
@@ -504,7 +504,7 @@ class CustomizerPage extends AdminPage {
         
         switch ($type) {
             case 'color':
-                $value = sanitizeInput($value ?? '');
+                $value = SecurityHelper::sanitizeInput($value ?? '');
                 
                 // Если значение пустое, пытаемся получить значение по умолчанию
                 if (empty($value)) {
@@ -543,7 +543,7 @@ class CustomizerPage extends AdminPage {
                 
             case 'select':
                 $options = $settingConfig['options'] ?? [];
-                $value = sanitizeInput($value);
+                $value = SecurityHelper::sanitizeInput($value);
                 if (isset($options[$value])) {
                     return $value;
                 } elseif (!empty($options)) {
@@ -560,7 +560,7 @@ class CustomizerPage extends AdminPage {
                 return '0';
                 
             case 'media':
-                $value = sanitizeInput($value);
+                $value = SecurityHelper::sanitizeInput($value);
                 // Для media дозволяємо порожні значення та будь-які рядки, які схожі на URL або шлях
                 if (empty($value)) {
                     return '';
@@ -578,7 +578,7 @@ class CustomizerPage extends AdminPage {
             case 'text':
             default:
                 // Для текстовых полей разрешаем любые значения, включая пустые
-                return sanitizeInput($value ?? '');
+                return SecurityHelper::sanitizeInput($value ?? '');
         }
     }
 }

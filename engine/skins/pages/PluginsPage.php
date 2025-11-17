@@ -54,7 +54,7 @@ class PluginsPage extends AdminPage {
                     $this->setMessage("Новых плагинов не обнаружено", 'info');
                 }
                 // Перенаправляем без параметра discover
-                Response::redirectStatic(adminUrl('plugins'));
+                Response::redirectStatic(UrlHelper::admin('plugins'));
                 return;
             } catch (Exception $e) {
                 error_log("Auto-discover plugins error: " . $e->getMessage());
@@ -270,7 +270,7 @@ class PluginsPage extends AdminPage {
     private function handleAjax(): void {
         Response::setHeader('Content-Type', 'application/json; charset=utf-8');
         
-        $action = sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         
         switch ($action) {
             case 'upload_plugin':

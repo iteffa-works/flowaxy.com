@@ -52,12 +52,12 @@ class MediaPage extends AdminPage {
         
         // Отримання параметрів фільтрації
         $filters = [
-            'media_type' => sanitizeInput($_GET['type'] ?? ''),
-            'search' => sanitizeInput($_GET['search'] ?? ''),
-            'date_from' => sanitizeInput($_GET['date_from'] ?? ''),
-            'date_to' => sanitizeInput($_GET['date_to'] ?? ''),
-            'order_by' => sanitizeInput($_GET['order_by'] ?? 'uploaded_at'),
-            'order_dir' => sanitizeInput($_GET['order_dir'] ?? 'DESC')
+            'media_type' => SecurityHelper::sanitizeInput($_GET['type'] ?? ''),
+            'search' => SecurityHelper::sanitizeInput($_GET['search'] ?? ''),
+            'date_from' => SecurityHelper::sanitizeInput($_GET['date_from'] ?? ''),
+            'date_to' => SecurityHelper::sanitizeInput($_GET['date_to'] ?? ''),
+            'order_by' => SecurityHelper::sanitizeInput($_GET['order_by'] ?? 'uploaded_at'),
+            'order_dir' => SecurityHelper::sanitizeInput($_GET['order_dir'] ?? 'DESC')
         ];
         
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -87,7 +87,7 @@ class MediaPage extends AdminPage {
         // Використовуємо Response клас для встановлення заголовків
         Response::setHeader('Content-Type', 'application/json; charset=utf-8');
         
-        $action = sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
         
         switch ($action) {
             case 'upload':
@@ -121,9 +121,9 @@ class MediaPage extends AdminPage {
             exit;
         }
         
-        $title = !empty($_POST['title']) ? sanitizeInput($_POST['title']) : null;
-        $description = sanitizeInput($_POST['description'] ?? '');
-        $alt = sanitizeInput($_POST['alt_text'] ?? '');
+        $title = !empty($_POST['title']) ? SecurityHelper::sanitizeInput($_POST['title']) : null;
+        $description = SecurityHelper::sanitizeInput($_POST['description'] ?? '');
+        $alt = SecurityHelper::sanitizeInput($_POST['alt_text'] ?? '');
         
         $result = $this->mediaModule->uploadFile($_FILES['file'], $title, $description, $alt);
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
@@ -162,9 +162,9 @@ class MediaPage extends AdminPage {
         
         $mediaId = isset($_POST['media_id']) ? (int)$_POST['media_id'] : 0;
         $data = [
-            'title' => sanitizeInput($_POST['title'] ?? ''),
-            'description' => sanitizeInput($_POST['description'] ?? ''),
-            'alt_text' => sanitizeInput($_POST['alt_text'] ?? '')
+            'title' => SecurityHelper::sanitizeInput($_POST['title'] ?? ''),
+            'description' => SecurityHelper::sanitizeInput($_POST['description'] ?? ''),
+            'alt_text' => SecurityHelper::sanitizeInput($_POST['alt_text'] ?? '')
         ];
         
         if (!$mediaId) {
@@ -206,7 +206,7 @@ class MediaPage extends AdminPage {
             return;
         }
         
-        $action = sanitizeInput($_POST['action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_POST['action'] ?? '');
         
         if ($action === 'delete') {
             $mediaId = isset($_POST['media_id']) ? (int)$_POST['media_id'] : 0;

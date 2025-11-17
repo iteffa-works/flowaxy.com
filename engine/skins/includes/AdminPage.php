@@ -19,13 +19,13 @@ class AdminPage {
     
     public function __construct() {
         // Перевірка авторизації
-        requireAdmin();
+        SecurityHelper::requireAdmin();
         
         // Підключення до БД з обробкою помилок
         try {
-            $this->db = getDB(true);
+            $this->db = DatabaseHelper::getConnection(true);
             if ($this->db === null) {
-                // Якщо підключення не вдалося, getDB() вже показав сторінку помилки
+                // Якщо підключення не вдалося, DatabaseHelper::getConnection() вже показав сторінку помилки
                 exit;
             }
         } catch (Exception $e) {
@@ -66,7 +66,7 @@ class AdminPage {
      * Перевірка CSRF токена
      */
     protected function verifyCsrf() {
-        if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
+        if (!SecurityHelper::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->setMessage('Помилка безпеки', 'danger');
             return false;
         }

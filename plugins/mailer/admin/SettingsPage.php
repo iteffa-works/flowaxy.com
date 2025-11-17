@@ -61,7 +61,7 @@ class MailerSettingsPage extends AdminPage {
     private function handleAjax(): void {
         Response::setHeader('Content-Type', 'application/json; charset=utf-8');
         
-        $action = sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
         
         if (!$this->mailer) {
             echo json_encode(['success' => false, 'message' => 'Mailer не завантажено'], JSON_UNESCAPED_UNICODE);
@@ -82,7 +82,7 @@ class MailerSettingsPage extends AdminPage {
                 exit;
                 
             case 'send_test_email':
-                $to = sanitizeInput($_POST['to'] ?? '');
+                $to = SecurityHelper::sanitizeInput($_POST['to'] ?? '');
                 if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
                     echo json_encode(['success' => false, 'message' => 'Невірний формат email'], JSON_UNESCAPED_UNICODE);
                     exit;
@@ -129,7 +129,7 @@ class MailerSettingsPage extends AdminPage {
         
         // Фільтруємо та санітизуємо налаштування
         foreach ($settings as $key => $value) {
-            $mailSettings[$key] = sanitizeInput($value);
+            $mailSettings[$key] = SecurityHelper::sanitizeInput($value);
         }
         
         if ($this->mailer->saveSettings($mailSettings)) {

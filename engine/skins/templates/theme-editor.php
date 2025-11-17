@@ -16,7 +16,7 @@
         <span>
             <i class="fas fa-code me-2"></i>Редактор теми: <strong><?= htmlspecialchars($theme['name']) ?></strong>
         </span>
-        <a href="<?= adminUrl('themes') ?>" class="btn btn-outline-secondary btn-sm">
+        <a href="<?= UrlHelper::admin('themes') ?>" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i>Назад до тем
         </a>
     </div>
@@ -30,7 +30,7 @@
                             <div class="text-muted small">Файли не знайдено</div>
                         <?php else: ?>
                             <?php foreach ($themeFiles as $file): ?>
-                                <a href="<?= adminUrl('theme-editor?theme=' . urlencode($theme['slug']) . '&file=' . urlencode($file['path'])) ?>" 
+                                <a href="<?= UrlHelper::admin('theme-editor?theme=' . urlencode($theme['slug']) . '&file=' . urlencode($file['path'])) ?>" 
                                    class="file-item <?= ($selectedFile === $file['path']) ? 'active' : '' ?>">
                                     <i class="fas fa-file-code me-2"></i>
                                     <span class="file-name"><?= htmlspecialchars($file['name']) ?></span>

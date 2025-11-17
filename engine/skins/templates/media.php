@@ -143,7 +143,7 @@ if (!function_exists('formatFileSize')) {
                     <div class="card media-card">
                         <div class="media-thumbnail">
                             <?php if ($file['media_type'] === 'image'): ?>
-                                <img src="<?= htmlspecialchars(toProtocolRelativeUrl($file['file_url'])) ?>" 
+                                <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
                                      alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
                                      class="img-fluid"
                                      loading="lazy">
@@ -292,7 +292,7 @@ if (!function_exists('formatFileSize')) {
                         <label for="fileAlt" class="form-label">Alt текст <span class="text-muted">(для зображень)</span></label>
                         <input type="text" class="form-control" id="fileAlt" name="alt_text">
                     </div>
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(SecurityHelper::csrfToken()) ?>">
                     <input type="hidden" name="action" value="upload">
                 </form>
                 <div id="uploadProgress" class="progress d-none mt-3">
@@ -347,7 +347,7 @@ if (!function_exists('formatFileSize')) {
                         <label for="editAlt" class="form-label">Alt текст</label>
                         <input type="text" class="form-control" id="editAlt" name="alt_text">
                     </div>
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(SecurityHelper::csrfToken()) ?>">
                     <input type="hidden" name="action" value="update">
                 </form>
             </div>

@@ -9,11 +9,11 @@ class LoginPage {
     
     public function __construct() {
         // Якщо вже авторизований, перенаправляємо (використовуємо Response клас)
-        if (isAdminLoggedIn()) {
-            Response::redirectStatic(adminUrl('dashboard'));
+        if (SecurityHelper::isAdminLoggedIn()) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
         }
         
-        $this->db = getDB();
+        $this->db = DatabaseHelper::getConnection();
     }
     
     public function handle() {
@@ -30,12 +30,12 @@ class LoginPage {
      * Обробка входу
      */
     private function processLogin() {
-        if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
+        if (!SecurityHelper::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->error = 'Помилка безпеки. Спробуйте ще раз.';
             return;
         }
         
-        $username = sanitizeInput($_POST['username'] ?? '');
+        $username = SecurityHelper::sanitizeInput($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
         
         if (empty($username) || empty($password)) {
@@ -57,13 +57,17 @@ class LoginPage {
                 // Регенеруємо ID сесії для безпеки
                 Session::regenerate();
                 
-                Response::redirectStatic(adminUrl('dashboard'));
+                Response::redirectStatic(UrlHelper::admin('dashboard'));
             } else {
                 $this->error = 'Невірний логін або пароль';
             }
         } catch (Exception $e) {
             $this->error = 'Помилка входу. Спробуйте пізніше.';
-            error_log("Login error: " . $e->getMessage());
+            if (function_exists('logger')) {
+                logger()->logError('Login error', ['error' => $e->getMessage()]);
+            } else {
+                error_log("Login error: " . $e->getMessage());
+            }
         }
     }
     
@@ -72,7 +76,7 @@ class LoginPage {
      */
     private function render() {
         $error = $this->error;
-        $csrfToken = generateCSRFToken();
+        $csrfToken = SecurityHelper::csrfToken();
         
         include __DIR__ . '/../templates/login.php';
     }

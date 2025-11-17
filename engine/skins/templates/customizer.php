@@ -21,7 +21,7 @@
 <?php if (!$activeTheme): ?>
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>Тему не активовано!</strong> Спочатку активуйте тему в розділі <a href="<?= adminUrl('themes') ?>">Теми</a>.
+        <strong>Тему не активовано!</strong> Спочатку активуйте тему в розділі <a href="<?= UrlHelper::admin('themes') ?>">Теми</a>.
     </div>
 <?php else: ?>
 
@@ -250,7 +250,7 @@
     </div>
 </div>
 
-<input type="hidden" id="csrfToken" value="<?= generateCSRFToken() ?>">
+<input type="hidden" id="csrfToken" value="<?= SecurityHelper::csrfToken() ?>">
 
 <script>
 (function() {

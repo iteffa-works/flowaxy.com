@@ -41,7 +41,7 @@ function getMenuItems() {
     // Додаємо пункт кастомізації тільки якщо тема підтримує
     if ($supportsCustomization) {
         $designSubmenu[] = [
-            'href' => adminUrl('customizer'),
+            'href' => UrlHelper::admin('customizer'),
             'text' => 'Кастомізація',
             'page' => 'customizer',
             'order' => 1
@@ -51,7 +51,7 @@ function getMenuItems() {
     // Додаємо пункт навігації тільки якщо тема підтримує
     if ($supportsNavigation) {
         $designSubmenu[] = [
-            'href' => adminUrl('menus'),
+            'href' => UrlHelper::admin('menus'),
             'text' => 'Навігація',
             'page' => 'menus',
             'order' => 2
@@ -60,35 +60,35 @@ function getMenuItems() {
     
     $menu = [
         [
-            'href' => adminUrl('dashboard'),
+            'href' => UrlHelper::admin('dashboard'),
             'icon' => 'fas fa-tachometer-alt',
             'text' => 'Панель управління',
             'page' => 'dashboard',
             'order' => 10
         ],
         [
-            'href' => adminUrl('media'),
+            'href' => UrlHelper::admin('media'),
             'icon' => 'fas fa-images',
             'text' => 'Медіа-бібліотека',
             'page' => 'media',
             'order' => 20
         ],
         [
-            'href' => adminUrl('plugins'),
+            'href' => UrlHelper::admin('plugins'),
             'icon' => 'fas fa-puzzle-piece',
             'text' => 'Плагіни',
             'page' => 'plugins',
             'order' => 30
         ],
         [
-            'href' => adminUrl('themes'),
+            'href' => UrlHelper::admin('themes'),
             'icon' => 'fas fa-palette',
             'text' => 'Теми оформлення',
             'page' => 'themes',
             'order' => 40
         ],
         [
-            'href' => adminUrl('settings'),
+            'href' => UrlHelper::admin('settings'),
             'icon' => 'fas fa-cog',
             'text' => 'Загальні налаштування',
             'page' => 'settings',
@@ -118,13 +118,13 @@ function getMenuItems() {
             'order' => 60,
             'submenu' => [
                 [
-                    'href' => adminUrl('diagnostics'),
+                    'href' => UrlHelper::admin('diagnostics'),
                     'text' => 'Діагностика системи',
                     'page' => 'diagnostics',
                     'order' => 1
                 ],
                 [
-                    'href' => adminUrl('documentation'),
+                    'href' => UrlHelper::admin('documentation'),
                     'text' => 'Документація движка',
                     'page' => 'documentation',
                     'order' => 2
@@ -144,6 +144,15 @@ function getMenuItems() {
             'order' => 57,
             'submenu' => $designSubmenu
         ];
+    }
+    
+    // Ініціалізуємо плагіни перед викликом хука admin_menu
+    // Це потрібно, щоб плагіни могли зареєструвати свої пункти меню
+    if (function_exists('pluginManager')) {
+        $pluginManager = pluginManager();
+        if ($pluginManager && method_exists($pluginManager, 'initializePlugins')) {
+            $pluginManager->initializePlugins();
+        }
     }
     
     // Застосовуємо хук для додавання пунктів меню від плагінів

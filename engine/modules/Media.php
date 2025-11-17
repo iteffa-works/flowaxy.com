@@ -200,7 +200,7 @@ class Media extends BaseModule {
         try {
             $stmt->execute([
                 $fileName,
-                sanitizeInput($file['name']),
+                SecurityHelper::sanitizeInput($file['name']),
                 $uploadPath,
                 $fileUrl,
                 $fileSize,
@@ -208,9 +208,9 @@ class Media extends BaseModule {
                 $mediaType,
                 $width,
                 $height,
-                sanitizeInput($title),
-                sanitizeInput($description),
-                sanitizeInput($alt),
+                SecurityHelper::sanitizeInput($title),
+                SecurityHelper::sanitizeInput($description),
+                SecurityHelper::sanitizeInput($alt),
                 $uploadedBy
             ]);
             
@@ -294,7 +294,7 @@ class Media extends BaseModule {
             $file = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($file && !empty($file['file_url'])) {
-                $file['file_url'] = toProtocolRelativeUrl($file['file_url']);
+                $file['file_url'] = UrlHelper::toProtocolRelative($file['file_url']);
             }
             
             return $file ?: null;
@@ -324,7 +324,7 @@ class Media extends BaseModule {
             
             if (!empty($filters['search'])) {
                 $where[] = "(title LIKE ? OR original_name LIKE ? OR description LIKE ?)";
-                $search = '%' . sanitizeInput($filters['search']) . '%';
+                $search = '%' . SecurityHelper::sanitizeInput($filters['search']) . '%';
                 $params[] = $search;
                 $params[] = $search;
                 $params[] = $search;
@@ -373,7 +373,7 @@ class Media extends BaseModule {
             
             foreach ($files as &$file) {
                 if (!empty($file['file_url'])) {
-                    $file['file_url'] = toProtocolRelativeUrl($file['file_url']);
+                    $file['file_url'] = UrlHelper::toProtocolRelative($file['file_url']);
                 }
             }
             unset($file);
@@ -417,7 +417,7 @@ class Media extends BaseModule {
             foreach ($allowedFields as $field) {
                 if (isset($data[$field])) {
                     $fields[] = "$field = ?";
-                    $params[] = sanitizeInput($data[$field]);
+                    $params[] = SecurityHelper::sanitizeInput($data[$field]);
                 }
             }
             

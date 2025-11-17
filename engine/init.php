@@ -69,8 +69,13 @@ spl_autoload_register(function (string $className): void {
             'MimeType' => 'files',
             'Cache' => 'data',
             'Database' => 'data',
+            'Logger' => 'data',
             'MenuManager' => 'managers',
             'ThemeManager' => 'managers',
+            'SettingsManager' => 'managers',
+            'UrlHelper' => 'helpers',
+            'DatabaseHelper' => 'helpers',
+            'SecurityHelper' => 'helpers',
             'ScssCompiler' => 'compilers',
             'Validator' => 'validators',
             // Нові класи для CMS
@@ -119,7 +124,7 @@ spl_autoload_register(function (string $className): void {
         }
         
         // Також пробуємо знайти в будь-якому підкаталозі (для майбутніх класів)
-        $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail'];
+        $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers'];
         foreach ($subdirs as $dir) {
             $classFile = $classesDir . $dir . '/' . $className . '.php';
             if (file_exists($classFile) && is_readable($classFile)) {
@@ -147,72 +152,7 @@ spl_autoload_register(function (string $className): void {
     }
 });
 
-// Функції для роботи з БД
-/**
- * Глобальна функція для отримання підключення до БД
- * Показує красиву сторінку помилки, якщо підключення не вдалося
- * 
- * @param bool $showError Показувати сторінку помилки (за замовчуванням true)
- * @return PDO|null
- */
-function getDB(bool $showError = true): ?PDO {
-    try {
-        return Database::getInstance()->getConnection();
-    } catch (Exception $e) {
-        error_log("getDB error: " . $e->getMessage());
-        
-        if ($showError && php_sapi_name() !== 'cli') {
-            $errorDetails = [
-                'host' => DB_HOST,
-                'database' => DB_NAME,
-                'error' => $e->getMessage(),
-                'code' => $e->getCode()
-            ];
-            
-            showDatabaseError($errorDetails);
-            exit;
-        }
-        
-        return null;
-    }
-}
-
-/**
- * Перевірка доступності БД
- * 
- * @param bool $showError Показувати сторінку помилки при недоступності
- * @return bool
- */
-function isDatabaseAvailable(bool $showError = false): bool {
-    try {
-        $isAvailable = Database::getInstance()->isAvailable();
-        
-        if (!$isAvailable && $showError && php_sapi_name() !== 'cli') {
-            showDatabaseError([
-                'host' => DB_HOST,
-                'database' => DB_NAME,
-                'error' => 'База даних недоступна'
-            ]);
-            exit;
-        }
-        
-        return $isAvailable;
-    } catch (Exception $e) {
-        error_log("isDatabaseAvailable error: " . $e->getMessage());
-        
-        if ($showError && php_sapi_name() !== 'cli') {
-            showDatabaseError([
-                'host' => DB_HOST,
-                'database' => DB_NAME,
-                'error' => $e->getMessage(),
-                'code' => $e->getCode()
-            ]);
-            exit;
-        }
-        
-        return false;
-    }
-}
+// Функції для роботи з БД видалені - використовуйте DatabaseHelper::getConnection() або Database::getInstance()->getConnection()
 
 /**
  * Відображення сторінки помилки підключення до БД
@@ -226,16 +166,16 @@ function showDatabaseError(array $errorDetails = []): void {
         header('Content-Type: text/html; charset=UTF-8');
     }
     
-    if (isset($errorDetails['host']) && !isset($errorDetails['port'])) {
-        $host = $errorDetails['host'];
-        if (strpos($host, ':') !== false) {
-            list($host, $port) = explode(':', $host, 2);
-            $errorDetails['host'] = $host;
-            $errorDetails['port'] = (int)$port;
-        } else {
-            $errorDetails['port'] = 3306;
+        if (isset($errorDetails['host']) && !isset($errorDetails['port'])) {
+            $host = $errorDetails['host'];
+            if (strpos($host, ':') !== false) {
+                [$host, $port] = explode(':', $host, 2);
+                $errorDetails['host'] = $host;
+                $errorDetails['port'] = (int)$port;
+            } else {
+                $errorDetails['port'] = 3306;
+            }
         }
-    }
     
     $errorTemplate = __DIR__ . '/templates/database-error.php';
     if (file_exists($errorTemplate) && is_readable($errorTemplate)) {
@@ -284,6 +224,58 @@ function showDatabaseError(array $errorDetails = []): void {
 require_once __DIR__ . '/modules/loader.php';
 ModuleLoader::init();
 
+// Ініціалізація системи логування та обробки помилок
+if (class_exists('Logger')) {
+    // Встановлюємо обробник помилок
+    set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
+        $logger = Logger::getInstance();
+        $context = [
+            'file' => $errfile,
+            'line' => $errline,
+            'errno' => $errno
+        ];
+        
+        // Визначаємо рівень помилки
+        $level = match($errno) {
+            E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE, E_RECOVERABLE_ERROR => Logger::LEVEL_ERROR,
+            E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING => Logger::LEVEL_WARNING,
+            E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED => Logger::LEVEL_INFO,
+            default => Logger::LEVEL_WARNING
+        };
+        
+        $logger->log($level, $errstr, $context);
+        
+        // Продовжуємо стандартну обробку помилок
+        return false;
+    });
+    
+    // Встановлюємо обробник винятків
+    set_exception_handler(function(\Throwable $exception): void {
+        $logger = Logger::getInstance();
+        $logger->logException($exception);
+        
+        // Показуємо помилку тільки в режимі розробки
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            echo '<pre>' . htmlspecialchars($exception->getMessage()) . "\n" . htmlspecialchars($exception->getTraceAsString()) . '</pre>';
+        } else {
+            http_response_code(500);
+            echo '<h1>Внутрішня помилка сервера</h1>';
+        }
+    });
+    
+    // Встановлюємо обробник завершення скрипта
+    register_shutdown_function(function(): void {
+        $error = error_get_last();
+        if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
+            $logger = Logger::getInstance();
+            $logger->logCritical('Fatal error: ' . $error['message'], [
+                'file' => $error['file'],
+                'line' => $error['line']
+            ]);
+        }
+    });
+}
+
 // Ініціалізація сесії через клас Session
 Session::start([
     'name' => 'PHPSESSID',
@@ -295,92 +287,7 @@ Session::start([
     'samesite' => 'Lax'
 ]);
 
-// Функції безпеки з типізацією (використовують класи)
-/**
- * Генерація CSRF токена (використовує Security клас)
- * 
- * @return string
- */
-function generateCSRFToken(): string {
-    return Security::csrfToken();
-}
-
-/**
- * Перевірка CSRF токена (використовує Security клас)
- * 
- * @param string|null $token Токен для перевірки
- * @return bool
- */
-function verifyCSRFToken(?string $token): bool {
-    return Security::verifyCsrfToken($token);
-}
-
-/**
- * Перевірка, чи адмін залогінений (використовує Session клас)
- * 
- * @return bool
- */
-function isAdminLoggedIn(): bool {
-    return Session::has(ADMIN_SESSION_NAME) && Session::get(ADMIN_SESSION_NAME) === true;
-}
-
-/**
- * Вимагає авторизації адміна
- * 
- * @return void
- */
-function requireAdmin(): void {
-    if (!isAdminLoggedIn()) {
-        Response::redirectStatic(ADMIN_URL . '/login');
-    }
-}
-
-/**
- * Безпечний вивід HTML (використовує Security клас)
- * 
- * @param mixed $value Значення для виводу
- * @param string $default Значення за замовчуванням
- * @return string
- */
-if (!function_exists('safe_html')) {
-    function safe_html($value, string $default = ''): string {
-        if (is_array($value) || is_object($value)) {
-            return Security::clean(Json::stringify($value));
-        }
-        return Security::clean((string)($value ?: $default));
-    }
-}
-
-/**
- * Санітизація вхідних даних (використовує Security клас)
- * 
- * @param mixed $input Вхідні дані
- * @return string
- */
-function sanitizeInput($input): string {
-    if (is_string($input)) {
-        return Security::clean(trim($input), true);
-    }
-    
-    if (is_numeric($input)) {
-        return (string)$input;
-    }
-    
-    if (is_array($input)) {
-        try {
-            return Json::stringify($input);
-        } catch (Exception $e) {
-            error_log("JSON encoding error: " . $e->getMessage());
-            return '';
-        }
-    }
-    
-    if (is_bool($input)) {
-        return $input ? '1' : '0';
-    }
-    
-    return '';
-}
+// Функції безпеки видалені - використовуйте SecurityHelper клас
 
 /**
  * Редірект на URL (використовує Response клас)
@@ -415,108 +322,9 @@ if (!function_exists('formatBytes')) {
     }
 }
 
-// Функції для роботи з URL
-/**
- * Отримання протокол-відносного URL (для уникнення Mixed Content)
- * 
- * @param string $path Шлях
- * @return string
- */
-function getProtocolRelativeUrl(string $path = ''): string {
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return '//' . $host . ($path ? '/' . ltrim($path, '/') : '');
-}
+// Функції для роботи з URL видалені - використовуйте UrlHelper клас
 
-/**
- * Отримання URL завантажень з правильним протоколом
- * 
- * @param string $filePath Шлях до файлу
- * @return string
- */
-function getUploadsUrl(string $filePath = ''): string {
-    return getProtocolRelativeUrl('uploads' . ($filePath ? '/' . ltrim($filePath, '/') : ''));
-}
-
-/**
- * Конвертація абсолютного URL в протокол-відносний
- * 
- * @param string $url URL
- * @return string
- */
-function toProtocolRelativeUrl(string $url): string {
-    if (empty($url)) {
-        return $url;
-    }
-    
-    // Якщо URL вже протокол-відносний, повертаємо як є
-    if (strpos($url, '//') === 0) {
-        return $url;
-    }
-    
-    // Якщо URL відносний, повертаємо як є
-    if (strpos($url, 'http://') !== 0 && strpos($url, 'https://') !== 0) {
-        return $url;
-    }
-    
-    // Конвертуємо абсолютний URL в протокол-відносний
-    $parsed = parse_url($url);
-    if ($parsed && isset($parsed['host'])) {
-        $path = $parsed['path'] ?? '';
-        $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
-        $fragment = isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '';
-        return '//' . $parsed['host'] . $path . $query . $fragment;
-    }
-    
-    return $url;
-}
-
-// Оптимізована функція для отримання налаштувань сайту з кешуванням
-/**
- * Отримання всіх налаштувань сайту
- * 
- * @return array
- */
-function getSiteSettings(): array {
-    if (!function_exists('cache_remember')) {
-        return [];
-    }
-    
-    return cache_remember('site_settings', function(): array {
-        $db = getDB(false); // Не показуємо помилку, якщо БД недоступна
-        if ($db === null) {
-            return [];
-        }
-        
-        try {
-            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings");
-            if ($stmt === false) {
-                return [];
-            }
-            
-            $settings = [];
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $settings[$row['setting_key']] = $row['setting_value'];
-            }
-            
-            return $settings;
-        } catch (PDOException $e) {
-            error_log("Error getting site settings: " . $e->getMessage());
-            return [];
-        }
-    }, 3600); // Кешуємо на 1 годину
-}
-
-/**
- * Отримання налаштування сайту
- * 
- * @param string $key Ключ налаштування
- * @param string $default Значення за замовчуванням
- * @return string
- */
-function getSetting(string $key, string $default = ''): string {
-    $settings = getSiteSettings();
-    return $settings[$key] ?? $default;
-}
+// Функції для роботи з налаштуваннями видалені - використовуйте SettingsManager клас
 
 // Створення необхідних директорій якщо не існують (використовує Directory клас)
 // Явно завантажуємо класи Directory та File перед використанням

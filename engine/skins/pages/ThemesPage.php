@@ -124,7 +124,7 @@ class ThemesPage extends AdminPage {
             }
             
             $this->setMessage('Тему успішно активовано', 'success');
-            Response::redirectStatic(adminUrl('themes'));
+            Response::redirectStatic(UrlHelper::admin('themes'));
         } else {
             $this->setMessage('Помилка при активації теми', 'danger');
         }
@@ -137,7 +137,7 @@ class ThemesPage extends AdminPage {
         // Використовуємо Response клас для встановлення заголовків
         Response::setHeader('Content-Type', 'application/json');
         
-        $action = sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         
         switch ($action) {
             case 'activate_theme':
@@ -167,7 +167,7 @@ class ThemesPage extends AdminPage {
             exit;
         }
         
-        $themeSlug = sanitizeInput($_POST['theme_slug'] ?? '');
+        $themeSlug = SecurityHelper::sanitizeInput($_POST['theme_slug'] ?? '');
         
         if (empty($themeSlug)) {
             echo Json::encode(['success' => false, 'error' => 'Тему не вибрано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -223,7 +223,7 @@ class ThemesPage extends AdminPage {
      * AJAX перевірка статусу компіляції
      */
     private function ajaxCheckCompilation() {
-        $themeSlug = sanitizeInput($_GET['theme_slug'] ?? '');
+        $themeSlug = SecurityHelper::sanitizeInput($_GET['theme_slug'] ?? '');
         
         if (empty($themeSlug)) {
             echo Json::encode(['success' => false, 'error' => 'Тему не вказано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -793,7 +793,7 @@ class ThemesPage extends AdminPage {
             return;
         }
         
-        $themeSlug = sanitizeInput($_POST['theme_slug'] ?? '');
+        $themeSlug = SecurityHelper::sanitizeInput($_POST['theme_slug'] ?? '');
         
         if (empty($themeSlug)) {
             $this->setMessage('Тему не вибрано', 'danger');
@@ -817,7 +817,7 @@ class ThemesPage extends AdminPage {
         
         // Видаляємо всі налаштування теми з theme_settings
         try {
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if ($db) {
                 $stmt = $db->prepare("DELETE FROM theme_settings WHERE theme_slug = ?");
                 $stmt->execute([$themeSlug]);
@@ -834,7 +834,7 @@ class ThemesPage extends AdminPage {
             themeManager()->clearThemeCache();
             
             $this->setMessage('Тему успішно видалено', 'success');
-            Response::redirectStatic(adminUrl('themes'));
+            Response::redirectStatic(UrlHelper::admin('themes'));
         } catch (Exception $e) {
             error_log("Theme delete error: " . $e->getMessage());
             $this->setMessage('Помилка при видаленні теми: ' . $e->getMessage(), 'danger');

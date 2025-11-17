@@ -641,7 +641,11 @@ class PluginManager extends BaseModule {
             
             return $activePlugins;
         } catch (Exception $e) {
-            error_log("Error getting active plugins: " . $e->getMessage());
+            if (function_exists('logger')) {
+                logger()->logError('Error getting active plugins', ['error' => $e->getMessage()]);
+            } else {
+                error_log("Error getting active plugins: " . $e->getMessage());
+            }
             return [];
         }
     }

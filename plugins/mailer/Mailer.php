@@ -27,7 +27,14 @@ class Mailer {
      * Приватний конструктор (Singleton)
      */
     private function __construct() {
-        $this->db = getDB();
+        // Убеждаемся, что DatabaseHelper загружен
+        if (!class_exists('DatabaseHelper')) {
+            $helperFile = dirname(__DIR__, 2) . '/engine/classes/helpers/DatabaseHelper.php';
+            if (file_exists($helperFile)) {
+                require_once $helperFile;
+            }
+        }
+        $this->db = DatabaseHelper::getConnection();
     }
     
     /**
@@ -45,7 +52,14 @@ class Mailer {
      */
     private function getDB(): ?PDO {
         if ($this->db === null) {
-            $this->db = getDB();
+            // Убеждаемся, что DatabaseHelper загружен
+            if (!class_exists('DatabaseHelper')) {
+                $helperFile = dirname(__DIR__, 2) . '/engine/classes/helpers/DatabaseHelper.php';
+                if (file_exists($helperFile)) {
+                    require_once $helperFile;
+                }
+            }
+            $this->db = DatabaseHelper::getConnection();
         }
         return $this->db;
     }

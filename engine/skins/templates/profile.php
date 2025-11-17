@@ -23,7 +23,7 @@ if (!$user) {
                 <?php endif; ?>
                 
                 <form method="POST" id="profileForm">
-                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                     <input type="hidden" name="save_profile" value="1">
                     
                     <div class="row">

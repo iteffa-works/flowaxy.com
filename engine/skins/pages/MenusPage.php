@@ -46,7 +46,7 @@ class MenusPage extends AdminPage {
             // Після POST запиту робимо редірект для уникнення повторної відправки (використовуємо Response клас)
             $menuId = $_GET['menu_id'] ?? $_POST['menu_id'] ?? null;
             if ($menuId) {
-                Response::redirectStatic(adminUrl('menus'));
+                Response::redirectStatic(UrlHelper::admin('menus'));
             }
         }
         
@@ -101,7 +101,7 @@ class MenusPage extends AdminPage {
         Response::setHeader('Content-Type', 'application/json; charset=utf-8');
         
         try {
-            $action = sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
+            $action = SecurityHelper::sanitizeInput($_POST['action'] ?? $_GET['action'] ?? '');
             
             if (empty($action)) {
                 echo json_encode(['success' => false, 'error' => 'Дія не вказана'], JSON_UNESCAPED_UNICODE);
@@ -219,10 +219,10 @@ class MenusPage extends AdminPage {
             exit;
         }
         
-        $name = sanitizeInput($_POST['name'] ?? '');
-        $slug = sanitizeInput($_POST['slug'] ?? '');
-        $description = sanitizeInput($_POST['description'] ?? '');
-        $location = sanitizeInput($_POST['location'] ?? 'primary');
+        $name = SecurityHelper::sanitizeInput($_POST['name'] ?? '');
+        $slug = SecurityHelper::sanitizeInput($_POST['slug'] ?? '');
+        $description = SecurityHelper::sanitizeInput($_POST['description'] ?? '');
+        $location = SecurityHelper::sanitizeInput($_POST['location'] ?? 'primary');
         
         if (empty($name) || empty($slug)) {
             echo json_encode(['success' => false, 'error' => 'Назва та slug обов\'язкові'], JSON_UNESCAPED_UNICODE);
@@ -248,10 +248,10 @@ class MenusPage extends AdminPage {
         }
         
         $id = (int)($_POST['menu_id'] ?? 0);
-        $name = sanitizeInput($_POST['name'] ?? '');
-        $slug = sanitizeInput($_POST['slug'] ?? '');
-        $description = sanitizeInput($_POST['description'] ?? '');
-        $location = sanitizeInput($_POST['location'] ?? 'primary');
+        $name = SecurityHelper::sanitizeInput($_POST['name'] ?? '');
+        $slug = SecurityHelper::sanitizeInput($_POST['slug'] ?? '');
+        $description = SecurityHelper::sanitizeInput($_POST['description'] ?? '');
+        $location = SecurityHelper::sanitizeInput($_POST['location'] ?? 'primary');
         
         if (empty($name) || empty($slug)) {
             echo json_encode(['success' => false, 'error' => 'Назва та slug обов\'язкові'], JSON_UNESCAPED_UNICODE);
@@ -296,12 +296,12 @@ class MenusPage extends AdminPage {
         }
         
         $menuId = (int)($_POST['menu_id'] ?? 0);
-        $title = sanitizeInput($_POST['title'] ?? '');
-        $url = sanitizeInput($_POST['url'] ?? '');
+        $title = SecurityHelper::sanitizeInput($_POST['title'] ?? '');
+        $url = SecurityHelper::sanitizeInput($_POST['url'] ?? '');
         $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
-        $target = sanitizeInput($_POST['target'] ?? '_self');
-        $cssClasses = sanitizeInput($_POST['css_classes'] ?? '');
-        $icon = sanitizeInput($_POST['icon'] ?? '');
+        $target = SecurityHelper::sanitizeInput($_POST['target'] ?? '_self');
+        $cssClasses = SecurityHelper::sanitizeInput($_POST['css_classes'] ?? '');
+        $icon = SecurityHelper::sanitizeInput($_POST['icon'] ?? '');
         $orderNum = (int)($_POST['order_num'] ?? 0);
         
         if (empty($title) || empty($url)) {
@@ -335,12 +335,12 @@ class MenusPage extends AdminPage {
         
         $id = (int)($_POST['item_id'] ?? 0);
         $menuId = (int)($_POST['menu_id'] ?? 0);
-        $title = sanitizeInput($_POST['title'] ?? '');
-        $url = sanitizeInput($_POST['url'] ?? '');
+        $title = SecurityHelper::sanitizeInput($_POST['title'] ?? '');
+        $url = SecurityHelper::sanitizeInput($_POST['url'] ?? '');
         $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
-        $target = sanitizeInput($_POST['target'] ?? '_self');
-        $cssClasses = sanitizeInput($_POST['css_classes'] ?? '');
-        $icon = sanitizeInput($_POST['icon'] ?? '');
+        $target = SecurityHelper::sanitizeInput($_POST['target'] ?? '_self');
+        $cssClasses = SecurityHelper::sanitizeInput($_POST['css_classes'] ?? '');
+        $icon = SecurityHelper::sanitizeInput($_POST['icon'] ?? '');
         $orderNum = (int)($_POST['order_num'] ?? 0);
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         

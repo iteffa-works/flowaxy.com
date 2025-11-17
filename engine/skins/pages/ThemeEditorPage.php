@@ -25,14 +25,14 @@ class ThemeEditorPage extends AdminPage {
         
         if (empty($themeSlug)) {
             $this->setMessage('Тему не вибрано', 'danger');
-            Response::redirectStatic(adminUrl('themes'));
+            Response::redirectStatic(UrlHelper::admin('themes'));
         }
         
         // Перевіряємо існування теми
         $theme = themeManager()->getTheme($themeSlug);
         if ($theme === null) {
             $this->setMessage('Тему не знайдено', 'danger');
-            Response::redirectStatic(adminUrl('themes'));
+            Response::redirectStatic(UrlHelper::admin('themes'));
         }
         
         $themePath = themeManager()->getThemePath($themeSlug);

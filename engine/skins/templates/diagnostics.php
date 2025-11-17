@@ -327,14 +327,14 @@
                     <h6 class="mb-3">Управління кешем</h6>
                     <div class="d-flex gap-2">
                         <form method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                             <input type="hidden" name="cache_action" value="clear_all">
                             <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Ви впевнені, що хочете очистити весь кеш?')">
                                 <i class="fas fa-trash me-1"></i>Очистити весь кеш
                             </button>
                         </form>
                         <form method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                             <input type="hidden" name="cache_action" value="clear_expired">
                             <button type="submit" class="btn btn-sm btn-warning">
                                 <i class="fas fa-clock me-1"></i>Очистити прострочений кеш

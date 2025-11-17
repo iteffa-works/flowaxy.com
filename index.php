@@ -12,7 +12,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/engine/init.php';
 
 // Перевірка доступності БД
-if (!isDatabaseAvailable()) {
+if (!DatabaseHelper::isAvailable()) {
     showDatabaseError([
         'host' => DB_HOST,
         'database' => DB_NAME,
@@ -48,14 +48,12 @@ if ($handled === true) {
     exit;
 }
 
-// Визначаємо, чи це запит до адмінки
-$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-$isAdminRequest = strpos($requestUri, '/admin') === 0;
-
-if ($isAdminRequest) {
-    // Підключаємо шаблонизатор для адмінки
-    require_once __DIR__ . '/engine/skins/includes/SimpleTemplate.php';
-    
+/**
+ * Завантаження необхідних класів
+ * 
+ * @return void
+ */
+function loadRequiredClasses(): void {
     // Завантажуємо Cache перед використанням функції cache_remember()
     if (!class_exists('Cache')) {
         $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
@@ -71,6 +69,18 @@ if ($isAdminRequest) {
             require_once $themeManagerFile;
         }
     }
+}
+
+// Визначаємо, чи це запит до адмінки
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$isAdminRequest = strpos($requestUri, '/admin') === 0;
+
+if ($isAdminRequest) {
+    // Підключаємо шаблонизатор для адмінки
+    require_once __DIR__ . '/engine/skins/includes/SimpleTemplate.php';
+    
+    // Завантажуємо необхідні класи
+    loadRequiredClasses();
     
     // Створюємо роутер для адмінки з базовим шляхом /admin
     $router = new Router('/admin', 'dashboard');
@@ -81,21 +91,8 @@ if ($isAdminRequest) {
     // Створюємо роутер для фронтенду
     $router = new Router('/', null);
     
-    // Завантажуємо Cache перед використанням функції cache_remember()
-    if (!class_exists('Cache')) {
-        $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
-        if (file_exists($cacheFile)) {
-            require_once $cacheFile;
-        }
-    }
-    
-    // Завантажуємо ThemeManager перед використанням функції themeManager()
-    if (!class_exists('ThemeManager')) {
-        $themeManagerFile = __DIR__ . '/engine/classes/managers/ThemeManager.php';
-        if (file_exists($themeManagerFile)) {
-            require_once $themeManagerFile;
-        }
-    }
+    // Завантажуємо необхідні класи
+    loadRequiredClasses();
     
     // Додаємо дефолтний маршрут для фронтенду ДО автоматичної загрузки маршрутів
     // Це гарантує, що маршрут буде доступний, якщо тема не зареєструє свій

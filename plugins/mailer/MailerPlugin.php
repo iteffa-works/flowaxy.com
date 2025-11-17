@@ -57,7 +57,7 @@ class MailerPlugin extends BasePlugin {
      * Видалення плагіна
      */
     public function uninstall(): void {
-        $db = getDB();
+        $db = DatabaseHelper::getConnection();
         if (!$db) {
             return;
         }
@@ -84,7 +84,7 @@ class MailerPlugin extends BasePlugin {
             // Добавляем в подменю "Налаштування плагінів"
             if (isset($item['page']) && $item['page'] === 'plugin-settings' && isset($item['submenu'])) {
                 $menu[$key]['submenu'][] = [
-                    'href' => adminUrl('mailer-settings'),
+                    'href' => UrlHelper::admin('mailer-settings'),
                     'text' => 'Налаштування пошти',
                     'icon' => 'fas fa-envelope',
                     'page' => 'mailer-settings',

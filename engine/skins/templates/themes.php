@@ -12,7 +12,7 @@
 <?php endif; ?>
 
 <!-- Скрытое поле с CSRF токеном для JavaScript -->
-<input type="hidden" id="csrf_token" name="csrf_token" value="<?= generateCSRFToken() ?>">
+<input type="hidden" id="csrf_token" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
 
 <div class="content-section themes-page">
     <div class="content-section-header">
@@ -101,7 +101,7 @@
                                         $hasScssSupport = themeManager()->hasScssSupport($theme['slug']);
                                         ?>
                                         <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= htmlspecialchars($theme['slug']) ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
-                                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                                             <input type="hidden" name="theme_slug" value="<?= htmlspecialchars($theme['slug']) ?>">
                                             <input type="hidden" name="activate_theme" value="1">
                                             <button type="submit" class="btn btn-primary theme-activate-btn">
@@ -116,7 +116,7 @@
                                         </form>
                                     <?php else: ?>
                                         <?php if ($supportsCustomization): ?>
-                                            <a href="<?= adminUrl('customizer') ?>" class="btn btn-primary">
+                                            <a href="<?= UrlHelper::admin('customizer') ?>" class="btn btn-primary">
                                                 <i class="fas fa-paint-brush me-1"></i>Налаштувати
                                             </a>
                                         <?php else: ?>
@@ -126,7 +126,7 @@
                                         <?php endif; ?>
                                         
                                         <?php if ($hasSettings): ?>
-                                            <a href="<?= adminUrl($theme['slug'] . '-theme-settings') ?>" class="btn btn-secondary" title="Налаштування теми">
+                                            <a href="<?= UrlHelper::admin($theme['slug'] . '-theme-settings') ?>" class="btn btn-secondary" title="Налаштування теми">
                                                 <i class="fas fa-cog"></i>
                                             </a>
                                         <?php endif; ?>
@@ -668,7 +668,7 @@
             </div>
             <form id="uploadThemeForm" enctype="multipart/form-data">
                 <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                     <input type="hidden" name="action" value="upload_theme">
                     
                     <div class="mb-3">

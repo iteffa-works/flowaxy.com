@@ -15,7 +15,7 @@ abstract class BasePlugin {
     
     public function __construct() {
         try {
-            $this->db = getDB();
+            $this->db = DatabaseHelper::getConnection();
             $this->loadConfig();
         } catch (Exception $e) {
             error_log("BasePlugin constructor error: " . $e->getMessage());
@@ -83,7 +83,7 @@ abstract class BasePlugin {
         $cacheKey = 'plugin_settings_' . $slug;
         
         return cache_remember($cacheKey, function() use ($slug) {
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if (!$db) {
                 return [];
             }

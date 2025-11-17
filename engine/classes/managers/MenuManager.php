@@ -9,7 +9,7 @@ class MenuManager {
     private static $instance = null;
     
     public function __construct() {
-        $this->db = getDB();
+        $this->db = DatabaseHelper::getConnection();
     }
     
     /**
@@ -31,7 +31,7 @@ class MenuManager {
         }
         
         return cache_remember('all_menus', function() {
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if (!$db) {
                 return [];
             }
@@ -56,7 +56,7 @@ class MenuManager {
         
         $cacheKey = 'menu_' . md5($slug);
         return cache_remember($cacheKey, function() use ($slug) {
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if (!$db) {
                 return null;
             }
@@ -100,7 +100,7 @@ class MenuManager {
         
         $cacheKey = 'menu_items_' . $menuId . '_' . ($parentId ?? 'root');
         return cache_remember($cacheKey, function() use ($menuId, $parentId) {
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if (!$db) {
                 return [];
             }

@@ -219,7 +219,7 @@ class DocumentationPage extends AdminPage {
                     'description' => 'Базовий клас для всіх модулів системи. Забезпечує доступ до БД та базову функціональність.',
                     'methods' => [
                         'getInstance() - Отримання єдиного екземпляру модуля',
-                        'getDB() - Отримання підключення до БД',
+                        'DatabaseHelper::getConnection() - Отримання підключення до БД',
                         'getInfo() - Отримання інформації про модуль',
                         'getApiMethods() - Отримання API методів модуля',
                         'registerHooks() - Реєстрація хуків модуля'
@@ -644,7 +644,7 @@ class MyPlugin extends BasePlugin {
      * Створення таблиць
      */
     private function createTables() {
-        $db = getDB();
+        $db = DatabaseHelper::getConnection();
         if (!$db) return;
         
         $sql = "CREATE TABLE IF NOT EXISTS my_plugin_data (
@@ -713,7 +713,7 @@ $this->enqueueScript(\'my-plugin-script\', \'assets/js/script.js\', [], true);'
                     'title' => 'Робота з базою даних',
                     'description' => 'Приклад роботи з БД в плагіні:',
                     'code' => '// Отримання підключення
-$db = getDB();
+$db = DatabaseHelper::getConnection();
 if (!$db) {
     return;
 }
@@ -980,7 +980,7 @@ $themeSettings = $themeManager->getThemeSettings($themeSlug);
 $color = $themeManager->getThemeSetting($themeSlug, \'primary_color\', \'#0073aa\');
 
 // Збереження налаштування (через БД)
-$db = getDB();
+$db = DatabaseHelper::getConnection();
 if ($db) {
     $stmt = $db->prepare("
         INSERT INTO theme_settings (theme_slug, setting_key, setting_value)

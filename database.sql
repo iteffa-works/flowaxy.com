@@ -52,11 +52,9 @@ CREATE TABLE IF NOT EXISTS `menus` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`),
   KEY `idx_menu_location` (`location`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_flowaxy.menus: ~0 rows (приблизно)
-INSERT INTO `menus` (`id`, `name`, `slug`, `description`, `location`, `created_at`, `updated_at`) VALUES
-	(1, 'Головне меню', 'main_menu', 'Основне меню навігації сайту', 'primary', '2025-11-15 10:47:13', '2025-11-15 10:47:13');
+-- Dumping data for table db_flowaxy.menus: ~1 rows (приблизно)
 
 -- Dumping structure for таблиця db_flowaxy.menu_items
 CREATE TABLE IF NOT EXISTS `menu_items` (
@@ -98,7 +96,7 @@ CREATE TABLE IF NOT EXISTS `plugins` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`),
   KEY `idx_plugins_active` (`is_active`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_flowaxy.plugins: ~0 rows (приблизно)
 
@@ -113,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `plugin_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `plugin_setting` (`plugin_slug`,`setting_key`),
   KEY `idx_plugin_slug` (`plugin_slug`)
-) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_flowaxy.plugin_settings: ~0 rows (приблизно)
 

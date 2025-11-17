@@ -17,7 +17,7 @@ class DashboardPage extends AdminPage {
             'Панель управління',
             'Ласкаво просимо до Flowaxy CMS',
             'fas fa-tachometer-alt',
-            '<a href="' . adminUrl('settings') . '" class="btn btn-outline-secondary btn-sm">
+            '<a href="' . UrlHelper::admin('settings') . '" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-cog me-1"></i>Налаштування
             </a>'
         );
@@ -37,7 +37,7 @@ class DashboardPage extends AdminPage {
      * Получение статистики с кешированием
      */
     private function getStats() {
-        if (!$this->db || !isDatabaseAvailable()) {
+        if (!$this->db || !DatabaseHelper::isAvailable()) {
             return [
                 'plugins' => 0,
                 'media' => 0
@@ -51,7 +51,7 @@ class DashboardPage extends AdminPage {
                 'media' => 0
             ];
             
-            $db = getDB();
+            $db = DatabaseHelper::getConnection();
             if (!$db) {
                 return $stats;
             }

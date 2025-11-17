@@ -53,7 +53,7 @@
                                             <i class="fas fa-pause me-1"></i>Деактивувати
                                         </button>
                                         <?php if (!empty($plugin['has_settings'])): ?>
-                                            <a href="<?= adminUrl($plugin['slug'] . '-settings') ?>" class="btn btn-secondary" title="Налаштування плагіна">
+                                            <a href="<?= UrlHelper::admin($plugin['slug'] . '-settings') ?>" class="btn btn-secondary" title="Налаштування плагіна">
                                                 <i class="fas fa-cog"></i>
                                             </a>
                                         <?php endif; ?>
@@ -106,7 +106,7 @@ function togglePlugin(slug, activate) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.innerHTML = `
-        <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+        <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
         <input type="hidden" name="action" value="${action}">
         <input type="hidden" name="plugin_slug" value="${slug}">
     `;
@@ -119,7 +119,7 @@ function installPlugin(slug) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.innerHTML = `
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
             <input type="hidden" name="action" value="install">
             <input type="hidden" name="plugin_slug" value="${slug}">
         `;
@@ -133,7 +133,7 @@ function uninstallPlugin(slug) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.innerHTML = `
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
             <input type="hidden" name="action" value="uninstall">
             <input type="hidden" name="plugin_slug" value="${slug}">
         `;
@@ -441,7 +441,7 @@ function resetFilters() {
             </div>
             <form id="uploadPluginForm" enctype="multipart/form-data">
                 <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                     <input type="hidden" name="action" value="upload_plugin">
                     
                     <div class="mb-3">

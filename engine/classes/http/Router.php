@@ -560,14 +560,6 @@ class Router {
     }
 }
 
-/**
- * Глобальна функція для генерації URL адмінки (для зворотної сумісності)
- * 
- * @param string $path Шлях
- * @return string URL
- */
-function adminUrl(string $path = ''): string {
-    return '/admin/' . ltrim($path, '/');
-}
+// Функція adminUrl видалена - використовуйте UrlHelper::admin()
 
 

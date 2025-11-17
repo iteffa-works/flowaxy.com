@@ -33,10 +33,14 @@ abstract class BaseModule {
         if ($this->db === null && !self::$initializing) {
             try {
                 self::$initializing = true;
-                $this->db = getDB(false); // Не показуємо помилку, щоб уникнути рекурсії
+                $this->db = DatabaseHelper::getConnection(false); // Не показуємо помилку, щоб уникнути рекурсії
             } catch (Exception $e) {
                 // Ігноруємо помилки БД в конструкторі модулів
-                error_log("BaseModule: Failed to get DB connection: " . $e->getMessage());
+                if (function_exists('logger')) {
+                    logger()->logError('BaseModule: Failed to get DB connection', ['error' => $e->getMessage()]);
+                } else {
+                    error_log("BaseModule: Failed to get DB connection: " . $e->getMessage());
+                }
             } finally {
                 self::$initializing = false;
             }

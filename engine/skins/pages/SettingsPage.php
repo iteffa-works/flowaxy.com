@@ -54,7 +54,7 @@ class SettingsPage extends AdminPage {
                     VALUES (?, ?) 
                     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
                 ");
-                $stmt->execute([$key, sanitizeInput($value)]);
+                $stmt->execute([$key, SecurityHelper::sanitizeInput($value)]);
             }
             
             $this->db->commit();

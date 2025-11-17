@@ -11,7 +11,7 @@
         </button>
         
         <!-- Логотип -->
-        <a class="navbar-brand d-flex align-items-center header-logo" href="<?= adminUrl('dashboard') ?>">
+        <a class="navbar-brand d-flex align-items-center header-logo" href="<?= UrlHelper::admin('dashboard') ?>">
             <div class="admin-logo-icon me-2">
                 <i class="fas fa-cog"></i>
             </div>
@@ -29,8 +29,8 @@
                     <li><h6 class="dropdown-header"><i class="fas fa-database me-2"></i>Управління кешем</h6></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <form method="POST" action="<?= adminUrl('diagnostics') ?>" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                        <form method="POST" action="<?= UrlHelper::admin('diagnostics') ?>" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                             <input type="hidden" name="cache_action" value="clear_all">
                             <button type="submit" class="dropdown-item" onclick="return confirm('Ви впевнені, що хочете очистити весь кеш?')">
                                 <i class="fas fa-trash me-2"></i>Очистити весь кеш
@@ -38,8 +38,8 @@
                         </form>
                     </li>
                     <li>
-                        <form method="POST" action="<?= adminUrl('diagnostics') ?>" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                        <form method="POST" action="<?= UrlHelper::admin('diagnostics') ?>" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                             <input type="hidden" name="cache_action" value="clear_expired">
                             <button type="submit" class="dropdown-item">
                                 <i class="fas fa-clock me-2"></i>Очистити прострочений кеш
@@ -47,7 +47,7 @@
                         </form>
                     </li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="<?= adminUrl('diagnostics') ?>"><i class="fas fa-info-circle me-2"></i>Діагностика</a></li>
+                    <li><a class="dropdown-item" href="<?= UrlHelper::admin('diagnostics') ?>"><i class="fas fa-info-circle me-2"></i>Діагностика</a></li>
                 </ul>
             </div>
             
@@ -59,9 +59,9 @@
                     </div>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="<?= adminUrl('profile') ?>"><i class="fas fa-user me-2"></i>Профіль</a></li>
+                    <li><a class="dropdown-item" href="<?= UrlHelper::admin('profile') ?>"><i class="fas fa-user me-2"></i>Профіль</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="<?= adminUrl('logout') ?>?token=<?= generateCSRFToken() ?>"><i class="fas fa-sign-out-alt me-2"></i>Вийти</a></li>
+                    <li><a class="dropdown-item" href="<?= UrlHelper::admin('logout') ?>?token=<?= SecurityHelper::csrfToken() ?>"><i class="fas fa-sign-out-alt me-2"></i>Вийти</a></li>
                 </ul>
             </div>
         </div>
