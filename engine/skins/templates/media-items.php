@@ -49,8 +49,7 @@ if (!function_exists('formatFileSize')) {
                         <div class="media-thumbnail">
                             <?php if ($file['media_type'] === 'image'): ?>
                                 <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
-                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
-                                     loading="lazy">
+                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>">
                             <?php elseif ($file['media_type'] === 'video'): ?>
                                 <div class="media-icon video-icon">
                                     <i class="fas fa-video fa-2x"></i>
@@ -123,8 +122,7 @@ if (!function_exists('formatFileSize')) {
                         <?php if ($file['media_type'] === 'image'): ?>
                             <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
                                  alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
-                                 class="img-fluid"
-                                 loading="lazy">
+                                 class="img-fluid">
                         <?php elseif ($file['media_type'] === 'video'): ?>
                             <div class="media-icon video-icon">
                                 <i class="fas fa-video fa-3x"></i>

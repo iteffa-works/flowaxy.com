@@ -34,22 +34,27 @@
 /* Повідомлення про кінець списку */
 .load-more-end-message {
     text-align: center;
-    padding: 40px 24px;
-    margin-top: 32px;
+    padding: 24px;
+    margin-top: 24px;
+    margin-bottom: 16px;
 }
 
 .load-more-end-content {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    color: #6c757d;
-    font-size: 13px;
-    font-weight: 500;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 400;
 }
 
 .load-more-end-content i {
-    color: #28a745;
+    color: #10b981;
     font-size: 16px;
+}
+
+.load-more-end-content span {
+    color: #6b7280;
 }
 
 /* Панель інструментів - лаконичний професійний дизайн */
@@ -297,18 +302,21 @@
 
 .media-card {
     border: 1px solid #e5e7eb;
-    border-radius: 0;
+    border-radius: 8px;
     background: #ffffff;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
     height: 100%;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .media-card:hover {
-    border-color: #9ca3af;
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .media-card.selected {
@@ -361,6 +369,7 @@
     overflow: hidden;
     margin: 0 !important;
     padding-bottom: 0 !important;
+    border-radius: 8px 8px 0 0;
 }
 
 .media-thumbnail-wrapper {
@@ -413,12 +422,14 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     display: none;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     z-index: 5;
+    transition: all 0.2s ease;
 }
 
 .media-thumbnail:hover .media-actions-overlay {
@@ -426,46 +437,62 @@
 }
 
 .media-action-btn {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: none;
     background: rgba(255, 255, 255, 0.95);
     color: #374151;
-    border-radius: 0;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.15s ease;
-    font-size: 13px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .media-action-btn:hover {
     background: #ffffff;
     color: #2563eb;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.media-action-btn.delete-media,
+.media-action-btn.delete-media:hover {
+    color: #dc2626;
+}
+
+.media-action-btn.delete-media:hover {
+    background: #fee2e2;
 }
 
 .media-card .card-body {
-    padding: 8px 10px !important;
+    padding: 12px !important;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     justify-content: center;
     align-items: flex-start;
     margin: 0 !important;
     min-height: auto !important;
+    background: #ffffff;
 }
 
 .media-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: #111827;
-    line-height: 1.2;
+    line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     margin: 0;
+    width: 100%;
+    padding: 2px 0;
+    letter-spacing: -0.01em;
 }
 
 .media-info-content {
@@ -564,14 +591,15 @@
 }
 
 .media-list-view .media-title {
-    font-size: 13px;
+    font-size: 14px;
     white-space: nowrap;
-    line-height: 1.3;
-    font-weight: 400;
-    color: #212529;
+    line-height: 1.4;
+    font-weight: 500;
+    color: #111827;
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: -0.01em;
 }
 
 .media-list-view .media-info-content {
@@ -618,24 +646,31 @@
 }
 
 .media-action-btn-list {
-    width: 28px;
-    height: 28px;
-    border: 1px solid #dee2e6;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e5e7eb;
     background: #ffffff;
-    color: #6c757d;
-    border-radius: 0;
+    color: #6b7280;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.1s ease;
-    font-size: 12px;
+    transition: all 0.2s ease;
+    font-size: 13px;
 }
 
 .media-action-btn-list:hover {
-    background: #f8f9fa;
-    border-color: #adb5bd;
-    color: #212529;
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #2563eb;
+    transform: scale(1.05);
+}
+
+.media-action-btn-list.delete-media:hover {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #dc2626;
 }
 
 .media-grid:not(.media-list-view) .media-actions-list {
@@ -931,24 +966,26 @@
 
 /* Стилі для модального вікна завантаження */
 #uploadModal .modal-content {
-    border-radius: 0;
-    border: 1px solid #e5e7eb;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 #uploadModal .modal-header {
-    border-bottom: 1px solid #e5e7eb;
-    padding: 16px 20px;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 20px 24px;
     background: #ffffff;
 }
 
 #uploadModal .modal-title {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     color: #111827;
+    letter-spacing: -0.02em;
 }
 
 #uploadModal .modal-body {
-    padding: 20px;
+    padding: 24px;
     background: #ffffff;
 }
 
@@ -956,43 +993,54 @@
     font-size: 13px;
     font-weight: 500;
     color: #374151;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 #uploadModal .form-control {
     border: 1px solid #e5e7eb;
-    border-radius: 0;
-    padding: 8px 12px;
-    font-size: 13px;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 14px;
     color: #111827;
     background: #ffffff;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 #uploadModal .form-control:focus {
     outline: none;
     border-color: #2563eb;
-    box-shadow: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+#uploadModal .form-control::placeholder {
+    color: #9ca3af;
 }
 
 #uploadModal .form-text {
     font-size: 12px;
     color: #6b7280;
-    margin-top: 4px;
+}
+
+#uploadModal .upload-fields {
+    display: none;
+}
+
+#uploadModal .upload-fields.active {
+    display: block;
 }
 
 #uploadModal .modal-footer {
-    border-top: 1px solid #e5e7eb;
-    padding: 12px 20px;
-    background: #f9fafb;
+    border-top: 1px solid #f3f4f6;
+    padding: 16px 24px;
+    background: #ffffff;
 }
 
 #uploadModal .btn {
-    border-radius: 0;
-    padding: 8px 16px;
-    font-size: 13px;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 14px;
     font-weight: 500;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 #uploadModal .btn-secondary {
@@ -1008,37 +1056,37 @@
 }
 
 #uploadModal .btn-primary {
-    border: 1px solid #2563eb;
+    border: none;
     background: #2563eb;
     color: #ffffff;
 }
 
 #uploadModal .btn-primary:hover {
     background: #1d4ed8;
-    border-color: #1d4ed8;
 }
 
 #uploadModal .progress {
-    height: 4px;
-    border-radius: 0;
-    background: #e5e7eb;
+    height: 3px;
+    border-radius: 3px;
+    background: #f3f4f6;
+    overflow: hidden;
 }
 
 #uploadModal .progress-bar {
     background: #2563eb;
-    border-radius: 0;
+    border-radius: 3px;
 }
 
 /* Dropzone для завантаження */
 .upload-dropzone {
     border: 2px dashed #e5e7eb;
-    border-radius: 0;
-    padding: 40px 20px;
+    border-radius: 8px;
+    padding: 48px 24px;
     text-align: center;
-    background: #f9fafb;
+    background: #fafafa;
     cursor: pointer;
-    transition: all 0.15s ease;
-    margin-bottom: 16px;
+    transition: all 0.2s ease;
+    margin-bottom: 24px;
 }
 
 .upload-dropzone:hover {
@@ -1049,13 +1097,15 @@
 .upload-dropzone.drag-over {
     border-color: #2563eb;
     background: #eff6ff;
+    border-style: solid;
 }
 
 .upload-dropzone i {
-    font-size: 48px;
+    font-size: 40px;
     color: #9ca3af;
     margin-bottom: 12px;
     display: block;
+    transition: all 0.2s ease;
 }
 
 .upload-dropzone p {
@@ -1063,58 +1113,107 @@
     font-size: 14px;
     color: #6b7280;
     font-weight: 400;
+    transition: all 0.2s ease;
 }
 
 .upload-dropzone.drag-over i {
     color: #2563eb;
+    transform: scale(1.05);
 }
 
 .upload-dropzone.drag-over p {
     color: #2563eb;
+    font-weight: 500;
 }
 
 /* Прев'ю файлів */
 #filePreview {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 12px;
+    margin-bottom: 24px;
 }
 
 .file-preview-item {
     position: relative;
     border: 1px solid #e5e7eb;
-    background: #ffffff;
-    padding: 8px;
-    border-radius: 0;
+    background: #fafafa;
+    padding: 10px;
+    border-radius: 8px;
     text-align: center;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    overflow: visible;
 }
 
 .file-preview-item:hover {
     border-color: #d1d5db;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .file-preview-item img {
     width: 100%;
-    height: 100px;
+    height: 90px;
     object-fit: cover;
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    border-radius: 4px;
 }
 
 .file-preview-item i {
-    font-size: 40px;
+    font-size: 36px;
     color: #9ca3af;
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .file-preview-item .file-name {
-    font-size: 11px;
-    color: #374151;
+    font-size: 12px;
+    color: #111827;
     word-break: break-word;
-    line-height: 1.3;
-    font-weight: 400;
+    line-height: 1.4;
+    font-weight: 500;
+    margin: 0;
+    padding: 2px 0;
+    letter-spacing: -0.01em;
+}
+
+.file-preview-item .remove-file {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(255, 255, 255, 0.95);
+    color: #dc2626;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    opacity: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+
+.file-preview-item:hover .remove-file {
+    opacity: 1;
+}
+
+.file-preview-item .remove-file:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.file-preview-item .remove-file:active {
+    transform: scale(1.05);
 }
 
 /* Адаптивність */

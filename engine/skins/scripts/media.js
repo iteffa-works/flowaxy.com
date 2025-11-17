@@ -70,7 +70,6 @@
             state.currentPage = currentPage;
             state.totalPages = totalPages;
             state.hasMore = currentPage < totalPages;
-            console.log('Initial pagination state:', { currentPage, totalPages, hasMore: state.hasMore });
             
             // Якщо файлів більше немає, показуємо повідомлення
             if (!state.hasMore && totalPages > 0) {
@@ -102,7 +101,20 @@
         // Обробка завантаження
         uploadBtn.addEventListener('click', uploadFiles);
         
+        // Обработка начала закрытия модального окна - убираем фокус с кнопки закрытия
+        const handleHideStart = function(e) {
+            // Убираем фокус с активного элемента (кнопки закрытия) перед закрытием
+            if (document.activeElement && document.activeElement.closest('.modal') === uploadModal) {
+                document.activeElement.blur();
+                // Переносим фокус на body
+                document.body.focus();
+                // Убираем фокус обратно
+                document.body.blur();
+            }
+        };
+        
         // Очищення при закритті модального вікна
+        uploadModal.addEventListener('hide.bs.modal', handleHideStart, { once: false });
         uploadModal.addEventListener('hidden.bs.modal', resetUploadForm);
     }
     
@@ -112,9 +124,13 @@
     function resetUploadForm() {
         const fileInput = document.getElementById('fileInput');
         const filePreview = document.getElementById('filePreview');
+        const uploadFields = document.querySelector('.upload-fields');
         
         if (fileInput) fileInput.value = '';
         if (filePreview) filePreview.innerHTML = '';
+        if (uploadFields) {
+            uploadFields.classList.remove('active');
+        }
         
         state.filesToUpload = [];
         
@@ -132,6 +148,7 @@
      */
     function handleFileSelect(files) {
         const filePreview = document.getElementById('filePreview');
+        const uploadFields = document.querySelector('.upload-fields');
         if (!filePreview) return;
         
         filePreview.innerHTML = '';
@@ -148,6 +165,13 @@
             const previewItem = createFilePreview(file);
             filePreview.appendChild(previewItem);
         });
+        
+        // Показуємо поля форми, якщо є вибрані файли
+        if (uploadFields && state.filesToUpload.length > 0) {
+            uploadFields.classList.add('active');
+        } else if (uploadFields) {
+            uploadFields.classList.remove('active');
+        }
     }
     
     /**
@@ -199,6 +223,12 @@
         removeBtn.addEventListener('click', function() {
             item.remove();
             state.filesToUpload = state.filesToUpload.filter(f => f.name !== file.name);
+            
+            // Скрываем поля формы, если файлов не осталось
+            const uploadFields = document.querySelector('.upload-fields');
+            if (uploadFields && state.filesToUpload.length === 0) {
+                uploadFields.classList.remove('active');
+            }
         });
         item.appendChild(removeBtn);
         
@@ -326,8 +356,51 @@
         
         if (!viewModalEl || !viewModalBody) return;
         
-        const viewModal = new bootstrap.Modal(viewModalEl);
+        // Получаем или создаем экземпляр модального окна
+        let viewModal = bootstrap.Modal.getInstance(viewModalEl);
+        if (!viewModal) {
+            viewModal = new bootstrap.Modal(viewModalEl, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+        }
+        
         viewModalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Завантаження...</span></div></div>';
+        
+        // Обработка начала закрытия модального окна - убираем фокус с кнопки закрытия
+        const handleHideStart = function(e) {
+            // Убираем фокус с активного элемента (кнопки закрытия) перед закрытием
+            if (document.activeElement && document.activeElement.closest('.modal') === viewModalEl) {
+                document.activeElement.blur();
+                // Переносим фокус на body
+                document.body.focus();
+                // Убираем фокус обратно
+                document.body.blur();
+            }
+        };
+        
+        // Обработка закрытия модального окна - очистка backdrop и body
+        const handleHide = function() {
+            viewModalBody.innerHTML = '';
+            
+            // Очищаем backdrop и body после закрытия с небольшой задержкой
+            setTimeout(() => {
+                // Убираем все backdrop элементы если остались
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                    backdrop.remove();
+                });
+                // Убираем класс modal-open с body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 200);
+        };
+        
+        viewModalEl.addEventListener('hide.bs.modal', handleHideStart, { once: true });
+        viewModalEl.addEventListener('hidden.bs.modal', handleHide, { once: true });
+        
+        // Показываем модальное окно
         viewModal.show();
         
         try {
@@ -583,7 +656,45 @@
         const editModalEl = document.getElementById('editModal');
         if (!editModalEl) return;
         
-        const editModal = new bootstrap.Modal(editModalEl);
+        // Получаем или создаем экземпляр модального окна
+        let editModal = bootstrap.Modal.getInstance(editModalEl);
+        if (!editModal) {
+            editModal = new bootstrap.Modal(editModalEl, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+        }
+        
+        // Обработка начала закрытия модального окна - убираем фокус с кнопки закрытия
+        const handleHideStart = function(e) {
+            // Убираем фокус с активного элемента (кнопки закрытия) перед закрытием
+            if (document.activeElement && document.activeElement.closest('.modal') === editModalEl) {
+                document.activeElement.blur();
+                // Переносим фокус на body
+                document.body.focus();
+                // Убираем фокус обратно
+                document.body.blur();
+            }
+        };
+        
+        // Обработка закрытия модального окна
+        const handleHide = function() {
+            // Очищаем backdrop и body после закрытия с небольшой задержкой
+            setTimeout(() => {
+                // Убираем все backdrop элементы если остались
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                    backdrop.remove();
+                });
+                // Убираем класс modal-open с body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 200);
+        };
+        
+        editModalEl.addEventListener('hide.bs.modal', handleHideStart, { once: true });
+        editModalEl.addEventListener('hidden.bs.modal', handleHide, { once: true });
         
         try {
             const response = await fetch(`${config.uploadUrl}?action=get_file&media_id=${mediaId}`, {
@@ -1239,7 +1350,6 @@
         // Показуємо індикатор, якщо є ще сторінки
         if (state.hasMore) {
             loadMoreIndicator.style.display = 'block';
-            console.log('Load more indicator created and visible', { currentPage: state.currentPage, totalPages: state.totalPages });
         } else {
             loadMoreIndicator.style.display = 'none';
             // Показуємо повідомлення про кінець
@@ -1250,9 +1360,7 @@
         // Створюємо Intersection Observer
         state.intersectionObserver = new IntersectionObserver(function(entries) {
             entries.forEach(entry => {
-                console.log('Intersection observer triggered', { isIntersecting: entry.isIntersecting, isLoading: state.isLoading, hasMore: state.hasMore });
                 if (entry.isIntersecting && !state.isLoading && state.hasMore) {
-                    console.log('Loading more files...', { currentPage: state.currentPage, totalPages: state.totalPages, hasMore: state.hasMore });
                     loadMoreFiles();
                 }
             });
@@ -1265,7 +1373,6 @@
         // Спостерігаємо за індикатором
         try {
             state.intersectionObserver.observe(loadMoreIndicator);
-            console.log('Observer attached to load more indicator');
         } catch (error) {
             console.error('Error attaching observer:', error);
         }
@@ -1365,8 +1472,6 @@
                 state.currentPage = nextPage;
                 state.totalPages = data.pages || 1;
                 state.hasMore = nextPage < state.totalPages;
-                
-                console.log('Files loaded', { currentPage: state.currentPage, totalPages: state.totalPages, hasMore: state.hasMore });
                 
                 // Реініціалізуємо обробники подій для нових елементів
                 initViewModal();

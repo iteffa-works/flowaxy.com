@@ -139,8 +139,7 @@ if (!function_exists('formatFileSize')) {
                             <div class="media-thumbnail">
                                 <?php if ($file['media_type'] === 'image'): ?>
                                     <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
-                                         alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
-                                         loading="lazy">
+                                         alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>">
                                 <?php elseif ($file['media_type'] === 'video'): ?>
                                     <div class="media-icon video-icon">
                                         <i class="fas fa-video fa-2x"></i>
@@ -212,8 +211,7 @@ if (!function_exists('formatFileSize')) {
                         <div class="media-thumbnail">
                             <?php if ($file['media_type'] === 'image'): ?>
                                 <img src="<?= htmlspecialchars(UrlHelper::toProtocolRelative($file['file_url'])) ?>" 
-                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>"
-                                     loading="lazy">
+                                     alt="<?= htmlspecialchars($file['alt_text'] ?? $file['title'] ?? '') ?>">
                             <?php elseif ($file['media_type'] === 'video'): ?>
                                 <div class="media-icon video-icon">
                                     <i class="fas fa-video fa-3x"></i>
@@ -277,7 +275,7 @@ if (!function_exists('formatFileSize')) {
 </div>
 
 <!-- Модальне вікно завантаження -->
-<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -286,30 +284,29 @@ if (!function_exists('formatFileSize')) {
             </div>
             <div class="modal-body">
                 <form id="uploadForm" enctype="multipart/form-data">
-                    <div class="mb-4">
-                        <label for="fileInput" class="form-label">Виберіть файли</label>
-                        <div id="fileInputContainer">
-                            <input type="file" class="form-control" id="fileInput" name="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx" aria-describedby="fileHelp">
-                        </div>
-                        <div id="fileHelp" class="form-text">Максимальний розмір файлу: 10 MB</div>
+                    <div id="fileInputContainer" class="mb-3">
+                        <input type="file" class="d-none" id="fileInput" name="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx" aria-describedby="fileHelp">
                     </div>
                     <div id="filePreview" class="mb-4"></div>
-                    <div class="mb-3">
-                        <label for="fileTitle" class="form-label">Назва <span class="text-muted">(опціонально)</span></label>
-                        <input type="text" class="form-control" id="fileTitle" name="title" placeholder="Автоматично з імені файлу">
+                    <div class="upload-fields">
+                        <div class="mb-3">
+                            <label for="fileTitle" class="form-label">Назва</label>
+                            <input type="text" class="form-control" id="fileTitle" name="title" placeholder="Автоматично з імені файлу">
+                        </div>
+                        <div class="mb-3">
+                            <label for="fileDescription" class="form-label">Опис</label>
+                            <textarea class="form-control" id="fileDescription" name="description" rows="3" placeholder="Додайте опис файлу"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fileAlt" class="form-label">Alt текст</label>
+                            <input type="text" class="form-control" id="fileAlt" name="alt_text" placeholder="Альтернативний текст для зображення">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="fileDescription" class="form-label">Опис <span class="text-muted">(опціонально)</span></label>
-                        <textarea class="form-control" id="fileDescription" name="description" rows="3" placeholder="Додайте опис файлу"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="fileAlt" class="form-label">Alt текст <span class="text-muted">(для зображень)</span></label>
-                        <input type="text" class="form-control" id="fileAlt" name="alt_text" placeholder="Альтернативний текст для зображення">
-                    </div>
+                    <div id="fileHelp" class="form-text text-center mt-3">Максимальний розмір файлу: 10 MB</div>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(SecurityHelper::csrfToken()) ?>">
                     <input type="hidden" name="action" value="upload">
                 </form>
-                <div id="uploadProgress" class="progress d-none mt-4">
+                <div id="uploadProgress" class="progress d-none mt-3">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
@@ -324,7 +321,7 @@ if (!function_exists('formatFileSize')) {
 </div>
 
 <!-- Модальне вікно перегляду -->
-<div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+<div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
@@ -339,7 +336,7 @@ if (!function_exists('formatFileSize')) {
 </div>
 
 <!-- Модальне вікно редагування -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
