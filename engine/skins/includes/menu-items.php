@@ -60,13 +60,6 @@ function getMenuItems() {
     
     $menu = [
         [
-            'href' => UrlHelper::admin('dashboard'),
-            'icon' => 'fas fa-tachometer-alt',
-            'text' => 'Панель управління',
-            'page' => 'dashboard',
-            'order' => 10
-        ],
-        [
             'href' => UrlHelper::admin('media'),
             'icon' => 'fas fa-images',
             'text' => 'Медіа-бібліотека',
