@@ -36,9 +36,9 @@ if (!function_exists('formatFileSize')) {
         <p class="media-empty-description">Завантажте перший файл, щоб почати роботу з медіа-бібліотекою.</p>
     </div>
 <?php else: ?>
-    <div class="row g-3">
+    <div class="row media-grid-row">
         <?php foreach ($files as $file): ?>
-            <div class="col-md-2 col-sm-3 col-6 media-item" data-id="<?= $file['id'] ?>">
+            <div class="media-item" data-id="<?= $file['id'] ?>">
                 <div class="card media-card">
                     <div class="media-checkbox-wrapper">
                         <input type="checkbox" class="media-checkbox" data-id="<?= $file['id'] ?>" id="media-<?= $file['id'] ?>">

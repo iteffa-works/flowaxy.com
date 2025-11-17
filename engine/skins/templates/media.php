@@ -117,9 +117,9 @@ if (!function_exists('formatFileSize')) {
             </button>
         </div>
     <?php else: ?>
-        <div class="row g-3">
+        <div class="row media-grid-row">
             <?php foreach ($files as $file): ?>
-                <div class="col-md-2 col-sm-3 col-6 media-item" data-id="<?= $file['id'] ?>">
+                <div class="media-item" data-id="<?= $file['id'] ?>">
                     <div class="card media-card">
                         <div class="media-checkbox-wrapper">
                             <input type="checkbox" class="media-checkbox" data-id="<?= $file['id'] ?>" id="media-<?= $file['id'] ?>">
@@ -222,28 +222,30 @@ if (!function_exists('formatFileSize')) {
             </div>
             <div class="modal-body">
                 <form id="uploadForm" enctype="multipart/form-data">
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="fileInput" class="form-label">Виберіть файли</label>
-                        <input type="file" class="form-control" id="fileInput" name="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx" aria-describedby="fileHelp">
+                        <div id="fileInputContainer">
+                            <input type="file" class="form-control" id="fileInput" name="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx" aria-describedby="fileHelp">
+                        </div>
                         <div id="fileHelp" class="form-text">Максимальний розмір файлу: 10 MB</div>
                     </div>
-                    <div id="filePreview" class="mb-3"></div>
+                    <div id="filePreview" class="mb-4"></div>
                     <div class="mb-3">
                         <label for="fileTitle" class="form-label">Назва <span class="text-muted">(опціонально)</span></label>
                         <input type="text" class="form-control" id="fileTitle" name="title" placeholder="Автоматично з імені файлу">
                     </div>
                     <div class="mb-3">
                         <label for="fileDescription" class="form-label">Опис <span class="text-muted">(опціонально)</span></label>
-                        <textarea class="form-control" id="fileDescription" name="description" rows="3"></textarea>
+                        <textarea class="form-control" id="fileDescription" name="description" rows="3" placeholder="Додайте опис файлу"></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="fileAlt" class="form-label">Alt текст <span class="text-muted">(для зображень)</span></label>
-                        <input type="text" class="form-control" id="fileAlt" name="alt_text">
+                        <input type="text" class="form-control" id="fileAlt" name="alt_text" placeholder="Альтернативний текст для зображення">
                     </div>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(SecurityHelper::csrfToken()) ?>">
                     <input type="hidden" name="action" value="upload">
                 </form>
-                <div id="uploadProgress" class="progress d-none mt-3">
+                <div id="uploadProgress" class="progress d-none mt-4">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>

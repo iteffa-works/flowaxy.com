@@ -171,14 +171,24 @@
         } else {
             // Іконка для інших файлів
             const icon = document.createElement('i');
-            icon.className = 'fas fa-file fa-3x text-muted';
+            if (file.type.startsWith('video/')) {
+                icon.className = 'fas fa-video';
+            } else if (file.type.startsWith('audio/')) {
+                icon.className = 'fas fa-music';
+            } else if (file.type.includes('pdf')) {
+                icon.className = 'fas fa-file-pdf';
+            } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+                icon.className = 'fas fa-file-word';
+            } else {
+                icon.className = 'fas fa-file';
+            }
             item.appendChild(icon);
         }
         
         // Назва файлу
         const fileName = document.createElement('div');
         fileName.className = 'file-name';
-        fileName.textContent = file.name;
+        fileName.textContent = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
         item.appendChild(fileName);
         
         // Кнопка видалення
@@ -1264,18 +1274,18 @@
                 const mediaGrid = document.getElementById('mediaGrid');
                 if (mediaGrid) {
                     // Знаходимо контейнер з файлами
-                    let rowContainer = mediaGrid.querySelector('.row');
+                    let rowContainer = mediaGrid.querySelector('.media-grid-row');
                     if (!rowContainer) {
                         // Якщо контейнера немає, створюємо його
                         rowContainer = document.createElement('div');
-                        rowContainer.className = 'row g-3';
+                        rowContainer.className = 'row media-grid-row';
                         mediaGrid.appendChild(rowContainer);
                     }
                     
                     // Створюємо тимчасовий контейнер для нового HTML
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = data.html;
-                    const newRowContainer = tempDiv.querySelector('.row');
+                    const newRowContainer = tempDiv.querySelector('.media-grid-row');
                     
                     if (newRowContainer) {
                         // Додаємо нові файли до існуючих
