@@ -151,8 +151,9 @@ class ThemesPage extends AdminPage {
      * Обробка AJAX запитів
      */
     private function handleAjax() {
-        // Використовуємо Response клас для встановлення заголовків
-        $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        // Используем Request напрямую из engine/classes
+        $request = Request::getInstance();
+        $action = SecurityHelper::sanitizeInput($request->get('action', $request->post('action', '')));
         
         switch ($action) {
             case 'activate_theme':
@@ -176,16 +177,12 @@ class ThemesPage extends AdminPage {
      * AJAX активація теми з компіляцією SCSS
      */
     private function ajaxActivateTheme() {
-        // Очищаємо буфер виводу
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        
         if (!$this->verifyCsrf()) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
         }
         
-        $themeSlug = SecurityHelper::sanitizeInput($_POST['theme_slug'] ?? '');
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput($request->post('theme_slug', ''));
         
         if (empty($themeSlug)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Тему не вибрано'], 400);
@@ -239,12 +236,8 @@ class ThemesPage extends AdminPage {
      * AJAX перевірка статусу компіляції
      */
     private function ajaxCheckCompilation() {
-        // Очищаємо буфер виводу
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        
-        $themeSlug = SecurityHelper::sanitizeInput($_GET['theme_slug'] ?? '');
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme_slug', ''));
         
         if (empty($themeSlug)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Тему не вказано'], 400);
@@ -252,8 +245,8 @@ class ThemesPage extends AdminPage {
         
         $hasScssSupport = themeManager()->hasScssSupport($themeSlug);
         $themePath = themeManager()->getThemePath($themeSlug);
-        $cssFile = $themePath . 'assets/css/style.css';
-        $cssExists = file_exists($cssFile);
+        $cssFile = new File($themePath . 'assets/css/style.css');
+        $cssExists = $cssFile->exists();
         
         $this->sendJsonResponse([
             'success' => true,
@@ -267,16 +260,14 @@ class ThemesPage extends AdminPage {
      * AJAX завантаження теми з ZIP архіву
      */
     private function ajaxUploadTheme(): void {
-        // Очищаємо буфер виводу для запобігання виводу HTML перед JSON
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        
         if (!$this->verifyCsrf()) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
         }
         
-        if (!isset($_FILES['theme_file'])) {
+        $request = Request::getInstance();
+        $files = $request->files();
+        
+        if (!isset($files['theme_file'])) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Файл не вибрано'], 400);
         }
         
@@ -397,7 +388,8 @@ class ThemesPage extends AdminPage {
             
             $upload->setUploadDir($tempDir);
             
-            $uploadResult = $upload->upload($_FILES['theme_file']);
+            $request = Request::getInstance();
+            $uploadResult = $upload->upload($request->files()['theme_file']);
             
             if (!$uploadResult['success']) {
                 $this->sendJsonResponse(['success' => false, 'error' => $uploadResult['error']], 400);
@@ -451,7 +443,9 @@ class ThemesPage extends AdminPage {
             
             // Якщо все ще немає slug, використовуємо ім'я файлу без розширення
             if (!$themeSlug) {
-                $themeSlug = pathinfo($_FILES['theme_file']['name'], PATHINFO_FILENAME);
+                $request = Request::getInstance();
+                $files = $request->files();
+                $themeSlug = pathinfo($files['theme_file']['name'], PATHINFO_FILENAME);
             }
             
             // Очищаємо slug від небезпечних символів
@@ -598,15 +592,19 @@ class ThemesPage extends AdminPage {
             }
         }
         
-        // Проверяем наличие theme.json с настройками
-        $themeJsonFile = $themePath . 'theme.json';
-        if (file_exists($themeJsonFile)) {
-            $content = @file_get_contents($themeJsonFile);
-            if ($content) {
-                $config = Json::decode($content, true);
-                if ($config && (isset($config['has_settings']) || isset($config['settings_page']))) {
-                    return true;
+        // Проверяем наличие theme.json с настройками (используем File класс)
+        $themeJsonFile = new File($themePath . 'theme.json');
+        if ($themeJsonFile->exists()) {
+            try {
+                $content = $themeJsonFile->read();
+                if ($content) {
+                    $config = Json::decode($content, true);
+                    if ($config && (isset($config['has_settings']) || isset($config['settings_page']))) {
+                        return true;
+                    }
                 }
+            } catch (Exception $e) {
+                // Если не удалось прочитать файл, игнорируем
             }
         }
         

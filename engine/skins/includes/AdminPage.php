@@ -7,15 +7,8 @@
 // Подключаем хелпер для компонентов
 require_once __DIR__ . '/ComponentHelper.php';
 
-// Интегрируем полезные классы из engine/classes
-if (class_exists('Request')) {
-    require_once __DIR__ . '/AdminRequest.php';
-}
-if (class_exists('AjaxHandler')) {
-    require_once __DIR__ . '/AdminAjaxHandler.php';
-}
-require_once __DIR__ . '/AdminValidator.php';
-require_once __DIR__ . '/AdminFileHelper.php';
+// Классы из engine/classes загружаются автоматически через autoloader в engine/init.php
+// Используем их напрямую: Request, AjaxHandler, Validator, File, Directory, Response и т.д.
 
 class AdminPage {
     protected $db;
@@ -78,8 +71,9 @@ class AdminPage {
     /**
      * Перевірка CSRF токена
      */
-    protected function verifyCsrf() {
-        if (!SecurityHelper::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+    protected function verifyCsrf(): bool {
+        $token = $this->request()->post('csrf_token', '');
+        if (!SecurityHelper::verifyCsrfToken($token)) {
             $this->setMessage('Помилка безпеки', 'danger');
             return false;
         }
@@ -243,73 +237,71 @@ class AdminPage {
     }
     
     /**
+     * Получение экземпляра Request (использует класс напрямую из engine/classes)
+     * 
+     * @return Request
+     */
+    protected function request(): Request {
+        return Request::getInstance();
+    }
+    
+    /**
      * Проверка на AJAX запрос
      * 
      * @return bool
      */
-    protected function isAjaxRequest() {
-        if (class_exists('AdminAjaxHandler')) {
-            return AdminAjaxHandler::isAjax();
-        }
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    protected function isAjaxRequest(): bool {
+        return AjaxHandler::isAjax();
     }
     
     /**
-     * Получение данных из запроса (использует AdminRequest если доступен)
+     * Получение данных из запроса
      * 
      * @param string $key Ключ
      * @param mixed $default Значение по умолчанию
      * @return mixed
      */
-    protected function request(string $key, $default = null) {
-        if (class_exists('AdminRequest')) {
-            return AdminRequest::input($key, $default);
-        }
-        return $_POST[$key] ?? $_GET[$key] ?? $default;
+    protected function input(string $key, $default = null) {
+        return Request::input($key, $default);
     }
     
     /**
      * Получение POST данных
      */
     protected function post(string $key, $default = null) {
-        if (class_exists('AdminRequest')) {
-            return AdminRequest::post($key, $default);
-        }
-        return $_POST[$key] ?? $default;
+        return $this->request()->post($key, $default);
     }
     
     /**
      * Получение GET данных
      */
     protected function query(string $key, $default = null) {
-        if (class_exists('AdminRequest')) {
-            return AdminRequest::query($key, $default);
-        }
-        return $_GET[$key] ?? $default;
+        return $this->request()->query($key, $default);
+    }
+    
+    /**
+     * Получение метода запроса
+     */
+    protected function method(): string {
+        return Request::getMethod();
+    }
+    
+    /**
+     * Проверка метода запроса
+     */
+    protected function isMethod(string $method): bool {
+        return $this->request()->isMethod($method);
     }
     
     /**
      * Отправка JSON ответа (для AJAX)
+     * Использует Response::jsonResponse напрямую из engine/classes
      * 
      * @param array $data Данные для отправки
      * @param int $statusCode HTTP статус код
      */
-    protected function sendJsonResponse($data, $statusCode = 200) {
-        // Очищаємо всі буфери перед виводом JSON
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        
-        if (class_exists('Json')) {
-            echo Json::encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        } else {
-            echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        }
-        exit;
+    protected function sendJsonResponse(array $data, int $statusCode = 200): void {
+        Response::jsonResponse($data, $statusCode);
     }
     
     /**
@@ -318,20 +310,11 @@ class AdminPage {
      * @param string $page Страница для редиректа
      * @param array $params Параметры GET
      */
-    protected function redirect($page, $params = []) {
-        if (class_exists('Response')) {
-            $url = UrlHelper::admin($page);
-            if (!empty($params)) {
-                $url .= '?' . http_build_query($params);
-            }
-            Response::redirectStatic($url);
-        } else {
-            $url = UrlHelper::admin($page);
-            if (!empty($params)) {
-                $url .= '?' . http_build_query($params);
-            }
-            header('Location: ' . $url);
-            exit;
+    protected function redirect(string $page, array $params = []): void {
+        $url = UrlHelper::admin($page);
+        if (!empty($params)) {
+            $url .= '?' . http_build_query($params);
         }
+        Response::redirectStatic($url);
     }
 }

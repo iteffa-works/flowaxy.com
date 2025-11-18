@@ -86,18 +86,14 @@ class ProfilePage extends AdminPage {
         $newPassword = $_POST['new_password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
         
-        // Валидация
-        $validation = AdminValidator::validate([
-            'username' => $username,
-            'email' => $email
-        ], [
-            'username' => 'required|string|min:3|max:50',
-            'email' => 'email|max:255'
-        ]);
+        // Валидация (используем Validator напрямую из engine/classes)
+        if (!Validator::validateString($username, 3, 50)) {
+            $this->setMessage('Логін має містити від 3 до 50 символів', 'danger');
+            return;
+        }
         
-        if (!$validation['valid']) {
-            $firstError = reset($validation['errors']);
-            $this->setMessage($firstError, 'danger');
+        if (!empty($email) && !Validator::validateEmail($email)) {
+            $this->setMessage('Невірний формат email', 'danger');
             return;
         }
         

@@ -277,9 +277,11 @@ class PluginsPage extends AdminPage {
     
     /**
      * Обробка AJAX запитів
+     * Используем Request напрямую из engine/classes
      */
     private function handleAjax(): void {
-        $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
+        $request = Request::getInstance();
+        $action = SecurityHelper::sanitizeInput($request->get('action', $request->post('action', '')));
         
         switch ($action) {
             case 'upload_plugin':
@@ -293,18 +295,17 @@ class PluginsPage extends AdminPage {
     
     /**
      * AJAX завантаження плагіна з ZIP архіву
+     * Используем Request и File напрямую из engine/classes
      */
     private function ajaxUploadPlugin(): void {
-        // Очищаємо буфер виводу для запобігання виводу HTML перед JSON
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        
         if (!$this->verifyCsrf()) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
         }
         
-        if (!isset($_FILES['plugin_file'])) {
+        $request = Request::getInstance();
+        $files = $request->files();
+        
+        if (!isset($files['plugin_file'])) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Файл не вибрано'], 400);
         }
         
@@ -425,7 +426,8 @@ class PluginsPage extends AdminPage {
             
             $upload->setUploadDir($tempDir);
             
-            $uploadResult = $upload->upload($_FILES['plugin_file']);
+            $request = Request::getInstance();
+            $uploadResult = $upload->upload($request->files()['plugin_file']);
             
             if (!$uploadResult['success']) {
                 $this->sendJsonResponse(['success' => false, 'error' => $uploadResult['error']], 400);
@@ -479,7 +481,9 @@ class PluginsPage extends AdminPage {
             
             // Якщо все ще немає slug, використовуємо ім'я файлу без розширення
             if (!$pluginSlug) {
-                $pluginSlug = pathinfo($_FILES['plugin_file']['name'], PATHINFO_FILENAME);
+                $request = Request::getInstance();
+                $files = $request->files();
+                $pluginSlug = pathinfo($files['plugin_file']['name'], PATHINFO_FILENAME);
             }
             
             // Очищаємо slug від небезпечних символів

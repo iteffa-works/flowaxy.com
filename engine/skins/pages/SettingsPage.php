@@ -66,7 +66,7 @@ class SettingsPage extends AdminPage {
             return;
         }
         
-        $settings = $this->post('settings', []);
+        $settings = $this->post('settings') ?? [];
         
         // Обработка checkbox полей (если не отмечены, они не приходят в POST)
         $checkboxFields = ['cache_enabled', 'cache_auto_cleanup', 'logging_enabled'];
