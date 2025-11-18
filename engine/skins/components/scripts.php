@@ -9,6 +9,15 @@
 <!-- Ajax Helper (глобальний хелпер для AJAX запитів) -->
 <script src="<?= UrlHelper::admin('assets/scripts/ajax-helper.js') ?>?v=<?= time() ?>"></script>
 
+<?php
+// Подключаем центральный обработчик модальных окон
+if (class_exists('ModalHandler')) {
+    $modalHandler = ModalHandler::getInstance();
+    $modalHandler->setContext('admin');
+    echo $modalHandler->renderScripts();
+}
+?>
+
 <script>
 // WordPress-подобная функциональность sidebar
 function toggleSidebar() {

@@ -90,6 +90,7 @@ spl_autoload_register(function (string $className): void {
             'AjaxHandler' => 'http',
             'View' => 'view',
             'Mail' => 'mail',
+            'ModalHandler' => 'ui',
             // Сторінки адмінки (для автозавантаження)
             'LoginPage' => 'skins/pages',
             'LogoutPage' => 'skins/pages',

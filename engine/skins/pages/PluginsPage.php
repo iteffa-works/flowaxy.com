@@ -13,6 +13,43 @@ class PluginsPage extends AdminPage {
         $this->pageTitle = 'Керування плагінами - Flowaxy CMS';
         $this->templateName = 'plugins';
         
+        // Регистрируем модальное окно загрузки плагина через ModalHandler
+        $this->registerModal('uploadPluginModal', [
+            'title' => 'Завантажити плагін',
+            'type' => 'upload',
+            'action' => 'upload_plugin',
+            'method' => 'POST',
+            'enctype' => 'multipart/form-data',
+            'fields' => [
+                [
+                    'type' => 'file',
+                    'name' => 'plugin_file',
+                    'label' => 'ZIP архів з плагіном',
+                    'help' => 'Максимальний розмір: 50 MB',
+                    'required' => true,
+                    'attributes' => [
+                        'accept' => '.zip'
+                    ]
+                ]
+            ],
+            'buttons' => [
+                [
+                    'text' => 'Скасувати',
+                    'type' => 'secondary',
+                    'action' => 'close'
+                ],
+                [
+                    'text' => 'Завантажити',
+                    'type' => 'primary',
+                    'icon' => 'upload',
+                    'action' => 'submit'
+                ]
+            ]
+        ]);
+        
+        // Регистрируем обработчик загрузки плагина
+        $this->registerModalHandler('uploadPluginModal', 'upload_plugin', [$this, 'handleUploadPlugin']);
+        
         // Используем вспомогательные методы для создания кнопок
         $headerButtons = $this->createButtonGroup([
             [
@@ -20,7 +57,11 @@ class PluginsPage extends AdminPage {
                 'type' => 'primary',
                 'options' => [
                     'icon' => 'upload',
-                    'attributes' => ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal']
+                    'attributes' => [
+                        'data-bs-toggle' => 'modal', 
+                        'data-bs-target' => '#uploadPluginModal',
+                        'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadPluginModal")'
+                    ]
                 ]
             ],
             [
@@ -77,10 +118,11 @@ class PluginsPage extends AdminPage {
         $installedPlugins = $this->getInstalledPlugins();
         $stats = $this->calculateStats($installedPlugins);
         
-        // Рендерим страницу
+        // Рендерим страницу с модальным окном
         $this->render([
             'installedPlugins' => $installedPlugins,
-            'stats' => $stats
+            'stats' => $stats,
+            'uploadModalHtml' => $this->renderModal('uploadPluginModal')
         ]);
     }
     
@@ -277,10 +319,20 @@ class PluginsPage extends AdminPage {
     
     /**
      * Обробка AJAX запитів
-     * Используем Request напрямую из engine/classes
+     * Используем ModalHandler для обработки запросов от модальных окон
      */
     private function handleAjax(): void {
         $request = Request::getInstance();
+        $modalId = $request->post('modal_id', '');
+        $action = SecurityHelper::sanitizeInput($request->post('action', ''));
+        
+        // Если запрос от модального окна, обрабатываем через ModalHandler
+        if (!empty($modalId) && !empty($action)) {
+            $this->handleModalRequest($modalId, $action);
+            return;
+        }
+        
+        // Обратная совместимость со старыми запросами
         $action = SecurityHelper::sanitizeInput($request->get('action', $request->post('action', '')));
         
         switch ($action) {
@@ -290,6 +342,214 @@ class PluginsPage extends AdminPage {
                 
             default:
                 $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія'], 400);
+        }
+    }
+    
+    /**
+     * Обработчик загрузки плагина для ModalHandler
+     * Использует логику из ajaxUploadPlugin, но возвращает массив вместо отправки JSON
+     * 
+     * @param array $data Данные запроса
+     * @param array $files Файлы
+     * @return array Результат
+     */
+    public function handleUploadPlugin(array $data, array $files): array {
+        if (!$this->verifyCsrf()) {
+            return ['success' => false, 'error' => 'Помилка безпеки', 'reload' => false];
+        }
+        
+        if (!isset($files['plugin_file'])) {
+            return ['success' => false, 'error' => 'Файл не вибрано', 'reload' => false];
+        }
+        
+        $uploadedFile = null;
+        $zip = null;
+        
+        try {
+            // Завантажуємо файл через клас Upload
+            $upload = new Upload();
+            $upload->setAllowedExtensions(['zip'])
+                   ->setAllowedMimeTypes(['application/zip', 'application/x-zip-compressed'])
+                   ->setMaxFileSize(50 * 1024 * 1024)
+                   ->setNamingStrategy('random')
+                   ->setOverwrite(true);
+            
+            // Створюємо тимчасову директорію
+            $projectRoot = dirname(__DIR__, 3);
+            $storageDir = $projectRoot . '/storage/temp/';
+            
+            if (!is_dir($storageDir)) {
+                if (!@mkdir($storageDir, 0755, true)) {
+                    throw new Exception('Не вдалося створити тимчасову директорію');
+                }
+            }
+            
+            $upload->setUploadDir($storageDir);
+            $uploadResult = $upload->upload($files['plugin_file']);
+            
+            if (!$uploadResult['success']) {
+                return ['success' => false, 'error' => $uploadResult['error'], 'reload' => false];
+            }
+            
+            $uploadedFile = $uploadResult['file'];
+            
+            // Відкриваємо ZIP архів
+            $zip = new Zip();
+            $zip->open($uploadedFile, ZipArchive::RDONLY);
+            
+            // Перевіряємо наявність plugin.json
+            $entries = $zip->getEntries();
+            $hasPluginJson = false;
+            $pluginJsonPath = null;
+            $pluginSlug = null;
+            
+            foreach ($entries as $entryName) {
+                if (basename($entryName) === 'plugin.json') {
+                    $hasPluginJson = true;
+                    $pluginJsonPath = $entryName;
+                    $pathParts = explode('/', trim($entryName, '/'));
+                    if (count($pathParts) >= 2) {
+                        $pluginSlug = $pathParts[0];
+                    }
+                    break;
+                }
+            }
+            
+            if (!$hasPluginJson) {
+                if ($zip) $zip->close();
+                if ($uploadedFile && file_exists($uploadedFile)) @unlink($uploadedFile);
+                return ['success' => false, 'error' => 'Архів не містить plugin.json', 'reload' => false];
+            }
+            
+            // Визначаємо slug
+            if (!$pluginSlug) {
+                $pluginJsonContent = $zip->getEntryContents($pluginJsonPath);
+                if ($pluginJsonContent) {
+                    $config = Json::decode($pluginJsonContent, true);
+                    if ($config && isset($config['slug'])) {
+                        $pluginSlug = $config['slug'];
+                    }
+                }
+            }
+            
+            if (!$pluginSlug) {
+                $pluginSlug = pathinfo($files['plugin_file']['name'], PATHINFO_FILENAME);
+            }
+            
+            $pluginSlug = preg_replace('/[^a-z0-9\-_]/i', '', $pluginSlug);
+            if (empty($pluginSlug)) {
+                if ($zip) $zip->close();
+                if ($uploadedFile && file_exists($uploadedFile)) @unlink($uploadedFile);
+                return ['success' => false, 'error' => 'Неможливо визначити slug плагіна', 'reload' => false];
+            }
+            
+            // Перевіряємо, чи не існує вже плагін
+            $pluginsDir = dirname(__DIR__, 3) . '/plugins/';
+            $pluginPath = $pluginsDir . $pluginSlug . '/';
+            
+            if (is_dir($pluginPath)) {
+                if ($zip) $zip->close();
+                if ($uploadedFile && file_exists($uploadedFile)) @unlink($uploadedFile);
+                return ['success' => false, 'error' => 'Плагін з таким slug вже існує: ' . $pluginSlug, 'reload' => false];
+            }
+            
+            // Створюємо папку для плагіна
+            if (!@mkdir($pluginPath, 0755, true)) {
+                if ($zip) $zip->close();
+                if ($uploadedFile && file_exists($uploadedFile)) @unlink($uploadedFile);
+                return ['success' => false, 'error' => 'Помилка створення папки плагіна', 'reload' => false];
+            }
+            
+            // Визначаємо кореневу папку в архіві
+            $rootPath = null;
+            if ($pluginJsonPath) {
+                $rootPath = dirname($pluginJsonPath);
+                if ($rootPath === '.' || $rootPath === '') {
+                    $rootPath = null;
+                }
+            }
+            
+            // Розпаковуємо файли
+            $extracted = 0;
+            foreach ($entries as $entryName) {
+                if (substr($entryName, -1) === '/') continue;
+                
+                if ($rootPath) {
+                    if (strpos($entryName, $rootPath . '/') === 0) {
+                        $relativePath = substr($entryName, strlen($rootPath) + 1);
+                    } else {
+                        continue;
+                    }
+                } else {
+                    $relativePath = $entryName;
+                }
+                
+                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                    continue;
+                }
+                
+                $targetPath = $pluginPath . $relativePath;
+                $targetDirPath = dirname($targetPath);
+                
+                if (!is_dir($targetDirPath)) {
+                    if (!@mkdir($targetDirPath, 0755, true)) {
+                        continue;
+                    }
+                }
+                
+                try {
+                    $zip->extractFile($entryName, $targetPath);
+                    $extracted++;
+                } catch (Exception $e) {
+                    error_log("Failed to extract file {$entryName}: " . $e->getMessage());
+                }
+            }
+            
+            if ($zip) $zip->close();
+            if ($uploadedFile && file_exists($uploadedFile)) @unlink($uploadedFile);
+            
+            // Автоматично встановлюємо плагін
+            try {
+                pluginManager()->installPlugin($pluginSlug);
+                return [
+                    'success' => true,
+                    'message' => 'Плагін успішно завантажено та встановлено',
+                    'plugin_slug' => $pluginSlug,
+                    'extracted_files' => $extracted,
+                    'reload' => true,
+                    'closeModal' => true,
+                    'closeDelay' => 2000
+                ];
+            } catch (Exception $e) {
+                error_log("Plugin install error: " . $e->getMessage());
+                return [
+                    'success' => true,
+                    'message' => 'Плагін завантажено, але помилка при встановленні: ' . $e->getMessage(),
+                    'plugin_slug' => $pluginSlug,
+                    'extracted_files' => $extracted,
+                    'reload' => true,
+                    'closeModal' => true,
+                    'closeDelay' => 2000
+                ];
+            }
+        } catch (Throwable $e) {
+            if ($zip) {
+                try {
+                    $zip->close();
+                } catch (Exception $ex) {
+                    // Игнорируем ошибки закрытия
+                }
+            }
+            if ($uploadedFile && file_exists($uploadedFile)) {
+                @unlink($uploadedFile);
+            }
+            
+            error_log("Plugin upload error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return [
+                'success' => false,
+                'error' => 'Помилка: ' . $e->getMessage(),
+                'reload' => false
+            ];
         }
     }
     

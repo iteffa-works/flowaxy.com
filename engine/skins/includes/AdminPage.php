@@ -317,4 +317,73 @@ class AdminPage {
         }
         Response::redirectStatic($url);
     }
+    
+    /**
+     * Получить экземпляр ModalHandler
+     * 
+     * @return ModalHandler
+     */
+    protected function modalHandler(): ModalHandler {
+        $handler = ModalHandler::getInstance();
+        $handler->setContext('admin');
+        return $handler;
+    }
+    
+    /**
+     * Регистрация модального окна
+     * 
+     * @param string $id ID модального окна
+     * @param array $config Конфигурация
+     * @return self
+     */
+    protected function registerModal(string $id, array $config = []): self {
+        $this->modalHandler()->register($id, $config);
+        return $this;
+    }
+    
+    /**
+     * Регистрация обработчика для модального окна
+     * 
+     * @param string $modalId ID модального окна
+     * @param string $action Действие
+     * @param callable $handler Обработчик
+     * @return self
+     */
+    protected function registerModalHandler(string $modalId, string $action, callable $handler): self {
+        $this->modalHandler()->registerHandler($modalId, $action, $handler);
+        return $this;
+    }
+    
+    /**
+     * Обработка AJAX запроса от модального окна
+     * 
+     * @param string $modalId ID модального окна
+     * @param string $action Действие
+     * @return void
+     */
+    protected function handleModalRequest(string $modalId, string $action): void {
+        $request = Request::getInstance();
+        
+        // Получаем все данные из POST и GET
+        $data = $request->all();
+        
+        // Убираем служебные поля
+        unset($data['modal_id'], $data['action'], $data['csrf_token']);
+        
+        $files = $request->files();
+        
+        $result = $this->modalHandler()->handle($modalId, $action, $data, $files);
+        $this->sendJsonResponse($result, $result['success'] ? 200 : 400);
+    }
+    
+    /**
+     * Рендеринг модального окна
+     * 
+     * @param string $id ID модального окна
+     * @param array $options Дополнительные опции
+     * @return string HTML
+     */
+    protected function renderModal(string $id, array $options = []): string {
+        return $this->modalHandler()->render($id, $options);
+    }
 }
