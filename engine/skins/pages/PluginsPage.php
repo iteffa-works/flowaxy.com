@@ -13,14 +13,26 @@ class PluginsPage extends AdminPage {
         $this->pageTitle = 'Керування плагінами - Flowaxy CMS';
         $this->templateName = 'plugins';
         
-        $headerButtons = '<div class="d-flex gap-2">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadPluginModal">
-                <i class="fas fa-upload me-1"></i>Завантажити плагін
-            </button>
-            <a href="https://flowaxy.com/marketplace/plugins" target="_blank" class="btn btn-outline-primary">
-                <i class="fas fa-store me-1"></i>Скачати плагіни
-            </a>
-        </div>';
+        // Используем компонент кнопки
+        ob_start();
+        $text = 'Завантажити плагін';
+        $type = 'primary';
+        $icon = 'upload';
+        $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal'];
+        unset($url);
+        include __DIR__ . '/../components/button.php';
+        $uploadBtn = ob_get_clean();
+        
+        ob_start();
+        $text = 'Скачати плагіни';
+        $type = 'outline-primary';
+        $url = 'https://flowaxy.com/marketplace/plugins';
+        $icon = 'store';
+        $attributes = ['target' => '_blank'];
+        include __DIR__ . '/../components/button.php';
+        $marketplaceBtn = ob_get_clean();
+        
+        $headerButtons = '<div class="d-flex gap-2">' . $uploadBtn . $marketplaceBtn . '</div>';
         
         $this->setPageHeader(
             'Керування плагінами',

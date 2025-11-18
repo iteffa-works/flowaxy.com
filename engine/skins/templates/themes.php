@@ -27,12 +27,23 @@
                 <h4>Теми не знайдено</h4>
                 <p class="text-muted">Встановіть тему за замовчуванням через міграцію бази даних або завантажте нову тему з маркетплейсу.</p>
                 <div class="d-flex gap-2 justify-content-center">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadThemeModal">
-                        <i class="fas fa-upload me-1"></i>Завантажити тему
-                    </button>
-                    <a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-outline-primary">
-                        <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
-                    </a>
+                    <?php
+                    // Кнопка загрузки темы
+                    $text = 'Завантажити тему';
+                    $type = 'primary';
+                    $icon = 'upload';
+                    $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal'];
+                    unset($url);
+                    include __DIR__ . '/../components/button.php';
+                    
+                    // Кнопка маркетплейса
+                    $text = 'Перейти до маркетплейсу';
+                    $type = 'outline-primary';
+                    $url = 'https://flowaxy.com/marketplace/themes';
+                    $icon = 'store';
+                    $attributes = ['target' => '_blank'];
+                    include __DIR__ . '/../components/button.php';
+                    ?>
                 </div>
             </div>
         <?php else: ?>

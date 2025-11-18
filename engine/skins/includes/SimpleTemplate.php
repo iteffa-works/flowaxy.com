@@ -72,7 +72,8 @@ class SimpleTemplate {
         $componentData = array_merge($this->data, $data);
         extract($componentData);
         
-        $componentFile = $this->templateDir . 'components/' . $component . '.php';
+        // Компоненты теперь находятся в engine/skins/components/
+        $componentFile = __DIR__ . '/../components/' . $component . '.php';
         if (file_exists($componentFile)) {
             include $componentFile;
         }

@@ -88,12 +88,23 @@
                 <h4>Плагіни відсутні</h4>
                 <p class="text-muted">Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.</p>
                 <div class="d-flex gap-2 justify-content-center">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadPluginModal">
-                        <i class="fas fa-upload me-1"></i>Завантажити плагін
-                    </button>
-                    <a href="https://flowaxy.com/marketplace/plugins" target="_blank" class="btn btn-outline-primary">
-                        <i class="fas fa-store me-1"></i>Перейти до маркетплейсу
-                    </a>
+                    <?php
+                    // Кнопка загрузки плагина
+                    $text = 'Завантажити плагін';
+                    $type = 'primary';
+                    $icon = 'upload';
+                    $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal'];
+                    unset($url);
+                    include __DIR__ . '/../components/button.php';
+                    
+                    // Кнопка маркетплейса
+                    $text = 'Перейти до маркетплейсу';
+                    $type = 'outline-primary';
+                    $url = 'https://flowaxy.com/marketplace/plugins';
+                    $icon = 'store';
+                    $attributes = ['target' => '_blank'];
+                    include __DIR__ . '/../components/button.php';
+                    ?>
                 </div>
             </div>
         <?php endif; ?>

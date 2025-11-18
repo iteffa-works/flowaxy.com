@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Ajax Helper (глобальний хелпер для AJAX запитів) -->
-<script src="scripts/ajax-helper.js?v=<?= time() ?>"></script>
+<script src="<?= UrlHelper::admin('assets/scripts/ajax-helper.js') ?>?v=<?= time() ?>"></script>
 
 <script>
 // WordPress-подобная функциональность sidebar

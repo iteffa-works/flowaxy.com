@@ -13,14 +13,26 @@ class ThemesPage extends AdminPage {
         $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
-        $headerButtons = '<div class="d-flex gap-2">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadThemeModal">
-                <i class="fas fa-upload me-1"></i>Завантажити тему
-            </button>
-            <a href="https://flowaxy.com/marketplace/themes" target="_blank" class="btn btn-outline-primary">
-                <i class="fas fa-store me-1"></i>Скачати теми
-            </a>
-        </div>';
+        // Используем компонент кнопки
+        ob_start();
+        $text = 'Завантажити тему';
+        $type = 'primary';
+        $icon = 'upload';
+        $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal'];
+        unset($url);
+        include __DIR__ . '/../components/button.php';
+        $uploadBtn = ob_get_clean();
+        
+        ob_start();
+        $text = 'Скачати теми';
+        $type = 'outline-primary';
+        $url = 'https://flowaxy.com/marketplace/themes';
+        $icon = 'store';
+        $attributes = ['target' => '_blank'];
+        include __DIR__ . '/../components/button.php';
+        $marketplaceBtn = ob_get_clean();
+        
+        $headerButtons = '<div class="d-flex gap-2">' . $uploadBtn . $marketplaceBtn . '</div>';
         
         $this->setPageHeader(
             'Теми',

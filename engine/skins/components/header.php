@@ -16,7 +16,7 @@
             
             <!-- Логотип -->
             <a class="navbar-brand d-none d-md-flex align-items-center header-logo" href="<?= UrlHelper::admin('dashboard') ?>">
-                <img src="<?= UrlHelper::admin('images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="admin-logo-img">
+                <img src="<?= UrlHelper::admin('assets/images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="admin-logo-img">
             </a>
         </div>
 
@@ -94,7 +94,7 @@
     <!-- Заголовок мобильной панели -->
     <div class="mobile-sidebar-header">
         <div class="mobile-sidebar-logo">
-            <img src="<?= UrlHelper::admin('images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="mobile-logo-img">
+            <img src="<?= UrlHelper::admin('assets/images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="mobile-logo-img">
         </div>
         <button class="mobile-sidebar-close" onclick="toggleMobileSidebar()">
             <i class="fas fa-times"></i>
@@ -103,7 +103,7 @@
     
     <nav class="nav flex-column wp-menu">
         <?php
-        require_once __DIR__ . '/../../includes/menu-items.php';
+        require_once __DIR__ . '/../includes/menu-items.php';
         // Router завантажується автоматично через автозавантажувач
         $currentPage = Router::getCurrentPage();
         $menuItems = getMenuItems();

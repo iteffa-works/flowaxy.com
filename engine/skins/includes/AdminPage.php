@@ -4,6 +4,9 @@
  * Спрощена архітектура без MVC
  */
 
+// Подключаем хелпер для компонентов
+require_once __DIR__ . '/ComponentHelper.php';
+
 class AdminPage {
     protected $db;
     protected $message = '';
