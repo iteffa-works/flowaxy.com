@@ -18,7 +18,8 @@ class LoginPage {
     
     public function handle() {
         // Обробка форми входу
-        if ($_POST) {
+        $isPost = (class_exists('AdminRequest') && AdminRequest::isMethod('POST')) || !empty($_POST);
+        if ($isPost) {
             $this->processLogin();
         }
         
@@ -30,13 +31,19 @@ class LoginPage {
      * Обробка входу
      */
     private function processLogin() {
-        if (!SecurityHelper::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $csrfToken = class_exists('AdminRequest') ? AdminRequest::post('csrf_token', '') : ($_POST['csrf_token'] ?? '');
+        if (!SecurityHelper::verifyCsrfToken($csrfToken)) {
             $this->error = 'Помилка безпеки. Спробуйте ще раз.';
             return;
         }
         
-        $username = SecurityHelper::sanitizeInput($_POST['username'] ?? '');
-        $password = $_POST['password'] ?? '';
+        if (class_exists('AdminRequest')) {
+            $username = AdminRequest::post('username', '');
+            $password = AdminRequest::post('password', '');
+        } else {
+            $username = SecurityHelper::sanitizeInput($_POST['username'] ?? '');
+            $password = $_POST['password'] ?? '';
+        }
         
         if (empty($username) || empty($password)) {
             $this->error = 'Заповніть всі поля';

@@ -87,13 +87,17 @@ class ProfilePage extends AdminPage {
         $confirmPassword = $_POST['confirm_password'] ?? '';
         
         // Валидация
-        if (empty($username)) {
-            $this->setMessage('Логін не може бути порожнім', 'danger');
-            return;
-        }
+        $validation = AdminValidator::validate([
+            'username' => $username,
+            'email' => $email
+        ], [
+            'username' => 'required|string|min:3|max:50',
+            'email' => 'email|max:255'
+        ]);
         
-        if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->setMessage('Невірний формат email', 'danger');
+        if (!$validation['valid']) {
+            $firstError = reset($validation['errors']);
+            $this->setMessage($firstError, 'danger');
             return;
         }
         

@@ -14,6 +14,8 @@ if (class_exists('Request')) {
 if (class_exists('AjaxHandler')) {
     require_once __DIR__ . '/AdminAjaxHandler.php';
 }
+require_once __DIR__ . '/AdminValidator.php';
+require_once __DIR__ . '/AdminFileHelper.php';
 
 class AdminPage {
     protected $db;
