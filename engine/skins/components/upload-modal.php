@@ -61,7 +61,7 @@ if ($fileInputName === 'plugin_file') {
                 <h5 class="modal-title" id="<?= htmlspecialchars($id) ?>Label">
                     <i class="fas fa-upload me-2"></i><?= htmlspecialchars($title) ?>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити" onclick="closeUploadModal('<?= htmlspecialchars($id) ?>')"></button>
+                <button type="button" class="btn-close" aria-label="Закрити" data-close-modal="<?= htmlspecialchars($id) ?>"></button>
             </div>
             <form id="<?= htmlspecialchars($formId) ?>" enctype="multipart/form-data">
                 <div class="modal-body">
@@ -89,7 +89,7 @@ if ($fileInputName === 'plugin_file') {
                     $text = 'Скасувати';
                     $type = 'secondary';
                     $icon = '';
-                    $attributes = ['data-bs-dismiss' => 'modal', 'type' => 'button', 'onclick' => "closeUploadModal('" . htmlspecialchars($id) . "')"];
+                    $attributes = ['type' => 'button', 'data-close-modal' => $id];
                     unset($url);
                     include __DIR__ . '/button.php';
                     $cancelBtn = ob_get_clean();
@@ -119,12 +119,35 @@ function closeUploadModal(modalId) {
         return;
     }
     
-    // Используем Bootstrap Modal API для закрытия
+    // КРИТИЧНО: Убираем фокус СИНХРОННО и НЕМЕДЛЕННО
+    // Не используем requestAnimationFrame или setTimeout - нужна синхронность
+    const activeElement = document.activeElement;
+    if (activeElement && modalElement.contains(activeElement)) {
+        // Убираем фокус синхронно
+        activeElement.blur();
+        
+        // Переводим фокус на body синхронно
+        // Используем небольшой трюк для гарантии удаления фокуса
+        const tempFocus = document.createElement('div');
+        tempFocus.style.position = 'fixed';
+        tempFocus.style.left = '-9999px';
+        tempFocus.style.width = '1px';
+        tempFocus.style.height = '1px';
+        tempFocus.setAttribute('tabindex', '-1');
+        document.body.appendChild(tempFocus);
+        tempFocus.focus();
+        
+        // Немедленно удаляем временный элемент
+        setTimeout(function() {
+            document.body.removeChild(tempFocus);
+        }, 0);
+    }
+    
+    // Закрываем модальное окно СРАЗУ после удаления фокуса
     const bsModal = bootstrap.Modal.getInstance(modalElement);
     if (bsModal) {
         bsModal.hide();
     } else {
-        // Если modal instance не существует, создаем новый и закрываем
         const newModal = new bootstrap.Modal(modalElement);
         newModal.hide();
     }
@@ -133,23 +156,6 @@ function closeUploadModal(modalId) {
     if (window.ModalHandler && typeof window.ModalHandler.hide === 'function') {
         window.ModalHandler.hide(modalId);
     }
-    
-    // Фолбэк: прячем модальное окно вручную
-    modalElement.classList.remove('show');
-    modalElement.style.display = 'none';
-    modalElement.setAttribute('aria-hidden', 'true');
-    modalElement.removeAttribute('aria-modal');
-    
-    // Убираем backdrop
-    const backdrop = document.querySelector('.modal-backdrop');
-    if (backdrop) {
-        backdrop.remove();
-    }
-    
-    // Убираем класс modal-open с body
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
 }
 
 // Добавляем обработчик на все кнопки закрытия
@@ -159,6 +165,87 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!modalElement) {
         return;
     }
+    
+    // Обработка события ПЕРЕД закрытием модального окна (hide.bs.modal)
+    // Это происходит ДО того, как Bootstrap установит aria-hidden
+    modalElement.addEventListener('hide.bs.modal', function(e) {
+        // Убираем фокус ПЕРЕД тем, как Bootstrap установит aria-hidden
+        const activeElement = document.activeElement;
+        if (activeElement && modalElement.contains(activeElement)) {
+            // Сохраняем элемент для возврата фокуса после закрытия
+            modalElement._previousActiveElement = activeElement;
+            
+            // Убираем фокус немедленно и синхронно
+            activeElement.blur();
+            
+            // Переводим фокус на временный невидимый элемент
+            const tempFocus = document.createElement('div');
+            tempFocus.style.position = 'fixed';
+            tempFocus.style.left = '-9999px';
+            tempFocus.style.width = '1px';
+            tempFocus.style.height = '1px';
+            tempFocus.setAttribute('tabindex', '-1');
+            document.body.appendChild(tempFocus);
+            tempFocus.focus();
+            
+            // Удаляем временный элемент после небольшой задержки
+            setTimeout(function() {
+                if (tempFocus.parentNode) {
+                    document.body.removeChild(tempFocus);
+                }
+            }, 100);
+        }
+    }, true); // Используем capture phase для раннего перехвата
+    
+    // Обработка события ПОСЛЕ закрытия модального окна (hidden.bs.modal)
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        // Убираем tabindex с body
+        document.body.removeAttribute('tabindex');
+        
+        // Возвращаем фокус на элемент, который открыл модальное окно
+        const triggerElement = document.querySelector('[data-bs-target="#' + modalId + '"]');
+        if (triggerElement) {
+            try {
+                triggerElement.focus();
+            } catch (e) {
+                // Если не удалось установить фокус, игнорируем ошибку
+            }
+        }
+    });
+    
+    // Обработка события показа модального окна (show.bs.modal - ПЕРЕД показом)
+    modalElement.addEventListener('show.bs.modal', function(e) {
+        // КРИТИЧНО: Убираем aria-hidden ДО того, как Bootstrap начнет показывать окно
+        if (modalElement.getAttribute('aria-hidden') === 'true') {
+            modalElement.removeAttribute('aria-hidden');
+            modalElement.setAttribute('aria-modal', 'true');
+        }
+    }, true); // Используем capture phase
+    
+    // Обработка события ПОСЛЕ показа модального окна (shown.bs.modal)
+    modalElement.addEventListener('shown.bs.modal', function() {
+        // Убеждаемся что aria-hidden убран и aria-modal установлен
+        if (modalElement.getAttribute('aria-hidden') === 'true') {
+            modalElement.removeAttribute('aria-hidden');
+        }
+        modalElement.setAttribute('aria-modal', 'true');
+        
+        // Также убираем aria-hidden через MutationObserver на всякий случай
+        const checkAriaHidden = setInterval(function() {
+            if (modalElement.classList.contains('show') && 
+                modalElement.getAttribute('aria-hidden') === 'true') {
+                modalElement.removeAttribute('aria-hidden');
+                modalElement.setAttribute('aria-modal', 'true');
+            } else if (!modalElement.classList.contains('show')) {
+                clearInterval(checkAriaHidden);
+            }
+        }, 100);
+        
+        // Останавливаем проверку через 2 секунды
+        setTimeout(function() {
+            clearInterval(checkAriaHidden);
+        }, 2000);
+    });
     
     // Обработка закрытия через ESC
     modalElement.addEventListener('keydown', function(e) {
@@ -172,6 +259,105 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target === modalElement) {
             closeUploadModal(modalId);
         }
+    });
+    
+    // Обработка клика на кнопки закрытия - убираем фокус ДО клика
+    const closeButtons = modalElement.querySelectorAll('[data-close-modal], .btn-close');
+    closeButtons.forEach(function(btn) {
+        // Убираем фокус при mousedown (ДО click события)
+        btn.addEventListener('mousedown', function(e) {
+            // КРИТИЧНО: Убираем фокус ДО того, как произойдет click
+            if (document.activeElement === this) {
+                this.blur();
+                // Переводим фокус на body синхронно
+                document.body.setAttribute('tabindex', '-1');
+                document.body.focus();
+                // Убираем tabindex после небольшой задержки
+                setTimeout(function() {
+                    document.body.removeAttribute('tabindex');
+                }, 50);
+            }
+        }, true); // Используем capture phase
+        
+        // Полностью перехватываем клик
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Еще раз убеждаемся, что фокус убран
+            if (document.activeElement === this || modalElement.contains(document.activeElement)) {
+                this.blur();
+                document.body.setAttribute('tabindex', '-1');
+                document.body.focus();
+                setTimeout(function() {
+                    document.body.removeAttribute('tabindex');
+                }, 50);
+            }
+            
+            const modalIdToClose = this.getAttribute('data-close-modal') || modalId;
+            closeUploadModal(modalIdToClose);
+            
+            return false;
+        }, true); // Используем capture phase для раннего перехвата
+    });
+    
+    // Используем MutationObserver для отслеживания изменений aria-hidden
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+                const target = mutation.target;
+                const activeElement = document.activeElement;
+                
+                // Если модальное окно ПОКАЗАНО, но aria-hidden установлен в true - это ошибка
+                if (target.classList.contains('show') && 
+                    target.getAttribute('aria-hidden') === 'true') {
+                    // Исправляем: убираем aria-hidden если окно показано
+                    target.removeAttribute('aria-hidden');
+                    target.setAttribute('aria-modal', 'true');
+                }
+                
+                // Если aria-hidden установлен в true, но внутри есть элемент с фокусом
+                if (target.getAttribute('aria-hidden') === 'true' && 
+                    activeElement && 
+                    target.contains(activeElement)) {
+                    
+                    // Убираем фокус немедленно
+                    activeElement.blur();
+                    document.body.setAttribute('tabindex', '-1');
+                    document.body.focus();
+                    setTimeout(function() {
+                        document.body.removeAttribute('tabindex');
+                    }, 50);
+                }
+            }
+        });
+    });
+    
+    // Наблюдаем за изменениями aria-hidden
+    observer.observe(modalElement, {
+        attributes: true,
+        attributeFilter: ['aria-hidden']
+    });
+    
+    // Также наблюдаем за изменениями класса 'show'
+    const classObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const target = mutation.target;
+                // Если класс 'show' добавлен, но aria-hidden все еще true - исправляем
+                if (target.classList.contains('show') && 
+                    target.getAttribute('aria-hidden') === 'true') {
+                    target.removeAttribute('aria-hidden');
+                    target.setAttribute('aria-modal', 'true');
+                }
+            }
+        });
+    });
+    
+    classObserver.observe(modalElement, {
+        attributes: true,
+        attributeFilter: ['class']
     });
 });
 </script>

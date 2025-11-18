@@ -13,6 +13,43 @@ class ThemesPage extends AdminPage {
         $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
+        // Регистрируем модальное окно загрузки темы через ModalHandler
+        $this->registerModal('uploadThemeModal', [
+            'title' => 'Завантажити тему',
+            'type' => 'upload',
+            'action' => 'upload_theme',
+            'method' => 'POST',
+            'enctype' => 'multipart/form-data',
+            'fields' => [
+                [
+                    'type' => 'file',
+                    'name' => 'theme_file',
+                    'label' => 'ZIP архів з темою',
+                    'help' => 'Максимальний розмір: 50 MB',
+                    'required' => true,
+                    'attributes' => [
+                        'accept' => '.zip'
+                    ]
+                ]
+            ],
+            'buttons' => [
+                [
+                    'text' => 'Скасувати',
+                    'type' => 'secondary',
+                    'action' => 'close'
+                ],
+                [
+                    'text' => 'Завантажити',
+                    'type' => 'primary',
+                    'icon' => 'upload',
+                    'action' => 'submit'
+                ]
+            ]
+        ]);
+        
+        // Регистрируем обработчик загрузки темы
+        $this->registerModalHandler('uploadThemeModal', 'upload_theme', [$this, 'handleUploadTheme']);
+        
         // Используем вспомогательные методы для создания кнопок
         $headerButtons = $this->createButtonGroup([
             [
@@ -20,7 +57,11 @@ class ThemesPage extends AdminPage {
                 'type' => 'primary',
                 'options' => [
                     'icon' => 'upload',
-                    'attributes' => ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal']
+                    'attributes' => [
+                        'data-bs-toggle' => 'modal', 
+                        'data-bs-target' => '#uploadThemeModal',
+                        'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadThemeModal")'
+                    ]
                 ]
             ],
             [
@@ -43,8 +84,17 @@ class ThemesPage extends AdminPage {
     }
     
     public function handle() {
-        // Обробка AJAX запитів
+        // Обробка AJAX запитів через ModalHandler
         if ($this->isAjaxRequest()) {
+            $modalId = $this->post('modal_id', '');
+            $action = SecurityHelper::sanitizeInput($this->post('action', ''));
+            
+            if (!empty($modalId) && !empty($action)) {
+                $this->handleModalRequest($modalId, $action);
+                return;
+            }
+            
+            // Старый способ обработки AJAX (для обратной совместимости)
             $this->handleAjax();
             return;
         }
@@ -104,7 +154,8 @@ class ThemesPage extends AdminPage {
             'themesWithCustomization' => $themesWithCustomization,
             'themesWithNavigation' => $themesWithNavigation,
             'themesWithSettings' => $themesWithSettings,
-            'themesFeatures' => $themesFeatures
+            'themesFeatures' => $themesFeatures,
+            'uploadModalHtml' => $this->renderModal('uploadThemeModal')
         ]);
     }
     
@@ -257,7 +308,222 @@ class ThemesPage extends AdminPage {
     }
     
     /**
-     * AJAX завантаження теми з ZIP архіву
+     * Обработчик загрузки темы для ModalHandler
+     * Использует логику из ajaxUploadTheme, но возвращает массив вместо отправки JSON
+     * 
+     * @param array $data Данные запроса
+     * @param array $files Файлы
+     * @return array Результат
+     */
+    public function handleUploadTheme(array $data, array $files): array {
+        if (!$this->verifyCsrf()) {
+            return ['success' => false, 'error' => 'Помилка безпеки', 'reload' => false];
+        }
+        
+        if (!isset($files['theme_file'])) {
+            return ['success' => false, 'error' => 'Файл не вибрано', 'reload' => false];
+        }
+        
+        $uploadedFile = null;
+        $zip = null;
+        
+        try {
+            // Используем ту же логику что и в ajaxUploadTheme
+            $upload = new Upload();
+            $upload->setAllowedExtensions(['zip'])
+                   ->setAllowedMimeTypes(['application/zip', 'application/x-zip-compressed'])
+                   ->setMaxFileSize(50 * 1024 * 1024)
+                   ->setNamingStrategy('random')
+                   ->setOverwrite(true);
+            
+            $projectRoot = dirname(__DIR__, 3);
+            $storageParent = $projectRoot . '/storage';
+            $storageDir = $storageParent . '/temp/';
+            
+            // Создаем временную директорию
+            $dirObj = new Directory($storageDir);
+            if (!$dirObj->exists()) {
+                $dirObj->create(0755, true);
+            }
+            
+            $upload->setUploadDir($storageDir);
+            $uploadResult = $upload->upload($files['theme_file']);
+            
+            if (!$uploadResult['success']) {
+                return ['success' => false, 'error' => $uploadResult['error'], 'reload' => false];
+            }
+            
+            $uploadedFile = $uploadResult['file'];
+            
+            // Открываем ZIP
+            $zip = new Zip();
+            $zip->open($uploadedFile, ZipArchive::RDONLY);
+            
+            // Проверяем наличие theme.json
+            $entries = $zip->getEntries();
+            $hasThemeJson = false;
+            $themeJsonPath = null;
+            $themeSlug = null;
+            
+            foreach ($entries as $entryName) {
+                if (basename($entryName) === 'theme.json') {
+                    $hasThemeJson = true;
+                    $themeJsonPath = $entryName;
+                    $pathParts = explode('/', trim($entryName, '/'));
+                    if (count($pathParts) >= 2) {
+                        $themeSlug = $pathParts[0];
+                    }
+                    break;
+                }
+            }
+            
+            if (!$hasThemeJson) {
+                if ($zip) {
+                    $zip->close();
+                }
+                if ($uploadedFile && file_exists($uploadedFile)) {
+                    @unlink($uploadedFile);
+                }
+                return ['success' => false, 'error' => 'Архів не містить theme.json', 'reload' => false];
+            }
+            
+            // Определяем slug
+            if (!$themeSlug) {
+                $themeJsonContent = $zip->getEntryContents($themeJsonPath);
+                if ($themeJsonContent) {
+                    $config = Json::decode($themeJsonContent, true);
+                    if ($config && isset($config['slug'])) {
+                        $themeSlug = $config['slug'];
+                    }
+                }
+            }
+            
+            if (!$themeSlug) {
+                $themeSlug = pathinfo($files['theme_file']['name'], PATHINFO_FILENAME);
+            }
+            
+            $themeSlug = preg_replace('/[^a-z0-9\-_]/i', '', $themeSlug);
+            if (empty($themeSlug)) {
+                if ($zip) {
+                    $zip->close();
+                }
+                if ($uploadedFile && file_exists($uploadedFile)) {
+                    @unlink($uploadedFile);
+                }
+                return ['success' => false, 'error' => 'Неможливо визначити slug теми', 'reload' => false];
+            }
+            
+            // Путь к папке тем
+            $themesDir = dirname(__DIR__, 3) . '/themes/';
+            $themePath = $themesDir . $themeSlug . '/';
+            
+            // Проверяем, не существует ли уже тема
+            if (is_dir($themePath)) {
+                if ($zip) {
+                    $zip->close();
+                }
+                if ($uploadedFile && file_exists($uploadedFile)) {
+                    @unlink($uploadedFile);
+                }
+                return ['success' => false, 'error' => 'Тема з таким slug вже існує: ' . $themeSlug, 'reload' => false];
+            }
+            
+            // Создаем папку для темы
+            if (!@mkdir($themePath, 0755, true)) {
+                if ($zip) {
+                    $zip->close();
+                }
+                if ($uploadedFile && file_exists($uploadedFile)) {
+                    @unlink($uploadedFile);
+                }
+                return ['success' => false, 'error' => 'Помилка створення папки теми', 'reload' => false];
+            }
+            
+            // Определяем корневую папку в архиве
+            $rootPath = null;
+            if ($themeJsonPath) {
+                $rootPath = dirname($themeJsonPath);
+                if ($rootPath === '.' || $rootPath === '') {
+                    $rootPath = null;
+                }
+            }
+            
+            // Распаковываем файлы
+            $extracted = 0;
+            foreach ($entries as $entryName) {
+                if (substr($entryName, -1) === '/') {
+                    continue;
+                }
+                
+                if ($rootPath) {
+                    if (strpos($entryName, $rootPath . '/') === 0) {
+                        $relativePath = substr($entryName, strlen($rootPath) + 1);
+                    } else {
+                        continue;
+                    }
+                } else {
+                    $relativePath = $entryName;
+                }
+                
+                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                    continue;
+                }
+                
+                $targetPath = $themePath . $relativePath;
+                $targetDirPath = dirname($targetPath);
+                
+                if (!is_dir($targetDirPath)) {
+                    if (!@mkdir($targetDirPath, 0755, true)) {
+                        error_log("Failed to create directory: {$targetDirPath}");
+                        continue;
+                    }
+                }
+                
+                try {
+                    $zip->extractFile($entryName, $targetPath);
+                    $extracted++;
+                } catch (Exception $e) {
+                    error_log("Failed to extract file {$entryName}: " . $e->getMessage());
+                }
+            }
+            
+            if ($zip) {
+                $zip->close();
+            }
+            if ($uploadedFile && file_exists($uploadedFile)) {
+                @unlink($uploadedFile);
+            }
+            
+            // Очищаем кеш тем
+            themeManager()->clearThemeCache();
+            
+            return [
+                'success' => true,
+                'message' => 'Тему успішно завантажено',
+                'theme_slug' => $themeSlug,
+                'extracted_files' => $extracted,
+                'reload' => true,
+                'closeModal' => true
+            ];
+        } catch (Throwable $e) {
+            if ($zip) {
+                try {
+                    $zip->close();
+                } catch (Exception $ex) {
+                    // Игнорируем ошибки закрытия
+                }
+            }
+            if ($uploadedFile && file_exists($uploadedFile)) {
+                @unlink($uploadedFile);
+            }
+            
+            error_log("Theme upload error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage(), 'reload' => false];
+        }
+    }
+    
+    /**
+     * AJAX завантаження теми з ZIP архіву (старый метод для обратной совместимости)
      */
     private function ajaxUploadTheme(): void {
         if (!$this->verifyCsrf()) {

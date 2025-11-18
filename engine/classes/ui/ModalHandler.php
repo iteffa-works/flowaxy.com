@@ -197,7 +197,7 @@ class ModalHandler {
                         <h5 class="modal-title" id="<?= htmlspecialchars($id) ?>Label">
                             <?= htmlspecialchars($config['title']) ?>
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                        <button type="button" class="btn-close" data-close-modal="<?= htmlspecialchars($id) ?>" aria-label="Закрити"></button>
                     </div>
                     <?php endif; ?>
                     
@@ -348,7 +348,7 @@ class ModalHandler {
             }
             
             if ($action === 'close' || $action === 'cancel') {
-                $attrString .= ' data-bs-dismiss="modal"';
+                $attrString .= ' data-close-modal="' . htmlspecialchars($modalId) . '"';
             } elseif ($action === 'submit') {
                 $attrString .= ' type="submit" data-modal-submit="' . htmlspecialchars($modalId) . '"';
             } else {
@@ -372,7 +372,7 @@ class ModalHandler {
     public function renderScripts(): string {
         $baseUrl = $this->context === 'admin' 
             ? UrlHelper::admin('') 
-            : UrlHelper::base('');
+            : '';
         
         ob_start();
         ?>
@@ -411,6 +411,9 @@ class ModalHandler {
                             this.resetModal(modalId);
                         }
                     });
+                    
+                    // Обработка закрытия модальных окон с правильным управлением фокусом
+                    this.initModalAccessibility();
                 }
                 
                 /**
@@ -577,6 +580,248 @@ class ModalHandler {
                 }
                 
                 /**
+                 * Инициализация доступности для всех модальных окон
+                 */
+                initModalAccessibility() {
+                    document.querySelectorAll('[data-modal-id]:not([data-accessibility-initialized])').forEach((modalElement) => {
+                        this.initModalAccessibilityForElement(modalElement);
+                    });
+                }
+                
+                /**
+                 * Инициализация доступности для конкретного модального окна
+                 */
+                initModalAccessibilityForElement(modalElement) {
+                    const modalId = modalElement.getAttribute('data-modal-id');
+                    if (!modalId || modalElement.hasAttribute('data-accessibility-initialized')) {
+                        return;
+                    }
+                    
+                    // Помечаем, что обработчики установлены
+                    modalElement.setAttribute('data-accessibility-initialized', 'true');
+                    
+                    // Функция для правильного закрытия модального окна
+                    const closeModal = (modalIdToClose) => {
+                            const modal = document.getElementById(modalIdToClose);
+                            if (!modal) {
+                                return;
+                            }
+                            
+                            // КРИТИЧНО: Убираем фокус СИНХРОННО и НЕМЕДЛЕННО
+                            const activeElement = document.activeElement;
+                            if (activeElement && modal.contains(activeElement)) {
+                                activeElement.blur();
+                                const tempFocus = document.createElement('div');
+                                tempFocus.style.position = 'fixed';
+                                tempFocus.style.left = '-9999px';
+                                tempFocus.style.width = '1px';
+                                tempFocus.style.height = '1px';
+                                tempFocus.setAttribute('tabindex', '-1');
+                                document.body.appendChild(tempFocus);
+                                tempFocus.focus();
+                                
+                                setTimeout(() => {
+                                    if (tempFocus.parentNode) {
+                                        document.body.removeChild(tempFocus);
+                                    }
+                                }, 0);
+                            }
+                            
+                            const bsModal = bootstrap.Modal.getInstance(modal);
+                            if (bsModal) {
+                                bsModal.hide();
+                            } else {
+                                const newModal = new bootstrap.Modal(modal);
+                                newModal.hide();
+                            }
+                        };
+                        
+                        // Обработка события ПЕРЕД показом модального окна
+                        modalElement.addEventListener('show.bs.modal', (e) => {
+                            // Убираем aria-hidden ДО того, как Bootstrap начнет показывать окно
+                            if (modalElement.getAttribute('aria-hidden') === 'true') {
+                                modalElement.removeAttribute('aria-hidden');
+                                modalElement.setAttribute('aria-modal', 'true');
+                            }
+                        }, true); // Capture phase
+                        
+                        // Обработка события ПОСЛЕ показа модального окна
+                        modalElement.addEventListener('shown.bs.modal', () => {
+                            // Убеждаемся что aria-hidden убран и aria-modal установлен
+                            if (modalElement.getAttribute('aria-hidden') === 'true') {
+                                modalElement.removeAttribute('aria-hidden');
+                            }
+                            modalElement.setAttribute('aria-modal', 'true');
+                        });
+                        
+                        // Обработка события ПЕРЕД закрытием модального окна
+                        modalElement.addEventListener('hide.bs.modal', (e) => {
+                            const activeElement = document.activeElement;
+                            if (activeElement && modalElement.contains(activeElement)) {
+                                activeElement.blur();
+                                const tempFocus = document.createElement('div');
+                                tempFocus.style.position = 'fixed';
+                                tempFocus.style.left = '-9999px';
+                                tempFocus.style.width = '1px';
+                                tempFocus.style.height = '1px';
+                                tempFocus.setAttribute('tabindex', '-1');
+                                document.body.appendChild(tempFocus);
+                                tempFocus.focus();
+                                
+                                setTimeout(() => {
+                                    if (tempFocus.parentNode) {
+                                        document.body.removeChild(tempFocus);
+                                    }
+                                }, 100);
+                            }
+                        }, true); // Capture phase
+                        
+                        // Обработка события ПОСЛЕ закрытия модального окна
+                        modalElement.addEventListener('hidden.bs.modal', () => {
+                            document.body.removeAttribute('tabindex');
+                            const triggerElement = document.querySelector('[data-bs-target="#' + modalId + '"]');
+                            if (triggerElement) {
+                                try {
+                                    triggerElement.focus();
+                                } catch (e) {}
+                            }
+                        });
+                        
+                        // Обработка закрытия через ESC - перехватываем раньше Bootstrap
+                        document.addEventListener('keydown', (e) => {
+                            if (e.key === 'Escape' && modalElement.classList.contains('show')) {
+                                const bsModal = bootstrap.Modal.getInstance(modalElement);
+                                if (bsModal) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.stopImmediatePropagation();
+                                    closeModal(modalId);
+                                }
+                            }
+                        }, true); // Capture phase - перехватываем ДО Bootstrap
+                        
+                        // Обработка закрытия при клике на backdrop
+                        modalElement.addEventListener('click', (e) => {
+                            if (e.target === modalElement) {
+                                closeModal(modalId);
+                            }
+                        });
+                        
+                        // Обработка кнопок закрытия - используем делегирование событий
+                        // Обработка на уровне модального окна, чтобы перехватывать все кнопки
+                        modalElement.addEventListener('click', (e) => {
+                            const btn = e.target.closest('[data-close-modal], .btn-close');
+                            if (!btn || !modalElement.contains(btn)) {
+                                return;
+                            }
+                            
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            
+                            // КРИТИЧНО: Убираем фокус СИНХРОННО и НЕМЕДЛЕННО
+                            const activeElement = document.activeElement;
+                            if (activeElement && modalElement.contains(activeElement)) {
+                                activeElement.blur();
+                                const tempFocus = document.createElement('div');
+                                tempFocus.style.position = 'fixed';
+                                tempFocus.style.left = '-9999px';
+                                tempFocus.style.width = '1px';
+                                tempFocus.style.height = '1px';
+                                tempFocus.setAttribute('tabindex', '-1');
+                                document.body.appendChild(tempFocus);
+                                tempFocus.focus();
+                                
+                                setTimeout(() => {
+                                    if (tempFocus.parentNode) {
+                                        document.body.removeChild(tempFocus);
+                                    }
+                                }, 0);
+                            }
+                            
+                            const modalIdToClose = btn.getAttribute('data-close-modal') || modalId;
+                            closeModal(modalIdToClose);
+                            
+                            return false;
+                        }, true); // Capture phase - перехватываем ДО Bootstrap
+                        
+                        // Дополнительная обработка mousedown для кнопок закрытия
+                        modalElement.addEventListener('mousedown', (e) => {
+                            const btn = e.target.closest('[data-close-modal], .btn-close');
+                            if (!btn || !modalElement.contains(btn)) {
+                                return;
+                            }
+                            
+                            // Убираем фокус сразу при нажатии мыши
+                            if (document.activeElement === btn) {
+                                btn.blur();
+                                document.body.setAttribute('tabindex', '-1');
+                                document.body.focus();
+                                setTimeout(() => {
+                                    document.body.removeAttribute('tabindex');
+                                }, 50);
+                            }
+                        }, true); // Capture phase
+                        
+                        // MutationObserver для отслеживания изменений aria-hidden
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+                                    const target = mutation.target;
+                                    const activeElement = document.activeElement;
+                                    
+                                    // Если модальное окно ПОКАЗАНО, но aria-hidden установлен в true - это ошибка
+                                    if (target.classList.contains('show') && 
+                                        target.getAttribute('aria-hidden') === 'true') {
+                                        // Исправляем: убираем aria-hidden если окно показано
+                                        target.removeAttribute('aria-hidden');
+                                        target.setAttribute('aria-modal', 'true');
+                                    }
+                                    
+                                    // Если aria-hidden установлен в true, но внутри есть элемент с фокусом
+                                    if (target.getAttribute('aria-hidden') === 'true' && 
+                                        activeElement && 
+                                        target.contains(activeElement)) {
+                                        
+                                        // Убираем фокус немедленно
+                                        activeElement.blur();
+                                        document.body.setAttribute('tabindex', '-1');
+                                        document.body.focus();
+                                        setTimeout(() => {
+                                            document.body.removeAttribute('tabindex');
+                                        }, 50);
+                                    }
+                                }
+                            });
+                        });
+                        
+                        observer.observe(modalElement, {
+                            attributes: true,
+                            attributeFilter: ['aria-hidden']
+                        });
+                        
+                        // Также наблюдаем за изменениями класса 'show'
+                        const classObserver = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                                    const target = mutation.target;
+                                    // Если класс 'show' добавлен, но aria-hidden все еще true - исправляем
+                                    if (target.classList.contains('show') && 
+                                        target.getAttribute('aria-hidden') === 'true') {
+                                        target.removeAttribute('aria-hidden');
+                                        target.setAttribute('aria-modal', 'true');
+                                    }
+                                }
+                            });
+                        });
+                        
+                        classObserver.observe(modalElement, {
+                            attributes: true,
+                            attributeFilter: ['class']
+                        });
+                }
+                
+                /**
                  * Сброс модального окна
                  */
                 resetModal(modalId) {
@@ -628,6 +873,11 @@ class ModalHandler {
                     if (!modalElement) {
                         console.error('Modal not found: ' + modalId);
                         return;
+                    }
+                    
+                    // Убеждаемся, что обработчики доступности установлены для этого модального окна
+                    if (!modalElement.hasAttribute('data-accessibility-initialized')) {
+                        this.initModalAccessibilityForElement(modalElement);
                     }
                     
                     // Применяем опции
