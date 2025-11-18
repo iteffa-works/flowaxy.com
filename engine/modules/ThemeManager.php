@@ -1,26 +1,62 @@
 <?php
 /**
- * Менеджер тем
+ * Модуль управления темами
  * Управление темами и их настройками
  * 
- * @package Core
+ * @package Engine\Modules
  * @version 2.0.0
  */
 
 declare(strict_types=1);
 
-class ThemeManager {
-    private ?PDO $db = null;
+class ThemeManager extends BaseModule {
     private ?array $activeTheme = null;
     private array $themeSettings = [];
     
     /**
-     * Конструктор
+     * Инициализация модуля
      */
-    public function __construct() {
-        $this->db = DatabaseHelper::getConnection();
+    protected function init(): void {
         $this->loadActiveTheme();
     }
+    
+    /**
+     * Регистрация хуков модуля
+     */
+    public function registerHooks(): void {
+        // Модуль ThemeManager не регистрирует хуки
+    }
+    
+    /**
+     * Получение информации о модуле
+     */
+    public function getInfo(): array {
+        return [
+            'name' => 'ThemeManager',
+            'title' => 'Менеджер тем',
+            'description' => 'Управление темами и их настройками',
+            'version' => '2.0.0',
+            'author' => 'Flowaxy CMS'
+        ];
+    }
+    
+    /**
+     * Получение API методов модуля
+     */
+    public function getApiMethods(): array {
+        return [
+            'getActiveTheme' => 'Получение активной темы',
+            'getAllThemes' => 'Получение всех тем',
+            'getTheme' => 'Получение темы по slug',
+            'activateTheme' => 'Активация темы',
+            'getSetting' => 'Получение настройки темы',
+            'setSetting' => 'Сохранение настройки темы',
+            'supportsCustomization' => 'Проверка поддержки кастомизации',
+            'hasScssSupport' => 'Проверка поддержки SCSS',
+            'compileScss' => 'Компиляция SCSS'
+        ];
+    }
+    
     
     /**
      * Загрузка активной темы с кешированием
@@ -29,13 +65,13 @@ class ThemeManager {
      * @return void
      */
     private function loadActiveTheme(): void {
-        if ($this->db === null) {
+        $db = $this->getDB();
+        if ($db === null) {
             return;
         }
         
         // Используем кеширование для активной темы
         $cacheKey = 'active_theme_slug';
-        $db = $this->db;
         $activeSlug = cache_remember($cacheKey, function() use ($db) {
             if ($db === null) {
                 return null;
@@ -77,7 +113,8 @@ class ThemeManager {
      * @return void
      */
     private function loadThemeSettings(string $themeSlug): void {
-        if ($this->db === null || empty($themeSlug)) {
+        $db = $this->getDB();
+        if ($db === null || empty($themeSlug)) {
             return;
         }
         
@@ -89,7 +126,6 @@ class ThemeManager {
         
         // Используем кеширование для настроек темы
         $cacheKey = 'theme_settings_' . $themeSlug;
-        $db = $this->db;
         $this->themeSettings = cache_remember($cacheKey, function() use ($themeSlug, $db): array {
             if ($db === null) {
                 return [];
@@ -128,22 +164,16 @@ class ThemeManager {
      * @return array
      */
     public function getAllThemes(): array {
-        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-        // __DIR__ = engine/classes/managers
-        // dirname(__DIR__, 2) = engine (поднимаемся на 2 уровня вверх)
-        // dirname(__DIR__, 2) . '/../themes/' = themes (из engine поднимаемся на уровень выше к корню, затем themes)
-        $baseDir = dirname(__DIR__, 2); // engine
+        // Путь к темам: engine/modules -> engine -> корень -> themes
+        $baseDir = dirname(__DIR__, 1); // engine
         $rootDir = dirname($baseDir); // корень проекта
         $themesDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
         
-        // Нормализуем путь (убираем ../ и делаем абсолютный)
+        // Нормализуем путь
         $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         
         if (!is_dir($themesDir)) {
             error_log("ThemeManager: Themes directory not found: {$themesDir}");
-            error_log("ThemeManager: __DIR__ = " . __DIR__);
-            error_log("ThemeManager: baseDir = " . $baseDir);
-            error_log("ThemeManager: rootDir = " . $rootDir);
             return [];
         }
         
@@ -168,11 +198,8 @@ class ThemeManager {
                             $config['slug'] = $themeSlug;
                         }
                         
-                        // Проверяем активность темы из site_settings
-                        // Используем slug из конфига для проверки, так как в БД хранится slug из конфига
                         $isActive = $this->isThemeActive($config['slug'] ?? $themeSlug);
                         
-                        // Формируем массив темы в формате БД для совместимости
                         $theme = [
                             'slug' => $config['slug'],
                             'name' => $config['name'] ?? $themeSlug,
@@ -191,7 +218,6 @@ class ThemeManager {
                 }
             }
             
-            // Сортируем: активная тема первая, затем по имени
             usort($themes, function($a, $b) {
                 if ($a['is_active'] != $b['is_active']) {
                     return $b['is_active'] - $a['is_active'];
@@ -200,24 +226,20 @@ class ThemeManager {
             });
             
             return array_values($themes);
-        }, 300); // Кешируем на 5 минут
+        }, 300);
     }
     
     /**
      * Проверка активности темы из site_settings
-     * 
-     * @param string $themeSlug
-     * @return bool
      */
     private function isThemeActive(string $themeSlug): bool {
-        if ($this->db === null || empty($themeSlug)) {
+        $db = $this->getDB();
+        if ($db === null || empty($themeSlug)) {
             return false;
         }
         
         try {
-            // Используем кеширование для активной темы
             $cacheKey = 'active_theme_check_' . md5($themeSlug);
-            $db = $this->db;
             
             return cache_remember($cacheKey, function() use ($themeSlug, $db): bool {
                 if ($db === null) {
@@ -234,7 +256,7 @@ class ThemeManager {
                     error_log("ThemeManager isThemeActive error: " . $e->getMessage());
                     return false;
                 }
-            }, 60); // Кешируем на 1 минуту
+            }, 60);
         } catch (Exception $e) {
             error_log("ThemeManager isThemeActive error: " . $e->getMessage());
             return false;
@@ -243,13 +265,9 @@ class ThemeManager {
     
     /**
      * Получение пути к скриншоту темы
-     * 
-     * @param string $themeSlug
-     * @return string|null
      */
     private function getThemeScreenshot(string $themeSlug): ?string {
-        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-        $themesDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesDir = dirname(__DIR__, 1) . '/../themes/';
         $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         $screenshotPath = $themesDir . $themeSlug . '/screenshot.png';
         
@@ -260,12 +278,8 @@ class ThemeManager {
         return null;
     }
     
-    
     /**
-     * Получение темы по slug (из файловой системы)
-     * 
-     * @param string $slug Slug темы
-     * @return array|null
+     * Получение темы по slug
      */
     public function getTheme(string $slug): ?array {
         $allThemes = $this->getAllThemes();
@@ -279,29 +293,22 @@ class ThemeManager {
     
     /**
      * Активация темы
-     * 
-     * @param string $slug Slug темы
-     * @return bool
      */
     public function activateTheme(string $slug): bool {
-        if ($this->db === null || empty($slug)) {
+        $db = $this->getDB();
+        if ($db === null || empty($slug)) {
             return false;
         }
         
-        // Валидация slug
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for activation: {$slug}");
             return false;
         }
         
-        // Проверяем существование темы в файловой системе
-        // Сначала пробуем найти по slug из конфига (ищем папку с таким slug в конфиге)
-        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-        $themesDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesDir = dirname(__DIR__, 1) . '/../themes/';
         $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         $themeFolderSlug = null;
         
-        // Ищем папку темы по slug из конфига
         $directories = glob($themesDir . '*', GLOB_ONLYDIR);
         foreach ($directories as $dir) {
             $folderName = basename($dir);
@@ -315,7 +322,6 @@ class ThemeManager {
             }
         }
         
-        // Если не найдено по slug из конфига, пробуем найти по имени папки
         if ($themeFolderSlug === null) {
             $themePath = $themesDir . $slug . '/';
             $themeJsonFile = $themePath . 'theme.json';
@@ -324,13 +330,11 @@ class ThemeManager {
             }
         }
         
-        // Проверяем, что тема найдена
         if ($themeFolderSlug === null) {
             error_log("ThemeManager: Theme not found: {$slug}");
             return false;
         }
         
-        // Проверяем существование папки и конфига
         $themePath = $themesDir . $themeFolderSlug . '/';
         $themeJsonFile = $themePath . 'theme.json';
         
@@ -340,11 +344,10 @@ class ThemeManager {
         }
         
         try {
-            // Получаем предыдущую активную тему ДО активации новой (для удаления CSS)
             $previousThemeSlug = null;
-            if ($this->db !== null) {
+            if ($db !== null) {
                 try {
-                    $stmt = $this->db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'active_theme' LIMIT 1");
+                    $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'active_theme' LIMIT 1");
                     $stmt->execute();
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     $previousThemeSlug = $result ? ($result['setting_value'] ?? null) : null;
@@ -353,54 +356,42 @@ class ThemeManager {
                 }
             }
             
-            // Удаляем скомпилированный CSS файл предыдущей темы только если она поддерживает SCSS
-            // (тобто style.css був згенерований з SCSS)
             if ($previousThemeSlug && $previousThemeSlug !== $slug) {
-                // Перевіряємо, чи попередня тема підтримує SCSS
                 if ($this->hasScssSupport($previousThemeSlug)) {
                     $previousThemePath = $this->getThemePath($previousThemeSlug);
                     if (!empty($previousThemePath)) {
                         $previousCssFile = $previousThemePath . 'assets/css/style.css';
                         if (file_exists($previousCssFile) && is_file($previousCssFile)) {
                             @unlink($previousCssFile);
-                            // Удаляем скомпилированный CSS файл предыдущей темы (не логируем, это нормальное поведение)
                         }
                     }
                 }
             }
             
-            // Сохраняем активную тему в site_settings (используем slug из конфига)
-            $stmt = $this->db->prepare("
+            $stmt = $db->prepare("
                 INSERT INTO site_settings (setting_key, setting_value) 
                 VALUES ('active_theme', ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
             ");
-            $result = $stmt->execute([$slug]); // Сохраняем slug из конфига, а не имя папки
+            $result = $stmt->execute([$slug]);
             
             if (!$result) {
                 error_log("ThemeManager: Failed to save active theme to database");
                 return false;
             }
             
-            // Очищаем весь кеш тем перед перезагрузкой
             $this->clearThemeCache($slug);
-            
-            // Перезагружаем активную тему
             $this->loadActiveTheme();
             
-            // Инициализируем настройки по умолчанию, если их еще нет
-            // Используем имя папки для загрузки конфига, но slug из конфига для инициализации
             $themeConfig = $this->getThemeConfig($slug);
             if (!empty($themeConfig)) {
                 $this->initializeDefaultSettings($slug);
             }
             
-            // Компилируем SCSS при активации темы, если тема поддерживает SCSS
             if ($this->hasScssSupport($slug)) {
-                $compileResult = $this->compileScss($slug, true); // Принудительная компиляция при активации
+                $compileResult = $this->compileScss($slug, true);
                 if (!$compileResult) {
                     error_log("ThemeManager: SCSS compilation failed for theme: {$slug}");
-                    // Не блокируем активацию, если компиляция не удалась
                 }
             }
             
@@ -413,23 +404,19 @@ class ThemeManager {
     
     /**
      * Инициализация настроек по умолчанию для темы
-     * 
-     * @param string $themeSlug Slug темы
-     * @return bool
      */
     private function initializeDefaultSettings(string $themeSlug): bool {
-        if ($this->db === null || empty($themeSlug)) {
+        $db = $this->getDB();
+        if ($db === null || empty($themeSlug)) {
             return false;
         }
         
-        // Валидация slug
         if (!Validator::validateSlug($themeSlug)) {
             error_log("ThemeManager: Invalid theme slug for default settings: {$themeSlug}");
             return false;
         }
         
         try {
-            // Загружаем конфигурацию темы
             $themeConfig = $this->getThemeConfig($themeSlug);
             $defaultSettings = $themeConfig['default_settings'] ?? [];
             
@@ -437,22 +424,18 @@ class ThemeManager {
                 return true;
             }
             
-            // Проверяем, есть ли уже настройки для этой темы
-            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM theme_settings WHERE theme_slug = ?");
+            $stmt = $db->prepare("SELECT COUNT(*) as count FROM theme_settings WHERE theme_slug = ?");
             $stmt->execute([$themeSlug]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // Если настроек нет, инициализируем значения по умолчанию
             if (isset($result['count']) && (int)$result['count'] === 0) {
                 Database::getInstance()->transaction(function(PDO $db) use ($themeSlug, $defaultSettings): void {
                     foreach ($defaultSettings as $key => $value) {
-                        // Валидация ключа
                         if (empty($key) || !Validator::validateString($key, 1, 255)) {
                             error_log("ThemeManager: Invalid default setting key: {$key}");
                             continue;
                         }
                         
-                        // Преобразуем значение в строку
                         $valueStr = is_scalar($value) ? (string)$value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
                         
                         $stmt = $db->prepare("
@@ -463,7 +446,6 @@ class ThemeManager {
                     }
                 });
                 
-                // Перезагружаем настройки
                 $this->loadThemeSettings($themeSlug);
                 cache_forget('theme_settings_' . $themeSlug);
             }
@@ -477,23 +459,16 @@ class ThemeManager {
     
     /**
      * Получение настройки темы
-     * 
-     * @param string $key Ключ настройки
-     * @param mixed $default Значение по умолчанию
-     * @return mixed
      */
     public function getSetting(string $key, $default = null) {
         if (empty($key)) {
             return $default;
         }
-        
         return $this->themeSettings[$key] ?? $default;
     }
     
     /**
      * Получение всех настроек темы
-     * 
-     * @return array
      */
     public function getSettings(): array {
         return $this->themeSettings;
@@ -501,17 +476,13 @@ class ThemeManager {
     
     /**
      * Сохранение настройки темы
-     * 
-     * @param string $key Ключ настройки
-     * @param mixed $value Значение настройки
-     * @return bool
      */
     public function setSetting(string $key, $value): bool {
-        if ($this->db === null || $this->activeTheme === null || empty($key)) {
+        $db = $this->getDB();
+        if ($db === null || $this->activeTheme === null || empty($key)) {
             return false;
         }
         
-        // Валидация ключа
         if (!Validator::validateString($key, 1, 255)) {
             error_log("ThemeManager: Invalid setting key: {$key}");
             return false;
@@ -521,7 +492,7 @@ class ThemeManager {
         $valueStr = is_scalar($value) ? (string)$value : json_encode($value, JSON_UNESCAPED_UNICODE);
         
         try {
-            $stmt = $this->db->prepare("
+            $stmt = $db->prepare("
                 INSERT INTO theme_settings (theme_slug, setting_key, setting_value) 
                 VALUES (?, ?, ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
@@ -543,12 +514,10 @@ class ThemeManager {
     
     /**
      * Сохранение нескольких настроек темы
-     * 
-     * @param array $settings Массив настроек
-     * @return bool
      */
     public function setSettings(array $settings): bool {
-        if ($this->db === null || $this->activeTheme === null) {
+        $db = $this->getDB();
+        if ($db === null || $this->activeTheme === null) {
             error_log("ThemeManager setSettings: DB or active theme not available");
             return false;
         }
@@ -563,13 +532,11 @@ class ThemeManager {
         try {
             Database::getInstance()->transaction(function(PDO $db) use ($settings, $themeSlug): void {
                 foreach ($settings as $key => $value) {
-                    // Валидация ключа
                     if (empty($key) || !Validator::validateString($key, 1, 255)) {
                         error_log("ThemeManager: Invalid setting key: {$key}");
                         continue;
                     }
                     
-                    // Преобразуем значение в строку для сохранения в БД
                     $valueStr = is_scalar($value) ? (string)$value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
                     
                     $stmt = $db->prepare("
@@ -582,7 +549,6 @@ class ThemeManager {
                 }
             });
             
-            // Перезагружаем настройки
             $this->loadThemeSettings($themeSlug);
             cache_forget('theme_settings_' . $themeSlug);
             
@@ -595,15 +561,11 @@ class ThemeManager {
     
     /**
      * Получение пути к теме
-     * 
-     * @param string|null $themeSlug Slug темы
-     * @return string
      */
     public function getThemePath(?string $themeSlug = null): string {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
-        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-        $themesBaseDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesBaseDir = dirname(__DIR__, 1) . '/../themes/';
         $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
         
         if ($theme === null || !isset($theme['slug'])) {
@@ -611,7 +573,6 @@ class ThemeManager {
         }
         
         $slug = $theme['slug'];
-        // Безопасная проверка пути
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for path: {$slug}");
             return $themesBaseDir . 'default/';
@@ -623,14 +584,10 @@ class ThemeManager {
     
     /**
      * Получение URL темы
-     * 
-     * @param string|null $themeSlug Slug темы
-     * @return string
      */
     public function getThemeUrl(?string $themeSlug = null): string {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
-        // Определяем протокол из текущего запроса
         $protocol = 'http://';
         if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
             (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
@@ -638,7 +595,6 @@ class ThemeManager {
             $protocol = 'https://';
         }
         
-        // Получаем хост из SITE_URL или из текущего запроса
         $host = parse_url(SITE_URL, PHP_URL_HOST);
         if (empty($host) && isset($_SERVER['HTTP_HOST'])) {
             $host = $_SERVER['HTTP_HOST'];
@@ -651,7 +607,6 @@ class ThemeManager {
         }
         
         $slug = $theme['slug'];
-        // Безопасная проверка slug
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for URL: {$slug}");
             return $baseUrl . '/themes/default/';
@@ -662,24 +617,17 @@ class ThemeManager {
     
     /**
      * Проверка существования темы
-     * 
-     * @param string $slug Slug темы
-     * @return bool
      */
     public function themeExists(string $slug): bool {
         if (empty($slug)) {
             return false;
         }
-        
         $theme = $this->getTheme($slug);
         return $theme !== null;
     }
     
     /**
      * Валидация структуры темы
-     * 
-     * @param string $slug Slug темы
-     * @return array ['valid' => bool, 'errors' => array, 'warnings' => array]
      */
     public function validateThemeStructure(string $slug): array {
         $errors = [];
@@ -690,8 +638,7 @@ class ThemeManager {
             return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
         }
         
-        // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-        $themesBaseDir = dirname(__DIR__, 2) . '/../themes/';
+        $themesBaseDir = dirname(__DIR__, 1) . '/../themes/';
         $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
         $themePath = $themesBaseDir . $slug . '/';
         
@@ -700,7 +647,6 @@ class ThemeManager {
             return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
         }
         
-        // Обязательные файлы
         $requiredFiles = [
             'index.php' => 'Головний шаблон теми',
             'theme.json' => 'Конфігурація теми'
@@ -712,7 +658,6 @@ class ThemeManager {
             }
         }
         
-        // Проверка theme.json
         $jsonFile = $themePath . 'theme.json';
         if (file_exists($jsonFile)) {
             try {
@@ -737,12 +682,11 @@ class ThemeManager {
             }
         }
         
-        // Рекомендуемые файлы
         $recommendedFiles = [
             'style.css' => 'Стилі теми',
             'script.js' => 'JavaScript теми',
             'screenshot.png' => 'Скріншот теми',
-            'customizer.php' => 'Конфігурація кастомізатора (якщо тема підтримує кастомізацію)'
+            'customizer.php' => 'Конфігурація кастомізатора'
         ];
         
         foreach ($recommendedFiles as $file => $description) {
@@ -751,7 +695,6 @@ class ThemeManager {
             }
         }
         
-        // Проверка customizer.php (если есть)
         $customizerFile = $themePath . 'customizer.php';
         if (file_exists($customizerFile)) {
             try {
@@ -772,21 +715,14 @@ class ThemeManager {
     }
     
     /**
-     * Установка темы (регистрация в БД)
-     * 
-     * @param string $slug Slug темы
-     * @param string $name Название темы
-     * @param string $description Описание темы
-     * @param string $version Версия темы
-     * @param string $author Автор темы
-     * @return bool
+     * Установка темы
      */
     public function installTheme(string $slug, string $name, string $description = '', string $version = '1.0.0', string $author = ''): bool {
-        if ($this->db === null || empty($slug) || empty($name)) {
+        $db = $this->getDB();
+        if ($db === null || empty($slug) || empty($name)) {
             return false;
         }
         
-        // Валидация входных данных
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for installation: {$slug}");
             return false;
@@ -797,19 +733,16 @@ class ThemeManager {
             return false;
         }
         
-        // Валидация структуры темы
         $validation = $this->validateThemeStructure($slug);
         if (!$validation['valid']) {
             error_log("ThemeManager: Theme structure validation failed for {$slug}: " . implode(', ', $validation['errors']));
             return false;
         }
         
-        // Если есть предупреждения, логируем их
         if (!empty($validation['warnings'])) {
             error_log("ThemeManager: Theme structure warnings for {$slug}: " . implode(', ', $validation['warnings']));
         }
         
-        // Загружаем конфигурацию из theme.json для получения актуальных данных
         $themeConfig = $this->getThemeConfig($slug);
         if (!empty($themeConfig)) {
             $name = $themeConfig['name'] ?? $name;
@@ -818,14 +751,9 @@ class ThemeManager {
             $author = $themeConfig['author'] ?? $author;
         }
         
-        // Темы теперь автоматически обнаруживаются из файловой системы
-        // Этот метод только валидирует структуру темы
-        // Если тема не активна, можно установить её как активную по умолчанию
         try {
-            // Проверяем, есть ли активная тема
             $activeTheme = getSetting('active_theme');
             if (empty($activeTheme)) {
-                // Если активной темы нет, устанавливаем эту тему как активную
                 $this->activateTheme($slug);
             }
             
@@ -841,15 +769,11 @@ class ThemeManager {
     
     /**
      * Загрузка конфигурации темы из theme.json
-     * 
-     * @param string|null $themeSlug Slug темы
-     * @return array
      */
     public function getThemeConfig(?string $themeSlug = null): array {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
         if ($theme === null) {
-            // Возвращаем конфигурацию по умолчанию
             return [
                 'name' => 'Default',
                 'version' => '1.0.0',
@@ -861,7 +785,6 @@ class ThemeManager {
         
         $slug = $theme['slug'] ?? 'default';
         
-        // Безопасная проверка пути
         if (!Validator::validateSlug($slug)) {
             error_log("ThemeManager: Invalid theme slug for config: {$slug}");
             return [
@@ -873,12 +796,9 @@ class ThemeManager {
             ];
         }
         
-        // Кешируем конфигурацию темы
         $cacheKey = 'theme_config_' . $slug;
         return cache_remember($cacheKey, function() use ($slug, $theme) {
-            // Загружаем из theme.json
-            // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-            $themesBaseDir = dirname(__DIR__, 2) . '/../themes/';
+            $themesBaseDir = dirname(__DIR__, 1) . '/../themes/';
             $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
             $jsonFile = $themesBaseDir . $slug . '/theme.json';
             
@@ -896,7 +816,6 @@ class ThemeManager {
                 }
             }
             
-            // Возвращаем базовую конфигурацию из данных темы, если theme.json не найден
             return [
                 'name' => $theme['name'] ?? 'Default',
                 'version' => $theme['version'] ?? '1.0.0',
@@ -904,14 +823,11 @@ class ThemeManager {
                 'default_settings' => [],
                 'available_settings' => []
             ];
-        }, 3600); // Кешируем на 1 час
+        }, 3600);
     }
     
     /**
      * Проверка поддержки кастоматизации темой
-     * 
-     * @param string|null $themeSlug Slug темы (null для активной темы)
-     * @return bool
      */
     public function supportsCustomization(?string $themeSlug = null): bool {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
@@ -924,16 +840,12 @@ class ThemeManager {
             return (bool)$themeConfig['supports_customization'];
         }
         
-        // Fallback: проверяем наличие customizer.php
         $themePath = $this->getThemePath($theme['slug']);
         return file_exists($themePath . 'customizer.php');
     }
     
     /**
      * Проверка поддержки навигации темой
-     * 
-     * @param string|null $themeSlug Slug темы (null для активной темы)
-     * @return bool
      */
     public function supportsNavigation(?string $themeSlug = null): bool {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
@@ -947,9 +859,6 @@ class ThemeManager {
     
     /**
      * Проверка поддержки SCSS темой
-     * 
-     * @param string|null $themeSlug Slug темы (null для активной темы)
-     * @return bool
      */
     public function hasScssSupport(?string $themeSlug = null): bool {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
@@ -965,10 +874,6 @@ class ThemeManager {
     
     /**
      * Компиляция SCSS в CSS для темы
-     * 
-     * @param string|null $themeSlug Slug темы (null для активной темы)
-     * @param bool $force Принудительная перекомпиляция
-     * @return bool Успешность компиляции
      */
     public function compileScss(?string $themeSlug = null, bool $force = false): bool {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
@@ -988,11 +893,7 @@ class ThemeManager {
     }
     
     /**
-     * Получение URL файла стилей темы (CSS или скомпилированный SCSS)
-     * 
-     * @param string|null $themeSlug Slug темы (null для активной темы)
-     * @param string $cssFile Имя CSS файла (по умолчанию style.css)
-     * @return string URL файла стилей
+     * Получение URL файла стилей темы
      */
     public function getStylesheetUrl(?string $themeSlug = null, string $cssFile = 'style.css'): string {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
@@ -1002,9 +903,7 @@ class ThemeManager {
         
         $themePath = $this->getThemePath($theme['slug']);
         
-        // Проверяем, есть ли SCSS поддержка
         if ($this->hasScssSupport($theme['slug'])) {
-            // Пытаемся скомпилировать SCSS (тихо, без ошибок если не получится)
             try {
                 $this->compileScss($theme['slug']);
             } catch (Exception $e) {
@@ -1013,33 +912,25 @@ class ThemeManager {
             
             $compiledCssFile = $themePath . 'assets/css/style.css';
             
-            // Если скомпилированный файл существует, используем его
             if (file_exists($compiledCssFile) && is_readable($compiledCssFile)) {
                 return $this->getThemeUrl($theme['slug']) . 'assets/css/style.css';
             }
         }
         
-        // Используем обычный CSS файл
         $regularCssFile = $themePath . $cssFile;
         
-        // Проверяем, существует ли файл в корне темы
         if (file_exists($regularCssFile) && is_readable($regularCssFile)) {
             return $this->getThemeUrl($theme['slug']) . $cssFile;
         }
         
-        // Fallback: возвращаем URL по умолчанию
         return $this->getThemeUrl($theme['slug']) . $cssFile;
     }
     
     /**
      * Очистка кеша темы
-     * 
-     * @param string|null $themeSlug Slug темы (null для всех тем)
-     * @return void
      */
     public function clearThemeCache(?string $themeSlug = null): void {
         if ($themeSlug) {
-            // Очищаем кеш конкретной темы
             cache_forget('active_theme');
             cache_forget('active_theme_slug');
             cache_forget('theme_settings_' . $themeSlug);
@@ -1047,15 +938,12 @@ class ThemeManager {
             cache_forget('theme_' . $themeSlug);
             cache_forget('active_theme_check_' . md5($themeSlug));
         } else {
-            // Очищаем весь кеш тем
             cache_forget('active_theme');
             cache_forget('active_theme_slug');
             cache_forget('all_themes_filesystem');
             cache_forget('site_settings');
             
-            // Очищаем кеш проверки активности для всех возможных тем
-            // Путь к темам: engine/classes/managers -> engine -> корень -> themes
-            $themesDir = dirname(__DIR__, 2) . '/../themes/';
+            $themesDir = dirname(__DIR__, 1) . '/../themes/';
             $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
             if (is_dir($themesDir)) {
                 $directories = glob($themesDir . '*', GLOB_ONLYDIR);
@@ -1078,10 +966,6 @@ class ThemeManager {
  * @return ThemeManager
  */
 function themeManager(): ThemeManager {
-    static $instance = null;
-    if ($instance === null) {
-        $instance = new ThemeManager();
-    }
-    return $instance;
+    return ThemeManager::getInstance();
 }
 

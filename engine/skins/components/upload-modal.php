@@ -61,7 +61,7 @@ if ($fileInputName === 'plugin_file') {
                 <h5 class="modal-title" id="<?= htmlspecialchars($id) ?>Label">
                     <i class="fas fa-upload me-2"></i><?= htmlspecialchars($title) ?>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити" onclick="closeUploadModal('<?= htmlspecialchars($id) ?>')"></button>
             </div>
             <form id="<?= htmlspecialchars($formId) ?>" enctype="multipart/form-data">
                 <div class="modal-body">
@@ -89,7 +89,7 @@ if ($fileInputName === 'plugin_file') {
                     $text = 'Скасувати';
                     $type = 'secondary';
                     $icon = '';
-                    $attributes = ['data-bs-dismiss' => 'modal', 'type' => 'button'];
+                    $attributes = ['data-bs-dismiss' => 'modal', 'type' => 'button', 'onclick' => "closeUploadModal('" . htmlspecialchars($id) . "')"];
                     unset($url);
                     include __DIR__ . '/button.php';
                     $cancelBtn = ob_get_clean();
@@ -112,3 +112,66 @@ if ($fileInputName === 'plugin_file') {
     </div>
 </div>
 
+<script>
+function closeUploadModal(modalId) {
+    const modalElement = document.getElementById(modalId);
+    if (!modalElement) {
+        return;
+    }
+    
+    // Используем Bootstrap Modal API для закрытия
+    const bsModal = bootstrap.Modal.getInstance(modalElement);
+    if (bsModal) {
+        bsModal.hide();
+    } else {
+        // Если modal instance не существует, создаем новый и закрываем
+        const newModal = new bootstrap.Modal(modalElement);
+        newModal.hide();
+    }
+    
+    // Также пробуем через ModalHandler если доступен
+    if (window.ModalHandler && typeof window.ModalHandler.hide === 'function') {
+        window.ModalHandler.hide(modalId);
+    }
+    
+    // Фолбэк: прячем модальное окно вручную
+    modalElement.classList.remove('show');
+    modalElement.style.display = 'none';
+    modalElement.setAttribute('aria-hidden', 'true');
+    modalElement.removeAttribute('aria-modal');
+    
+    // Убираем backdrop
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+        backdrop.remove();
+    }
+    
+    // Убираем класс modal-open с body
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+}
+
+// Добавляем обработчик на все кнопки закрытия
+document.addEventListener('DOMContentLoaded', function() {
+    const modalId = '<?= htmlspecialchars($id) ?>';
+    const modalElement = document.getElementById(modalId);
+    if (!modalElement) {
+        return;
+    }
+    
+    // Обработка закрытия через ESC
+    modalElement.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeUploadModal(modalId);
+        }
+    });
+    
+    // Обработка клика на backdrop
+    modalElement.addEventListener('click', function(e) {
+        if (e.target === modalElement) {
+            closeUploadModal(modalId);
+        }
+    });
+});
+</script>

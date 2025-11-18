@@ -1,35 +1,56 @@
 <?php
 /**
- * Менеджер налаштувань сайту
- * Централізована робота з налаштуваннями через клас
+ * Модуль управления настройками сайта
+ * Централизованная работа с настройками через класс
  * 
- * @package Engine\Classes\Managers
+ * @package Engine\Modules
  * @version 1.0.0
  */
 
 declare(strict_types=1);
 
-class SettingsManager {
-    private static ?self $instance = null;
+class SettingsManager extends BaseModule {
     private array $settings = [];
     private bool $loaded = false;
     
     /**
-     * Конструктор (приватный для Singleton)
+     * Инициализация модуля
      */
-    private function __construct() {
+    protected function init(): void {
+        // Настройки загружаются лениво при первом обращении
     }
     
     /**
-     * Получение экземпляра класса (Singleton)
-     * 
-     * @return self
+     * Регистрация хуков модуля
      */
-    public static function getInstance(): self {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
+    public function registerHooks(): void {
+        // Модуль SettingsManager не регистрирует хуки
+    }
+    
+    /**
+     * Получение информации о модуле
+     */
+    public function getInfo(): array {
+        return [
+            'name' => 'SettingsManager',
+            'title' => 'Менеджер настроек',
+            'description' => 'Централизованное управление настройками сайта',
+            'version' => '1.0.0',
+            'author' => 'Flowaxy CMS'
+        ];
+    }
+    
+    /**
+     * Получение API методов модуля
+     */
+    public function getApiMethods(): array {
+        return [
+            'get' => 'Получение настройки',
+            'set' => 'Сохранение настройки',
+            'delete' => 'Удаление настройки',
+            'all' => 'Получение всех настроек',
+            'has' => 'Проверка существования настройки'
+        ];
     }
     
     /**
@@ -62,7 +83,11 @@ class SettingsManager {
      */
     private function loadFromDatabase(): array {
         try {
-            $db = Database::getInstance()->getConnection();
+            $db = $this->getDB();
+            if ($db === null) {
+                return [];
+            }
+            
             $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings");
             
             if ($stmt === false) {
@@ -116,7 +141,11 @@ class SettingsManager {
      */
     public function set(string $key, string $value): bool {
         try {
-            $db = Database::getInstance()->getConnection();
+            $db = $this->getDB();
+            if ($db === null) {
+                return false;
+            }
+            
             $stmt = $db->prepare("
                 INSERT INTO site_settings (setting_key, setting_value) 
                 VALUES (?, ?) 
@@ -153,7 +182,11 @@ class SettingsManager {
      */
     public function setMultiple(array $settings): bool {
         try {
-            $db = Database::getInstance()->getConnection();
+            $db = $this->getDB();
+            if ($db === null) {
+                return false;
+            }
+            
             $db->beginTransaction();
             
             $stmt = $db->prepare("
@@ -176,7 +209,8 @@ class SettingsManager {
             
             return true;
         } catch (Exception $e) {
-            if ($db->inTransaction()) {
+            $db = $this->getDB();
+            if ($db && $db->inTransaction()) {
                 $db->rollBack();
             }
             
@@ -197,7 +231,11 @@ class SettingsManager {
      */
     public function delete(string $key): bool {
         try {
-            $db = Database::getInstance()->getConnection();
+            $db = $this->getDB();
+            if ($db === null) {
+                return false;
+            }
+            
             $stmt = $db->prepare("DELETE FROM site_settings WHERE setting_key = ?");
             $result = $stmt->execute([$key]);
             
@@ -246,25 +284,46 @@ class SettingsManager {
         }
     }
     
-    // Предотвращение клонирования
-    private function __clone() {}
-    
     /**
+     * Перезагрузка настроек
+     * 
      * @return void
-     * @throws Exception
      */
-    public function __wakeup(): void {
-        throw new Exception("Cannot unserialize singleton");
+    public function reloadSettings(): void {
+        $this->load(true);
     }
 }
 
 /**
  * Глобальная функция для получения экземпляра SettingsManager
  * 
- * @return SettingsManager
+ * @return SettingsManager|null
  */
-function settingsManager(): SettingsManager {
-    return SettingsManager::getInstance();
+function settingsManager(): ?SettingsManager {
+    // Избегаем рекурсии: проверяем, что SettingsManager не инициализируется
+    static $initializing = false;
+    if ($initializing) {
+        return null;
+    }
+    
+    if (!class_exists('SettingsManager')) {
+        return null;
+    }
+    
+    try {
+        $initializing = true;
+        $instance = SettingsManager::getInstance();
+        $initializing = false;
+        return $instance;
+    } catch (Exception $e) {
+        $initializing = false;
+        error_log("settingsManager() error: " . $e->getMessage());
+        return null;
+    } catch (Error $e) {
+        $initializing = false;
+        error_log("settingsManager() fatal error: " . $e->getMessage());
+        return null;
+    }
 }
 
 /**

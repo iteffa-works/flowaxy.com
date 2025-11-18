@@ -21,7 +21,7 @@ class Config {
      * @param string|null $configDir Директорія для конфігурацій
      */
     private function __construct(?string $configDir = null) {
-        $this->configDir = $configDir ?? dirname(__DIR__) . '/data/';
+        $this->configDir = $configDir ?? dirname(__DIR__, 2) . '/data/';
         $this->configDir = rtrim($this->configDir, '/\\') . DIRECTORY_SEPARATOR;
         $this->ensureConfigDir();
     }

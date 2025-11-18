@@ -9,20 +9,12 @@ class CustomizerPage extends AdminPage {
     
     /**
      * Завантаження конфігурації кастомізера з теми
+     * Используем ThemeCustomizer модуль
      */
     private function getCustomizerConfig($themePath) {
-        $customizerFile = $themePath . 'customizer.php';
-        
-        if (file_exists($customizerFile) && is_readable($customizerFile)) {
-            try {
-                $config = require $customizerFile;
-                return is_array($config) ? $config : [];
-            } catch (Exception $e) {
-                error_log("CustomizerPage: Error loading customizer config: " . $e->getMessage());
-                return [];
-            }
+        if (class_exists('ThemeCustomizer')) {
+            return ThemeCustomizer::getInstance()->getCustomizerConfig($themePath);
         }
-        
         return [];
     }
     
@@ -112,31 +104,25 @@ class CustomizerPage extends AdminPage {
         $defaultSettings = $themeConfig['default_settings'] ?? [];
         $settings = array_merge($defaultSettings, $savedSettings);
         
-        // Дефолтные категории с иконками
-        $defaultCategories = [
-            'identity' => ['icon' => 'fa-id-card', 'label' => 'Ідентичність сайту'],
-            'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
-            'fonts' => ['icon' => 'fa-font', 'label' => 'Typography'],
-            'menu' => ['icon' => 'fa-bars', 'label' => 'Меню'],
-            'header' => ['icon' => 'fa-window-maximize', 'label' => 'Header Settings'],
-            'footer' => ['icon' => 'fa-window-minimize', 'label' => 'Footer Settings'],
-            'css' => ['icon' => 'fa-code', 'label' => 'Додатковий код CSS'],
-        ];
-        
         // Получаем доступные настройки из темы
         $availableSettings = $themeConfig['available_settings'] ?? [];
         
-        // Формируем список категорий только из тех, что есть в available_settings
+        // Формируем список категорий через ThemeCustomizer
         $categories = [];
-        if (isset($customizerConfig['categories']) && is_array($customizerConfig['categories'])) {
-            // Если в customizer.php определены категории, используем их
-            foreach ($customizerConfig['categories'] as $category => $categoryInfo) {
-                if (isset($availableSettings[$category]) && !empty($availableSettings[$category])) {
-                    $categories[$category] = $categoryInfo;
-                }
-            }
+        if (class_exists('ThemeCustomizer')) {
+            $customizer = ThemeCustomizer::getInstance();
+            $categories = $customizer->getCategories($customizerConfig, $availableSettings);
         } else {
-            // Иначе используем дефолтные категории, но только те, что есть в available_settings
+            // Fallback если ThemeCustomizer не загружен
+            $defaultCategories = [
+                'identity' => ['icon' => 'fa-id-card', 'label' => 'Ідентичність сайту'],
+                'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
+                'fonts' => ['icon' => 'fa-font', 'label' => 'Typography'],
+                'menu' => ['icon' => 'fa-bars', 'label' => 'Меню'],
+                'header' => ['icon' => 'fa-window-maximize', 'label' => 'Header Settings'],
+                'footer' => ['icon' => 'fa-window-minimize', 'label' => 'Footer Settings'],
+                'css' => ['icon' => 'fa-code', 'label' => 'Додатковий код CSS'],
+            ];
             foreach ($defaultCategories as $category => $categoryInfo) {
                 if (isset($availableSettings[$category]) && !empty($availableSettings[$category])) {
                     $categories[$category] = $categoryInfo;
@@ -384,6 +370,10 @@ class CustomizerPage extends AdminPage {
             ];
         }
         
+        if (class_exists('ThemeCustomizer')) {
+            return ThemeCustomizer::getInstance()->validateAndSaveSettings($settings);
+        }
+        
         return $this->validateAndSaveSettings($settings);
     }
     
@@ -426,8 +416,13 @@ class CustomizerPage extends AdminPage {
         
         // Валідуємо та зберігаємо одну налаштування
         $validatedSettings = [];
-        $validatedSettings[$key] = $this->validateSetting($key, $value, $settingConfig);
+        if (class_exists('ThemeCustomizer')) {
+            $customizer = ThemeCustomizer::getInstance();
+            $validatedSettings[$key] = $customizer->validateSetting($key, $value, $settingConfig);
+            return $customizer->validateAndSaveSettings($validatedSettings);
+        }
         
+        $validatedSettings[$key] = $this->validateSetting($key, $value, $settingConfig);
         return $this->validateAndSaveSettings($validatedSettings);
     }
     
@@ -466,8 +461,14 @@ class CustomizerPage extends AdminPage {
     
     /**
      * Валідація та збереження налаштувань
+     * Используем ThemeCustomizer модуль если доступен, иначе fallback на старую логику
      */
     private function validateAndSaveSettings($settings) {
+        if (class_exists('ThemeCustomizer')) {
+            return ThemeCustomizer::getInstance()->validateAndSaveSettings($settings);
+        }
+        
+        // Fallback на старую логику если модуль не загружен
         try {
             $activeTheme = themeManager()->getActiveTheme();
             if (!$activeTheme) {
@@ -576,8 +577,14 @@ class CustomizerPage extends AdminPage {
     
     /**
      * Валидация одной настройки
+     * Используем ThemeCustomizer модуль если доступен, иначе fallback на старую логику
      */
     private function validateSetting($key, $value, $settingConfig) {
+        if (class_exists('ThemeCustomizer')) {
+            return ThemeCustomizer::getInstance()->validateSetting($key, $value, $settingConfig);
+        }
+        
+        // Fallback на старую логику если модуль не загружен
         $type = $settingConfig['type'] ?? 'text';
         
         // Нормализуем значение

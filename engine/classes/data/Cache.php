@@ -35,23 +35,37 @@ class Cache {
      * @return void
      */
     private function loadSettings(bool $skipCleanup = false): void {
-        if (class_exists('SettingsManager')) {
-            try {
+        // Избегаем циклических зависимостей: не загружаем настройки, если SettingsManager еще не загружен
+        // или если модули еще инициализируются
+        if (!class_exists('SettingsManager') || !class_exists('ModuleLoader') || !ModuleLoader::isModuleLoaded('SettingsManager')) {
+            // Используем значения по умолчанию
+            return;
+        }
+        
+        try {
+            // Проверяем, не вызывается ли это во время инициализации модулей
+            if (function_exists('settingsManager')) {
                 $settings = settingsManager();
-                $this->enabled = $settings->get('cache_enabled', '1') === '1';
-                $this->defaultTtl = (int)$settings->get('cache_default_ttl', '3600');
-                $this->autoCleanup = $settings->get('cache_auto_cleanup', '1') === '1';
-                
-                // Выполняем автоматическую очистку при необходимости (только если не в конструкторе)
-                if (!$skipCleanup && $this->autoCleanup && mt_rand(1, 1000) <= 1) { // 0.1% шанс на очистку при каждом запросе
-                    // Запускаем очистку в фоне, чтобы не блокировать запрос
-                    register_shutdown_function(function() {
-                        $this->cleanup();
-                    });
+                if ($settings !== null) {
+                    $this->enabled = $settings->get('cache_enabled', '1') === '1';
+                    $this->defaultTtl = (int)$settings->get('cache_default_ttl', '3600');
+                    $this->autoCleanup = $settings->get('cache_auto_cleanup', '1') === '1';
+                    
+                    // Выполняем автоматическую очистку при необходимости (только если не в конструкторе)
+                    if (!$skipCleanup && $this->autoCleanup && mt_rand(1, 1000) <= 1) { // 0.1% шанс на очистку при каждом запросе
+                        // Запускаем очистку в фоне, чтобы не блокировать запрос
+                        register_shutdown_function(function() {
+                            $this->cleanup();
+                        });
+                    }
                 }
-            } catch (Exception $e) {
-                // В случае ошибки используем значения по умолчанию
             }
+        } catch (Exception $e) {
+            // В случае ошибки используем значения по умолчанию
+            error_log("Cache::loadSettings error: " . $e->getMessage());
+        } catch (Error $e) {
+            // В случае фатальной ошибки (например, при рекурсии) используем значения по умолчанию
+            error_log("Cache::loadSettings fatal error: " . $e->getMessage());
         }
     }
     

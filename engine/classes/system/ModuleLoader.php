@@ -2,7 +2,7 @@
 /**
  * Завантажувач системних модулів
  * 
- * @package Engine\Modules
+ * @package Engine\Classes
  * @version 1.0.0
  */
 
@@ -22,10 +22,12 @@ class ModuleLoader {
             return; // Вже ініціалізовано
         }
         
-        self::$modulesDir = __DIR__;
+        // Встановлюємо правильну директорію модулів (відносно engine/)
+        // dirname(__DIR__, 2) отримує engine/ з engine/classes/system/
+        self::$modulesDir = dirname(__DIR__, 2) . '/modules/';
         
         // Завантажуємо тільки критично важливі модулі, які потрібні для роботи системи
-        $criticalModules = ['PluginManager']; // Модулі, які потрібно завантажити одразу
+        $criticalModules = ['PluginManager', 'ThemeManager', 'SettingsManager']; // Модулі, які потрібно завантажити одразу
         
         foreach ($criticalModules as $moduleName) {
             self::loadModule($moduleName);
@@ -53,10 +55,10 @@ class ModuleLoader {
         
         // Перевіряємо, що директорія модулів визначена
         if (empty(self::$modulesDir)) {
-            self::$modulesDir = __DIR__;
+            self::$modulesDir = dirname(__DIR__, 2) . '/modules/';
         }
         
-        $moduleFile = self::$modulesDir . '/' . $moduleName . '.php';
+        $moduleFile = self::$modulesDir . $moduleName . '.php';
         
         // Перевіряємо існування файлу модуля
         if (!file_exists($moduleFile)) {
@@ -96,15 +98,23 @@ class ModuleLoader {
             // Переконуємося, що BaseModule завантажено (автозавантажувач має завантажити)
             if (!class_exists('BaseModule')) {
                 // Пробуємо завантажити з нової структури
-                $baseModuleFile = dirname(self::$modulesDir) . '/classes/base/BaseModule.php';
+                $baseModuleFile = dirname(__DIR__, 1) . '/base/BaseModule.php';
                 if (file_exists($baseModuleFile)) {
                     require_once $baseModuleFile;
                 } else {
                     // Зворотна сумісність - стара структура
-                    $baseModuleFile = dirname(self::$modulesDir) . '/classes/BaseModule.php';
+                    $baseModuleFile = dirname(__DIR__, 1) . '/BaseModule.php';
                     if (file_exists($baseModuleFile)) {
                         require_once $baseModuleFile;
                     }
+                }
+            }
+            
+            // Переконуємося, що Cache завантажено, щоб функція cache_remember() була доступна
+            if (!class_exists('Cache')) {
+                $cacheFile = dirname(__DIR__, 1) . '/data/Cache.php';
+                if (file_exists($cacheFile)) {
+                    require_once $cacheFile;
                 }
             }
             

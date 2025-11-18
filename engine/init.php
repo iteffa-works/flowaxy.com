@@ -40,10 +40,10 @@ spl_autoload_register(function (string $className): void {
     if (strpos($className, '\\') === false) {
         $classesDir = __DIR__ . '/classes/';
         
-        // Спочатку перевіряємо модулі (Config тепер в modules)
+        // Спочатку перевіряємо модулі (ThemeManager, SettingsManager, ThemeCustomizer тепер в modules)
         $modulesDir = __DIR__ . '/modules/';
         // MailModule завантажується тільки через ModuleLoader (lazy loading)
-        if ($className === 'Config' || in_array($className, ['Menu', 'PluginManager'])) {
+        if (in_array($className, ['Menu', 'PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer'])) {
             $moduleFile = $modulesDir . $className . '.php';
             if (file_exists($moduleFile) && is_readable($moduleFile)) {
                 require_once $moduleFile;
@@ -71,8 +71,6 @@ spl_autoload_register(function (string $className): void {
             'Database' => 'data',
             'Logger' => 'data',
             'MenuManager' => 'managers',
-            'ThemeManager' => 'managers',
-            'SettingsManager' => 'managers',
             'UrlHelper' => 'helpers',
             'DatabaseHelper' => 'helpers',
             'SecurityHelper' => 'helpers',
@@ -91,6 +89,8 @@ spl_autoload_register(function (string $className): void {
             'View' => 'view',
             'Mail' => 'mail',
             'ModalHandler' => 'ui',
+            'ModuleLoader' => 'system',
+            'Config' => 'data',
             // Сторінки адмінки (для автозавантаження)
             'LoginPage' => 'skins/pages',
             'LogoutPage' => 'skins/pages',
@@ -123,7 +123,7 @@ spl_autoload_register(function (string $className): void {
         }
         
         // Також пробуємо знайти в будь-якому підкаталозі (для майбутніх класів)
-        $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers'];
+        $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system'];
         foreach ($subdirs as $dir) {
             $classFile = $classesDir . $dir . '/' . $className . '.php';
             if (file_exists($classFile) && is_readable($classFile)) {
@@ -220,7 +220,11 @@ function showDatabaseError(array $errorDetails = []): void {
 }
 
 // Підключення ядра системи
-require_once __DIR__ . '/modules/loader.php';
+// Завантажуємо Cache перед ModuleLoader, щоб функція cache_remember() була доступна
+if (!class_exists('Cache')) {
+    require_once __DIR__ . '/classes/data/Cache.php';
+}
+// ModuleLoader завантажується через автозавантажувач
 ModuleLoader::init();
 
 // Установка часового пояса из настроек
