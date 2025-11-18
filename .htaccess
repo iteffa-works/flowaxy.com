@@ -4,10 +4,15 @@
 RewriteEngine On
 
 # Обработка запросов к админке (должно быть первым)
-# Перенаправление статических файлов админки (styles, scripts, images)
+# Перенаправление статических файлов админки (assets - styles, scripts, images)
+RewriteCond %{REQUEST_URI} ^/admin/assets/(styles|scripts|images)/(.*)$
+RewriteCond %{DOCUMENT_ROOT}/engine/skins/assets/$1/$2 -f
+RewriteRule ^admin/assets/(styles|scripts|images)/(.*)$ /engine/skins/assets/$1/$2 [L]
+
+# Обратная совместимость: старые пути (styles, scripts, images)
 RewriteCond %{REQUEST_URI} ^/admin/(styles|scripts|images)/(.*)$
-RewriteCond %{DOCUMENT_ROOT}/engine/skins/$1/$2 -f
-RewriteRule ^admin/(styles|scripts|images)/(.*)$ /engine/skins/$1/$2 [L]
+RewriteCond %{DOCUMENT_ROOT}/engine/skins/assets/$1/$2 -f
+RewriteRule ^admin/(styles|scripts|images)/(.*)$ /engine/skins/assets/$1/$2 [L]
 
 # Исключаем реальные файлы и директории
 RewriteCond %{REQUEST_FILENAME} !-f
