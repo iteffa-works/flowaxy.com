@@ -5,12 +5,13 @@
 ?>
 
 <!-- Уведомления -->
-<?php if (!empty($message)): ?>
-    <div class="alert alert-<?= $messageType ?> alert-dismissible fade show" role="alert">
-        <?= $message ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
+<?php
+if (!empty($message)) {
+    include __DIR__ . '/../components/alert.php';
+    $type = $messageType ?? 'info';
+    $dismissible = true;
+}
+?>
 
 <div class="row g-3">
     <!-- Список файлов логов -->
@@ -100,9 +101,13 @@
                         <p class="mb-0">Виберіть файл логу зі списку для перегляду</p>
                     </div>
                 <?php elseif (isset($logContent['error'])): ?>
-                    <div class="p-3 alert alert-danger mb-0">
-                        <?= htmlspecialchars($logContent['error']) ?>
-                    </div>
+                    <?php
+                    include __DIR__ . '/../components/alert.php';
+                    $message = htmlspecialchars($logContent['error']);
+                    $type = 'danger';
+                    $dismissible = false;
+                    $classes = ['p-3', 'mb-0'];
+                    ?>
                 <?php elseif (empty($logContent['lines'])): ?>
                     <div class="p-3 text-center text-muted">
                         <i class="fas fa-inbox fa-2x mb-2"></i>

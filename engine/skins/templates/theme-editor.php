@@ -4,12 +4,14 @@
  */
 ?>
 
-<?php if (!empty($message)): ?>
-    <div class="alert alert-<?= $messageType ?> alert-dismissible fade show" role="alert">
-        <?= $message ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
+<!-- Уведомления -->
+<?php
+if (!empty($message)) {
+    include __DIR__ . '/../components/alert.php';
+    $type = $messageType ?? 'info';
+    $dismissible = true;
+}
+?>
 
 <div class="content-section">
     <div class="content-section-header d-flex justify-content-between align-items-center">

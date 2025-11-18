@@ -5,111 +5,67 @@
 ?>
 
 <!-- Уведомления -->
-<?php if (!empty($message)): ?>
-    <div class="alert alert-<?= $messageType ?> alert-dismissible fade show" role="alert">
-        <?= $message ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
+<?php
+if (!empty($message)) {
+    include __DIR__ . '/../components/alert.php';
+    $type = $messageType ?? 'info';
+    $dismissible = true;
+}
+?>
 
-<div class="content-section plugins-page">
-    <div class="content-section-header">
-        <span><i class="fas fa-puzzle-piece me-2"></i>Встановлені плагіни</span>
+<?php
+// Формируем содержимое секции
+ob_start();
+?>
+<?php if (!empty($installedPlugins)): ?>
+    <div class="plugins-list">
+        <div class="row">
+            <?php foreach ($installedPlugins as $plugin): ?>
+                <?php
+                include __DIR__ . '/../components/plugin-card.php';
+                ?>
+            <?php endforeach; ?>
+        </div>
     </div>
-    <div class="content-section-body">
-        <?php if (!empty($installedPlugins)): ?>
-            <div class="plugins-list">
-                <div class="row">
-                    <?php foreach ($installedPlugins as $plugin): ?>
-                        <div class="col-lg-6 mb-3 plugin-item" data-status="<?= $plugin['is_active'] ? 'active' : ($plugin['is_installed'] ? 'inactive' : 'available') ?>" data-name="<?= strtolower($plugin['name'] ?? '') ?>">
-                            <div class="plugin-card">
-                                <div class="plugin-header">
-                                    <h6 class="plugin-name">
-                                        <?= htmlspecialchars($plugin['name'] ?? 'Неизвестный плагин') ?>
-                                    </h6>
-                                    <div class="plugin-badges">
-                                        <?php if ($plugin['is_active']): ?>
-                                            <span class="badge badge-active">Активний</span>
-                                        <?php elseif ($plugin['is_installed']): ?>
-                                            <span class="badge badge-installed">Встановлений</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-available">Доступний</span>
-                                        <?php endif; ?>
-                                        <span class="plugin-version">v<?= htmlspecialchars($plugin['version'] ?? '1.0.0') ?></span>
-                                    </div>
-                                </div>
-                                
-                                <p class="plugin-description">
-                                    <?= htmlspecialchars($plugin['description'] ?? 'Описание отсутствует') ?>
-                                </p>
-                                
-                                <div class="plugin-actions">
-                                    <?php if (!$plugin['is_installed']): ?>
-                                        <button class="btn btn-primary" onclick="installPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')">
-                                            <i class="fas fa-download me-1"></i>Встановити
-                                        </button>
-                                    <?php elseif ($plugin['is_active']): ?>
-                                        <button class="btn btn-warning" onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', false)">
-                                            <i class="fas fa-pause me-1"></i>Деактивувати
-                                        </button>
-                                        <?php if (!empty($plugin['has_settings'])): ?>
-                                            <a href="<?= UrlHelper::admin($plugin['slug'] . '-settings') ?>" class="btn btn-secondary" title="Налаштування плагіна">
-                                                <i class="fas fa-cog"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <button class="btn btn-success" onclick="togglePlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>', true)">
-                                            <i class="fas fa-play me-1"></i>Активувати
-                                        </button>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($plugin['is_installed']): ?>
-                                        <?php if ($plugin['is_active']): ?>
-                                            <button class="btn btn-danger" disabled title="Спочатку деактивуйте плагін перед видаленням">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        <?php else: ?>
-                                            <button class="btn btn-danger" onclick="uninstallPlugin('<?= htmlspecialchars($plugin['slug'] ?? '') ?>')" title="Видалити плагін">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        <?php else: ?>
-            <div class="plugins-empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-puzzle-piece"></i>
-                </div>
-                <h4>Плагіни відсутні</h4>
-                <p class="text-muted">Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.</p>
-                <div class="d-flex gap-2 justify-content-center">
-                    <?php
-                    // Кнопка загрузки плагина
-                    $text = 'Завантажити плагін';
-                    $type = 'primary';
-                    $icon = 'upload';
-                    $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal'];
-                    unset($url);
-                    include __DIR__ . '/../components/button.php';
-                    
-                    // Кнопка маркетплейса
-                    $text = 'Перейти до маркетплейсу';
-                    $type = 'outline-primary';
-                    $url = 'https://flowaxy.com/marketplace/plugins';
-                    $icon = 'store';
-                    $attributes = ['target' => '_blank'];
-                    include __DIR__ . '/../components/button.php';
-                    ?>
-                </div>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
+<?php else: ?>
+    <?php
+    // Пустое состояние с кнопками
+    ob_start();
+    $text = 'Завантажити плагін';
+    $type = 'primary';
+    $icon = 'upload';
+    $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal'];
+    unset($url);
+    include __DIR__ . '/../components/button.php';
+    $uploadBtn = ob_get_clean();
+    
+    ob_start();
+    $text = 'Перейти до маркетплейсу';
+    $type = 'outline-primary';
+    $url = 'https://flowaxy.com/marketplace/plugins';
+    $icon = 'store';
+    $attributes = ['target' => '_blank'];
+    include __DIR__ . '/../components/button.php';
+    $marketplaceBtn = ob_get_clean();
+    
+    $actions = $uploadBtn . $marketplaceBtn;
+    include __DIR__ . '/../components/empty-state.php';
+    $icon = 'puzzle-piece';
+    $title = 'Плагіни відсутні';
+    $message = 'Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.';
+    $classes = ['plugins-empty-state'];
+    ?>
+<?php endif; ?>
+<?php
+$sectionContent = ob_get_clean();
+
+// Используем компонент секции контента
+include __DIR__ . '/../components/content-section.php';
+$title = 'Встановлені плагіни';
+$icon = 'puzzle-piece';
+$content = $sectionContent;
+$classes = ['plugins-page'];
+?>
 
 <script>
 function togglePlugin(slug, activate) {
@@ -441,44 +397,16 @@ function resetFilters() {
 </style>
 
 <!-- Модальне вікно завантаження плагіна -->
-<div class="modal fade" id="uploadPluginModal" tabindex="-1" aria-labelledby="uploadPluginModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="uploadPluginModalLabel">
-                    <i class="fas fa-upload me-2"></i>Завантажити плагін
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="uploadPluginForm" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                    <input type="hidden" name="action" value="upload_plugin">
-                    
-                    <div class="mb-3">
-                        <label for="pluginFile" class="form-label">Виберіть ZIP архів з плагіном</label>
-                        <input type="file" class="form-control" id="pluginFile" name="plugin_file" accept=".zip" required>
-                        <div class="form-text">
-                            Максимальний розмір: 50 MB. Архів повинен містити файл plugin.json
-                        </div>
-                    </div>
-                    
-                    <div id="uploadProgress" class="progress d-none mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    
-                    <div id="uploadResult" class="alert d-none"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-                    <button type="submit" class="btn btn-primary" id="uploadPluginBtn">
-                        <i class="fas fa-upload me-1"></i>Завантажити
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<?php
+include __DIR__ . '/../components/upload-modal.php';
+$id = 'uploadPluginModal';
+$title = 'Завантажити плагін';
+$fileInputName = 'plugin_file';
+$action = 'upload_plugin';
+$accept = '.zip';
+$helpText = 'Виберіть ZIP архів з плагіном';
+$maxSize = 50;
+?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

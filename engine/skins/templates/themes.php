@@ -4,48 +4,50 @@
  */
 ?>
 
-<?php if (!empty($message)): ?>
-    <div class="alert alert-<?= $messageType ?> alert-dismissible fade show" role="alert">
-        <?= $message ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
+<!-- Уведомления -->
+<?php
+if (!empty($message)) {
+    include __DIR__ . '/../components/alert.php';
+    $type = $messageType ?? 'info';
+    $dismissible = true;
+}
+?>
 
 <!-- Скрытое поле с CSRF токеном для JavaScript -->
 <input type="hidden" id="csrf_token" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
 
-<div class="content-section themes-page">
-    <div class="content-section-header">
-        <span><i class="fas fa-palette me-2"></i>Встановлені теми</span>
-    </div>
-    <div class="content-section-body">
+<?php
+// Формируем содержимое секции
+ob_start();
+?>
         <?php if (empty($themes)): ?>
-            <div class="themes-empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-palette"></i>
-                </div>
-                <h4>Теми не знайдено</h4>
-                <p class="text-muted">Встановіть тему за замовчуванням через міграцію бази даних або завантажте нову тему з маркетплейсу.</p>
-                <div class="d-flex gap-2 justify-content-center">
-                    <?php
-                    // Кнопка загрузки темы
-                    $text = 'Завантажити тему';
-                    $type = 'primary';
-                    $icon = 'upload';
-                    $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal'];
-                    unset($url);
-                    include __DIR__ . '/../components/button.php';
-                    
-                    // Кнопка маркетплейса
-                    $text = 'Перейти до маркетплейсу';
-                    $type = 'outline-primary';
-                    $url = 'https://flowaxy.com/marketplace/themes';
-                    $icon = 'store';
-                    $attributes = ['target' => '_blank'];
-                    include __DIR__ . '/../components/button.php';
-                    ?>
-                </div>
-            </div>
+            <?php
+            // Пустое состояние с кнопками
+            ob_start();
+            $text = 'Завантажити тему';
+            $type = 'primary';
+            $icon = 'upload';
+            $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal'];
+            unset($url);
+            include __DIR__ . '/../components/button.php';
+            $uploadBtn = ob_get_clean();
+            
+            ob_start();
+            $text = 'Перейти до маркетплейсу';
+            $type = 'outline-primary';
+            $url = 'https://flowaxy.com/marketplace/themes';
+            $icon = 'store';
+            $attributes = ['target' => '_blank'];
+            include __DIR__ . '/../components/button.php';
+            $marketplaceBtn = ob_get_clean();
+            
+            $actions = $uploadBtn . $marketplaceBtn;
+            include __DIR__ . '/../components/empty-state.php';
+            $icon = 'palette';
+            $title = 'Теми не знайдено';
+            $message = 'Встановіть тему за замовчуванням через міграцію бази даних або завантажте нову тему з маркетплейсу.';
+            $classes = ['themes-empty-state'];
+            ?>
         <?php else: ?>
             <div class="themes-list">
                 <div class="row">
@@ -164,8 +166,16 @@
                 </div>
             </div>
         <?php endif; ?>
-    </div>
-</div>
+<?php
+$sectionContent = ob_get_clean();
+
+// Используем компонент секции контента
+include __DIR__ . '/../components/content-section.php';
+$title = 'Встановлені теми';
+$icon = 'palette';
+$content = $sectionContent;
+$classes = ['themes-page'];
+?>
 
 <style>
 .themes-page {
@@ -673,44 +683,16 @@
 </script>
 
 <!-- Модальне вікно завантаження теми -->
-<div class="modal fade" id="uploadThemeModal" tabindex="-1" aria-labelledby="uploadThemeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="uploadThemeModalLabel">
-                    <i class="fas fa-upload me-2"></i>Завантажити тему
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="uploadThemeForm" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                    <input type="hidden" name="action" value="upload_theme">
-                    
-                    <div class="mb-3">
-                        <label for="themeFile" class="form-label">Виберіть ZIP архів з темою</label>
-                        <input type="file" class="form-control" id="themeFile" name="theme_file" accept=".zip" required>
-                        <div class="form-text">
-                            Максимальний розмір: 50 MB. Архів повинен містити файл theme.json
-                        </div>
-                    </div>
-                    
-                    <div id="uploadProgress" class="progress d-none mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    
-                    <div id="uploadResult" class="alert d-none"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-                    <button type="submit" class="btn btn-primary" id="uploadThemeBtn">
-                        <i class="fas fa-upload me-1"></i>Завантажити
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<?php
+include __DIR__ . '/../components/upload-modal.php';
+$id = 'uploadThemeModal';
+$title = 'Завантажити тему';
+$fileInputName = 'theme_file';
+$action = 'upload_theme';
+$accept = '.zip';
+$helpText = 'Виберіть ZIP архів з темою';
+$maxSize = 50;
+?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

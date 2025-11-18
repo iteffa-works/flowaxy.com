@@ -3,7 +3,10 @@
  * Шаблон профиля пользователя
  */
 if (!$user) {
-    echo '<div class="alert alert-danger">Користувач не знайдено</div>';
+    include __DIR__ . '/../components/alert.php';
+    $message = 'Користувач не знайдено';
+    $type = 'danger';
+    $dismissible = false;
     return;
 }
 ?>
@@ -15,12 +18,13 @@ if (!$user) {
                 <h5 class="mb-0">Редагування профілю</h5>
             </div>
             <div class="card-body">
-                <?php if (!empty($message)): ?>
-                    <div class="alert alert-<?= $messageType ?> alert-dismissible fade show">
-                        <?= $message ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
+                <?php
+                if (!empty($message)) {
+                    include __DIR__ . '/../components/alert.php';
+                    $type = $messageType ?? 'info';
+                    $dismissible = true;
+                }
+                ?>
                 
                 <form method="POST" id="profileForm">
                     <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">

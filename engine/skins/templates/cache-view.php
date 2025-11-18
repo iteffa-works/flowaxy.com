@@ -5,12 +5,13 @@
 ?>
 
 <!-- Уведомления -->
-<?php if (!empty($message)): ?>
-    <div class="alert alert-<?= $messageType ?> alert-dismissible fade show" role="alert">
-        <?= $message ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
+<?php
+if (!empty($message)) {
+    include __DIR__ . '/../components/alert.php';
+    $type = $messageType ?? 'info';
+    $dismissible = true;
+}
+?>
 
 <div class="row g-3">
     <!-- Статистика кеша -->
