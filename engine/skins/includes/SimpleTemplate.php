@@ -25,7 +25,7 @@ class SimpleTemplate {
         extract($this->data);
         
         // Підключаємо базовий layout
-        include $this->templateDir . 'layout/base.php';
+        include __DIR__ . '/../layouts/base.php';
     }
     
     /**

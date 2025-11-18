@@ -153,7 +153,7 @@ includeComponent('form-group', [
 
 ### Базовый layout
 
-Все страницы админки используют базовый layout из `templates/layout/base.php`, который включает:
+Все страницы админки используют базовый layout из `layouts/base.php`, который включает:
 - Header (шапка)
 - Sidebar (боковая панель)
 - Основной контент

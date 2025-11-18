@@ -1,7 +1,7 @@
 <?php
 /**
- * Базовый шаблон для плагинов
- * Аналогичен base.php, но использует кастомный шаблон из переменной $customTemplateFile
+ * Базовый шаблон админки
+ * Содержит общую структуру HTML
  */
 ?>
 <!DOCTYPE html>
@@ -29,30 +29,31 @@
     <?php endif; ?>
 </head>
 <body>
-    <?php include __DIR__ . '/../../components/header.php'; ?>
+    <?php include __DIR__ . '/../components/header.php'; ?>
     
     <div class="container-fluid">
         <div class="row">
-            <?php include __DIR__ . '/../../components/sidebar.php'; ?>
+            <?php include __DIR__ . '/../components/sidebar.php'; ?>
             
             <main class="col-md-9 ms-sm-auto col-lg-10">
                 <div class="admin-content-container">
-                    <?php include __DIR__ . '/../../components/page-header.php'; ?>
+                    <?php include __DIR__ . '/../components/page-header.php'; ?>
                     
-                    <!-- Подключаем кастомный шаблон плагина -->
-                    <?php if (isset($customTemplateFile) && file_exists($customTemplateFile)): ?>
-                        <?php include $customTemplateFile; ?>
-                    <?php else: ?>
-                        <div class="alert alert-danger">Template not found</div>
-                    <?php endif; ?>
+                    <!-- Основной контент страницы -->
+    <?php 
+    $templateFile = __DIR__ . '/../templates/' . ($templateName ?? 'dashboard') . '.php';
+    if (file_exists($templateFile)) {
+        include $templateFile;
+    }
+    ?>
                 </div>
             </main>
         </div>
     </div>
     
-    <?php include __DIR__ . '/../../components/footer.php'; ?>
-    <?php include __DIR__ . '/../../components/notifications.php'; ?>
-    <?php include __DIR__ . '/../../components/scripts.php'; ?>
+    <?php include __DIR__ . '/../components/footer.php'; ?>
+    <?php include __DIR__ . '/../components/notifications.php'; ?>
+    <?php include __DIR__ . '/../components/scripts.php'; ?>
     
     <?php if (!empty($additionalJS)): ?>
         <!-- Дополнительные JS файлы -->
@@ -62,3 +63,4 @@
     <?php endif; ?>
 </body>
 </html>
+

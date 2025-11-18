@@ -44,14 +44,30 @@
     - Параметры: `plugin` (массив данных), `colClass`
     - Использование: Отображение плагина в списке
 
+11. **theme-card.php** - Карточки тем
+    - Параметры: `theme` (массив данных), `features`, `supportsCustomization`, `supportsNavigation`, `hasSettings`, `colClass`
+    - Использование: Отображение темы в списке
+
+12. **spinner.php** - Спиннер загрузки
+    - Параметры: `size` (sm/md/lg), `variant` (border/grow), `text`, `classes`
+    - Использование: Индикатор загрузки
+
+13. **table.php** - Таблицы
+    - Параметры: `headers`, `rows`, `striped`, `hover`, `bordered`, `classes`
+    - Использование: Отображение табличных данных
+
+14. **stats-card.php** - Статистические карточки
+    - Параметры: `label`, `value`, `icon`, `color` (primary/success/warning/danger/info), `size` (sm/md/lg/xl), `classes`
+    - Использование: Статистика (количество файлов, размер кеша, и т.д.)
+
 ### Компоненты layout
 
-11. **header.php** - Шапка сайта
-12. **sidebar.php** - Боковая панель
-13. **footer.php** - Подвал
-14. **page-header.php** - Заголовок страницы
-15. **notifications.php** - Система уведомлений
-16. **scripts.php** - JavaScript скрипты
+15. **header.php** - Шапка сайта
+16. **sidebar.php** - Боковая панель
+17. **footer.php** - Подвал
+18. **page-header.php** - Заголовок страницы
+19. **notifications.php** - Система уведомлений
+20. **scripts.php** - JavaScript скрипты
 
 ## Использование компонентов
 
@@ -100,12 +116,15 @@ includeComponent('button', [
 ## Рефакторинг шаблонов
 
 Заменено в шаблонах:
-- ✅ `alert` → компонент `alert.php`
-- ✅ `empty-state` → компонент `empty-state.php`
-- ✅ Кнопки → компонент `button.php`
-- ✅ Модальные окна загрузки → компонент `upload-modal.php`
-- ✅ Карточки плагинов → компонент `plugin-card.php`
-- ✅ Content sections → компонент `content-section.php`
+- ✅ `alert` → компонент `alert.php` (все шаблоны)
+- ✅ `empty-state` → компонент `empty-state.php` (plugins, themes, cache-view, logs-view)
+- ✅ Кнопки → компонент `button.php` (plugins, themes, cache-view, logs-view, settings)
+- ✅ Модальные окна загрузки → компонент `upload-modal.php` (plugins, themes)
+- ✅ Карточки плагинов → компонент `plugin-card.php` (plugins.php)
+- ✅ Карточки тем → компонент `theme-card.php` (themes.php)
+- ✅ Content sections → компонент `content-section.php` (plugins, themes)
+- ✅ Статистические карточки → компонент `stats-card.php` (cache-view.php)
+- ✅ Спиннеры → компонент `spinner.php` (готов к использованию)
 
 ## Преимущества
 

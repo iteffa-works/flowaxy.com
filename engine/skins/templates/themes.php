@@ -52,116 +52,16 @@ ob_start();
             <div class="themes-list">
                 <div class="row">
                     <?php foreach ($themes as $theme): ?>
-                        <?php 
+                        <?php
+                        // Подготавливаем данные для компонента
                         $isActive = ($theme['is_active'] == 1);
                         $supportsCustomization = isset($themesWithCustomization[$theme['slug']]) && $themesWithCustomization[$theme['slug']];
                         $supportsNavigation = isset($themesWithNavigation[$theme['slug']]) && $themesWithNavigation[$theme['slug']];
                         $hasSettings = isset($themesWithSettings[$theme['slug']]) && $themesWithSettings[$theme['slug']];
                         $features = isset($themesFeatures[$theme['slug']]) ? $themesFeatures[$theme['slug']] : [];
+                        
+                        include __DIR__ . '/../components/theme-card.php';
                         ?>
-                        <div class="col-lg-6 mb-3 theme-item-wrapper" data-status="<?= $isActive ? 'active' : 'inactive' ?>" data-name="<?= strtolower($theme['name'] ?? '') ?>">
-                            <div class="theme-card <?= $isActive ? 'theme-active' : '' ?>">
-                                <div class="theme-header">
-                                    <h6 class="theme-name">
-                                        <?= htmlspecialchars($theme['name']) ?>
-                                    </h6>
-                                    <div class="theme-badges">
-                                        <?php if ($isActive): ?>
-                                            <span class="badge badge-active">Активна</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-inactive">Неактивна</span>
-                                        <?php endif; ?>
-                                        <span class="theme-version">v<?= htmlspecialchars($theme['version'] ?? '1.0.0') ?></span>
-                                    </div>
-                                </div>
-                                
-                                <p class="theme-description">
-                                    <?= htmlspecialchars($theme['description'] ?? 'Опис відсутній') ?>
-                                </p>
-                                
-                                <?php if (!empty($features) && (($features['header'] ?? false) || ($features['parameters'] ?? false) || ($features['customization'] ?? false) || ($features['logo'] ?? false) || ($features['favicon'] ?? false))): ?>
-                                    <div class="theme-features">
-                                        <?php if ($features['header'] ?? false): ?>
-                                            <span class="theme-feature-badge" title="Підтримка хедера">
-                                                <i class="fas fa-header"></i>Header
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($features['parameters'] ?? false): ?>
-                                            <span class="theme-feature-badge" title="Параметри налаштувань">
-                                                <i class="fas fa-sliders-h"></i>Параметри
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($features['customization'] ?? false): ?>
-                                            <span class="theme-feature-badge" title="Кастомізація теми">
-                                                <i class="fas fa-paint-brush"></i>Кастомізація
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($features['logo'] ?? false): ?>
-                                            <span class="theme-feature-badge" title="Логотип">
-                                                <i class="fas fa-image"></i>Логотип
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($features['favicon'] ?? false): ?>
-                                            <span class="theme-feature-badge" title="Фавікон">
-                                                <i class="fas fa-star"></i>Фавікон
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <div class="theme-actions">
-                                    <?php if (!$isActive): ?>
-                                        <?php
-                                        $hasScssSupport = themeManager()->hasScssSupport($theme['slug']);
-                                        ?>
-                                        <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= htmlspecialchars($theme['slug']) ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
-                                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                                            <input type="hidden" name="theme_slug" value="<?= htmlspecialchars($theme['slug']) ?>">
-                                            <input type="hidden" name="activate_theme" value="1">
-                                            <button type="submit" class="btn btn-primary theme-activate-btn">
-                                                <i class="fas fa-check me-1"></i>
-                                                <span class="btn-text">Активувати</span>
-                                                <?php if ($hasScssSupport): ?>
-                                                    <span class="btn-spinner ms-2" style="display: none;">
-                                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                                    </span>
-                                                <?php endif; ?>
-                                            </button>
-                                        </form>
-                                    <?php else: ?>
-                                        <div class="d-flex gap-2 flex-wrap">
-                                            <?php 
-                                            $supportsNavigation = isset($themesWithNavigation[$theme['slug']]) && $themesWithNavigation[$theme['slug']];
-                                            ?>
-                                            
-                                            <?php if ($supportsCustomization): ?>
-                                                <a href="<?= UrlHelper::admin('customizer') ?>" class="btn btn-primary">
-                                                    <i class="fas fa-paint-brush me-1"></i>Кастомізація
-                                                </a>
-                                            <?php endif; ?>
-                                            
-                                            <?php if ($supportsNavigation): ?>
-                                                <a href="<?= UrlHelper::admin('menus') ?>" class="btn btn-primary">
-                                                    <i class="fas fa-bars me-1"></i>Навігація
-                                                </a>
-                                            <?php endif; ?>
-                                            
-                                            <?php if ($hasSettings): ?>
-                                                <a href="<?= UrlHelper::admin($theme['slug'] . '-theme-settings') ?>" class="btn btn-outline-secondary" title="Налаштування теми">
-                                                    <i class="fas fa-cog me-1"></i>Налаштування
-                                                </a>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (!$isActive): ?>
-                                        <button type="button" class="btn btn-danger delete-theme-btn" data-theme-slug="<?= htmlspecialchars($theme['slug'] ?? '') ?>" title="Видалити тему">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
                     <?php endforeach; ?>
                 </div>
             </div>

@@ -137,7 +137,7 @@ class AdminPage {
         $customTemplateFile = $templateFile;
         
         // Використовуємо стандартний layout адмінки для плагінів
-        include __DIR__ . '/../templates/layout/base-plugin.php';
+        include __DIR__ . '/../layouts/base-plugin.php';
     }
     
     /**
@@ -145,5 +145,56 @@ class AdminPage {
      */
     public function handle() {
         // Перевизначається в дочірніх класах
+    }
+    
+    /**
+     * Вспомогательный метод для рендеринга компонента alert
+     */
+    protected function renderAlert($message, $type = 'info', $dismissible = true, $icon = null) {
+        $alertPath = __DIR__ . '/../components/alert.php';
+        if (file_exists($alertPath)) {
+            include $alertPath;
+        }
+    }
+    
+    /**
+     * Вспомогательный метод для рендеринга компонента button
+     */
+    protected function renderButton($text, $type = 'primary', $options = []) {
+        $buttonPath = __DIR__ . '/../components/button.php';
+        if (file_exists($buttonPath)) {
+            $url = $options['url'] ?? null;
+            $icon = $options['icon'] ?? null;
+            $attributes = $options['attributes'] ?? [];
+            $submit = $options['submit'] ?? false;
+            include $buttonPath;
+        }
+    }
+    
+    /**
+     * Вспомогательный метод для рендеринга компонента empty-state
+     */
+    protected function renderEmptyState($icon, $title, $message, $actions = '', $classes = []) {
+        $emptyStatePath = __DIR__ . '/../components/empty-state.php';
+        if (file_exists($emptyStatePath)) {
+            include $emptyStatePath;
+        }
+    }
+    
+    /**
+     * Вспомогательный метод для получения HTML компонента через ob_start/ob_get_clean
+     */
+    protected function getComponent($componentName, $data = []) {
+        $componentPath = __DIR__ . '/../components/' . $componentName . '.php';
+        if (!file_exists($componentPath)) {
+            return '';
+        }
+        
+        // Извлекаем переменные из данных
+        extract($data);
+        
+        ob_start();
+        include $componentPath;
+        return ob_get_clean();
     }
 }

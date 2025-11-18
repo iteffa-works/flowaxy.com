@@ -24,10 +24,14 @@ if (!empty($message)) {
             </div>
             <div class="card-body p-0">
                 <?php if (empty($logFiles)): ?>
-                    <div class="p-3 text-center text-muted">
-                        <i class="fas fa-inbox fa-2x mb-2"></i>
-                        <p class="mb-0 small">Файлів логів не знайдено</p>
-                    </div>
+                    <?php
+                    include __DIR__ . '/../components/empty-state.php';
+                    $icon = 'inbox';
+                    $title = 'Файлів логів не знайдено';
+                    $message = '';
+                    $actions = '';
+                    $classes = ['p-3'];
+                    ?>
                 <?php else: ?>
                     <div class="list-group list-group-flush">
                         <?php foreach ($logFiles as $logFile): ?>
@@ -57,22 +61,40 @@ if (!empty($message)) {
                     </h6>
                 </div>
                 <div class="card-body p-3">
+                    <?php
+                    // Кнопка очистки всех логов
+                    ob_start();
+                    $text = 'Очистити всі логи';
+                    $type = 'danger';
+                    $icon = 'trash';
+                    $attributes = ['type' => 'submit', 'class' => 'btn-sm w-100', 'onclick' => "return confirm('Ви впевнені, що хочете очистити всі логи?')"];
+                    unset($url);
+                    include __DIR__ . '/../components/button.php';
+                    $clearAllBtn = ob_get_clean();
+                    ?>
                     <form method="POST" class="d-inline">
                         <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                         <input type="hidden" name="clear_logs" value="1">
                         <input type="hidden" name="file" value="all">
-                        <button type="submit" class="btn btn-danger btn-sm w-100" onclick="return confirm('Ви впевнені, що хочете очистити всі логи?')">
-                            <i class="fas fa-trash me-1"></i>Очистити всі логи
-                        </button>
+                        <?= $clearAllBtn ?>
                     </form>
                     <?php if (!empty($selectedFile)): ?>
-                        <form method="POST" class="d-inline mt-2">
+                        <?php
+                        // Кнопка очистки текущего файла
+                        ob_start();
+                        $text = 'Очистити поточний файл';
+                        $type = 'warning';
+                        $icon = 'broom';
+                        $attributes = ['type' => 'submit', 'class' => 'btn-sm w-100 mt-2', 'onclick' => "return confirm('Ви впевнені, що хочете очистити цей файл?')"];
+                        unset($url);
+                        include __DIR__ . '/../components/button.php';
+                        $clearCurrentBtn = ob_get_clean();
+                        ?>
+                        <form method="POST" class="d-inline">
                             <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
                             <input type="hidden" name="clear_logs" value="1">
                             <input type="hidden" name="file" value="<?= htmlspecialchars($selectedFile) ?>">
-                            <button type="submit" class="btn btn-warning btn-sm w-100" onclick="return confirm('Ви впевнені, що хочете очистити цей файл?')">
-                                <i class="fas fa-broom me-1"></i>Очистити поточний файл
-                            </button>
+                            <?= $clearCurrentBtn ?>
                         </form>
                     <?php endif; ?>
                 </div>
@@ -96,10 +118,14 @@ if (!empty($message)) {
             </div>
             <div class="card-body p-0">
                 <?php if (empty($logContent['file'])): ?>
-                    <div class="p-4 text-center text-muted">
-                        <i class="fas fa-file-alt fa-3x mb-3"></i>
-                        <p class="mb-0">Виберіть файл логу зі списку для перегляду</p>
-                    </div>
+                    <?php
+                    include __DIR__ . '/../components/empty-state.php';
+                    $icon = 'file-alt';
+                    $title = 'Виберіть файл для перегляду';
+                    $message = 'Виберіть файл логу зі списку для перегляду';
+                    $actions = '';
+                    $classes = ['p-4'];
+                    ?>
                 <?php elseif (isset($logContent['error'])): ?>
                     <?php
                     include __DIR__ . '/../components/alert.php';
@@ -109,10 +135,14 @@ if (!empty($message)) {
                     $classes = ['p-3', 'mb-0'];
                     ?>
                 <?php elseif (empty($logContent['lines'])): ?>
-                    <div class="p-3 text-center text-muted">
-                        <i class="fas fa-inbox fa-2x mb-2"></i>
-                        <p class="mb-0">Файл порожній</p>
-                    </div>
+                    <?php
+                    include __DIR__ . '/../components/empty-state.php';
+                    $icon = 'inbox';
+                    $title = 'Файл порожній';
+                    $message = '';
+                    $actions = '';
+                    $classes = ['p-3'];
+                    ?>
                 <?php else: ?>
                     <div class="log-content">
                         <pre class="mb-0 p-3 bg-dark text-light small" style="max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; line-height: 1.5;"><?php
