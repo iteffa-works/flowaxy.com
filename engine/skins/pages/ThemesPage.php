@@ -13,26 +13,26 @@ class ThemesPage extends AdminPage {
         $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
-        // Используем компонент кнопки
-        ob_start();
-        $text = 'Завантажити тему';
-        $type = 'primary';
-        $icon = 'upload';
-        $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal'];
-        unset($url);
-        include __DIR__ . '/../components/button.php';
-        $uploadBtn = ob_get_clean();
-        
-        ob_start();
-        $text = 'Скачати теми';
-        $type = 'outline-primary';
-        $url = 'https://flowaxy.com/marketplace/themes';
-        $icon = 'store';
-        $attributes = ['target' => '_blank'];
-        include __DIR__ . '/../components/button.php';
-        $marketplaceBtn = ob_get_clean();
-        
-        $headerButtons = '<div class="d-flex gap-2">' . $uploadBtn . $marketplaceBtn . '</div>';
+        // Используем вспомогательные методы для создания кнопок
+        $headerButtons = $this->createButtonGroup([
+            [
+                'text' => 'Завантажити тему',
+                'type' => 'primary',
+                'options' => [
+                    'icon' => 'upload',
+                    'attributes' => ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadThemeModal']
+                ]
+            ],
+            [
+                'text' => 'Скачати теми',
+                'type' => 'outline-primary',
+                'options' => [
+                    'url' => 'https://flowaxy.com/marketplace/themes',
+                    'icon' => 'store',
+                    'attributes' => ['target' => '_blank']
+                ]
+            ]
+        ]);
         
         $this->setPageHeader(
             'Теми',
@@ -44,8 +44,7 @@ class ThemesPage extends AdminPage {
     
     public function handle() {
         // Обробка AJAX запитів
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        if ($this->isAjaxRequest()) {
             $this->handleAjax();
             return;
         }
@@ -142,7 +141,7 @@ class ThemesPage extends AdminPage {
             }
             
             $this->setMessage('Тему успішно активовано', 'success');
-            Response::redirectStatic(UrlHelper::admin('themes'));
+            $this->redirect('themes');
         } else {
             $this->setMessage('Помилка при активації теми', 'danger');
         }
@@ -852,7 +851,7 @@ class ThemesPage extends AdminPage {
             themeManager()->clearThemeCache();
             
             $this->setMessage('Тему успішно видалено', 'success');
-            Response::redirectStatic(UrlHelper::admin('themes'));
+            $this->redirect('themes');
         } catch (Exception $e) {
             error_log("Theme delete error: " . $e->getMessage());
             $this->setMessage('Помилка при видаленні теми: ' . $e->getMessage(), 'danger');

@@ -13,26 +13,26 @@ class PluginsPage extends AdminPage {
         $this->pageTitle = 'Керування плагінами - Flowaxy CMS';
         $this->templateName = 'plugins';
         
-        // Используем компонент кнопки
-        ob_start();
-        $text = 'Завантажити плагін';
-        $type = 'primary';
-        $icon = 'upload';
-        $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal'];
-        unset($url);
-        include __DIR__ . '/../components/button.php';
-        $uploadBtn = ob_get_clean();
-        
-        ob_start();
-        $text = 'Скачати плагіни';
-        $type = 'outline-primary';
-        $url = 'https://flowaxy.com/marketplace/plugins';
-        $icon = 'store';
-        $attributes = ['target' => '_blank'];
-        include __DIR__ . '/../components/button.php';
-        $marketplaceBtn = ob_get_clean();
-        
-        $headerButtons = '<div class="d-flex gap-2">' . $uploadBtn . $marketplaceBtn . '</div>';
+        // Используем вспомогательные методы для создания кнопок
+        $headerButtons = $this->createButtonGroup([
+            [
+                'text' => 'Завантажити плагін',
+                'type' => 'primary',
+                'options' => [
+                    'icon' => 'upload',
+                    'attributes' => ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal']
+                ]
+            ],
+            [
+                'text' => 'Скачати плагіни',
+                'type' => 'outline-primary',
+                'options' => [
+                    'url' => 'https://flowaxy.com/marketplace/plugins',
+                    'icon' => 'store',
+                    'attributes' => ['target' => '_blank']
+                ]
+            ]
+        ]);
         
         $this->setPageHeader(
             'Керування плагінами',
@@ -44,8 +44,7 @@ class PluginsPage extends AdminPage {
     
     public function handle() {
         // Обробка AJAX запитів
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        if ($this->isAjaxRequest()) {
             $this->handleAjax();
             return;
         }
@@ -66,7 +65,7 @@ class PluginsPage extends AdminPage {
                     $this->setMessage("Новых плагинов не обнаружено", 'info');
                 }
                 // Перенаправляем без параметра discover
-                Response::redirectStatic(UrlHelper::admin('plugins'));
+                $this->redirect('plugins');
                 return;
             } catch (Exception $e) {
                 error_log("Auto-discover plugins error: " . $e->getMessage());

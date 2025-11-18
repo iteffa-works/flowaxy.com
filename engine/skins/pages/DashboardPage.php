@@ -13,13 +13,17 @@ class DashboardPage extends AdminPage {
         $this->pageTitle = 'Панель управління - Flowaxy CMS';
         $this->templateName = 'dashboard';
         
+        $headerButtons = $this->createButton('Налаштування', 'outline-secondary', [
+            'url' => UrlHelper::admin('settings'),
+            'icon' => 'cog',
+            'attributes' => ['class' => 'btn-sm']
+        ]);
+        
         $this->setPageHeader(
             'Панель управління',
             'Ласкаво просимо до Flowaxy CMS',
             'fas fa-tachometer-alt',
-            '<a href="' . UrlHelper::admin('settings') . '" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-cog me-1"></i>Налаштування
-            </a>'
+            $headerButtons
         );
     }
     

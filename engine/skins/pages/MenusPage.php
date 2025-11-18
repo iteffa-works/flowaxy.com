@@ -34,8 +34,7 @@ class MenusPage extends AdminPage {
     
     public function handle() {
         // Обработка AJAX запросов
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        if ($this->isAjaxRequest()) {
             $this->handleAjax();
             return;
         }
@@ -43,10 +42,10 @@ class MenusPage extends AdminPage {
         // Обработка обычных POST запросов (для обратной совместимости)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST)) {
             $this->handlePost();
-            // Після POST запиту робимо редірект для уникнення повторної відправки (використовуємо Response клас)
+            // Після POST запиту робимо редірект для уникнення повторної відправки
             $menuId = $_GET['menu_id'] ?? $_POST['menu_id'] ?? null;
             if ($menuId) {
-                Response::redirectStatic(UrlHelper::admin('menus'));
+                $this->redirect('menus');
             }
         }
         

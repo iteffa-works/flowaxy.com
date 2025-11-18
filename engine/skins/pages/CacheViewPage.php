@@ -22,9 +22,7 @@ class CacheViewPage extends AdminPage {
     
     public function handle() {
         // Обробка AJAX запитів для очистки кешу
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' &&
-            isset($_POST['cache_action'])) {
+        if ($this->isAjaxRequest() && isset($_POST['cache_action'])) {
             $this->handleAjaxCacheClear();
             return;
         }

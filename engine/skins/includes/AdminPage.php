@@ -197,4 +197,89 @@ class AdminPage {
         include $componentPath;
         return ob_get_clean();
     }
+    
+    /**
+     * Создание кнопки через компонент и возврат HTML
+     * 
+     * @param string $text Текст кнопки
+     * @param string $type Тип кнопки (primary, secondary, success, danger, warning, info, outline-primary, etc.)
+     * @param array $options Опции: url, icon, attributes, submit
+     * @return string HTML кнопки
+     */
+    protected function createButton($text, $type = 'primary', $options = []) {
+        return $this->getComponent('button', array_merge([
+            'text' => $text,
+            'type' => $type
+        ], $options));
+    }
+    
+    /**
+     * Создание группы кнопок для header
+     * 
+     * @param array $buttons Массив кнопок: [['text' => '...', 'type' => '...', 'options' => [...]], ...]
+     * @param string $wrapperClass CSS класс для обертки (по умолчанию 'd-flex gap-2')
+     * @return string HTML группы кнопок
+     */
+    protected function createButtonGroup($buttons, $wrapperClass = 'd-flex gap-2') {
+        $buttonsHtml = '';
+        foreach ($buttons as $button) {
+            $text = $button['text'] ?? '';
+            $type = $button['type'] ?? 'primary';
+            $options = $button['options'] ?? [];
+            $buttonsHtml .= $this->createButton($text, $type, $options);
+        }
+        
+        return '<div class="' . htmlspecialchars($wrapperClass) . '">' . $buttonsHtml . '</div>';
+    }
+    
+    /**
+     * Проверка на AJAX запрос
+     * 
+     * @return bool
+     */
+    protected function isAjaxRequest() {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+    
+    /**
+     * Отправка JSON ответа (для AJAX)
+     * 
+     * @param array $data Данные для отправки
+     * @param int $statusCode HTTP статус код
+     */
+    protected function sendJsonResponse($data, $statusCode = 200) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (class_exists('Json')) {
+            echo Json::encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } else {
+            echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        exit;
+    }
+    
+    /**
+     * Редирект на страницу
+     * 
+     * @param string $page Страница для редиректа
+     * @param array $params Параметры GET
+     */
+    protected function redirect($page, $params = []) {
+        if (class_exists('Response')) {
+            $url = UrlHelper::admin($page);
+            if (!empty($params)) {
+                $url .= '?' . http_build_query($params);
+            }
+            Response::redirectStatic($url);
+        } else {
+            $url = UrlHelper::admin($page);
+            if (!empty($params)) {
+                $url .= '?' . http_build_query($params);
+            }
+            header('Location: ' . $url);
+            exit;
+        }
+    }
 }

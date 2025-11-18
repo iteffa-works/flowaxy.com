@@ -73,7 +73,7 @@ class CustomizerPage extends AdminPage {
         
         if ($_POST && isset($_POST['save_customizer'])) {
             $this->saveSettings();
-            Response::redirectStatic(UrlHelper::admin('customizer'));
+            $this->redirect('customizer');
         }
         
         // Отримання активної теми та перевірка підтримки кастомізації

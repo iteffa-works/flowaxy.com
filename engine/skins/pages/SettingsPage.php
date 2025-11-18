@@ -13,12 +13,27 @@ class SettingsPage extends AdminPage {
         $this->pageTitle = 'Налаштування сайту - Flowaxy CMS';
         $this->templateName = 'settings';
         
-        $headerButtons = '<div class="d-flex gap-2">' .
-            '<a href="' . UrlHelper::admin('cache-view') . '" class="btn btn-outline-secondary btn-sm">' .
-            '<i class="fas fa-database me-1"></i>Переглянути кеш</a>' .
-            '<a href="' . UrlHelper::admin('logs-view') . '" class="btn btn-outline-secondary btn-sm">' .
-            '<i class="fas fa-file-alt me-1"></i>Переглянути логи</a>' .
-            '</div>';
+        // Используем вспомогательные методы для создания кнопок
+        $headerButtons = $this->createButtonGroup([
+            [
+                'text' => 'Переглянути кеш',
+                'type' => 'outline-secondary',
+                'options' => [
+                    'url' => UrlHelper::admin('cache-view'),
+                    'icon' => 'database',
+                    'attributes' => ['class' => 'btn-sm']
+                ]
+            ],
+            [
+                'text' => 'Переглянути логи',
+                'type' => 'outline-secondary',
+                'options' => [
+                    'url' => UrlHelper::admin('logs-view'),
+                    'icon' => 'file-alt',
+                    'attributes' => ['class' => 'btn-sm']
+                ]
+            ]
+        ]);
         
         $this->setPageHeader(
             'Налаштування сайту',
