@@ -7,6 +7,14 @@
 // Подключаем хелпер для компонентов
 require_once __DIR__ . '/ComponentHelper.php';
 
+// Интегрируем полезные классы из engine/classes
+if (class_exists('Request')) {
+    require_once __DIR__ . '/AdminRequest.php';
+}
+if (class_exists('AjaxHandler')) {
+    require_once __DIR__ . '/AdminAjaxHandler.php';
+}
+
 class AdminPage {
     protected $db;
     protected $message = '';
@@ -238,8 +246,45 @@ class AdminPage {
      * @return bool
      */
     protected function isAjaxRequest() {
+        if (class_exists('AdminAjaxHandler')) {
+            return AdminAjaxHandler::isAjax();
+        }
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+    
+    /**
+     * Получение данных из запроса (использует AdminRequest если доступен)
+     * 
+     * @param string $key Ключ
+     * @param mixed $default Значение по умолчанию
+     * @return mixed
+     */
+    protected function request(string $key, $default = null) {
+        if (class_exists('AdminRequest')) {
+            return AdminRequest::input($key, $default);
+        }
+        return $_POST[$key] ?? $_GET[$key] ?? $default;
+    }
+    
+    /**
+     * Получение POST данных
+     */
+    protected function post(string $key, $default = null) {
+        if (class_exists('AdminRequest')) {
+            return AdminRequest::post($key, $default);
+        }
+        return $_POST[$key] ?? $default;
+    }
+    
+    /**
+     * Получение GET данных
+     */
+    protected function query(string $key, $default = null) {
+        if (class_exists('AdminRequest')) {
+            return AdminRequest::query($key, $default);
+        }
+        return $_GET[$key] ?? $default;
     }
     
     /**
@@ -249,6 +294,11 @@ class AdminPage {
      * @param int $statusCode HTTP статус код
      */
     protected function sendJsonResponse($data, $statusCode = 200) {
+        // Очищаємо всі буфери перед виводом JSON
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
         

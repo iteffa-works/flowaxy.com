@@ -279,8 +279,6 @@ class PluginsPage extends AdminPage {
      * Обробка AJAX запитів
      */
     private function handleAjax(): void {
-        Response::setHeader('Content-Type', 'application/json; charset=utf-8');
-        
         $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         
         switch ($action) {
@@ -289,12 +287,7 @@ class PluginsPage extends AdminPage {
                 break;
                 
             default:
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія'], 400);
         }
     }
     
@@ -302,38 +295,17 @@ class PluginsPage extends AdminPage {
      * AJAX завантаження плагіна з ZIP архіву
      */
     private function ajaxUploadPlugin(): void {
-        // Відключаємо вивід помилок на екран для запобігання HTML у JSON
-        $oldErrorReporting = error_reporting(E_ALL);
-        $oldDisplayErrors = ini_get('display_errors');
-        ini_set('display_errors', '0');
-        
         // Очищаємо буфер виводу для запобігання виводу HTML перед JSON
         while (ob_get_level()) {
             ob_end_clean();
         }
-        ob_start();
-        
-        // Встановлюємо заголовок JSON
-        header('Content-Type: application/json; charset=utf-8');
         
         if (!$this->verifyCsrf()) {
-            ob_clean();
-            try {
-                echo Json::encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $e) {
-                echo json_encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
         }
         
         if (!isset($_FILES['plugin_file'])) {
-            ob_clean();
-            try {
-                echo Json::encode(['success' => false, 'error' => 'Файл не вибрано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $e) {
-                echo json_encode(['success' => false, 'error' => 'Файл не вибрано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Файл не вибрано'], 400);
         }
         
         $uploadedFile = null;
@@ -456,13 +428,7 @@ class PluginsPage extends AdminPage {
             $uploadResult = $upload->upload($_FILES['plugin_file']);
             
             if (!$uploadResult['success']) {
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => $uploadResult['error']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => $uploadResult['error']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => $uploadResult['error']], 400);
             }
             
             $uploadedFile = $uploadResult['file'];
@@ -497,13 +463,7 @@ class PluginsPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Архів не містить plugin.json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Архів не містить plugin.json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Архів не містить plugin.json'], 400);
             }
             
             // Якщо slug не визначено, спробуємо прочитати plugin.json
@@ -531,13 +491,7 @@ class PluginsPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Неможливо визначити slug плагіна'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Неможливо визначити slug плагіна'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Неможливо визначити slug плагіна'], 400);
             }
             
             // Шлях до папки плагінів
@@ -552,13 +506,7 @@ class PluginsPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Плагін з таким slug вже існує: ' . $pluginSlug], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Плагін з таким slug вже існує: ' . $pluginSlug], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Плагін з таким slug вже існує: ' . $pluginSlug], 400);
             }
             
             // Створюємо папку для плагіна
@@ -569,13 +517,7 @@ class PluginsPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Помилка створення папки плагіна'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Помилка створення папки плагіна'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Помилка створення папки плагіна'], 500);
             }
             
             // Визначаємо кореневу папку в архіві
@@ -643,43 +585,20 @@ class PluginsPage extends AdminPage {
             // Автоматично встановлюємо плагін
             try {
                 pluginManager()->installPlugin($pluginSlug);
-                // Очищаємо буфер перед виводом JSON
-                ob_clean();
-                try {
-                    $response = Json::encode([
-                        'success' => true,
-                        'message' => 'Плагін успішно завантажено та встановлено',
-                        'plugin_slug' => $pluginSlug,
-                        'extracted_files' => $extracted
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    error_log("JSON encode error: " . $e->getMessage());
-                    $response = json_encode([
-                        'success' => true,
-                        'message' => 'Плагін успішно завантажено та встановлено',
-                        'plugin_slug' => $pluginSlug,
-                        'extracted_files' => $extracted
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
+                $this->sendJsonResponse([
+                    'success' => true,
+                    'message' => 'Плагін успішно завантажено та встановлено',
+                    'plugin_slug' => $pluginSlug,
+                    'extracted_files' => $extracted
+                ], 200);
             } catch (Exception $e) {
-                // Очищаємо буфер перед виводом JSON
-                ob_clean();
-                try {
-                    $response = Json::encode([
-                        'success' => true,
-                        'message' => 'Плагін завантажено, але помилка при встановленні: ' . $e->getMessage(),
-                        'plugin_slug' => $pluginSlug,
-                        'extracted_files' => $extracted
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $jsonEx) {
-                    error_log("JSON encode error: " . $jsonEx->getMessage());
-                    $response = json_encode([
-                        'success' => true,
-                        'message' => 'Плагін завантажено, але помилка при встановленні: ' . $e->getMessage(),
-                        'plugin_slug' => $pluginSlug,
-                        'extracted_files' => $extracted
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
+                error_log("Plugin install error: " . $e->getMessage());
+                $this->sendJsonResponse([
+                    'success' => true,
+                    'message' => 'Плагін завантажено, але помилка при встановленні: ' . $e->getMessage(),
+                    'plugin_slug' => $pluginSlug,
+                    'extracted_files' => $extracted
+                ], 200);
             }
         } catch (Throwable $e) {
             // Очищаємо ресурси при помилці
@@ -695,50 +614,7 @@ class PluginsPage extends AdminPage {
             }
             
             error_log("Plugin upload error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            
-            // Очищаємо буфер перед виводом JSON
-            ob_clean();
-            try {
-                $response = Json::encode(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $jsonEx) {
-                error_log("JSON encode error: " . $jsonEx->getMessage());
-                $response = json_encode(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
-        } finally {
-            // Відновлюємо налаштування помилок
-            error_reporting($oldErrorReporting);
-            ini_set('display_errors', $oldDisplayErrors);
-            
-            // Очищаємо всі буфери перед виводом
-            while (ob_get_level() > 1) {
-                ob_end_clean();
-            }
-            
-            // Виводимо відповідь
-            if (isset($response) && !empty($response)) {
-                // Очищаємо буфер перед виводом
-                if (ob_get_level()) {
-                    ob_clean();
-                }
-                echo $response;
-            } else {
-                // Якщо відповідь не встановлена, виводимо помилку
-                if (ob_get_level()) {
-                    ob_clean();
-                }
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Помилка: не вдалося сформувати відповідь'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Помилка: не вдалося сформувати відповідь'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-            }
-            
-            // Закриваємо останній буфер
-            if (ob_get_level()) {
-                ob_end_flush();
-            }
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], 500);
         }
-        
-        exit;
     }
 }

@@ -152,8 +152,6 @@ class ThemesPage extends AdminPage {
      */
     private function handleAjax() {
         // Використовуємо Response клас для встановлення заголовків
-        Response::setHeader('Content-Type', 'application/json');
-        
         $action = SecurityHelper::sanitizeInput($_GET['action'] ?? $_POST['action'] ?? '');
         
         switch ($action) {
@@ -170,8 +168,7 @@ class ThemesPage extends AdminPage {
                 break;
                 
             default:
-                echo Json::encode(['success' => false, 'error' => 'Невідома дія'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія'], 400);
         }
     }
     
@@ -179,16 +176,19 @@ class ThemesPage extends AdminPage {
      * AJAX активація теми з компіляцією SCSS
      */
     private function ajaxActivateTheme() {
+        // Очищаємо буфер виводу
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
         if (!$this->verifyCsrf()) {
-            echo Json::encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
         }
         
         $themeSlug = SecurityHelper::sanitizeInput($_POST['theme_slug'] ?? '');
         
         if (empty($themeSlug)) {
-            echo Json::encode(['success' => false, 'error' => 'Тему не вибрано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не вибрано'], 400);
         }
         
         // Перевіряємо, чи підтримує тема SCSS
@@ -221,30 +221,33 @@ class ThemesPage extends AdminPage {
                 cache_forget($pattern);
             }
             
-            echo Json::encode([
+            $this->sendJsonResponse([
                 'success' => true,
                 'message' => 'Тему успішно активовано',
                 'has_scss' => $hasScssSupport,
                 'compiled' => $hasScssSupport ? $compileResult : null
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            ], 200);
         } else {
-            echo Json::encode([
+            $this->sendJsonResponse([
                 'success' => false,
                 'error' => 'Помилка при активації теми'
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            ], 500);
         }
-        exit;
     }
     
     /**
      * AJAX перевірка статусу компіляції
      */
     private function ajaxCheckCompilation() {
+        // Очищаємо буфер виводу
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
         $themeSlug = SecurityHelper::sanitizeInput($_GET['theme_slug'] ?? '');
         
         if (empty($themeSlug)) {
-            echo Json::encode(['success' => false, 'error' => 'Тему не вказано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не вказано'], 400);
         }
         
         $hasScssSupport = themeManager()->hasScssSupport($themeSlug);
@@ -252,51 +255,29 @@ class ThemesPage extends AdminPage {
         $cssFile = $themePath . 'assets/css/style.css';
         $cssExists = file_exists($cssFile);
         
-        echo Json::encode([
+        $this->sendJsonResponse([
             'success' => true,
             'has_scss' => $hasScssSupport,
             'css_exists' => $cssExists,
             'css_file' => $cssExists ? 'assets/css/style.css' : null
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        exit;
+        ], 200);
     }
     
     /**
      * AJAX завантаження теми з ZIP архіву
      */
     private function ajaxUploadTheme(): void {
-        // Відключаємо вивід помилок на екран для запобігання HTML у JSON
-        $oldErrorReporting = error_reporting(E_ALL);
-        $oldDisplayErrors = ini_get('display_errors');
-        ini_set('display_errors', '0');
-        
         // Очищаємо буфер виводу для запобігання виводу HTML перед JSON
         while (ob_get_level()) {
             ob_end_clean();
         }
-        ob_start();
-        
-        // Встановлюємо заголовок JSON
-        header('Content-Type: application/json; charset=utf-8');
         
         if (!$this->verifyCsrf()) {
-            ob_clean();
-            try {
-                echo Json::encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $e) {
-                echo json_encode(['success' => false, 'error' => 'Помилка безпеки'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
         }
         
         if (!isset($_FILES['theme_file'])) {
-            ob_clean();
-            try {
-                echo Json::encode(['success' => false, 'error' => 'Файл не вибрано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $e) {
-                echo json_encode(['success' => false, 'error' => 'Файл не вибрано'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
-            exit;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Файл не вибрано'], 400);
         }
         
         $uploadedFile = null;
@@ -419,13 +400,7 @@ class ThemesPage extends AdminPage {
             $uploadResult = $upload->upload($_FILES['theme_file']);
             
             if (!$uploadResult['success']) {
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => $uploadResult['error']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => $uploadResult['error']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => $uploadResult['error']], 400);
             }
             
             $uploadedFile = $uploadResult['file'];
@@ -460,13 +435,7 @@ class ThemesPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Архів не містить theme.json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Архів не містить theme.json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Архів не містить theme.json'], 400);
             }
             
             // Якщо slug не визначено, спробуємо прочитати theme.json
@@ -494,13 +463,7 @@ class ThemesPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Неможливо визначити slug теми'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Неможливо визначити slug теми'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Неможливо визначити slug теми'], 400);
             }
             
             // Шлях до папки тем
@@ -515,13 +478,7 @@ class ThemesPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Тема з таким slug вже існує: ' . $themeSlug], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Тема з таким slug вже існує: ' . $themeSlug], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Тема з таким slug вже існує: ' . $themeSlug], 400);
             }
             
             // Створюємо папку для теми
@@ -532,13 +489,7 @@ class ThemesPage extends AdminPage {
                 if ($uploadedFile && file_exists($uploadedFile)) {
                     @unlink($uploadedFile);
                 }
-                ob_clean();
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Помилка створення папки теми'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Помилка створення папки теми'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-                exit;
+                $this->sendJsonResponse(['success' => false, 'error' => 'Помилка створення папки теми'], 500);
             }
             
             // Визначаємо кореневу папку в архіві
@@ -606,24 +557,12 @@ class ThemesPage extends AdminPage {
             // Очищаємо кеш тем
             themeManager()->clearThemeCache();
             
-            // Очищаємо буфер перед виводом JSON
-            ob_clean();
-            try {
-                $response = Json::encode([
-                    'success' => true,
-                    'message' => 'Тему успішно завантажено',
-                    'theme_slug' => $themeSlug,
-                    'extracted_files' => $extracted
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $e) {
-                error_log("JSON encode error: " . $e->getMessage());
-                $response = json_encode([
-                    'success' => true,
-                    'message' => 'Тему успішно завантажено',
-                    'theme_slug' => $themeSlug,
-                    'extracted_files' => $extracted
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
+            $this->sendJsonResponse([
+                'success' => true,
+                'message' => 'Тему успішно завантажено',
+                'theme_slug' => $themeSlug,
+                'extracted_files' => $extracted
+            ], 200);
         } catch (Throwable $e) {
             // Очищаємо ресурси при помилці
             if ($zip) {
@@ -638,51 +577,8 @@ class ThemesPage extends AdminPage {
             }
             
             error_log("Theme upload error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            
-            // Очищаємо буфер перед виводом JSON
-            ob_clean();
-            try {
-                $response = Json::encode(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            } catch (Exception $jsonEx) {
-                error_log("JSON encode error: " . $jsonEx->getMessage());
-                $response = json_encode(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            }
-        } finally {
-            // Відновлюємо налаштування помилок
-            error_reporting($oldErrorReporting);
-            ini_set('display_errors', $oldDisplayErrors);
-            
-            // Очищаємо всі буфери перед виводом
-            while (ob_get_level() > 1) {
-                ob_end_clean();
-            }
-            
-            // Виводимо відповідь
-            if (isset($response) && !empty($response)) {
-                // Очищаємо буфер перед виводом
-                if (ob_get_level()) {
-                    ob_clean();
-                }
-                echo $response;
-            } else {
-                // Якщо відповідь не встановлена, виводимо помилку
-                if (ob_get_level()) {
-                    ob_clean();
-                }
-                try {
-                    echo Json::encode(['success' => false, 'error' => 'Помилка: не вдалося сформувати відповідь'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => 'Помилка: не вдалося сформувати відповідь'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-            }
-            
-            // Закриваємо останній буфер
-            if (ob_get_level()) {
-                ob_end_flush();
-            }
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка: ' . $e->getMessage()], 500);
         }
-        
-        exit;
     }
     
     /**
