@@ -144,6 +144,13 @@ class Database {
      * @throws Exception
      */
     private function connect(): void {
+        // Проверяем, что константы БД определены и не пустые
+        if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
+            $this->isConnected = false;
+            $this->connection = null;
+            throw new Exception('Database configuration is not set');
+        }
+        
         if ($this->connectionAttempts >= self::MAX_CONNECTION_ATTEMPTS) {
             $error = 'Превышено максимальное количество попыток подключения к базе данных';
             $this->logError('Database connection failed', ['error' => $error, 'attempts' => $this->connectionAttempts]);
@@ -581,6 +588,11 @@ class Database {
      * @return bool
      */
     public function isAvailable(): bool {
+        // Проверяем, что константы БД определены и не пустые
+        if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
+            return false;
+        }
+        
         try {
             if (!$this->isConnected || $this->connection === null) {
                 $this->connect();
@@ -596,7 +608,10 @@ class Database {
         } catch (Exception $e) {
             $this->isConnected = false;
             $this->connection = null;
-            $this->logError('Database availability check failed', ['error' => $e->getMessage()]);
+            // Не логируем ошибку, если конфигурация не установлена (это нормально для установщика)
+            if (defined('DB_HOST') && !empty(DB_HOST)) {
+                $this->logError('Database availability check failed', ['error' => $e->getMessage()]);
+            }
             return false;
         }
     }
