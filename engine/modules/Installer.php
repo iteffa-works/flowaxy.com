@@ -61,42 +61,16 @@ class Installer extends BaseModule {
     
     /**
      * Проверка установлена ли система
+     * Проверяет наличие файла database.ini
      * 
      * @return bool
      */
     public function isInstalled(): bool {
         try {
-            // Сначала проверяем подключение к БД
-            if (!DatabaseHelper::isAvailable(false)) {
-                return false;
-            }
+            $databaseIniFile = dirname(__DIR__) . '/data/database.ini';
             
-            $db = $this->getDB();
-            if ($db === null) {
-                return false;
-            }
-            
-            // Проверяем наличие таблицы site_settings
-            if (!$this->tableExists('site_settings')) {
-                return false;
-            }
-            
-            // Проверяем флаг установки в настройках
-            try {
-                $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ?");
-                $stmt->execute([self::INSTALL_FLAG_KEY]);
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($result && $result['setting_value'] === '1') {
-                    return true;
-                }
-            } catch (PDOException $e) {
-                // Если таблица существует, но запрос не выполнился, система не установлена
-                return false;
-            }
-            
-            // Проверяем наличие всех обязательных таблиц
-            return $this->checkTables();
+            // Если файл database.ini существует, система установлена
+            return file_exists($databaseIniFile);
         } catch (Exception $e) {
             return false;
         }
@@ -251,20 +225,28 @@ class Installer extends BaseModule {
     
     /**
      * Установка флага установки системы
+     * Устанавливает флаг в БД (database.ini уже создан на предыдущем шаге)
      * 
-     * @param PDO $db Подключение к БД
+     * @param PDO|null $db Подключение к БД
      * @return void
      */
-    private function setInstallFlag(PDO $db): void {
+    public function setInstallFlag(?PDO $db = null): void {
         try {
-            $stmt = $db->prepare("
-                INSERT INTO site_settings (setting_key, setting_value) 
-                VALUES (?, '1')
-                ON DUPLICATE KEY UPDATE setting_value = '1'
-            ");
-            $stmt->execute([self::INSTALL_FLAG_KEY]);
-        } catch (PDOException $e) {
-            // Игнорируем ошибку, если таблица еще не создана
+            // Устанавливаем флаг в БД, если подключение есть
+            if ($db !== null) {
+                try {
+                    $stmt = $db->prepare("
+                        INSERT INTO site_settings (setting_key, setting_value) 
+                        VALUES (?, '1')
+                        ON DUPLICATE KEY UPDATE setting_value = '1'
+                    ");
+                    $stmt->execute([self::INSTALL_FLAG_KEY]);
+                } catch (PDOException $e) {
+                    // Игнорируем ошибку, если таблица еще не создана
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error setting install flag: " . $e->getMessage());
         }
     }
     
@@ -273,7 +255,7 @@ class Installer extends BaseModule {
      * 
      * @return array
      */
-    private function getTableDefinitions(): array {
+    public function getTableDefinitions(): array {
         return [
             'plugins' => "CREATE TABLE IF NOT EXISTS `plugins` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,

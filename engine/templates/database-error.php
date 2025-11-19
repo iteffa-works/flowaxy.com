@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="uk" id="error-page">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Помилка підключення до бази даних - Flowaxy CMS</title>
+    <title data-i18n="title">Помилка підключення до бази даних - Flowaxy CMS</title>
     <style>
         * {
             margin: 0;
@@ -339,7 +339,7 @@
                     </li>
                     <li>
                         <strong>Невірні параметри підключення</strong>
-                        <span>Перевірте файл engine/data/database.php: хост, порт, ім'я бази даних</span>
+                        <span>Перевірте файл engine/data/database.ini: хост, порт, ім'я бази даних</span>
                     </li>
                     <li>
                         <strong>База даних не існує</strong>
@@ -399,11 +399,52 @@
             <?php endif; ?>
             
             <div class="error-actions">
-                <button class="btn btn-primary" onclick="location.reload()">Оновити сторінку</button>
-                <a href="<?= defined('ADMIN_URL') ? ADMIN_URL : '/admin' ?>" class="btn btn-secondary">Адмін-панель</a>
+                <button class="btn btn-primary" onclick="location.reload()" data-i18n="button.reload">Оновити сторінку</button>
+                <a href="<?= defined('ADMIN_URL') ? ADMIN_URL : '/admin' ?>" class="btn btn-secondary" data-i18n="button.admin">Адмін-панель</a>
             </div>
         </div>
     </div>
+    
+    <script>
+        const translations = {
+            uk: {
+                'title': 'Помилка підключення до бази даних - Flowaxy CMS',
+                'button.reload': 'Оновити сторінку',
+                'button.admin': 'Адмін-панель'
+            },
+            ru: {
+                'title': 'Ошибка подключения к базе данных - Flowaxy CMS',
+                'button.reload': 'Обновить страницу',
+                'button.admin': 'Админ-панель'
+            },
+            en: {
+                'title': 'Database Connection Error - Flowaxy CMS',
+                'button.reload': 'Reload Page',
+                'button.admin': 'Admin Panel'
+            }
+        };
+        
+        function getBrowserLang() {
+            const lang = navigator.language || navigator.userLanguage;
+            const code = lang.split('-')[0].toLowerCase();
+            return ['uk', 'ru', 'en'].includes(code) ? code : 'uk';
+        }
+        
+        function applyTranslations(lang) {
+            const trans = translations[lang] || translations.uk;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (trans[key]) {
+                    el.textContent = trans[key];
+                }
+            });
+            document.title = trans['title'] || document.title;
+        }
+        
+        const lang = getBrowserLang();
+        document.documentElement.lang = lang;
+        applyTranslations(lang);
+    </script>
 </body>
 </html>
 
