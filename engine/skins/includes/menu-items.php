@@ -93,22 +93,49 @@ function getMenuItems() {
  * Рендерить пункт меню
  */
 function renderMenuItem($item, $currentPage, $isMobile = false) {
-    $isActive = isset($item['page']) && $currentPage === $item['page'];
     $hasSubmenu = isset($item['submenu']) && !empty($item['submenu']);
     $target = isset($item['target']) ? ' target="' . $item['target'] . '"' : '';
     
+    // Получаем параметр tab из URL один раз
+    $request = Request::getInstance();
+    $tab = SecurityHelper::sanitizeInput($request->query('tab', ''));
+    
     if ($hasSubmenu) {
         // Меню з підменю (однаково для десктопу та мобільних)
+        // Основной пункт меню активен только если активна одна из его подменю
         $activeClass = '';
+        $hasActiveSubmenu = false;
+        
         if (isset($item['submenu'])) {
             foreach ($item['submenu'] as $subItem) {
-                if (isset($subItem['page']) && $currentPage === $subItem['page']) {
-                    $activeClass = 'active';
-                    break;
+                if (isset($subItem['page'])) {
+                    $subItemPage = $subItem['page'];
+                    
+                    // Проверяем точное совпадение с текущей страницей
+                    if ($currentPage === $subItemPage) {
+                        // Если нет tab, значит это главная страница
+                        if (empty($tab)) {
+                            $hasActiveSubmenu = true;
+                            break;
+                        }
+                    }
+                    
+                    // Если есть tab, проверяем совпадение с учетом tab
+                    if (!empty($tab)) {
+                        $pageWithTab = $currentPage . '-' . $tab;
+                        if ($subItemPage === $pageWithTab) {
+                            $hasActiveSubmenu = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
-        if ($isActive) $activeClass = 'active';
+        
+        // Основной пункт меню активен только если активна подменю
+        if ($hasActiveSubmenu) {
+            $activeClass = 'active';
+        }
         
         if ($isMobile) {
             // Мобільна версія з підменю
@@ -120,9 +147,25 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             echo '</a>';
             echo '<div class="submenu">';
             foreach ($item['submenu'] as $subItem) {
-                $subActive = isset($subItem['page']) && $currentPage === $subItem['page'] ? 'active' : '';
+                // Определяем активный пункт подменю с учетом tab
+                $subActive = false;
+                if (isset($subItem['page'])) {
+                    $subItemPage = $subItem['page'];
+                    // Проверяем точное совпадение (для главной страницы без tab)
+                    if ($currentPage === $subItemPage && empty($tab)) {
+                        $subActive = true;
+                    }
+                    // Если есть tab, проверяем совпадение с учетом tab
+                    if (!empty($tab)) {
+                        $pageWithTab = $currentPage . '-' . $tab;
+                        if ($subItemPage === $pageWithTab) {
+                            $subActive = true;
+                        }
+                    }
+                }
+                $subActiveClass = $subActive ? 'active' : '';
                 $subIcon = isset($subItem['icon']) ? '<i class="' . $subItem['icon'] . '"></i>' : '';
-                echo '<a href="' . $subItem['href'] . '" class="submenu-link ' . $subActive . '">' . $subIcon . '<span class="menu-text">' . htmlspecialchars($subItem['text'] ?? $subItem['title'] ?? '') . '</span></a>';
+                echo '<a href="' . $subItem['href'] . '" class="submenu-link ' . $subActiveClass . '">' . $subIcon . '<span class="menu-text">' . htmlspecialchars($subItem['text'] ?? $subItem['title'] ?? '') . '</span></a>';
             }
             echo '</div>';
             echo '</div>';
@@ -136,15 +179,50 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             echo '</a>';
             echo '<ul class="submenu">';
             foreach ($item['submenu'] as $subItem) {
-                $subActive = isset($subItem['page']) && $currentPage === $subItem['page'] ? 'active' : '';
+                // Определяем активный пункт подменю с учетом tab
+                $subActive = false;
+                if (isset($subItem['page'])) {
+                    $subItemPage = $subItem['page'];
+                    // Проверяем точное совпадение (для главной страницы без tab)
+                    if ($currentPage === $subItemPage && empty($tab)) {
+                        $subActive = true;
+                    }
+                    // Если есть tab, проверяем совпадение с учетом tab
+                    if (!empty($tab)) {
+                        $pageWithTab = $currentPage . '-' . $tab;
+                        if ($subItemPage === $pageWithTab) {
+                            $subActive = true;
+                        }
+                    }
+                }
+                $subActiveClass = $subActive ? 'active' : '';
                 $subIcon = isset($subItem['icon']) ? '<i class="' . $subItem['icon'] . '"></i>' : '';
-                echo '<li><a href="' . $subItem['href'] . '" class="' . $subActive . '">' . $subIcon . '<span class="menu-text">' . htmlspecialchars($subItem['text'] ?? $subItem['title'] ?? '') . '</span></a></li>';
+                echo '<li><a href="' . $subItem['href'] . '" class="' . $subActiveClass . '">' . $subIcon . '<span class="menu-text">' . htmlspecialchars($subItem['text'] ?? $subItem['title'] ?? '') . '</span></a></li>';
             }
             echo '</ul>';
             echo '</li>';
         }
     } else {
         // Звичайний пункт меню (без підменю)
+        $isActive = false;
+        if (isset($item['page'])) {
+            $itemPage = $item['page'];
+            // Проверяем точное совпадение
+            if ($currentPage === $itemPage) {
+                // Если нет tab, значит это активная страница
+                if (empty($tab)) {
+                    $isActive = true;
+                }
+            }
+            // Если есть tab, проверяем совпадение с учетом tab
+            if (!empty($tab)) {
+                $pageWithTab = $currentPage . '-' . $tab;
+                if ($itemPage === $pageWithTab) {
+                    $isActive = true;
+                }
+            }
+        }
+        
         $activeClass = $isActive ? 'active' : '';
         if ($isMobile) {
             echo '<a class="nav-link ' . $activeClass . '" href="' . $item['href'] . '"' . $target . '>';

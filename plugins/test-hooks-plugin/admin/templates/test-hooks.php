@@ -2,22 +2,20 @@
 /**
  * Шаблон страницы Test Hooks Plugin
  */
-?>
 
-<!-- Уведомления -->
-<?php
-if (!empty($message)) {
-    include __DIR__ . '/../../../../engine/skins/components/alert.php';
-    $type = $messageType ?? 'info';
-    $dismissible = true;
-}
-?>
-
-<?php
 // Определяем активную вкладку
 $activeTab = $activeTab ?? '';
 $currentUrl = '/admin/test-hooks-plugin';
 ?>
+
+<!-- Уведомления -->
+<?php if (!empty($message)): ?>
+    <?php
+    $type = $messageType ?? 'info';
+    $dismissible = true;
+    include __DIR__ . '/../../../../engine/skins/components/alert.php';
+    ?>
+<?php endif; ?>
 
 <!-- Навигация по вкладкам -->
 <div class="test-hooks-tabs mb-4">
@@ -97,17 +95,6 @@ $currentUrl = '/admin/test-hooks-plugin';
         <?php endif; ?>
     </div>
 </div>
-
-<?php
-$sectionContent = ob_get_clean();
-
-// Используем компонент секции контента
-$title = 'Test Hooks';
-$icon = 'code';
-$content = $sectionContent;
-$classes = ['test-hooks-page'];
-include __DIR__ . '/../../../../engine/skins/components/content-section.php';
-?>
 
 <style>
 .test-hooks-page {
