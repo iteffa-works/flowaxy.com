@@ -39,6 +39,13 @@ if (isset($attributes['class'])) {
     unset($attributes['class']);
 }
 
+// Извлекаем type из атрибутов для кнопок (чтобы не дублировать в HTML)
+$buttonType = null;
+if (!isset($url) && isset($attributes['type'])) {
+    $buttonType = $attributes['type'];
+    unset($attributes['type']);
+}
+
 // Формируем атрибуты
 $attributesString = '';
 foreach ($attributes as $key => $value) {
@@ -65,7 +72,10 @@ if (isset($url) && !empty($url)):
 <?php
 // Иначе создаем кнопку
 else:
-    $buttonType = $submit ? 'submit' : 'button';
+    // Используем type из атрибутов, если был указан, иначе проверяем $submit
+    if ($buttonType === null) {
+        $buttonType = $submit ? 'submit' : 'button';
+    }
 ?>
     <button type="<?= $buttonType ?>" class="<?= $buttonClass ?>"<?= $attributesString ?>>
         <?= $iconHtml ?><?= htmlspecialchars($text) ?>

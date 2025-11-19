@@ -64,12 +64,18 @@ class SettingsManager extends BaseModule {
             return;
         }
         
-        // Используем кеш
-        if (function_exists('cache_remember')) {
+        // Если принудительная перезагрузка, очищаем кеш перед загрузкой
+        if ($force && function_exists('cache_forget')) {
+            cache_forget('site_settings');
+        }
+        
+        // Используем кеш только если не принудительная перезагрузка
+        if (!$force && function_exists('cache_remember')) {
             $this->settings = cache_remember('site_settings', function(): array {
                 return $this->loadFromDatabase();
             }, 3600);
         } else {
+            // Загружаем напрямую из БД (минуя кеш)
             $this->settings = $this->loadFromDatabase();
         }
         
@@ -197,15 +203,19 @@ class SettingsManager extends BaseModule {
             
             foreach ($settings as $key => $value) {
                 $stmt->execute([$key, (string)$value]);
+                // Обновляем локальный кеш настроек
                 $this->settings[$key] = (string)$value;
             }
             
             $db->commit();
             
-            // Очищаем кеш
+            // Очищаем кеш Cache перед обновлением локального кеша
             if (function_exists('cache_forget')) {
                 cache_forget('site_settings');
             }
+            
+            // Помечаем, что настройки загружены (чтобы избежать повторной загрузки)
+            $this->loaded = true;
             
             return true;
         } catch (Exception $e) {

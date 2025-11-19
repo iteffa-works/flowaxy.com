@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 class Cache {
     private static ?self $instance = null;
+    private static bool $loadingSettings = false; // Флаг для предотвращения рекурсии
+    private bool $settingsLoaded = false; // Флаг загрузки настроек
     private string $cacheDir;
     private int $defaultTtl = 3600; // 1 час
     private array $memoryCache = []; // Кеш в памяти для текущего запроса
@@ -24,8 +26,8 @@ class Cache {
         $this->cacheDir = defined('CACHE_DIR') ? CACHE_DIR : dirname(__DIR__, 2) . '/storage/cache/';
         $this->cacheDir = rtrim($this->cacheDir, '/') . '/';
         $this->ensureCacheDir();
-        // Пропускаем автоматическую очистку в конструкторе, чтобы избежать циклических зависимостей
-        $this->loadSettings(true);
+        // НЕ загружаем настройки в конструкторе, чтобы избежать циклических зависимостей
+        // Настройки будут загружены позже при первом обращении или через reloadSettings()
     }
     
     /**
@@ -35,21 +37,73 @@ class Cache {
      * @return void
      */
     private function loadSettings(bool $skipCleanup = false): void {
+        // Предотвращаем рекурсию: если настройки уже загружаются, выходим
+        if (self::$loadingSettings) {
+            return;
+        }
+        
         // Избегаем циклических зависимостей: не загружаем настройки, если SettingsManager еще не загружен
-        // или если модули еще инициализируются
-        if (!class_exists('SettingsManager') || !class_exists('ModuleLoader') || !ModuleLoader::isModuleLoaded('SettingsManager')) {
+        if (!class_exists('SettingsManager')) {
             // Используем значения по умолчанию
             return;
         }
+        
+        // Устанавливаем флаг загрузки настроек
+        self::$loadingSettings = true;
         
         try {
             // Проверяем, не вызывается ли это во время инициализации модулей
             if (function_exists('settingsManager')) {
                 $settings = settingsManager();
                 if ($settings !== null) {
-                    $this->enabled = $settings->get('cache_enabled', '1') === '1';
-                    $this->defaultTtl = (int)$settings->get('cache_default_ttl', '3600');
-                    $this->autoCleanup = $settings->get('cache_auto_cleanup', '1') === '1';
+                    // Загружаем настройки напрямую из БД, минуя кеш, чтобы избежать рекурсии
+                    try {
+                        // Используем прямой запрос к БД для получения настроек
+                        $db = DatabaseHelper::getConnection();
+                        if ($db !== null) {
+                            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('cache_enabled', 'cache_default_ttl', 'cache_auto_cleanup')");
+                            if ($stmt !== false) {
+                                $dbSettings = [];
+                                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                    $dbSettings[$row['setting_key']] = $row['setting_value'];
+                                }
+                                
+                                // Применяем настройки из БД
+                                $cacheEnabled = $dbSettings['cache_enabled'] ?? '1';
+                                $this->enabled = $cacheEnabled === '1';
+                                
+                                $cacheDefaultTtl = $dbSettings['cache_default_ttl'] ?? '3600';
+                                $this->defaultTtl = (int)$cacheDefaultTtl ?: 3600;
+                                
+                                $cacheAutoCleanup = $dbSettings['cache_auto_cleanup'] ?? '1';
+                                $this->autoCleanup = $cacheAutoCleanup === '1';
+                            } else {
+                                // Если не удалось загрузить из БД, используем settingsManager
+                                $cacheEnabled = $settings->get('cache_enabled', '1');
+                                if ($cacheEnabled === '' && !$settings->has('cache_enabled')) {
+                                    $cacheEnabled = '1';
+                                }
+                                $this->enabled = $cacheEnabled === '1';
+                                
+                                $cacheDefaultTtl = $settings->get('cache_default_ttl', '3600');
+                                $this->defaultTtl = (int)$cacheDefaultTtl ?: 3600;
+                                
+                                $cacheAutoCleanup = $settings->get('cache_auto_cleanup', '1');
+                                if ($cacheAutoCleanup === '' && !$settings->has('cache_auto_cleanup')) {
+                                    $cacheAutoCleanup = '1';
+                                }
+                                $this->autoCleanup = $cacheAutoCleanup === '1';
+                            }
+                        } else {
+                            // Если БД недоступна, используем значения по умолчанию
+                            $this->enabled = true;
+                            $this->defaultTtl = 3600;
+                            $this->autoCleanup = true;
+                        }
+                    } catch (Exception $e) {
+                        // В случае ошибки используем значения по умолчанию
+                        error_log("Cache::loadSettings DB error: " . $e->getMessage());
+                    }
                     
                     // Выполняем автоматическую очистку при необходимости (только если не в конструкторе)
                     if (!$skipCleanup && $this->autoCleanup && mt_rand(1, 1000) <= 1) { // 0.1% шанс на очистку при каждом запросе
@@ -66,6 +120,9 @@ class Cache {
         } catch (Error $e) {
             // В случае фатальной ошибки (например, при рекурсии) используем значения по умолчанию
             error_log("Cache::loadSettings fatal error: " . $e->getMessage());
+        } finally {
+            // Сбрасываем флаг загрузки настроек
+            self::$loadingSettings = false;
         }
     }
     
@@ -77,6 +134,7 @@ class Cache {
     public function reloadSettings(): void {
         // При обновлении настроек разрешаем автоматическую очистку
         $this->loadSettings(false);
+        $this->settingsLoaded = true;
     }
     
     /**
@@ -122,6 +180,12 @@ class Cache {
      * @return mixed
      */
     public function get(string $key, $default = null) {
+        // Ленивая загрузка настроек при первом использовании
+        if (!$this->settingsLoaded) {
+            $this->loadSettings(true);
+            $this->settingsLoaded = true;
+        }
+        
         // Если кеширование отключено, возвращаем значение по умолчанию
         if (!$this->enabled) {
             return $default;
@@ -183,6 +247,12 @@ class Cache {
      * @return bool
      */
     public function set(string $key, $data, ?int $ttl = null): bool {
+        // Ленивая загрузка настроек при первом использовании
+        if (!$this->settingsLoaded) {
+            $this->loadSettings(true);
+            $this->settingsLoaded = true;
+        }
+        
         // Если кеширование отключено, не сохраняем
         if (!$this->enabled) {
             return false;
@@ -260,6 +330,17 @@ class Cache {
      * @return bool
      */
     public function has(string $key): bool {
+        // Ленивая загрузка настроек при первом использовании
+        if (!$this->settingsLoaded) {
+            $this->loadSettings(true);
+            $this->settingsLoaded = true;
+        }
+        
+        // Если кеширование отключено, всегда возвращаем false
+        if (!$this->enabled) {
+            return false;
+        }
+        
         // Валидация ключа
         if (empty($key)) {
             return false;
@@ -312,6 +393,12 @@ class Cache {
      * @return mixed
      */
     public function remember(string $key, callable $callback, ?int $ttl = null) {
+        // Ленивая загрузка настроек при первом использовании
+        if (!$this->settingsLoaded) {
+            $this->loadSettings(true);
+            $this->settingsLoaded = true;
+        }
+        
         // Если кеширование отключено, просто выполняем callback
         if (!$this->enabled) {
             try {

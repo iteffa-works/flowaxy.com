@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 class Logger {
     private static ?self $instance = null;
+    private static bool $loadingSettings = false; // Флаг для предотвращения рекурсии
+    private bool $settingsLoaded = false; // Флаг загрузки настроек
     private string $logDir;
     private string $logFile;
     private int $maxFileSize = 10 * 1024 * 1024; // 10 MB
@@ -43,8 +45,8 @@ class Logger {
         // Имя файла лога с датой
         $this->logFile = $this->logDir . 'app-' . date('Y-m-d') . '.log';
         
-        // Загружаем настройки
-        $this->loadSettings();
+        // НЕ загружаем настройки в конструкторе, чтобы избежать циклических зависимостей
+        // Настройки будут загружены позже при первом логировании или через reloadSettings()
     }
     
     /**
@@ -82,6 +84,33 @@ class Logger {
      * @return void
      */
     private function loadSettings(): void {
+        // Предотвращаем рекурсию: если настройки уже загружаются, выходим
+        if (self::$loadingSettings) {
+            return;
+        }
+        
+        // Избегаем циклических зависимостей: не загружаем настройки, если SettingsManager еще не загружен
+        if (!class_exists('SettingsManager')) {
+            // Используем значения по умолчанию
+            $this->settings = [
+                'enabled' => true,
+                'min_level' => self::LEVEL_INFO,
+                'log_to_file' => true,
+                'log_to_error_log' => false,
+                'log_db_queries' => false,
+                'log_db_errors' => true,
+                'log_slow_queries' => true,
+                'slow_query_threshold' => 1.0,
+                'max_file_size' => $this->maxFileSize,
+                'max_files' => $this->maxFiles,
+                'retention_days' => 30
+            ];
+            return;
+        }
+        
+        // Устанавливаем флаг загрузки настроек
+        self::$loadingSettings = true;
+        
         // Настройки по умолчанию
         $this->settings = [
             'enabled' => true,
@@ -98,46 +127,114 @@ class Logger {
         ];
         
         // Загружаем из БД, если доступна
-        if (class_exists('SettingsManager')) {
-            $settings = settingsManager();
-            
-            // Основные настройки логирования
-            $this->settings['enabled'] = $settings->get('logging_enabled', '1') === '1';
-            
-            // Уровень логирования
-            $levelStr = $settings->get('logging_level', 'INFO');
-            $this->settings['min_level'] = match(strtoupper($levelStr)) {
-                'DEBUG' => self::LEVEL_DEBUG,
-                'INFO' => self::LEVEL_INFO,
-                'WARNING' => self::LEVEL_WARNING,
-                'ERROR' => self::LEVEL_ERROR,
-                'CRITICAL' => self::LEVEL_CRITICAL,
-                default => self::LEVEL_INFO
-            };
-            
-            // Настройки файлов
-            $this->settings['log_to_file'] = $this->settings['enabled'];
-            $maxFileSize = (int)$settings->get('logging_max_file_size', (string)$this->maxFileSize);
-            if ($maxFileSize > 0) {
-                $this->settings['max_file_size'] = $maxFileSize;
-                $this->maxFileSize = $maxFileSize;
+        if (function_exists('settingsManager')) {
+            try {
+                $settings = settingsManager();
+                if ($settings !== null) {
+                    // Загружаем настройки напрямую из БД, минуя кеш, чтобы избежать рекурсии
+                    try {
+                        // Используем прямой запрос к БД для получения настроек
+                        $db = DatabaseHelper::getConnection();
+                        if ($db !== null) {
+                            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('logging_enabled', 'logging_level', 'logging_max_file_size', 'logging_retention_days')");
+                            if ($stmt !== false) {
+                                $dbSettings = [];
+                                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                    $dbSettings[$row['setting_key']] = $row['setting_value'];
+                                }
+                                
+                                // Применяем настройки из БД
+                                $loggingEnabled = $dbSettings['logging_enabled'] ?? '1';
+                                $this->settings['enabled'] = $loggingEnabled === '1';
+                                
+                                // Уровень логирования
+                                $levelStr = $dbSettings['logging_level'] ?? 'INFO';
+                                $this->settings['min_level'] = match(strtoupper($levelStr)) {
+                                    'DEBUG' => self::LEVEL_DEBUG,
+                                    'INFO' => self::LEVEL_INFO,
+                                    'WARNING' => self::LEVEL_WARNING,
+                                    'ERROR' => self::LEVEL_ERROR,
+                                    'CRITICAL' => self::LEVEL_CRITICAL,
+                                    default => self::LEVEL_INFO
+                                };
+                                
+                                // Настройки файлов
+                                $this->settings['log_to_file'] = $this->settings['enabled'];
+                                $maxFileSize = (int)($dbSettings['logging_max_file_size'] ?? $this->maxFileSize);
+                                if ($maxFileSize > 0) {
+                                    $this->settings['max_file_size'] = $maxFileSize;
+                                    $this->maxFileSize = $maxFileSize;
+                                }
+                                
+                                // Дни хранения логов
+                                $retentionDays = (int)($dbSettings['logging_retention_days'] ?? 30);
+                                if ($retentionDays > 0) {
+                                    $this->settings['retention_days'] = $retentionDays;
+                                    $this->settings['max_files'] = max(5, $retentionDays + 1);
+                                    $this->maxFiles = $this->settings['max_files'];
+                                }
+                            } else {
+                                // Если не удалось загрузить из БД, используем settingsManager
+                                $loggingEnabled = $settings->get('logging_enabled', '1');
+                                if ($loggingEnabled === '' && !$settings->has('logging_enabled')) {
+                                    $loggingEnabled = '1';
+                                }
+                                $this->settings['enabled'] = $loggingEnabled === '1';
+                                
+                                $levelStr = $settings->get('logging_level', 'INFO');
+                                $this->settings['min_level'] = match(strtoupper($levelStr)) {
+                                    'DEBUG' => self::LEVEL_DEBUG,
+                                    'INFO' => self::LEVEL_INFO,
+                                    'WARNING' => self::LEVEL_WARNING,
+                                    'ERROR' => self::LEVEL_ERROR,
+                                    'CRITICAL' => self::LEVEL_CRITICAL,
+                                    default => self::LEVEL_INFO
+                                };
+                                
+                                $this->settings['log_to_file'] = $this->settings['enabled'];
+                                $maxFileSize = (int)$settings->get('logging_max_file_size', (string)$this->maxFileSize);
+                                if ($maxFileSize > 0) {
+                                    $this->settings['max_file_size'] = $maxFileSize;
+                                    $this->maxFileSize = $maxFileSize;
+                                }
+                                
+                                $retentionDays = (int)$settings->get('logging_retention_days', '30');
+                                if ($retentionDays > 0) {
+                                    $this->settings['retention_days'] = $retentionDays;
+                                    $this->settings['max_files'] = max(5, $retentionDays + 1);
+                                    $this->maxFiles = $this->settings['max_files'];
+                                }
+                            }
+                        } else {
+                            // Если БД недоступна, используем значения по умолчанию
+                            $this->settings['enabled'] = true;
+                            $this->settings['min_level'] = self::LEVEL_INFO;
+                            $this->settings['log_to_file'] = true;
+                        }
+                        
+                        // Дополнительные настройки (для совместимости)
+                        if ($settings !== null) {
+                            $this->settings['log_to_error_log'] = $settings->get('logger_log_to_error_log', '0') === '1';
+                            $this->settings['log_db_queries'] = $settings->get('logger_log_db_queries', '0') === '1';
+                            $this->settings['log_db_errors'] = $settings->get('logger_log_db_errors', '1') === '1';
+                            $this->settings['log_slow_queries'] = $settings->get('logger_log_slow_queries', '1') === '1';
+                            $this->settings['slow_query_threshold'] = (float)$settings->get('logger_slow_query_threshold', '1.0');
+                        }
+                    } catch (Exception $e) {
+                        // В случае ошибки используем значения по умолчанию
+                        error_log("Logger::loadSettings DB error: " . $e->getMessage());
+                    }
+                }
+            } catch (Exception $e) {
+                // В случае ошибки используем значения по умолчанию
+                error_log("Logger::loadSettings error: " . $e->getMessage());
+            } catch (Error $e) {
+                // В случае фатальной ошибки используем значения по умолчанию
+                error_log("Logger::loadSettings fatal error: " . $e->getMessage());
+            } finally {
+                // Сбрасываем флаг загрузки настроек
+                self::$loadingSettings = false;
             }
-            
-            // Дни хранения логов
-            $retentionDays = (int)$settings->get('logging_retention_days', '30');
-            if ($retentionDays > 0) {
-                $this->settings['retention_days'] = $retentionDays;
-                // Устанавливаем max_files на основе retention_days (примерно 1 файл в день)
-                $this->settings['max_files'] = max(5, $retentionDays + 1);
-                $this->maxFiles = $this->settings['max_files'];
-            }
-            
-            // Дополнительные настройки (для совместимости)
-            $this->settings['log_to_error_log'] = $settings->get('logger_log_to_error_log', '0') === '1';
-            $this->settings['log_db_queries'] = $settings->get('logger_log_db_queries', '0') === '1';
-            $this->settings['log_db_errors'] = $settings->get('logger_log_db_errors', '1') === '1';
-            $this->settings['log_slow_queries'] = $settings->get('logger_log_slow_queries', '1') === '1';
-            $this->settings['slow_query_threshold'] = (float)$settings->get('logger_slow_query_threshold', '1.0');
         }
     }
     
@@ -148,6 +245,7 @@ class Logger {
      */
     public function reloadSettings(): void {
         $this->loadSettings();
+        $this->settingsLoaded = true;
     }
     
     /**
@@ -186,6 +284,12 @@ class Logger {
      * @return void
      */
     public function log(int $level, string $message, array $context = []): void {
+        // Ленивая загрузка настроек при первом использовании
+        if (!$this->settingsLoaded) {
+            $this->loadSettings();
+            $this->settingsLoaded = true;
+        }
+        
         // Если логирование отключено, не логируем
         if (!$this->settings['enabled']) {
             return;

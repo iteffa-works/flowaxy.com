@@ -13,184 +13,211 @@ if (!empty($message)) {
 }
 ?>
 
-<div class="row g-3">
-    <!-- Список файлов логов -->
-    <div class="col-md-4">
-        <div class="card border-0 mb-3">
-            <div class="card-header bg-white border-bottom py-2 px-3">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="fas fa-folder me-2 text-primary"></i>Файли логів
-                </h6>
+<!-- Модальное окно подтверждения удаления всех логов -->
+<?php if (!empty($logFiles)): ?>
+<div class="modal fade" id="clearAllLogsModal" tabindex="-1" aria-labelledby="clearAllLogsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearAllLogsModalLabel">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Підтвердження видалення
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
-            <div class="card-body p-0">
-                <?php if (empty($logFiles)): ?>
-                    <?php
-                    include __DIR__ . '/../components/empty-state.php';
-                    $icon = 'inbox';
-                    $title = 'Файлів логів не знайдено';
-                    $message = '';
-                    $actions = '';
-                    $classes = ['p-3'];
-                    ?>
-                <?php else: ?>
-                    <div class="list-group list-group-flush">
-                        <?php foreach ($logFiles as $logFile): ?>
-                            <a href="?file=<?= urlencode($logFile['name']) ?>" 
-                               class="list-group-item list-group-item-action <?= ($selectedFile === $logFile['name']) ? 'active' : '' ?>">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-medium small"><?= htmlspecialchars($logFile['name']) ?></div>
-                                        <div class="text-muted small mt-1">
-                                            <?= $logFile['size_formatted'] ?> • <?= $logFile['modified'] ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+            <div class="modal-body">
+                <p>Ви впевнені, що хочете видалити всі файли логів?</p>
+                <p class="text-muted small mb-0">Цю дію неможливо скасувати. Всі файли логів будуть безповоротно видалені.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <form method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+                    <input type="hidden" name="clear_logs" value="1">
+                    <input type="hidden" name="file" value="all">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Видалити всі логи
+                    </button>
+                </form>
             </div>
         </div>
-        
-        <!-- Дії з логами -->
-        <?php if (!empty($logFiles)): ?>
-            <div class="card border-0 mb-3">
-                <div class="card-header bg-white border-bottom py-2 px-3">
-                    <h6 class="mb-0 fw-semibold">
-                        <i class="fas fa-tools me-2 text-primary"></i>Дії
-                    </h6>
-                </div>
-                <div class="card-body p-3">
-                    <?php
-                    // Кнопка очистки всех логов
-                    ob_start();
-                    $text = 'Очистити всі логи';
-                    $type = 'danger';
-                    $icon = 'trash';
-                    $attributes = ['type' => 'submit', 'class' => 'btn-sm w-100', 'onclick' => "return confirm('Ви впевнені, що хочете очистити всі логи?')"];
-                    unset($url);
-                    include __DIR__ . '/../components/button.php';
-                    $clearAllBtn = ob_get_clean();
-                    ?>
-                    <form method="POST" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                        <input type="hidden" name="clear_logs" value="1">
-                        <input type="hidden" name="file" value="all">
-                        <?= $clearAllBtn ?>
-                    </form>
-                    <?php if (!empty($selectedFile)): ?>
-                        <?php
-                        // Кнопка очистки текущего файла
-                        ob_start();
-                        $text = 'Очистити поточний файл';
-                        $type = 'warning';
-                        $icon = 'broom';
-                        $attributes = ['type' => 'submit', 'class' => 'btn-sm w-100 mt-2', 'onclick' => "return confirm('Ви впевнені, що хочете очистити цей файл?')"];
-                        unset($url);
-                        include __DIR__ . '/../components/button.php';
-                        $clearCurrentBtn = ob_get_clean();
-                        ?>
-                        <form method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                            <input type="hidden" name="clear_logs" value="1">
-                            <input type="hidden" name="file" value="<?= htmlspecialchars($selectedFile) ?>">
-                            <?= $clearCurrentBtn ?>
-                        </form>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
     </div>
-    
-    <!-- Содержимое лога -->
-    <div class="col-md-8">
-        <div class="card border-0 mb-3">
-            <div class="card-header bg-white border-bottom py-2 px-3">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="fas fa-file-alt me-2 text-primary"></i>
-                    <?php if (!empty($logContent['file'])): ?>
-                        <?= htmlspecialchars($logContent['file']) ?>
-                        <span class="text-muted small ms-2">(показано останні <?= count($logContent['lines']) ?> з <?= $logContent['total_lines'] ?> рядків)</span>
-                    <?php else: ?>
-                        Виберіть файл для перегляду
-                    <?php endif; ?>
-                </h6>
+</div>
+<?php endif; ?>
+
+<?php
+// Формируем содержимое секции
+ob_start();
+?>
+    <?php if (empty($logFiles)): ?>
+        <?php
+        // Пустое состояние без кнопок
+        unset($actions);
+        include __DIR__ . '/../components/empty-state.php';
+        $icon = 'inbox';
+        $title = 'Файлів логів не знайдено';
+        $message = 'Системні логи будуть автоматично створюватися при виникненні подій.';
+        $classes = ['logs-empty-state'];
+        ?>
+    <?php else: ?>
+        <div class="logs-view-content">
+            <!-- Выпадающее меню выбора файла лога -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-file-alt me-2 text-primary"></i>Виберіть файл логу
+                </label>
+                <select class="form-select" id="logFileSelect" onchange="window.location.href='?file=' + encodeURIComponent(this.value)">
+                    <option value="">-- Виберіть файл --</option>
+                    <?php foreach ($logFiles as $logFile): ?>
+                        <option value="<?= htmlspecialchars($logFile['name']) ?>" 
+                                <?= ($selectedFile === $logFile['name']) ? 'selected' : '' ?>
+                                data-size="<?= htmlspecialchars($logFile['size_formatted']) ?>"
+                                data-modified="<?= htmlspecialchars($logFile['modified']) ?>">
+                            <?= htmlspecialchars($logFile['name']) ?> 
+                            (<?= $logFile['size_formatted'] ?> • <?= $logFile['modified'] ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <div class="card-body p-0">
-                <?php if (empty($logContent['file'])): ?>
-                    <?php
-                    include __DIR__ . '/../components/empty-state.php';
-                    $icon = 'file-alt';
-                    $title = 'Виберіть файл для перегляду';
-                    $message = 'Виберіть файл логу зі списку для перегляду';
-                    $actions = '';
-                    $classes = ['p-4'];
-                    ?>
-                <?php elseif (isset($logContent['error'])): ?>
-                    <?php
-                    include __DIR__ . '/../components/alert.php';
-                    $message = htmlspecialchars($logContent['error']);
-                    $type = 'danger';
-                    $dismissible = false;
-                    $classes = ['p-3', 'mb-0'];
-                    ?>
-                <?php elseif (empty($logContent['lines'])): ?>
-                    <?php
-                    include __DIR__ . '/../components/empty-state.php';
-                    $icon = 'inbox';
-                    $title = 'Файл порожній';
-                    $message = '';
-                    $actions = '';
-                    $classes = ['p-3'];
-                    ?>
-                <?php else: ?>
+
+            <!-- Содержимое лога -->
+            <?php if (empty($logContent['file'])): ?>
+                <?php
+                include __DIR__ . '/../components/empty-state.php';
+                $icon = 'file-alt';
+                $title = 'Виберіть файл для перегляду';
+                $message = 'Виберіть файл логу з випадаючого меню для перегляду його вмісту';
+                $actions = '';
+                $classes = ['logs-content-empty'];
+                ?>
+            <?php elseif (isset($logContent['error'])): ?>
+                <?php
+                include __DIR__ . '/../components/alert.php';
+                $message = htmlspecialchars($logContent['error']);
+                $type = 'danger';
+                $dismissible = false;
+                $classes = ['mb-0'];
+                ?>
+            <?php elseif (empty($logContent['lines'])): ?>
+                <?php
+                include __DIR__ . '/../components/empty-state.php';
+                $icon = 'inbox';
+                $title = 'Файл порожній';
+                $message = 'Вибраний файл логу не містить записів';
+                $actions = '';
+                $classes = ['logs-content-empty'];
+                ?>
+            <?php else: ?>
+                <div class="log-content-wrapper">
+                    <div class="log-content-header mb-2 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Показано останні <?= count($logContent['lines']) ?> з <?= $logContent['total_lines'] ?> рядків
+                            </span>
+                        </div>
+                    </div>
                     <div class="log-content">
-                        <pre class="mb-0 p-3 bg-dark text-light small" style="max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; line-height: 1.5;"><?php
+                        <pre class="mb-0 p-3 bg-dark text-light small"><?php
                             foreach ($logContent['lines'] as $line) {
                                 echo htmlspecialchars($line['content']) . "\n";
                             }
                         ?></pre>
                     </div>
+                </div>
+                
+                <!-- Кнопка удаления текущего файла -->
+                <?php if (!empty($selectedFile)): ?>
+                    <div class="mt-3 pt-3 border-top">
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+                            <input type="hidden" name="clear_logs" value="1">
+                            <input type="hidden" name="file" value="<?= htmlspecialchars($selectedFile) ?>">
+                            <?php
+                            ob_start();
+                            $text = 'Видалити поточний файл';
+                            $type = 'danger';
+                            $icon = 'trash';
+                            $attributes = [
+                                'type' => 'submit',
+                                'class' => 'btn-sm',
+                                'onclick' => "return confirm('Ви впевнені, що хочете видалити файл " . htmlspecialchars($selectedFile, ENT_QUOTES) . "? Цю дію неможливо скасувати.')"
+                            ];
+                            unset($url);
+                            include __DIR__ . '/../components/button.php';
+                            echo ob_get_clean();
+                            ?>
+                        </form>
+                    </div>
                 <?php endif; ?>
-            </div>
+            <?php endif; ?>
         </div>
-    </div>
-</div>
+    <?php endif; ?>
+<?php
+$sectionContent = ob_get_clean();
+
+// Используем компонент секции контента (без заголовка, так как он уже в page-header)
+$title = '';
+$icon = '';
+$content = $sectionContent;
+$classes = ['logs-page'];
+include __DIR__ . '/../components/content-section.php';
+?>
 
 <style>
-.logs-view .list-group-item {
-    border-left: none;
-    border-right: none;
-    padding: 0.75rem 1rem;
+.logs-view-content {
+    min-height: 400px;
 }
 
-.logs-view .list-group-item:first-child {
-    border-top: none;
+.logs-content-empty {
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.logs-view .list-group-item:last-child {
-    border-bottom: none;
+.log-content-wrapper {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-.logs-view .list-group-item.active {
-    background-color: #0073aa;
-    border-color: #0073aa;
-    color: #ffffff;
+.log-content-header {
+    padding: 12px 16px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
 }
 
-.logs-view .list-group-item.active .text-muted {
-    color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.logs-view pre {
-    border-radius: 0;
+.log-content pre {
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    line-height: 1.5;
     margin: 0;
     white-space: pre-wrap;
     word-wrap: break-word;
 }
 
-.logs-view .card-body {
-    max-height: none;
+.content-section-body:has(.logs-empty-state) {
+    border: 2px dashed #dee2e6;
+    border-radius: 16px;
+    background: #f8f9fa;
+    padding: 60px 24px !important;
+    min-height: calc(100vh - 300px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content-section-body:has(.logs-empty-state .empty-state) {
+    border: 2px dashed #dee2e6;
+    border-radius: 16px;
+    background: #f8f9fa;
+    padding: 60px 24px !important;
+    min-height: calc(100vh - 300px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 </style>
+
 

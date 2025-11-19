@@ -23,12 +23,40 @@ class LogsViewPage extends AdminPage {
     public function handle() {
         // Обробка очистки логів
         if ($_POST && isset($_POST['clear_logs'])) {
+            $fileToDelete = $this->post('file', '');
             $this->clearLogs();
+            // После удаления конкретного файла происходит редирект с exit, дальше не выполняем
+            // Если удаление всех файлов - продолжаем выполнение для отображения сообщения
+            if ($fileToDelete !== 'all') {
+                return;
+            }
         }
         
         // Отримання списку логів
         $logFiles = $this->getLogFiles();
         $logContent = $this->getLogContent();
+        
+        // Кнопка очистки всех логов в заголовке (добавляем после получения логов)
+        $headerButtons = '';
+        if (!empty($logFiles)) {
+            $headerButtons = $this->createButton('Очистити всі логи', 'danger', [
+                'icon' => 'trash',
+                'attributes' => [
+                    'class' => 'btn-sm',
+                    'data-bs-toggle' => 'modal',
+                    'data-bs-target' => '#clearAllLogsModal',
+                    'onclick' => 'return false;'
+                ]
+            ]);
+        }
+        
+        // Обновляем заголовок с кнопкой
+        $this->setPageHeader(
+            'Перегляд логів',
+            'Системні логи та події',
+            'fas fa-file-alt',
+            $headerButtons
+        );
         
         // Рендеримо сторінку
         $this->render([
@@ -152,48 +180,77 @@ class LogsViewPage extends AdminPage {
     }
     
     /**
-     * Очистка логів
+     * Очистка логів (удаление файлов)
      */
     private function clearLogs() {
         if (!$this->verifyCsrf()) {
+            $this->setMessage('Помилка безпеки: невірний CSRF токен', 'danger');
             return;
         }
         
-        $file = $_POST['file'] ?? null;
+        $file = $this->post('file', null);
         $logsDir = dirname(__DIR__, 3) . '/storage/logs/';
         
+        // Проверяем, что директория существует
+        if (!is_dir($logsDir)) {
+            $this->setMessage('Помилка: директорія логів не знайдена', 'danger');
+            return;
+        }
+        
         if ($file === 'all') {
-            // Очищаємо всі логи
+            // Удаляем все файлы логов
             $pattern = $logsDir . '*.log';
             $files = glob($pattern);
-            $cleared = 0;
+            $deleted = 0;
             
             if ($files !== false) {
                 foreach ($files as $logFile) {
                     if (is_file($logFile) && is_writable($logFile)) {
-                        if (@file_put_contents($logFile, '') !== false) {
-                            $cleared++;
+                        if (@unlink($logFile)) {
+                            $deleted++;
                         }
                     }
                 }
             }
             
-            $this->setMessage("Очищено {$cleared} файлів логів", 'success');
+            $this->setMessage("Видалено {$deleted} файлів логів", 'success');
         } elseif (!empty($file)) {
-            // Очищаємо конкретний файл
+            // Удаляем конкретный файл
             $filePath = $logsDir . basename($file);
+            
+            // Нормализуем пути для безопасной проверки
+            $realFilePath = realpath($filePath);
+            $realLogsDir = realpath($logsDir);
+            
+            if ($realFilePath === false || $realLogsDir === false) {
+                $this->setMessage('Помилка: не вдалося визначити шлях до файлу', 'danger');
+                return;
+            }
             
             if (file_exists($filePath) && 
                 is_file($filePath) && 
-                is_writable($filePath) &&
-                strpos(realpath($filePath), realpath($logsDir)) === 0) {
-                if (@file_put_contents($filePath, '') !== false) {
-                    $this->setMessage('Файл логу успішно очищено', 'success');
+                is_writable($filePath)) {
+                // Проверяем, что файл находится в директории логов
+                if (strpos($realFilePath, $realLogsDir) === 0) {
+                    if (@unlink($filePath)) {
+                        $this->setMessage('Файл логу успішно видалено', 'success');
+                        // Перенаправляем на страницу без выбранного файла
+                        Response::redirectStatic(UrlHelper::admin('logs-view'));
+                        exit; // Обязательно выходим после редиректа
+                    } else {
+                        $this->setMessage('Помилка при видаленні файлу логу. Перевірте права доступу.', 'danger');
+                    }
                 } else {
-                    $this->setMessage('Помилка при очищенні файлу логу', 'danger');
+                    $this->setMessage('Помилка безпеки: файл знаходиться поза дозволеною директорією', 'danger');
                 }
             } else {
-                $this->setMessage('Файл не знайдено або недоступний', 'danger');
+                if (!file_exists($filePath)) {
+                    $this->setMessage('Файл не знайдено: ' . basename($file), 'danger');
+                } else if (!is_writable($filePath)) {
+                    $this->setMessage('Файл недоступний для запису. Перевірте права доступу.', 'danger');
+                } else {
+                    $this->setMessage('Файл не знайдено або недоступний', 'danger');
+                }
             }
         }
     }

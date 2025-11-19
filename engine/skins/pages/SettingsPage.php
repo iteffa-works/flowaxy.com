@@ -86,15 +86,37 @@ class SettingsPage extends AdminPage {
             // Используем SettingsManager для сохранения настроек
             if (class_exists('SettingsManager')) {
                 $settingsManager = settingsManager();
+                
+                // Очищаем кеш настроек перед сохранением, чтобы гарантировать свежие данные
+                if (method_exists($settingsManager, 'clearCache')) {
+                    $settingsManager->clearCache();
+                }
+                
                 $result = $settingsManager->setMultiple($sanitizedSettings);
                 
                 if ($result) {
+                    // Очищаем кеш настроек после сохранения
+                    if (method_exists($settingsManager, 'clearCache')) {
+                        $settingsManager->clearCache();
+                    }
+                    
+                    // Перезагружаем настройки в SettingsManager
+                    if (method_exists($settingsManager, 'reloadSettings')) {
+                        $settingsManager->reloadSettings();
+                    }
+                    
                     // Обновляем настройки в Cache и Logger
                     if (class_exists('Cache')) {
-                        cache()->reloadSettings();
+                        $cacheInstance = cache();
+                        if ($cacheInstance && method_exists($cacheInstance, 'reloadSettings')) {
+                            $cacheInstance->reloadSettings();
+                        }
                     }
                     if (class_exists('Logger')) {
-                        logger()->reloadSettings();
+                        $loggerInstance = logger();
+                        if ($loggerInstance && method_exists($loggerInstance, 'reloadSettings')) {
+                            $loggerInstance->reloadSettings();
+                        }
                     }
                     
                     // Применяем timezone, если он был изменен
@@ -126,7 +148,7 @@ class SettingsPage extends AdminPage {
      * Отримання налаштувань
      */
     private function getSettings() {
-        // Значення за замовчуванням
+        // Значення за замовчуванням (используются только если настройка отсутствует в БД)
         $defaultSettings = [
             'admin_email' => 'admin@example.com',
             'timezone' => 'Europe/Kiev',
@@ -145,8 +167,32 @@ class SettingsPage extends AdminPage {
         if (class_exists('SettingsManager')) {
             try {
                 $settingsManager = settingsManager();
+                
+                // Очищаем кеш Cache перед загрузкой настроек, чтобы избежать использования устаревших данных
+                if (function_exists('cache_forget')) {
+                    cache_forget('site_settings');
+                }
+                
+                // Очищаем кеш SettingsManager перед загрузкой
+                if (method_exists($settingsManager, 'clearCache')) {
+                    $settingsManager->clearCache();
+                }
+                
+                // Загружаем настройки из БД напрямую (с force=true), минуя кеш
+                if (method_exists($settingsManager, 'load')) {
+                    $settingsManager->load(true); // force = true для принудительной перезагрузки
+                } else if (method_exists($settingsManager, 'reloadSettings')) {
+                    $settingsManager->reloadSettings();
+                }
+                
+                // Получаем все настройки из БД
                 $settings = $settingsManager->all();
-                return array_merge($defaultSettings, $settings);
+                
+                // Объединяем настройки: сначала дефолтные, затем из БД (БД имеет приоритет)
+                // Это гарантирует, что если настройка есть в БД (даже со значением '0'), она будет использована
+                $result = array_merge($defaultSettings, $settings);
+                
+                return $result;
             } catch (Exception $e) {
                 error_log("Settings load error: " . $e->getMessage());
                 return $defaultSettings;
