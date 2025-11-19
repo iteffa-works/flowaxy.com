@@ -20,6 +20,9 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- CSS Compatibility Fixes (после Bootstrap для переопределения) -->
+    <link href="<?= UrlHelper::admin('assets/styles/css-fixes.css') ?>?v=<?= time() ?>" rel="stylesheet">
+    
     <!-- Font Awesome -->
     <link href="<?= UrlHelper::admin('assets/styles/font-awesome/css/all.min.css') ?>" rel="stylesheet">
     

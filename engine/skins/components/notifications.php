@@ -52,6 +52,7 @@
     background: currentColor;
     animation: progressBar 5s linear forwards;
     opacity: 0.6;
+    width: 100%;
 }
 
 /* Иконки для типов уведомлений */
@@ -172,10 +173,12 @@
 
 @keyframes progressBar {
     from {
-        width: 100%;
+        transform: scaleX(1);
+        transform-origin: left;
     }
     to {
-        width: 0%;
+        transform: scaleX(0);
+        transform-origin: left;
     }
 }
 

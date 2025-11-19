@@ -1,0 +1,46 @@
+/* ========================================
+   CSS Compatibility Fixes
+   Исправления для совместимости с современными браузерами
+   ======================================== */
+
+/* Исправление для -webkit-text-size-adjust */
+/* Добавляем стандартное свойство text-size-adjust для поддержки всех браузеров */
+/* Стандартное свойство должно идти после префиксного для правильного переопределения */
+html,
+body {
+    /* Стандартное свойство для Chrome 54+, Edge 79+, Firefox, Safari */
+    text-size-adjust: 100%;
+    /* Префиксное для обратной совместимости */
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Исправление для text-align: -webkit-match-parent */
+/* Добавляем стандартное свойство match-parent для Safari 15.4+ */
+/* Правильный порядок: сначала префиксное, потом стандартное */
+[style*="-webkit-match-parent"],
+*[style*="text-align"][style*="-webkit-match-parent"] {
+    text-align: -webkit-match-parent;
+    text-align: match-parent;
+}
+
+/* Исправление для элементов с text-align: inherit */
+/* Убеждаемся, что inherit идет после -webkit-match-parent */
+[style*="text-align:inherit"] {
+    text-align: -webkit-match-parent;
+    text-align: match-parent;
+    text-align: inherit;
+}
+
+/* Исправление для -webkit-print-color-adjust */
+/* Добавляем стандартное свойство color-adjust для печати */
+/* Используем print-color-adjust (новый стандарт) и color-adjust (старый стандарт) */
+@media print {
+    * {
+        /* Новый стандарт (Chrome 89+, Edge 89+) */
+        print-color-adjust: exact;
+        /* Старый стандарт (Firefox, Safari) */
+        color-adjust: exact;
+        /* Префиксное для обратной совместимости */
+        -webkit-print-color-adjust: exact;
+    }
+}

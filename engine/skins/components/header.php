@@ -10,7 +10,7 @@
         <!-- Левая часть навбара -->
         <div class="d-flex align-items-center">
             <!-- Кнопка мобильного меню -->
-            <button class="mobile-menu-btn" onclick="toggleMobileSidebar()">
+            <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Відкрити меню" title="Відкрити меню">
                 <i class="fas fa-bars"></i>
             </button>
             
@@ -96,7 +96,7 @@
         <div class="mobile-sidebar-logo">
             <img src="<?= UrlHelper::admin('assets/images/brand/logo-white.png') ?>" alt="Flowaxy CMS" class="mobile-logo-img">
         </div>
-        <button class="mobile-sidebar-close" onclick="toggleMobileSidebar()">
+        <button class="mobile-sidebar-close" onclick="toggleMobileSidebar()" aria-label="Закрити меню" title="Закрити меню">
             <i class="fas fa-times"></i>
         </button>
     </div>
