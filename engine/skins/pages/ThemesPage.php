@@ -341,9 +341,10 @@ class ThemesPage extends AdminPage {
             $storageDir = $storageParent . '/temp/';
             
             // Создаем временную директорию
-            $dirObj = new Directory($storageDir);
-            if (!$dirObj->exists()) {
-                $dirObj->create(0755, true);
+            if (!is_dir($storageDir)) {
+                if (!@mkdir($storageDir, 0755, true)) {
+                    return ['success' => false, 'error' => 'Не вдалося створити тимчасову директорію', 'reload' => false];
+                }
             }
             
             $upload->setUploadDir($storageDir);
@@ -552,110 +553,32 @@ class ThemesPage extends AdminPage {
             // Створюємо тимчасову директорію для завантаження
             // Використовуємо директорію всередині проекту для сумісності з різними хостингами
             $projectRoot = dirname(__DIR__, 3);
-            $tempDir = null;
-            $errors = [];
             
-            // Клас Directory завантажується через автозавантажувач
-            // Не потрібно завантажувати вручну
-            
-            // Функція для створення та перевірки директорії через клас Directory
-            $createTempDir = function($dirPath, $parentDir = null) use (&$tempDir, &$errors) {
-                try {
-                    // Перевіряємо, чи клас Directory завантажений (наш клас, а не вбудований PHP)
-                    // Перевіряємо наявність методу create() щоб переконатися що це наш клас
-                    if (!class_exists('Directory') || !method_exists('Directory', 'create')) {
-                        // Якщо не завантажений, використовуємо стандартні PHP функції
-                        if ($parentDir && !is_dir($parentDir)) {
-                            if (!@mkdir($parentDir, 0755, true)) {
-                                $errors[] = "Не вдалося створити батьківську директорію: {$parentDir}";
-                                return false;
-                            }
-                        }
-                        
-                        if ($parentDir && !is_writable($parentDir)) {
-                            $errors[] = "Немає прав на запис у директорію: {$parentDir}";
-                            return false;
-                        }
-                        
-                        if (!is_dir($dirPath)) {
-                            if (!@mkdir($dirPath, 0755, true)) {
-                                $errors[] = "Не вдалося створити директорію: {$dirPath}";
-                                return false;
-                            }
-                        }
-                        
-                        if (!is_writable($dirPath)) {
-                            $errors[] = "Немає прав на запис у директорію: {$dirPath}";
-                            return false;
-                        }
-                        
-                        $tempDir = $dirPath;
-                        return true;
-                    }
-                    
-                    // Використовуємо клас Directory
-                    // Спочатку перевіряємо/створюємо батьківську директорію
-                    if ($parentDir) {
-                        $parentDirObj = new Directory($parentDir);
-                        if (!$parentDirObj->exists()) {
-                            try {
-                                $parentDirObj->create(0755, true);
-                            } catch (Exception $e) {
-                                $errors[] = "Не вдалося створити батьківську директорію: {$parentDir} - " . $e->getMessage();
-                                return false;
-                            }
-                        }
-                        
-                        // Перевіряємо права на запис у батьківську директорію
-                        if (!is_writable($parentDir)) {
-                            $errors[] = "Немає прав на запис у директорію: {$parentDir}";
-                            return false;
-                        }
-                    }
-                    
-                    // Створюємо тимчасову директорію через клас Directory
-                    $dirObj = new Directory($dirPath);
-                    if (!$dirObj->exists()) {
-                        try {
-                            $dirObj->create(0755, true);
-                        } catch (Exception $e) {
-                            $errors[] = "Не вдалося створити директорію: {$dirPath} - " . $e->getMessage();
-                            return false;
-                        }
-                    }
-                    
-                    // Перевіряємо права на запис
-                    if (!is_writable($dirPath)) {
-                        $errors[] = "Немає прав на запис у директорію: {$dirPath}";
-                        return false;
-                    }
-                    
-                    $tempDir = $dirPath;
-                    return true;
-                } catch (Exception $e) {
-                    $errors[] = "Помилка при роботі з директорією {$dirPath}: " . $e->getMessage();
-                    return false;
-                }
-            };
-            
-            // Створюємо директорію в storage/temp/
+            // Создаем временную директорию
             $storageParent = $projectRoot . '/storage';
             $storageDir = $storageParent . '/temp/';
-            if (!$createTempDir($storageDir, $storageParent)) {
-                $errorMsg = 'Не вдалося створити тимчасову директорію. ';
-                $errorMsg .= 'Спробовано: ' . implode(', ', array_unique($errors));
-                $errorMsg .= '. Перевірте права доступу до директорії storage/temp/';
-                throw new Exception($errorMsg);
+            
+            // Создаем родительскую директорию если нужно
+            if (!is_dir($storageParent)) {
+                if (!@mkdir($storageParent, 0755, true)) {
+                    throw new Exception('Не вдалося створити батьківську директорію: ' . $storageParent);
+                }
             }
             
-            if (!$tempDir) {
-                throw new Exception('Не вдалося визначити тимчасову директорію для завантаження');
+            // Создаем временную директорию
+            if (!is_dir($storageDir)) {
+                if (!@mkdir($storageDir, 0755, true)) {
+                    throw new Exception('Не вдалося створити тимчасову директорію: ' . $storageDir);
+                }
             }
             
-            $upload->setUploadDir($tempDir);
+            // Проверяем права на запись
+            if (!is_writable($storageDir)) {
+                throw new Exception('Немає прав на запис у директорію: ' . $storageDir);
+            }
             
-            $request = Request::getInstance();
-            $uploadResult = $upload->upload($request->files()['theme_file']);
+            $upload->setUploadDir($storageDir);
+            $uploadResult = $upload->upload($files['theme_file']);
             
             if (!$uploadResult['success']) {
                 $this->sendJsonResponse(['success' => false, 'error' => $uploadResult['error']], 400);

@@ -43,3 +43,8 @@ package-lock.json
 # Системные файлы
 .htaccess.backup
 *.bak
+
+plugins/
+themes/
+uploads/
+storage/
