@@ -33,121 +33,109 @@ if (!ob_get_level()) {
     ob_start();
 }
 
-// Автозавантаження класів (сучасний підхід з перевірками та підтримкою підкаталогів)
-// Класи завантажуються автоматично перед використанням
+/**
+ * Автозавантаження класів системи
+ * Класи завантажуються автоматично при використанні
+ */
 spl_autoload_register(function (string $className): void {
-    // Перевіряємо тільки класи з нашого простору імен
-    if (strpos($className, '\\') === false) {
-        $classesDir = __DIR__ . '/classes/';
-        
-        // Спочатку перевіряємо модулі (ThemeManager, SettingsManager, ThemeCustomizer тепер в modules)
-        $modulesDir = __DIR__ . '/modules/';
-        // MailModule завантажується тільки через ModuleLoader (lazy loading)
-        if (in_array($className, ['Menu', 'PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer'])) {
-            $moduleFile = $modulesDir . $className . '.php';
-            if (file_exists($moduleFile) && is_readable($moduleFile)) {
-                require_once $moduleFile;
-                return;
-            }
-        }
-        
-        // Визначаємо підкаталог на основі імені класу
-        $subdirectories = [
-            'BaseModule' => 'base',
-            'BasePlugin' => 'base',
-            'ThemePlugin' => 'base',
-            'Ini' => 'files',
-            'Json' => 'files',
-            'Zip' => 'files',
-            'File' => 'files',
-            'Xml' => 'files',
-            'Csv' => 'files',
-            'Yaml' => 'files',
-            'Image' => 'files',
-            'Directory' => 'files',
-            'Upload' => 'files',
-            'MimeType' => 'files',
-            'Cache' => 'data',
-            'Database' => 'data',
-            'Logger' => 'data',
-            'MenuManager' => 'managers',
-            'UrlHelper' => 'helpers',
-            'DatabaseHelper' => 'helpers',
-            'SecurityHelper' => 'helpers',
-            'ScssCompiler' => 'compilers',
-            'Validator' => 'validators',
-            // Нові класи для CMS
-            'Security' => 'security',
-            'Hash' => 'security',
-            'Encryption' => 'security',
-            'Session' => 'security',
-            'Cookie' => 'http',
-            'Response' => 'http',
-            'Request' => 'http',
-            'Router' => 'http',
-            'AjaxHandler' => 'http',
-            'View' => 'view',
-            'Mail' => 'mail',
-            'ModalHandler' => 'ui',
-            'ModuleLoader' => 'system',
-            'Config' => 'data',
-            // Сторінки адмінки (для автозавантаження)
-            'LoginPage' => 'skins/pages',
-            'LogoutPage' => 'skins/pages',
-            'DashboardPage' => 'skins/pages',
-            'SettingsPage' => 'skins/pages',
-            'ProfilePage' => 'skins/pages',
-            'PluginsPage' => 'skins/pages',
-            'ThemesPage' => 'skins/pages',
-            'CustomizerPage' => 'skins/pages',
-            'MenusPage' => 'skins/pages',
-            'ThemeEditorPage' => 'skins/pages',
-        ];
-        
-        $subdir = $subdirectories[$className] ?? '';
-        
-        // Пробуємо знайти файл в підкаталозі
-        if ($subdir) {
-            $classFile = $classesDir . $subdir . '/' . $className . '.php';
-            if (file_exists($classFile) && is_readable($classFile)) {
-                require_once $classFile;
-                return;
-            }
-        }
-        
-        // Якщо не знайдено в підкаталозі, шукаємо в корені (для зворотної сумісності)
-        $classFile = $classesDir . $className . '.php';
-        if (file_exists($classFile) && is_readable($classFile)) {
-            require_once $classFile;
-            return;
-        }
-        
-        // Також пробуємо знайти в будь-якому підкаталозі (для майбутніх класів)
-        $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system'];
-        foreach ($subdirs as $dir) {
-            $classFile = $classesDir . $dir . '/' . $className . '.php';
-            if (file_exists($classFile) && is_readable($classFile)) {
-                require_once $classFile;
-                return;
-            }
-        }
-        
-        // Перевіряємо сторінки адмінки
-        if (strpos($className, 'Page') !== false && strpos($className, 'AdminPage') === false) {
-            $pagesDir = __DIR__ . '/skins/pages/';
-            $pageFile = $pagesDir . $className . '.php';
-            if (file_exists($pageFile) && is_readable($pageFile)) {
-                require_once $pageFile;
-                return;
-            }
-        }
-        
-        // Також пробуємо знайти в modules
+    // Перевіряємо тільки класи без namespace (глобальні класи)
+    if (strpos($className, '\\') !== false) {
+        return;
+    }
+    
+    $classesDir = __DIR__ . '/classes/';
+    $modulesDir = __DIR__ . '/modules/';
+    
+    // Спочатку перевіряємо модулі (ThemeManager, SettingsManager, ThemeCustomizer тепер в modules)
+    $moduleClasses = ['Menu', 'PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer'];
+    if (in_array($className, $moduleClasses, true)) {
         $moduleFile = $modulesDir . $className . '.php';
         if (file_exists($moduleFile) && is_readable($moduleFile)) {
             require_once $moduleFile;
             return;
         }
+    }
+    
+    // Мапінг класів на підкаталоги
+    $classMapping = [
+        // Base classes
+        'BaseModule' => 'base', 'BasePlugin' => 'base', 'ThemePlugin' => 'base',
+        // File classes
+        'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
+        'Xml' => 'files', 'Csv' => 'files', 'Yaml' => 'files', 'Image' => 'files',
+        'Directory' => 'files', 'Upload' => 'files', 'MimeType' => 'files',
+        // Data classes
+        'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data',
+        // Manager classes
+        'MenuManager' => 'managers',
+        // Helper classes
+        'UrlHelper' => 'helpers', 'DatabaseHelper' => 'helpers', 'SecurityHelper' => 'helpers',
+        // Compiler classes
+        'ScssCompiler' => 'compilers',
+        // Validator classes
+        'Validator' => 'validators',
+        // Security classes
+        'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
+        // HTTP classes
+        'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
+        // View classes
+        'View' => 'view',
+        // Mail classes
+        'Mail' => 'mail',
+        // UI classes
+        'ModalHandler' => 'ui',
+        // System classes
+        'ModuleLoader' => 'system',
+        // Admin pages
+        'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
+        'SettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
+        'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages', 'MenusPage' => 'skins/pages',
+        'ThemeEditorPage' => 'skins/pages', 'CacheViewPage' => 'skins/pages', 'LogsViewPage' => 'skins/pages',
+    ];
+    
+    $subdir = $classMapping[$className] ?? '';
+    
+    // Пробуємо знайти файл в підкаталозі
+    if ($subdir) {
+        $classFile = $classesDir . $subdir . '/' . $className . '.php';
+        if (file_exists($classFile) && is_readable($classFile)) {
+            require_once $classFile;
+            return;
+        }
+    }
+    
+    // Якщо не знайдено в підкаталозі, шукаємо в корені classes (для зворотної сумісності)
+    $classFile = $classesDir . $className . '.php';
+    if (file_exists($classFile) && is_readable($classFile)) {
+        require_once $classFile;
+        return;
+    }
+    
+    // Перевіряємо всі підкаталоги (для майбутніх класів)
+    $subdirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system'];
+    foreach ($subdirs as $dir) {
+        $classFile = $classesDir . $dir . '/' . $className . '.php';
+        if (file_exists($classFile) && is_readable($classFile)) {
+            require_once $classFile;
+            return;
+        }
+    }
+    
+    // Перевіряємо сторінки адмінки (динамічні сторінки, що закінчуються на Page)
+    if (strpos($className, 'Page') !== false && strpos($className, 'AdminPage') === false) {
+        $pagesDir = __DIR__ . '/skins/pages/';
+        $pageFile = $pagesDir . $className . '.php';
+        if (file_exists($pageFile) && is_readable($pageFile)) {
+            require_once $pageFile;
+            return;
+        }
+    }
+    
+    // Останній раз пробуємо знайти в modules (для невідомих класів)
+    $moduleFile = $modulesDir . $className . '.php';
+    if (file_exists($moduleFile) && is_readable($moduleFile)) {
+        require_once $moduleFile;
+        return;
     }
 });
 
@@ -344,84 +332,36 @@ if (!function_exists('formatBytes')) {
 
 // Функції для роботи з налаштуваннями видалені - використовуйте SettingsManager клас
 
-// Створення необхідних директорій якщо не існують (використовує Directory клас)
-// Явно завантажуємо класи Directory та File перед використанням
-if (!class_exists('Directory')) {
-    $directoryClassFile = __DIR__ . '/classes/files/Directory.php';
-    if (file_exists($directoryClassFile)) {
-        require_once $directoryClassFile;
-    }
-}
-if (!class_exists('File')) {
-    $fileClassFile = __DIR__ . '/classes/files/File.php';
-    if (file_exists($fileClassFile)) {
-        require_once $fileClassFile;
-    }
-}
-
-$directories = [
-    UPLOADS_DIR,
-    CACHE_DIR,
-    LOGS_DIR
-];
-
-foreach ($directories as $dir) {
-    // Використовуємо клас Directory якщо доступний, інакше стандартні PHP функції
-    if (class_exists('Directory')) {
-        try {
-            $directory = new Directory($dir);
-            if (method_exists($directory, 'exists') && !$directory->exists()) {
-                if (method_exists($directory, 'create')) {
-                    $directory->create(0755, true);
-                } else {
-                    // Fallback на стандартні PHP функції
-                    if (!is_dir($dir)) {
-                        @mkdir($dir, 0755, true);
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Failed to create directory {$dir} using Directory class: " . $e->getMessage());
-            // Fallback на стандартні PHP функції
-            if (!is_dir($dir)) {
-                @mkdir($dir, 0755, true);
-            }
-        }
-    } else {
-        // Fallback: використовуємо стандартні PHP функції
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0755, true);
-        }
-    }
+/**
+ * Створення необхідних системних директорій
+ * 
+ * @return void
+ */
+function createSystemDirectories(): void {
+    $directories = [
+        UPLOADS_DIR,
+        CACHE_DIR,
+        LOGS_DIR
+    ];
     
-    // Створюємо .htaccess для захисту директорій
-    if (strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false) {
-        $htaccessFile = rtrim($dir, '/') . '/.htaccess';
-        if (class_exists('File')) {
-            try {
-                $file = new File($htaccessFile);
-                if (method_exists($file, 'exists') && !$file->exists()) {
-                    if (method_exists($file, 'write')) {
-                        $file->write("Deny from all\n");
-                    } else {
-                        // Fallback на стандартні PHP функції
-                        if (!file_exists($htaccessFile)) {
-                            @file_put_contents($htaccessFile, "Deny from all\n");
-                        }
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Failed to write .htaccess to {$htaccessFile} using File class: " . $e->getMessage());
-                // Fallback на стандартні PHP функції
-                if (!file_exists($htaccessFile)) {
-                    @file_put_contents($htaccessFile, "Deny from all\n");
-                }
+    foreach ($directories as $dir) {
+        // Створюємо директорію, якщо не існує
+        if (!is_dir($dir)) {
+            if (!@mkdir($dir, 0755, true)) {
+                error_log("Failed to create directory: {$dir}");
+                continue;
             }
-        } else {
-            // Fallback: використовуємо стандартні PHP функції
+        }
+        
+        // Створюємо .htaccess для захисту директорій cache та logs
+        if (strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false) {
+            $htaccessFile = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . '.htaccess';
             if (!file_exists($htaccessFile)) {
                 @file_put_contents($htaccessFile, "Deny from all\n");
             }
         }
     }
 }
+
+// Створення системних директорій
+createSystemDirectories();
