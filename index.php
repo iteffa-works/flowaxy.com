@@ -59,96 +59,8 @@ function reloadDatabaseConfig(): void {
     }
 }
 
-// Проверка установки: если database.ini нет - запускаем установщик
+// Обработка установщика ДО инициализации системы
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-if (strpos($requestUri, '/install') !== 0) {
-    $databaseIniFile = __DIR__ . '/engine/data/database.ini';
-    if (!file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
-        header('Location: /install');
-        exit;
-    }
-}
-
-/**
- * Перевірка та ініціалізація системи
- */
-function initializeSystem(): void {
-    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-    
-    // Пропускаем проверку БД для установщика
-    if (strpos($requestUri, '/install') === 0) {
-        return;
-    }
-    
-    // Проверяем наличие database.ini
-    $databaseIniFile = __DIR__ . '/engine/data/database.ini';
-    if (!file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
-        header('Location: /install');
-        exit;
-    }
-    
-    // Проверяем подключение к БД
-    if (!DatabaseHelper::isAvailable(false)) {
-        showDatabaseError([
-            'host' => DB_HOST,
-            'database' => DB_NAME,
-            'error' => 'Не вдалося підключитися до бази даних. Перевірте налаштування підключення.'
-        ]);
-        exit;
-    }
-}
-
-
-/**
- * Рендеринг fallback сторінки коли тема не встановлена
- * 
- * @return bool
- */
-function renderThemeFallback(): bool {
-    http_response_code(200);
-    $templatePath = __DIR__ . '/engine/templates/theme-not-installed.php';
-    if (file_exists($templatePath)) {
-        include $templatePath;
-    } else {
-        ?>
-        <!DOCTYPE html>
-        <html lang="uk">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Встановіть тему</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head>
-        <body class="bg-light">
-            <div class="container mt-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-6 text-center">
-                        <h1>Встановіть тему</h1>
-                        <p class="text-muted">Для відображення сайту необхідно встановити та активувати тему.</p>
-                        <a href="/admin/themes" class="btn btn-primary">Перейти до тем</a>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-        <?php
-    }
-    return true;
-}
-
-
-// Ініціалізація системи
-initializeSystem();
-
-// Хук для обробки ранніх запитів (AJAX, API тощо)
-$handled = doHook('handle_early_request', false);
-if ($handled === true) {
-    exit;
-}
-
-// Визначаємо тип запиту
-$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-$isAdminRequest = strpos($requestUri, '/admin') === 0;
 if (strpos($requestUri, '/install') === 0) {
     $step = $_GET['step'] ?? 'welcome';
     $action = $_GET['action'] ?? '';
@@ -321,6 +233,90 @@ if (strpos($requestUri, '/install') === 0) {
         exit;
     }
 }
+
+/**
+ * Перевірка та ініціалізація системи
+ */
+function initializeSystem(): void {
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    
+    // Пропускаем проверку БД для установщика
+    if (strpos($requestUri, '/install') === 0) {
+        return;
+    }
+    
+    // Проверяем наличие database.ini еще раз (на всякий случай)
+    $databaseIniFile = __DIR__ . '/engine/data/database.ini';
+    if (!file_exists($databaseIniFile)) {
+        if (php_sapi_name() !== 'cli') {
+            header('Location: /install');
+            exit;
+        }
+        return;
+    }
+    
+    // Проверяем подключение к БД только если database.ini существует
+    if (!DatabaseHelper::isAvailable(false)) {
+        showDatabaseError([
+            'host' => DB_HOST,
+            'database' => DB_NAME,
+            'error' => 'Не вдалося підключитися до бази даних. Перевірте налаштування підключення.'
+        ]);
+        exit;
+    }
+}
+
+/**
+ * Рендеринг fallback сторінки коли тема не встановлена
+ * 
+ * @return bool
+ */
+function renderThemeFallback(): bool {
+    http_response_code(200);
+    $templatePath = __DIR__ . '/engine/templates/theme-not-installed.php';
+    if (file_exists($templatePath)) {
+        include $templatePath;
+    } else {
+        ?>
+        <!DOCTYPE html>
+        <html lang="uk">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Встановіть тему</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body class="bg-light">
+            <div class="container mt-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center">
+                        <h1>Встановіть тему</h1>
+                        <p class="text-muted">Для відображення сайту необхідно встановити та активувати тему.</p>
+                        <a href="/admin/themes" class="btn btn-primary">Перейти до тем</a>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        <?php
+    }
+    return true;
+}
+
+// Ініціалізація системи (только если не установщик)
+initializeSystem();
+
+// Хук для обробки ранніх запитів (AJAX, API тощо)
+// Проверяем, что функция существует (может быть недоступна если БД не подключена)
+if (function_exists('doHook')) {
+    $handled = doHook('handle_early_request', false);
+    if ($handled === true) {
+        exit;
+    }
+}
+
+// Визначаємо тип запиту
+$isAdminRequest = strpos($requestUri, '/admin') === 0;
 
 if ($isAdminRequest) {
     // Підключаємо шаблонизатор для адмінки

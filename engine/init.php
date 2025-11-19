@@ -22,6 +22,16 @@ if (version_compare(PHP_VERSION, '8.3.0', '<')) {
     die('Ця CMS потребує PHP 8.3 або вище. Поточна версія: ' . PHP_VERSION . PHP_EOL);
 }
 
+// ПЕРВАЯ проверка: если database.ini нет и это не установщик - перенаправляем
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$isInstaller = strpos($requestUri, '/install') === 0;
+$databaseIniFile = __DIR__ . '/data/database.ini';
+
+if (!$isInstaller && !file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
+    header('Location: /install');
+    exit;
+}
+
 // Визначаємо протокол автоматично
 $protocol = 'http://';
 if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
@@ -247,6 +257,20 @@ spl_autoload_register(function (string $className): void {
  * @return void
  */
 function showDatabaseError(array $errorDetails = []): void {
+    // Не показываем ошибку БД для установщика - перенаправляем на установщик
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    if (strpos($requestUri, '/install') === 0) {
+        // Если это установщик, не показываем ошибку БД
+        return;
+    }
+    
+    // Проверяем, что database.ini существует - если нет, перенаправляем на установщик
+    $databaseIniFile = __DIR__ . '/data/database.ini';
+    if (!file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
+        header('Location: /install');
+        exit;
+    }
+    
     if (!headers_sent()) {
         http_response_code(503);
         header('Content-Type: text/html; charset=UTF-8');
@@ -311,26 +335,34 @@ function showDatabaseError(array $errorDetails = []): void {
 if (!class_exists('Cache')) {
     require_once __DIR__ . '/classes/data/Cache.php';
 }
-// ModuleLoader завантажується через автозавантажувач
-ModuleLoader::init();
 
-// Установка часового пояса из настроек
-if (class_exists('SettingsManager')) {
-    try {
-        $timezone = settingsManager()->get('timezone', 'Europe/Kiev');
-        if (!empty($timezone) && in_array($timezone, timezone_identifiers_list())) {
-            date_default_timezone_set($timezone);
+// ModuleLoader завантажується через автозавантажувач
+// Только если database.ini существует (система установлена)
+// НЕ загружаем модули для установщика, так как они могут пытаться подключиться к БД
+if (!$isInstaller && file_exists($databaseIniFile)) {
+    ModuleLoader::init();
+    
+    // Установка часового пояса из настроек (только если система установлена)
+    if (class_exists('SettingsManager')) {
+        try {
+            $timezone = settingsManager()->get('timezone', 'Europe/Kiev');
+            if (!empty($timezone) && in_array($timezone, timezone_identifiers_list())) {
+                date_default_timezone_set($timezone);
+            }
+        } catch (Exception $e) {
+            @date_default_timezone_set('Europe/Kiev');
         }
-    } catch (Exception $e) {
-        // В случае ошибки используем часовой пояс по умолчанию
+    } else {
         @date_default_timezone_set('Europe/Kiev');
     }
 } else {
+    // Если система не установлена или это установщик, используем часовой пояс по умолчанию
     @date_default_timezone_set('Europe/Kiev');
 }
 
 // Ініціалізація системи логування та обробки помилок
-if (class_exists('Logger')) {
+// Только если система установлена (НЕ для установщика, так как Logger может требовать БД)
+if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     // Встановлюємо обробник помилок
     set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
         $logger = Logger::getInstance();
