@@ -101,7 +101,7 @@
         </button>
     </div>
     
-    <nav class="nav flex-column wp-menu">
+    <ul class="nav flex-column wp-menu">
         <?php
         require_once __DIR__ . '/../includes/menu-items.php';
         // Router завантажується автоматично через автозавантажувач
@@ -110,13 +110,15 @@
         
         if (empty($menuItems)):
         ?>
-            <div class="sidebar-empty-state">
-                <div class="sidebar-empty-icon">
-                    <i class="fas fa-folder-open"></i>
+            <li class="nav-item">
+                <div class="sidebar-empty-state">
+                    <div class="sidebar-empty-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <p class="sidebar-empty-text">Розділів немає</p>
+                    <p class="sidebar-empty-hint">Встановіть плагіни для додавання розділів</p>
                 </div>
-                <p class="sidebar-empty-text">Розділів немає</p>
-                <p class="sidebar-empty-hint">Встановіть плагіни для додавання розділів</p>
-            </div>
+            </li>
         <?php
         else:
             foreach ($menuItems as $item) {
@@ -124,5 +126,5 @@
             }
         endif;
         ?>
-    </nav>
+    </ul>
 </div>

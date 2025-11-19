@@ -161,8 +161,8 @@ class AdminPage {
         // Зберігаємо шлях до кастомного шаблону для використання в layout
         $customTemplateFile = $templateFile;
         
-        // Використовуємо стандартний layout адмінки для плагінів
-        include __DIR__ . '/../layouts/base-plugin.php';
+        // Використовуємо стандартний layout адмінки (тепер підтримує кастомні шаблони)
+        include __DIR__ . '/../layouts/base.php';
     }
     
     /**

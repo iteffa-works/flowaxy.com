@@ -49,9 +49,15 @@
                     
                     <!-- Основной контент страницы -->
     <?php 
-    $templateFile = __DIR__ . '/../templates/' . ($templateName ?? 'dashboard') . '.php';
-    if (file_exists($templateFile)) {
-        include $templateFile;
+    // Если есть кастомный шаблон плагина, используем его
+    if (isset($customTemplateFile) && file_exists($customTemplateFile)) {
+        include $customTemplateFile;
+    } else {
+        // Иначе используем стандартный шаблон
+        $templateFile = __DIR__ . '/../templates/' . ($templateName ?? 'dashboard') . '.php';
+        if (file_exists($templateFile)) {
+            include $templateFile;
+        }
     }
     ?>
                 </div>

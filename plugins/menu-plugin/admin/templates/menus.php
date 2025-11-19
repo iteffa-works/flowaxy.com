@@ -375,6 +375,14 @@
     background: #f8f9fa;
 }
 
+.menu-item-nested {
+    border-left: 3px solid #007bff;
+}
+
+.menu-item-card[data-indent] {
+    margin-left: var(--item-indent, 0);
+}
+
 .menu-item-header {
     display: flex;
     align-items: center;
@@ -542,16 +550,16 @@
                 <input type="hidden" name="menu_id" id="menuFormId" value="">
                 <div class="modal-header">
                     <h5 class="modal-title" id="menuModalTitle">Створити меню</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="menuName" class="form-label">Назва меню <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="menuName" name="name" required>
+                        <input type="text" class="form-control" id="menuName" name="name" required autocomplete="off">
                     </div>
                     <div class="mb-3">
                         <label for="menuSlug" class="form-label">Slug <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="menuSlug" name="slug" required>
+                        <input type="text" class="form-control" id="menuSlug" name="slug" required autocomplete="off">
                         <div class="form-text">Унікальний ідентифікатор меню</div>
                     </div>
                     <div class="mb-3">
@@ -598,20 +606,20 @@
                 <input type="hidden" name="item_id" id="menuItemId" value="">
                 <div class="modal-header">
                     <h5 class="modal-title" id="menuItemModalTitle">Додати пункт меню</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="itemTitle" class="form-label">Назва <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="itemTitle" name="title" required>
+                                <input type="text" class="form-control" id="itemTitle" name="title" required autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="itemUrl" class="form-label">URL <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="itemUrl" name="url" required placeholder="/ або #section">
+                                <input type="text" class="form-control" id="itemUrl" name="url" required placeholder="/ або #section" autocomplete="off">
                             </div>
                         </div>
                     </div>
@@ -638,17 +646,17 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="itemIcon" class="form-label">Іконка (Font Awesome)</label>
-                                <input type="text" class="form-control" id="itemIcon" name="icon" placeholder="fas fa-home">
+                                <input type="text" class="form-control" id="itemIcon" name="icon" placeholder="fas fa-home" autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="itemOrder" class="form-label">Порядок</label>
-                                <input type="number" class="form-control" id="itemOrder" name="order_num" value="0" min="0">
+                                <input type="number" class="form-control" id="itemOrder" name="order_num" value="0" min="0" autocomplete="off">
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3" id="itemActiveContainer" style="display: none;">
+                    <div class="mb-3 d-none" id="itemActiveContainer">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="itemActive" name="is_active" value="1" checked>
                             <label class="form-check-label" for="itemActive">Активний пункт меню</label>
@@ -722,7 +730,7 @@ const MenusApp = {
         alert.className = `alert alert-${type} alert-dismissible fade show`;
         alert.innerHTML = `
             ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрити"></button>
         `;
         container.innerHTML = '';
         container.appendChild(alert);
@@ -862,7 +870,7 @@ const MenusApp = {
             const hasChildren = item.children && item.children.length > 0;
             const isInactive = item.is_active == 0;
             html += `
-                <div class="menu-item-card ${isInactive ? 'opacity-75' : ''}" data-item-id="${item.id}" data-level="${level}" style="margin-left: ${indent}px; ${level > 0 ? 'border-left: 3px solid #007bff;' : ''}">
+                <div class="menu-item-card ${isInactive ? 'opacity-75' : ''} ${level > 0 ? 'menu-item-nested' : ''}" data-item-id="${item.id}" data-level="${level}" style="--item-indent: ${indent}px;">
                     <div class="menu-item-header">
                         <div class="menu-item-drag-handle">
                             <i class="fas fa-grip-vertical"></i>

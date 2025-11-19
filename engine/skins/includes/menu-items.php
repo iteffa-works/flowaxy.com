@@ -139,13 +139,13 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
         
         if ($isMobile) {
             // Мобільна версія з підменю
-            echo '<div class="nav-item has-submenu">';
+            echo '<li class="nav-item has-submenu">';
             echo '<a class="nav-link submenu-toggle ' . $activeClass . '" href="#" onclick="toggleSubmenu(this, event)">';
             echo '<i class="' . ($item['icon'] ?? '') . '"></i>';
             echo '<span class="menu-text">' . htmlspecialchars($item['text'] ?? $item['title'] ?? '') . '</span>';
             echo '<i class="fas fa-chevron-down submenu-arrow"></i>';
             echo '</a>';
-            echo '<div class="submenu">';
+            echo '<ul class="submenu">';
             foreach ($item['submenu'] as $subItem) {
                 // Определяем активный пункт подменю с учетом tab
                 $subActive = false;
@@ -165,10 +165,10 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
                 }
                 $subActiveClass = $subActive ? 'active' : '';
                 $subIcon = isset($subItem['icon']) ? '<i class="' . $subItem['icon'] . '"></i>' : '';
-                echo '<a href="' . $subItem['href'] . '" class="submenu-link ' . $subActiveClass . '">' . $subIcon . '<span class="menu-text">' . htmlspecialchars($subItem['text'] ?? $subItem['title'] ?? '') . '</span></a>';
+                echo '<li><a href="' . $subItem['href'] . '" class="submenu-link ' . $subActiveClass . '">' . $subIcon . '<span class="menu-text">' . htmlspecialchars($subItem['text'] ?? $subItem['title'] ?? '') . '</span></a></li>';
             }
-            echo '</div>';
-            echo '</div>';
+            echo '</ul>';
+            echo '</li>';
         } else {
             // Десктопна версія з підменю
             echo '<li class="nav-item has-submenu">';
@@ -224,19 +224,13 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
         }
         
         $activeClass = $isActive ? 'active' : '';
-        if ($isMobile) {
-            echo '<a class="nav-link ' . $activeClass . '" href="' . $item['href'] . '"' . $target . '>';
-            echo '<i class="' . ($item['icon'] ?? '') . '"></i>';
-            echo '<span class="menu-text">' . htmlspecialchars($item['text'] ?? $item['title'] ?? '') . '</span>';
-            echo '</a>';
-        } else {
-            echo '<li class="nav-item">';
-            echo '<a class="nav-link ' . $activeClass . '" href="' . $item['href'] . '"' . $target . '>';
-            echo '<i class="' . ($item['icon'] ?? '') . '"></i>';
-            echo '<span class="menu-text">' . htmlspecialchars($item['text'] ?? $item['title'] ?? '') . '</span>';
-            echo '</a>';
-            echo '</li>';
-        }
+        // Всегда используем <li> для валидности HTML (ul должен содержать только li, script или template)
+        echo '<li class="nav-item">';
+        echo '<a class="nav-link ' . $activeClass . '" href="' . $item['href'] . '"' . $target . '>';
+        echo '<i class="' . ($item['icon'] ?? '') . '"></i>';
+        echo '<span class="menu-text">' . htmlspecialchars($item['text'] ?? $item['title'] ?? '') . '</span>';
+        echo '</a>';
+        echo '</li>';
     }
 }
 ?>
