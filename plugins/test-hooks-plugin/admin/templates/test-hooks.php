@@ -14,90 +14,52 @@ if (!empty($message)) {
 ?>
 
 <?php
-// Формируем содержимое секции
-ob_start();
+// Определяем активную вкладку
+$activeTab = $activeTab ?? '';
+$currentUrl = '/admin/test-hooks-plugin';
 ?>
+
+<!-- Навигация по вкладкам -->
+<div class="test-hooks-tabs mb-4">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link <?= $activeTab === '' ? 'active' : '' ?>" href="<?= $currentUrl ?>">
+                <i class="fas fa-home"></i> Главная
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $activeTab === 'filters' ? 'active' : '' ?>" href="<?= $currentUrl ?>?tab=filters">
+                <i class="fas fa-filter"></i> Фильтры
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $activeTab === 'actions' ? 'active' : '' ?>" href="<?= $currentUrl ?>?tab=actions">
+                <i class="fas fa-bolt"></i> События
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $activeTab === 'stats' ? 'active' : '' ?>" href="<?= $currentUrl ?>?tab=stats">
+                <i class="fas fa-chart-bar"></i> Статистика
+            </a>
+        </li>
+    </ul>
+</div>
 
 <div class="test-hooks-page">
     <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> О системе хуков</h5>
-                </div>
-                <div class="card-body">
-                    <p>Этот плагин демонстрирует работу системы хуков и событий Flowaxy CMS.</p>
-                    
-                    <h6>Типы хуков:</h6>
-                    <ul>
-                        <li><strong>Фильтры (Filters)</strong> - модифицируют данные и возвращают результат</li>
-                        <li><strong>События (Actions)</strong> - выполняют действия без возврата данных</li>
-                    </ul>
-                    
-                    <h6>Возможности:</h6>
-                    <ul>
-                        <li>Приоритизация хуков</li>
-                        <li>Условное выполнение</li>
-                        <li>Удаление и модификация хуков</li>
-                        <li>Статистика вызовов</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-list"></i> Все зарегистрированные хуки</h5>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($allHooks)): ?>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Имя хука</th>
-                                        <th>Тип</th>
-                                        <th>Обработчиков</th>
-                                        <th>Вызовов</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($allHooks as $hookName => $hooks): ?>
-                                        <?php
-                                        $hookType = 'filter';
-                                        if (!empty($hooks)) {
-                                            $firstHook = $hooks[0];
-                                            $hookType = $firstHook['type'] ?? 'filter';
-                                        }
-                                        $callCount = $hookCalls[$hookName] ?? 0;
-                                        ?>
-                                        <tr>
-                                            <td><code><?= htmlspecialchars($hookName) ?></code></td>
-                                            <td>
-                                                <span class="badge bg-<?= $hookType === 'action' ? 'success' : 'info' ?>">
-                                                    <?= $hookType === 'action' ? 'Action' : 'Filter' ?>
-                                                </span>
-                                            </td>
-                                            <td><span class="badge bg-primary"><?= count($hooks) ?></span></td>
-                                            <td><span class="badge bg-secondary"><?= $callCount ?></span></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <p class="text-muted">Хуки не зарегистрированы.</p>
-                    <?php endif; ?>
-                </div>
-            </div>
+        <div class="col-md-12">
+            <!-- Контент вкладки -->
+            <?= $tabContent ?? '' ?>
         </div>
         
+        <?php if ($activeTab === ''): ?>
         <div class="col-md-4">
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Статистика</h5>
                 </div>
                 <div class="card-body">
-                    <p><strong>Всего хуков:</strong> <?= $totalHooks ?></p>
+                    <p><strong>Всего хуков:</strong> <?= $totalHooks ?? 0 ?></p>
                     
                     <?php if (!empty($hookCalls)): ?>
                         <h6>Вызовы хуков:</h6>
@@ -132,6 +94,7 @@ ob_start();
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -165,6 +128,32 @@ include __DIR__ . '/../../../../engine/skins/components/content-section.php';
     background: #f8f9fa;
     padding: 2px 6px;
     border-radius: 3px;
+}
+
+.test-hooks-tabs .nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.test-hooks-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 20px;
+}
+
+.test-hooks-tabs .nav-link:hover {
+    border-bottom-color: #dee2e6;
+    color: #495057;
+}
+
+.test-hooks-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    font-weight: 500;
+}
+
+.test-hooks-tabs .nav-link i {
+    margin-right: 5px;
 }
 </style>
 
