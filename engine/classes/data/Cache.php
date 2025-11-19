@@ -221,8 +221,8 @@ class Cache {
                 return $default;
             }
             
-            // Проверяем срок действия
-            if ($cached['expires'] < time()) {
+            // Проверяем срок действия (0 = без ограничения)
+            if ($cached['expires'] !== 0 && $cached['expires'] < time()) {
                 $this->delete($key);
                 return $default;
             }
@@ -548,7 +548,8 @@ class Cache {
                     continue;
                 }
                 
-                if ($cached['expires'] < $currentTime) {
+                // Проверяем срок действия (0 = без ограничения)
+                if ($cached['expires'] !== 0 && $cached['expires'] < $currentTime) {
                     $expired++;
                 } else {
                     $valid++;

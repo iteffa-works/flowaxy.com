@@ -12,12 +12,6 @@ class CacheViewPage extends AdminPage {
         
         $this->pageTitle = 'Перегляд кешу - Flowaxy CMS';
         $this->templateName = 'cache-view';
-        
-        $this->setPageHeader(
-            'Перегляд кешу',
-            'Статистика та управління кешем системи',
-            'fas fa-database'
-        );
     }
     
     public function handle() {
@@ -30,11 +24,47 @@ class CacheViewPage extends AdminPage {
         // Обробка очистки кешу через форму
         if ($_POST && isset($_POST['clear_cache'])) {
             $this->clearCache();
+            // После очистки делаем редирект для обновления статистики
+            Response::redirectStatic(UrlHelper::admin('cache-view'));
+            exit;
         }
         
         // Отримання статистики кешу
         $cacheStats = $this->getCacheStats();
         $cacheFiles = $this->getCacheFiles();
+        
+        // Кнопки в заголовке
+        $headerButtons = $this->createButtonGroup([
+            [
+                'text' => 'Очистити весь кеш',
+                'type' => 'danger',
+                'options' => [
+                    'icon' => 'trash',
+                    'attributes' => [
+                        'class' => 'btn-sm',
+                        'onclick' => "if(confirm('Ви впевнені, що хочете очистити весь кеш?')) { document.getElementById('clearAllCacheForm').submit(); } return false;"
+                    ]
+                ]
+            ],
+            [
+                'text' => 'Очистити прострочений кеш',
+                'type' => 'warning',
+                'options' => [
+                    'icon' => 'broom',
+                    'attributes' => [
+                        'class' => 'btn-sm',
+                        'onclick' => "document.getElementById('clearExpiredCacheForm').submit(); return false;"
+                    ]
+                ]
+            ]
+        ]);
+        
+        $this->setPageHeader(
+            'Перегляд кешу',
+            'Статистика та управління кешем системи',
+            'fas fa-database',
+            $headerButtons
+        );
         
         // Рендеримо сторінку
         $this->render([
@@ -47,59 +77,57 @@ class CacheViewPage extends AdminPage {
      * Обробка AJAX запиту для очистки кешу
      */
     private function handleAjaxCacheClear() {
-        header('Content-Type: application/json; charset=utf-8');
-        
         if (!$this->verifyCsrf()) {
-            echo json_encode([
+            $this->sendJsonResponse([
                 'success' => false,
                 'message' => 'Помилка безпеки: невірний CSRF токен'
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            exit;
+            ], 403);
+            return;
         }
         
-        $action = $_POST['cache_action'] ?? '';
+        $action = $this->post('cache_action', '');
         
         if ($action === 'clear_all') {
             if (function_exists('cache_flush')) {
                 $result = cache_flush();
                 if ($result) {
-                    echo json_encode([
+                    $this->sendJsonResponse([
                         'success' => true,
-                        'message' => 'Весь кеш успішно очищено'
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                        'message' => 'Весь кеш успішно очищено',
+                        'reload' => true
+                    ]);
                 } else {
-                    echo json_encode([
+                    $this->sendJsonResponse([
                         'success' => false,
                         'message' => 'Помилка при очищенні кешу'
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    ], 500);
                 }
             } else {
-                echo json_encode([
+                $this->sendJsonResponse([
                     'success' => false,
                     'message' => 'Помилка: функція очистки кешу недоступна'
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                ], 500);
             }
         } elseif ($action === 'clear_expired') {
             if (function_exists('cache')) {
                 $cleaned = cache()->cleanup();
-                echo json_encode([
+                $this->sendJsonResponse([
                     'success' => true,
-                    'message' => "Очищено {$cleaned} прострочених файлів кешу"
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    'message' => "Очищено {$cleaned} прострочених файлів кешу",
+                    'reload' => true
+                ]);
             } else {
-                echo json_encode([
+                $this->sendJsonResponse([
                     'success' => false,
                     'message' => 'Помилка: функція очистки кешу недоступна'
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                ], 500);
             }
         } else {
-            echo json_encode([
+            $this->sendJsonResponse([
                 'success' => false,
                 'message' => 'Невідома дія'
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            ], 400);
         }
-        
-        exit;
     }
     
     /**
@@ -157,23 +185,28 @@ class CacheViewPage extends AdminPage {
             try {
                 $cached = unserialize($data, ['allowed_classes' => false]);
                 
-                if (!is_array($cached) || !isset($cached['expires']) || !isset($cached['created'])) {
+                if (!is_array($cached) || !isset($cached['expires'])) {
                     continue;
                 }
                 
+                // Если поле created отсутствует (старые файлы), используем время модификации файла
+                $created = $cached['created'] ?? filemtime($file);
+                
                 $key = basename($file, '.cache');
-                $isExpired = $cached['expires'] < $currentTime;
+                $isExpired = ($cached['expires'] !== 0) && ($cached['expires'] < $currentTime);
                 $fileSize = filesize($file);
+                
+                $ttl = ($cached['expires'] === 0) ? 0 : ($cached['expires'] - $created);
                 
                 $files[] = [
                     'key' => $key,
                     'file' => basename($file),
                     'size' => $fileSize,
                     'size_formatted' => $this->formatBytes($fileSize),
-                    'created' => date('d.m.Y H:i:s', $cached['created']),
-                    'expires' => date('d.m.Y H:i:s', $cached['expires']),
-                    'ttl' => $cached['expires'] - $cached['created'],
-                    'ttl_formatted' => $this->formatDuration($cached['expires'] - $cached['created']),
+                    'created' => date('d.m.Y H:i:s', $created),
+                    'expires' => ($cached['expires'] === 0) ? 'Без обмеження' : date('d.m.Y H:i:s', $cached['expires']),
+                    'ttl' => $ttl,
+                    'ttl_formatted' => ($ttl === 0) ? 'Без обмеження' : $this->formatDuration($ttl),
                     'is_expired' => $isExpired
                 ];
             } catch (Exception $e) {
@@ -194,15 +227,20 @@ class CacheViewPage extends AdminPage {
      */
     private function clearCache() {
         if (!$this->verifyCsrf()) {
+            $this->setMessage('Помилка безпеки: невірний CSRF токен', 'danger');
             return;
         }
         
-        $action = $_POST['action'] ?? 'clear_all';
+        $action = $this->post('action', 'clear_all');
         
         if ($action === 'clear_all') {
             if (function_exists('cache_flush')) {
-                cache_flush();
-                $this->setMessage('Весь кеш успішно очищено', 'success');
+                $result = cache_flush();
+                if ($result) {
+                    $this->setMessage('Весь кеш успішно очищено', 'success');
+                } else {
+                    $this->setMessage('Помилка при очищенні кешу', 'danger');
+                }
             } else {
                 $this->setMessage('Помилка: функція очистки кешу недоступна', 'danger');
             }

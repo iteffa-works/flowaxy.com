@@ -63,15 +63,6 @@ class PluginsPage extends AdminPage {
                         'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadPluginModal")'
                     ]
                 ]
-            ],
-            [
-                'text' => 'Скачати плагіни',
-                'type' => 'outline-primary',
-                'options' => [
-                    'url' => 'https://flowaxy.com/marketplace/plugins',
-                    'icon' => 'store',
-                    'attributes' => ['target' => '_blank']
-                ]
             ]
         ]);
         

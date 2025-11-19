@@ -26,42 +26,42 @@ if (!empty($message)) {
                 <div class="row g-3">
                     <div class="col-md-3">
                         <?php
+                        $label = 'Загальний розмір';
+                        $value = $cacheStats['total_size_formatted'] ?? '0 B';
+                        $color = 'info';
+                        $size = 'lg';
+                        unset($icon, $classes);
                         include __DIR__ . '/../components/stats-card.php';
+                        ?>
+                    </div>
+                    <div class="col-md-3">
+                        <?php
                         $label = 'Всього файлів';
                         $value = $cacheStats['total_files'] ?? 0;
                         $color = 'primary';
                         $size = 'lg';
                         unset($icon, $classes);
+                        include __DIR__ . '/../components/stats-card.php';
                         ?>
                     </div>
                     <div class="col-md-3">
                         <?php
-                        include __DIR__ . '/../components/stats-card.php';
                         $label = 'Дійсних файлів';
                         $value = $cacheStats['valid_files'] ?? 0;
                         $color = 'success';
                         $size = 'lg';
                         unset($icon, $classes);
+                        include __DIR__ . '/../components/stats-card.php';
                         ?>
                     </div>
                     <div class="col-md-3">
                         <?php
-                        include __DIR__ . '/../components/stats-card.php';
                         $label = 'Прострочених';
                         $value = $cacheStats['expired_files'] ?? 0;
                         $color = 'warning';
                         $size = 'lg';
                         unset($icon, $classes);
-                        ?>
-                    </div>
-                    <div class="col-md-3">
-                        <?php
                         include __DIR__ . '/../components/stats-card.php';
-                        $label = 'Загальний розмір';
-                        $value = $cacheStats['total_size_formatted'] ?? '0 B';
-                        $color = 'info';
-                        $size = 'md';
-                        unset($icon, $classes);
                         ?>
                     </div>
                 </div>
@@ -69,52 +69,18 @@ if (!empty($message)) {
         </div>
     </div>
     
-    <!-- Дії з кешем -->
-    <div class="col-12">
-        <div class="card border-0 mb-3">
-            <div class="card-header bg-white border-bottom py-2 px-3">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="fas fa-tools me-2 text-primary"></i>Дії з кешем
-                </h6>
-            </div>
-            <div class="card-body p-3">
-                <?php
-                // Кнопка очистки всего кеша
-                ob_start();
-                $text = 'Очистити весь кеш';
-                $type = 'danger';
-                $icon = 'trash';
-                $attributes = ['type' => 'submit', 'class' => 'btn-sm', 'onclick' => "return confirm('Ви впевнені, що хочете очистити весь кеш?')"];
-                unset($url);
-                include __DIR__ . '/../components/button.php';
-                $clearAllBtn = ob_get_clean();
-                ?>
-                <form method="POST" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                    <input type="hidden" name="clear_cache" value="1">
-                    <input type="hidden" name="action" value="clear_all">
-                    <?= $clearAllBtn ?>
-                </form>
-                <?php
-                // Кнопка очистки простроченного кеша
-                ob_start();
-                $text = 'Очистити прострочений кеш';
-                $type = 'warning';
-                $icon = 'broom';
-                $attributes = ['type' => 'submit', 'class' => 'btn-sm'];
-                unset($url);
-                include __DIR__ . '/../components/button.php';
-                $clearExpiredBtn = ob_get_clean();
-                ?>
-                <form method="POST" class="d-inline ms-2">
-                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                    <input type="hidden" name="clear_cache" value="1">
-                    <input type="hidden" name="action" value="clear_expired">
-                    <?= $clearExpiredBtn ?>
-                </form>
-            </div>
-        </div>
-    </div>
+    <!-- Скрытые формы для кнопок в заголовке -->
+    <form id="clearAllCacheForm" method="POST" style="display: none;">
+        <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+        <input type="hidden" name="clear_cache" value="1">
+        <input type="hidden" name="action" value="clear_all">
+    </form>
+    
+    <form id="clearExpiredCacheForm" method="POST" style="display: none;">
+        <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+        <input type="hidden" name="clear_cache" value="1">
+        <input type="hidden" name="action" value="clear_expired">
+    </form>
     
     <!-- Список файлів кешу -->
     <div class="col-12">

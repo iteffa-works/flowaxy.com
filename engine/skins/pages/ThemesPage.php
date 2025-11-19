@@ -63,15 +63,6 @@ class ThemesPage extends AdminPage {
                         'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadThemeModal")'
                     ]
                 ]
-            ],
-            [
-                'text' => 'Скачати теми',
-                'type' => 'outline-primary',
-                'options' => [
-                    'url' => 'https://flowaxy.com/marketplace/themes',
-                    'icon' => 'store',
-                    'attributes' => ['target' => '_blank']
-                ]
             ]
         ]);
         
