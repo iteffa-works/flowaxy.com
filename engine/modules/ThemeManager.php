@@ -368,6 +368,7 @@ class ThemeManager extends BaseModule {
                 }
             }
             
+            // Сохраняем активную тему в site_settings
             $stmt = $db->prepare("
                 INSERT INTO site_settings (setting_key, setting_value) 
                 VALUES ('active_theme', ?) 
@@ -380,7 +381,14 @@ class ThemeManager extends BaseModule {
                 return false;
             }
             
+            // Очищаем все кеши связанные с темами
             $this->clearThemeCache($slug);
+            
+            // Очищаем кеш активной темы
+            cache_forget('active_theme_slug');
+            cache_forget('active_theme');
+            
+            // Перезагружаем активную тему
             $this->loadActiveTheme();
             
             $themeConfig = $this->getThemeConfig($slug);
@@ -930,19 +938,18 @@ class ThemeManager extends BaseModule {
      * Очистка кеша темы
      */
     public function clearThemeCache(?string $themeSlug = null): void {
+        // Всегда очищаем кеш активной темы
+        cache_forget('active_theme');
+        cache_forget('active_theme_slug');
+        cache_forget('all_themes_filesystem');
+        
         if ($themeSlug) {
-            cache_forget('active_theme');
-            cache_forget('active_theme_slug');
             cache_forget('theme_settings_' . $themeSlug);
             cache_forget('theme_config_' . $themeSlug);
             cache_forget('theme_' . $themeSlug);
             cache_forget('active_theme_check_' . md5($themeSlug));
         } else {
-            cache_forget('active_theme');
-            cache_forget('active_theme_slug');
-            cache_forget('all_themes_filesystem');
-            cache_forget('site_settings');
-            
+            // Очищаем кеш для всех тем
             $themesDir = dirname(__DIR__, 1) . '/../themes/';
             $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
             if (is_dir($themesDir)) {

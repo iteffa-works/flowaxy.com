@@ -165,9 +165,12 @@ class ThemesPage extends AdminPage {
             return;
         }
         
-        if (themeManager()->activateTheme($themeSlug)) {
+        // Активируем тему
+        $result = themeManager()->activateTheme($themeSlug);
+        
+        if ($result) {
             // Очищаем все кеши после успешной активации
-            themeManager()->clearThemeCache();
+            themeManager()->clearThemeCache($themeSlug);
             
             // Очищаем кеш меню админки (все варианты)
             $cachePatterns = [
@@ -182,10 +185,14 @@ class ThemesPage extends AdminPage {
                 cache_forget($pattern);
             }
             
+            // Дополнительно очищаем кеш активной темы
+            cache_forget('active_theme_slug');
+            cache_forget('active_theme');
+            
             $this->setMessage('Тему успішно активовано', 'success');
             $this->redirect('themes');
         } else {
-            $this->setMessage('Помилка при активації теми', 'danger');
+            $this->setMessage('Помилка при активації теми. Перевірте логи системи.', 'danger');
         }
     }
     
@@ -221,6 +228,7 @@ class ThemesPage extends AdminPage {
     private function ajaxActivateTheme() {
         if (!$this->verifyCsrf()) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
         }
         
         $request = Request::getInstance();
@@ -228,6 +236,7 @@ class ThemesPage extends AdminPage {
         
         if (empty($themeSlug)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Тему не вибрано'], 400);
+            return;
         }
         
         // Перевіряємо, чи підтримує тема SCSS
@@ -243,9 +252,11 @@ class ThemesPage extends AdminPage {
         }
         
         // Активируем тему
-        if (themeManager()->activateTheme($themeSlug)) {
+        $result = themeManager()->activateTheme($themeSlug);
+        
+        if ($result) {
             // Очищаем все кеши после успешной активации
-            themeManager()->clearThemeCache();
+            themeManager()->clearThemeCache($themeSlug);
             
             // Очищаем кеш меню админки (все варианты)
             $cachePatterns = [
@@ -260,17 +271,23 @@ class ThemesPage extends AdminPage {
                 cache_forget($pattern);
             }
             
+            // Дополнительно очищаем кеш активной темы
+            cache_forget('active_theme_slug');
+            cache_forget('active_theme');
+            
             $this->sendJsonResponse([
                 'success' => true,
                 'message' => 'Тему успішно активовано',
                 'has_scss' => $hasScssSupport,
                 'compiled' => $hasScssSupport ? $compileResult : null
             ], 200);
+            return;
         } else {
             $this->sendJsonResponse([
                 'success' => false,
-                'error' => 'Помилка при активації теми'
+                'error' => 'Помилка при активації теми. Перевірте логи системи.'
             ], 500);
+            return;
         }
     }
     

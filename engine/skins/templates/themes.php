@@ -372,8 +372,16 @@ include __DIR__ . '/../components/content-section.php';
                 const themeSlug = this.dataset.themeSlug;
                 const hasScss = this.dataset.hasScss === '1';
                 const btn = this.querySelector('.theme-activate-btn');
-                const btnText = btn.querySelector('.btn-text');
+                
+                if (!btn) {
+                    console.error('Кнопка активации не найдена');
+                    return;
+                }
+                
                 const btnSpinner = btn.querySelector('.btn-spinner');
+                
+                // Сохраняем оригинальный текст кнопки
+                const originalText = btn.textContent.trim();
                 
                 // Отключаем кнопку и показываем спиннер
                 btn.disabled = true;
@@ -384,19 +392,44 @@ include __DIR__ . '/../components/content-section.php';
                 
                 // Если тема поддерживает SCSS, сначала компилируем
                 if (hasScss) {
-                    btnText.textContent = 'Компілюється...';
+                    // Обновляем текст кнопки (убираем иконку и спиннер из текста)
+                    updateButtonText(btn, 'Компілюється...');
                     
                     // Компилируем SCSS
-                    compileAndActivateTheme(themeSlug, btn, btnText, btnSpinner);
+                    compileAndActivateTheme(themeSlug, btn, originalText, btnSpinner);
                 } else {
                     // Просто активируем тему
-                    activateTheme(themeSlug, btn, btnText, btnSpinner);
+                    updateButtonText(btn, 'Активується...');
+                    activateTheme(themeSlug, btn, originalText, btnSpinner);
                 }
             });
         });
     }
     
-    function compileAndActivateTheme(themeSlug, btn, btnText, btnSpinner) {
+    /**
+     * Обновляет текст кнопки, сохраняя иконку
+     */
+    function updateButtonText(btn, newText) {
+        // Находим иконку в кнопке
+        const icon = btn.querySelector('i');
+        if (icon) {
+            // Если есть иконка, обновляем текст после неё
+            const textNode = Array.from(btn.childNodes).find(node => 
+                node.nodeType === Node.TEXT_NODE && node.textContent.trim()
+            );
+            if (textNode) {
+                textNode.textContent = ' ' + newText;
+            } else {
+                // Если текстового узла нет, добавляем после иконки
+                btn.appendChild(document.createTextNode(' ' + newText));
+            }
+        } else {
+            // Если иконки нет, просто обновляем весь текст
+            btn.textContent = newText;
+        }
+    }
+    
+    function compileAndActivateTheme(themeSlug, btn, originalText, btnSpinner) {
         const formData = new FormData();
         formData.append('action', 'activate_theme');
         formData.append('theme_slug', themeSlug);
@@ -412,7 +445,7 @@ include __DIR__ . '/../components/content-section.php';
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                btnText.textContent = 'Активовано!';
+                updateButtonText(btn, 'Активовано!');
                 btn.classList.remove('compiling');
                 btn.classList.add('activating');
                 
@@ -426,7 +459,7 @@ include __DIR__ . '/../components/content-section.php';
                 if (btnSpinner) {
                     btnSpinner.style.display = 'none';
                 }
-                btnText.textContent = 'Активувати';
+                updateButtonText(btn, originalText);
                 
                 alert('Помилка: ' + (data.error || 'Невідома помилка'));
             }
@@ -437,46 +470,69 @@ include __DIR__ . '/../components/content-section.php';
             if (btnSpinner) {
                 btnSpinner.style.display = 'none';
             }
-            btnText.textContent = 'Активувати';
+            updateButtonText(btn, originalText);
             
             alert('Помилка підключення до сервера');
             console.error('Error:', error);
         });
     }
     
-    function activateTheme(themeSlug, btn, btnText, btnSpinner) {
-        // Для тем без SCSS используем обычную активацию через форму
-        btnText.textContent = 'Активується...';
+    function activateTheme(themeSlug, btn, originalText, btnSpinner) {
+        const formData = new FormData();
+        formData.append('action', 'activate_theme');
+        formData.append('theme_slug', themeSlug);
+        formData.append('csrf_token', csrfToken);
         
-        // Отправляем форму обычным способом
-        const form = btn.closest('form');
-        if (form) {
-            // Создаем скрытую форму для отправки
-            const hiddenForm = document.createElement('form');
-            hiddenForm.method = 'POST';
-            hiddenForm.action = '';
+        fetch('', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            // Проверяем, является ли ответ JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                // Если не JSON, значит произошла ошибка или редирект
+                throw new Error('Неверный формат ответа от сервера');
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                updateButtonText(btn, 'Активовано!');
+                btn.classList.remove('activating');
+                btn.classList.add('success');
+                
+                // Перезагружаем страницу через небольшую задержку
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('activating');
+                if (btnSpinner) {
+                    btnSpinner.style.display = 'none';
+                }
+                updateButtonText(btn, originalText);
+                
+                alert('Помилка: ' + (data.error || 'Невідома помилка'));
+                console.error('Activation error:', data);
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.classList.remove('activating');
+            if (btnSpinner) {
+                btnSpinner.style.display = 'none';
+            }
+            updateButtonText(btn, originalText);
             
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = csrfToken;
-            hiddenForm.appendChild(csrfInput);
-            
-            const themeSlugInput = document.createElement('input');
-            themeSlugInput.type = 'hidden';
-            themeSlugInput.name = 'theme_slug';
-            themeSlugInput.value = themeSlug;
-            hiddenForm.appendChild(themeSlugInput);
-            
-            const activateInput = document.createElement('input');
-            activateInput.type = 'hidden';
-            activateInput.name = 'activate_theme';
-            activateInput.value = '1';
-            hiddenForm.appendChild(activateInput);
-            
-            document.body.appendChild(hiddenForm);
-            hiddenForm.submit();
-        }
+            alert('Помилка підключення до сервера');
+            console.error('Error:', error);
+        });
     }
     
     function deleteTheme(slug) {

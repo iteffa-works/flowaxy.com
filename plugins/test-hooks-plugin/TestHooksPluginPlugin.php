@@ -43,6 +43,11 @@ class TestHooksPluginPlugin extends BasePlugin {
         
         // 8. Демонстрация приоритетов - добавляем текст в конец (низкий приоритет)
         addFilter('test_priority', [$this, 'addSuffix'], 20);
+        
+        // 9. Регистрация маршрута админки (используем addHook для совместимости)
+        // Примечание: маршрут также регистрируется автоматически системой
+        // если файл admin/TestHooksPluginAdminPage.php существует
+        addHook('admin_register_routes', [$this, 'registerAdminRoute'], 10);
     }
     
     /**
@@ -52,10 +57,10 @@ class TestHooksPluginPlugin extends BasePlugin {
         $menu[] = [
             'text' => 'Test Hooks',
             'title' => 'Test Hooks',
-            'href' => '/admin/test-hooks',
+            'href' => '/admin/test-hooks-plugin',
             'icon' => 'fas fa-code',
             'order' => 100,
-            'page' => 'test-hooks'
+            'page' => 'test-hooks-plugin'
         ];
         
         return $menu;
@@ -185,6 +190,29 @@ class TestHooksPluginPlugin extends BasePlugin {
      */
     public function addSuffix(string $text): string {
         return $text . ' [END]';
+    }
+    
+    /**
+     * Регистрация маршрута админки
+     * Примечание: маршрут также регистрируется автоматически системой
+     * если файл admin/TestHooksPluginAdminPage.php существует
+     */
+    public function registerAdminRoute($router): void {
+        // Загружаем класс страницы админки (на случай если автозагрузка не сработала)
+        $pluginDir = dirname(__FILE__);
+        $adminPageFile = $pluginDir . '/admin/TestHooksPluginAdminPage.php';
+        
+        if (file_exists($adminPageFile) && !class_exists('TestHooksPluginAdminPage')) {
+            require_once $adminPageFile;
+        }
+        
+        // Регистрируем маршрут с кастомным именем (опционально)
+        // Система автоматически зарегистрирует маршрут test-hooks-plugin
+        // Но мы можем зарегистрировать более короткий маршрут
+        if (class_exists('TestHooksPluginAdminPage')) {
+            // Можно зарегистрировать альтернативный маршрут
+            // $router->add(['GET', 'POST'], 'test-hooks', 'TestHooksPluginAdminPage');
+        }
     }
     
     /**
