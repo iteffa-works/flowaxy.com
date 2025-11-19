@@ -17,6 +17,15 @@ class DatabaseHelper {
      * @return PDO|null
      */
     public static function getConnection(bool $showError = true): ?PDO {
+        // Проверяем, что константы БД определены и не пустые
+        if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
+            if ($showError && php_sapi_name() !== 'cli') {
+                // Не показываем ошибку БД, если конфигурация не установлена (это нормально для установщика)
+                // Просто возвращаем null
+            }
+            return null;
+        }
+        
         try {
             if (!class_exists('Database')) {
                 // Если Database еще не загружен, пытаемся загрузить
@@ -58,6 +67,11 @@ class DatabaseHelper {
      * @return bool
      */
     public static function isAvailable(bool $showError = false): bool {
+        // Проверяем, что константы БД определены и не пустые
+        if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
+            return false;
+        }
+        
         try {
             if (!class_exists('Database')) {
                 // Если Database еще не загружен, пытаемся загрузить
