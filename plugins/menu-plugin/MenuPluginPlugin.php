@@ -171,12 +171,8 @@ class MenuPluginPlugin extends BasePlugin {
             return;
         }
         
-        // Регистрируем маршрут только если тема поддерживает навигацию
-        if (!$this->themeSupportsNavigation()) {
-            // Если тема не поддерживает навигацию, все равно регистрируем маршрут
-            // так как меню может использоваться в других темах
-        }
-        
+        // Регистрируем маршрут menus для доступа через /admin/menus
+        // Основной маршрут /admin/menu-plugin регистрируется автоматически
         require_once __DIR__ . '/admin/MenusPage.php';
         $router->add(['GET', 'POST'], 'menus', 'MenusPage');
     }

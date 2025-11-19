@@ -29,6 +29,14 @@ if (themeSupportsCustomization()) {
 
 // Маршрут меню тепер реєструється через плагін menu-plugin
 
+// Инициализируем плагины перед вызовом хука, чтобы они могли зарегистрировать свои маршруты
+if (function_exists('pluginManager')) {
+    $pluginManager = pluginManager();
+    if ($pluginManager && method_exists($pluginManager, 'initializePlugins')) {
+        $pluginManager->initializePlugins();
+    }
+}
+
 // Хук для реєстрації маршрутів модулів та плагінів
 doHook('admin_register_routes', $router);
 
@@ -57,6 +65,17 @@ foreach ($activePlugins as $slug => $plugin) {
     } elseif (file_exists($adminPageFile)) {
         require_once $adminPageFile;
         $router->add(['GET', 'POST'], $slug, $className);
+    }
+    
+    // Специальная регистрация маршрута /admin/menus для плагина menu-plugin
+    if ($slug === 'menu-plugin') {
+        $menusPageFile = $pluginDir . '/admin/MenusPage.php';
+        if (file_exists($menusPageFile)) {
+            require_once $menusPageFile;
+            if (class_exists('MenusPage')) {
+                $router->add(['GET', 'POST'], 'menus', 'MenusPage');
+            }
+        }
     }
 }
 

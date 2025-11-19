@@ -346,7 +346,8 @@ class PluginManager extends BaseModule {
         // Используем HookManager для выполнения хука
         // Для admin_register_routes передаем объект напрямую
         if ($hookName === 'admin_register_routes') {
-            // Для этого хука используем старую логику, так как он передает объект
+            // Используем HookManager для вызова хуков плагинов
+            // Также проверяем старую систему для обратной совместимости
             if (isset($this->hooks[$hookName])) {
                 foreach ($this->hooks[$hookName] as $hook) {
                     if (!is_callable($hook['callback'])) {
@@ -359,6 +360,8 @@ class PluginManager extends BaseModule {
                     }
                 }
             }
+            // Также вызываем через HookManager для поддержки плагинов
+            $this->hookManager->doAction($hookName, $data);
             return $data;
         }
         
