@@ -59,7 +59,7 @@ spl_autoload_register(function (string $className): void {
     // Мапінг класів на підкаталоги
     $classMapping = [
         // Base classes
-        'BaseModule' => 'base', 'BasePlugin' => 'base', 'ThemePlugin' => 'base',
+        'BaseModule' => 'base', 'BasePlugin' => 'base',
         // File classes
         'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
         'Xml' => 'files', 'Csv' => 'files', 'Yaml' => 'files', 'Image' => 'files',
