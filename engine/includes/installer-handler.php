@@ -66,55 +66,39 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Шаги установщика
-if ($step === 'welcome' || empty($step)) {
-    $template = __DIR__ . '/../templates/installer-welcome.php';
-    if (file_exists($template)) include $template;
-    else echo '<h1>Установка Flowaxy CMS</h1><p>Шаблон приветствия не найден</p>';
-    exit;
-}
-
-if ($step === 'database') {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        try {
-            $dbConfig = [
-                'host' => $_POST['db_host'] ?? '127.0.0.1',
-                'port' => (int)($_POST['db_port'] ?? 3306),
-                'name' => $_POST['db_name'] ?? '',
-                'user' => $_POST['db_user'] ?? 'root',
-                'pass' => $_POST['db_pass'] ?? '',
-                'charset' => 'utf8mb4'
-            ];
-            
-            $databaseIniFile = __DIR__ . '/../data/database.ini';
-            
-            if (class_exists('Ini')) {
-                $ini = new Ini();
-                $ini->setSection('database', $dbConfig);
-                $ini->save($databaseIniFile);
-            } else {
-                $content = "[database]\n";
-                foreach ($dbConfig as $k => $v) $content .= "{$k} = {$v}\n";
-                @file_put_contents($databaseIniFile, $content);
-            }
-            
-            header('Location: /install?step=tables');
-            exit;
-        } catch (Exception $e) {
-            $error = $e->getMessage();
+// Обработка POST запросов
+if ($step === 'database' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $dbConfig = [
+            'host' => $_POST['db_host'] ?? '127.0.0.1',
+            'port' => (int)($_POST['db_port'] ?? 3306),
+            'name' => $_POST['db_name'] ?? '',
+            'user' => $_POST['db_user'] ?? 'root',
+            'pass' => $_POST['db_pass'] ?? '',
+            'charset' => 'utf8mb4'
+        ];
+        
+        $databaseIniFile = __DIR__ . '/../data/database.ini';
+        
+        if (class_exists('Ini')) {
+            $ini = new Ini();
+            $ini->setSection('database', $dbConfig);
+            $ini->save($databaseIniFile);
+        } else {
+            $content = "[database]\n";
+            foreach ($dbConfig as $k => $v) $content .= "{$k} = {$v}\n";
+            @file_put_contents($databaseIniFile, $content);
         }
+        
+        header('Location: /install?step=tables');
+        exit;
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
-    
-    $template = __DIR__ . '/../templates/installer-database.php';
-    if (file_exists($template)) include $template;
-    exit;
 }
 
 if ($step === 'tables') {
     loadDatabaseConfig(true);
-    $template = __DIR__ . '/../templates/installer-tables.php';
-    if (file_exists($template)) include $template;
-    exit;
 }
 
 if ($step === 'user') {
@@ -137,7 +121,6 @@ if ($step === 'user') {
                 $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT)]);
                 
                 // Установка завершена - database.ini уже создан на шаге database
-                // Проверка установки делается по наличию файла database.ini
                 header('Location: /admin/login');
                 exit;
             }
@@ -145,9 +128,14 @@ if ($step === 'user') {
             $error = $e->getMessage();
         }
     }
-    
-    $template = __DIR__ . '/../templates/installer-user.php';
-    if (file_exists($template)) include $template;
-    exit;
 }
+
+// Подключаем единый шаблон установщика
+$template = __DIR__ . '/../templates/installer.php';
+if (file_exists($template)) {
+    include $template;
+} else {
+    echo '<h1>Flowaxy CMS Installation</h1><p>Installer template not found</p>';
+}
+exit;
 
