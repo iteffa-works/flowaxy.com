@@ -4,7 +4,7 @@ cache/
 *.tmp
 
 # Конфигурация
-engine/data/*
+engine/data/*.ini
 
 # Загруженные файлы
 uploads/*
