@@ -1,0 +1,20 @@
+{
+  "name": "Menu Plugin",
+  "slug": "menu-plugin",
+  "version": "1.0.0",
+  "description": "Плагин для управления меню навигации сайта",
+  "author": "Flowaxy CMS",
+  "author_url": "https://flowaxy.com",
+  "requires": "1.0.0",
+  "tested": "8.3",
+  "hooks": [
+    "admin_menu",
+    "admin_register_routes",
+    "theme_menu",
+    "theme_footer",
+    "theme_content",
+    "theme_widgets"
+  ],
+  "dependencies": []
+}
+
