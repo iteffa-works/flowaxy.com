@@ -22,11 +22,111 @@ if (version_compare(PHP_VERSION, '8.3.0', '<')) {
     die('Ця CMS потребує PHP 8.3 або вище. Поточна версія: ' . PHP_VERSION . PHP_EOL);
 }
 
-// Підключаємо глобальну конфігурацію
-require_once __DIR__ . '/data/config.php';
+// Визначаємо протокол автоматично
+$protocol = 'http://';
+if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
+    (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+    (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)) {
+    $protocol = 'https://';
+}
 
-// Підключаємо конфігурацію бази даних
-require_once __DIR__ . '/data/database.php';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+if (!defined('SITE_URL')) {
+    define('SITE_URL', $protocol . $host);
+}
+if (!defined('ADMIN_URL')) {
+    define('ADMIN_URL', SITE_URL . '/admin');
+}
+
+// Глобальна конфігурація CMS
+// Константи та основні налаштування
+if (!defined('UPLOADS_DIR')) {
+    define('UPLOADS_DIR', dirname(__DIR__, 2) . '/uploads/');
+}
+if (!defined('UPLOADS_URL')) {
+    define('UPLOADS_URL', SITE_URL . '/uploads/');
+}
+if (!defined('CACHE_DIR')) {
+    define('CACHE_DIR', dirname(__DIR__, 2) . '/storage/cache/');
+}
+if (!defined('LOGS_DIR')) {
+    define('LOGS_DIR', dirname(__DIR__, 2) . '/storage/logs/');
+}
+
+// Налаштування безпеки
+if (!defined('ADMIN_SESSION_NAME')) {
+    define('ADMIN_SESSION_NAME', 'cms_admin_logged_in');
+}
+if (!defined('CSRF_TOKEN_NAME')) {
+    define('CSRF_TOKEN_NAME', 'csrf_token');
+}
+if (!defined('PASSWORD_MIN_LENGTH')) {
+    define('PASSWORD_MIN_LENGTH', 8);
+}
+
+/**
+ * Завантаження конфігурації бази даних з database.ini
+ * 
+ * @return void
+ */
+function loadDatabaseConfig(): void {
+    $databaseIniFile = __DIR__ . '/data/database.ini';
+    
+    if (!file_exists($databaseIniFile) || !is_readable($databaseIniFile)) {
+        // Файл не существует - определяем пустые значения
+        if (!defined('DB_HOST')) define('DB_HOST', '');
+        if (!defined('DB_NAME')) define('DB_NAME', '');
+        if (!defined('DB_USER')) define('DB_USER', '');
+        if (!defined('DB_PASS')) define('DB_PASS', '');
+        if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+        return;
+    }
+    
+    try {
+        $dbConfig = null;
+        
+        // Пробуем загрузить через класс Ini
+        if (class_exists('Ini')) {
+            $ini = new Ini($databaseIniFile);
+            $dbConfig = $ini->getSection('database', []);
+        }
+        
+        // Fallback: парсим вручную
+        if (empty($dbConfig)) {
+            $parsed = @parse_ini_file($databaseIniFile, true);
+            $dbConfig = $parsed['database'] ?? [];
+        }
+        
+        if (!empty($dbConfig)) {
+            $host = $dbConfig['host'] ?? '127.0.0.1';
+            $port = (int)($dbConfig['port'] ?? 3306);
+            
+            if (!defined('DB_HOST')) define('DB_HOST', $host . ':' . $port);
+            if (!defined('DB_NAME')) define('DB_NAME', $dbConfig['name'] ?? '');
+            if (!defined('DB_USER')) define('DB_USER', $dbConfig['user'] ?? 'root');
+            if (!defined('DB_PASS')) define('DB_PASS', $dbConfig['pass'] ?? '');
+            if (!defined('DB_CHARSET')) define('DB_CHARSET', $dbConfig['charset'] ?? 'utf8mb4');
+        } else {
+            // Если секция пустая, определяем пустые значения
+            if (!defined('DB_HOST')) define('DB_HOST', '');
+            if (!defined('DB_NAME')) define('DB_NAME', '');
+            if (!defined('DB_USER')) define('DB_USER', '');
+            if (!defined('DB_PASS')) define('DB_PASS', '');
+            if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+        }
+    } catch (Exception $e) {
+        error_log("Error loading database.ini: " . $e->getMessage());
+        // В случае ошибки определяем пустые значения
+        if (!defined('DB_HOST')) define('DB_HOST', '');
+        if (!defined('DB_NAME')) define('DB_NAME', '');
+        if (!defined('DB_USER')) define('DB_USER', '');
+        if (!defined('DB_PASS')) define('DB_PASS', '');
+        if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+    }
+}
+
+// Завантажуємо конфігурацію бази даних
+loadDatabaseConfig();
 
 // Вмикаємо буферизацію виводу для запобігання проблем з headers
 if (!ob_get_level()) {

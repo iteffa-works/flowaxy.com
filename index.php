@@ -12,11 +12,83 @@ declare(strict_types=1);
 require_once __DIR__ . '/engine/init.php';
 
 /**
+ * Перезагрузка настроек БД из database.ini
+ * Используется в установщике для обновления констант
+ * 
+ * @return void
+ */
+function reloadDatabaseConfig(): void {
+    $databaseIniFile = __DIR__ . '/engine/data/database.ini';
+    if (!file_exists($databaseIniFile)) {
+        return;
+    }
+    
+    try {
+        $dbConfig = null;
+        
+        if (class_exists('Ini')) {
+            $ini = new Ini($databaseIniFile);
+            $dbConfig = $ini->getSection('database', []);
+        }
+        
+        if (empty($dbConfig)) {
+            $parsed = @parse_ini_file($databaseIniFile, true);
+            $dbConfig = $parsed['database'] ?? [];
+        }
+        
+        if (!empty($dbConfig)) {
+            $host = $dbConfig['host'] ?? '127.0.0.1';
+            $port = (int)($dbConfig['port'] ?? 3306);
+            
+            // Переопределяем константы (если они пустые)
+            if (!defined('DB_HOST') || DB_HOST === '') {
+                define('DB_HOST', $host . ':' . $port);
+            }
+            if (!defined('DB_NAME') || DB_NAME === '') {
+                define('DB_NAME', $dbConfig['name'] ?? '');
+            }
+            if (!defined('DB_USER') || DB_USER === '') {
+                define('DB_USER', $dbConfig['user'] ?? 'root');
+            }
+            if (!defined('DB_PASS') || DB_PASS === '') {
+                define('DB_PASS', $dbConfig['pass'] ?? '');
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error reloading database config: " . $e->getMessage());
+    }
+}
+
+// Проверка установки: если database.ini нет - запускаем установщик
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+if (strpos($requestUri, '/install') !== 0) {
+    $databaseIniFile = __DIR__ . '/engine/data/database.ini';
+    if (!file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
+        header('Location: /install');
+        exit;
+    }
+}
+
+/**
  * Перевірка та ініціалізація системи
  */
 function initializeSystem(): void {
-    // Перевірка доступності БД
-    if (!DatabaseHelper::isAvailable()) {
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    
+    // Пропускаем проверку БД для установщика
+    if (strpos($requestUri, '/install') === 0) {
+        return;
+    }
+    
+    // Проверяем наличие database.ini
+    $databaseIniFile = __DIR__ . '/engine/data/database.ini';
+    if (!file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
+        header('Location: /install');
+        exit;
+    }
+    
+    // Проверяем подключение к БД
+    if (!DatabaseHelper::isAvailable(false)) {
         showDatabaseError([
             'host' => DB_HOST,
             'database' => DB_NAME,
@@ -24,40 +96,8 @@ function initializeSystem(): void {
         ]);
         exit;
     }
-    
-    // Перевірка доступності PluginManager (плагіни завантажуються лениво через хуки)
-    try {
-        if (!function_exists('pluginManager')) {
-            throw new Exception('PluginManager не доступний');
-        }
-    } catch (Exception $e) {
-        if (strpos($e->getMessage(), 'database') !== false || strpos($e->getMessage(), 'PDO') !== false) {
-            showDatabaseError([
-                'host' => DB_HOST,
-                'database' => DB_NAME,
-                'error' => $e->getMessage()
-            ]);
-            exit;
-        }
-        throw $e;
-    }
 }
 
-/**
- * Завантаження необхідних класів для роботи системи
- * 
- * @return void
- */
-function loadRequiredClasses(): void {
-    // Cache завантажується автоматично через autoloader
-    // Але перевіряємо для впевненості
-    if (!class_exists('Cache')) {
-        $cacheFile = __DIR__ . '/engine/classes/data/Cache.php';
-        if (file_exists($cacheFile)) {
-            require_once $cacheFile;
-        }
-    }
-}
 
 /**
  * Рендеринг fallback сторінки коли тема не встановлена
@@ -96,52 +136,9 @@ function renderThemeFallback(): bool {
     return true;
 }
 
-/**
- * Проверка установки системы и перенаправление на установщик
- * 
- * @return bool
- */
-function checkInstallation(): bool {
-    // Пропускаем проверку для маршрута установщика
-    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-    if (strpos($requestUri, '/install') === 0) {
-        return true;
-    }
-    
-    try {
-        // Проверяем доступность БД
-        if (!DatabaseHelper::isAvailable(false)) {
-            // Если БД недоступна, показываем ошибку
-            return true;
-        }
-        
-        // Проверяем установку системы
-        if (class_exists('Installer')) {
-            $installer = Installer::getInstance();
-            if (!$installer->isInstalled()) {
-                // Перенаправляем на установщик
-                if (php_sapi_name() !== 'cli') {
-                    header('Location: /install');
-                    exit;
-                }
-                return false;
-            }
-        }
-    } catch (Exception $e) {
-        // В случае ошибки продолжаем работу
-        if (function_exists('logger')) {
-            logger()->logError('Installation check failed', ['error' => $e->getMessage()]);
-        }
-    }
-    
-    return true;
-}
 
 // Ініціалізація системи
 initializeSystem();
-
-// Проверка установки системы (до создания роутера)
-checkInstallation();
 
 // Хук для обробки ранніх запитів (AJAX, API тощо)
 $handled = doHook('handle_early_request', false);
@@ -149,99 +146,179 @@ if ($handled === true) {
     exit;
 }
 
-// Завантаження необхідних класів
-loadRequiredClasses();
-
-// Визначаємо тип запиту та створюємо роутер
+// Визначаємо тип запиту
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $isAdminRequest = strpos($requestUri, '/admin') === 0;
-
-// Обработка маршрута установщика
-$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 if (strpos($requestUri, '/install') === 0) {
-    // Обработка установщика
-    $installerTemplate = __DIR__ . '/engine/templates/installer.php';
+    $step = $_GET['step'] ?? 'welcome';
+    $action = $_GET['action'] ?? '';
     
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Выполняем установку
+    // AJAX действия
+    if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
         try {
-            if (class_exists('Installer')) {
-                $installer = Installer::getInstance();
-                $installResult = $installer->install();
-                
-                // Показываем результат
-                $dbAvailable = DatabaseHelper::isAvailable(false);
-                $tablesStatus = ['exists' => [], 'missing' => []];
-                
-                if ($dbAvailable) {
-                    $tablesStatus = [
-                        'exists' => [],
-                        'missing' => $installer->getMissingTables()
-                    ];
-                }
-                
-                if (file_exists($installerTemplate)) {
-                    include $installerTemplate;
-                } else {
-                    http_response_code(200);
-                    echo '<h1>Установка завершена</h1>';
-                    echo '<pre>' . print_r($installResult, true) . '</pre>';
-                    echo '<a href="/admin">Перейти к админ-панели</a>';
-                }
+            $host = $_POST['db_host'] ?? '127.0.0.1';
+            $port = (int)($_POST['db_port'] ?? 3306);
+            $name = $_POST['db_name'] ?? '';
+            $user = $_POST['db_user'] ?? 'root';
+            $pass = $_POST['db_pass'] ?? '';
+            
+            $dsn = "mysql:host={$host};port={$port};charset=utf8mb4";
+            $pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_TIMEOUT => 3
+            ]);
+            
+            // Проверяем существование базы данных
+            $stmt = $pdo->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?");
+            $stmt->execute([$name]);
+            $dbExists = $stmt->fetch();
+            
+            echo json_encode([
+                'success' => true,
+                'database_exists' => $dbExists !== false
+            ]);
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+    
+    if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
+        try {
+            reloadDatabaseConfig();
+            
+            $data = json_decode(file_get_contents('php://input'), true);
+            $table = $data['table'] ?? '';
+            
+            if (!class_exists('Installer')) {
+                echo json_encode(['success' => false, 'message' => 'Installer not available']);
                 exit;
             }
-        } catch (Exception $e) {
-            $installResult = [
-                'success' => false,
-                'message' => 'Ошибка: ' . $e->getMessage(),
-                'errors' => [$e->getMessage()]
-            ];
             
-            $dbAvailable = DatabaseHelper::isAvailable(false);
-            $tablesStatus = ['exists' => [], 'missing' => []];
+            $installer = Installer::getInstance();
+            $tables = $installer->getTableDefinitions();
             
-            if (file_exists($installerTemplate)) {
-                include $installerTemplate;
-            } else {
-                http_response_code(500);
-                echo '<h1>Ошибка установки</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>';
+            if (!isset($tables[$table])) {
+                echo json_encode(['success' => false, 'message' => 'Table not found']);
+                exit;
             }
-            exit;
-        }
-    } else {
-        // Показываем форму установки
-        try {
-            $dbAvailable = DatabaseHelper::isAvailable(false);
-            $tablesStatus = ['exists' => [], 'missing' => []];
             
-            if ($dbAvailable && class_exists('Installer')) {
-                $installer = Installer::getInstance();
-                $missingTables = $installer->getMissingTables();
-                $allTables = $installer->getRequiredTables();
-                $existingTables = array_diff($allTables, $missingTables);
-                
-                $tablesStatus = [
-                    'exists' => $existingTables,
-                    'missing' => $missingTables
+            $db = DatabaseHelper::getConnection();
+            $db->exec($tables[$table]);
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+    
+    // Обработка шагов
+    if ($step === 'welcome' || empty($step)) {
+        $template = __DIR__ . '/engine/templates/installer-welcome.php';
+        if (file_exists($template)) {
+            include $template;
+        } else {
+            http_response_code(200);
+            echo '<h1>Установка Flowaxy CMS</h1><p>Шаблон приветствия не найден</p>';
+        }
+        exit;
+    }
+    
+    if ($step === 'database') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $dbConfig = [
+                    'host' => $_POST['db_host'] ?? '127.0.0.1',
+                    'port' => (int)($_POST['db_port'] ?? 3306),
+                    'name' => $_POST['db_name'] ?? '',
+                    'user' => $_POST['db_user'] ?? 'root',
+                    'pass' => $_POST['db_pass'] ?? '',
+                    'charset' => 'utf8mb4'
                 ];
-            }
-            
-            if (file_exists($installerTemplate)) {
-                include $installerTemplate;
-            } else {
-                http_response_code(200);
-                echo '<h1>Установка системы</h1>';
-                echo '<p>База данных: ' . ($dbAvailable ? 'Подключена' : 'Не подключена') . '</p>';
-                if ($dbAvailable && !empty($tablesStatus['missing'])) {
-                    echo '<form method="POST"><button type="submit" name="install">Установить</button></form>';
+                
+                $iniFile = __DIR__ . '/engine/data/database.ini';
+                
+                if (class_exists('Ini')) {
+                    $ini = new Ini();
+                    $ini->setSection('database', $dbConfig);
+                    $ini->save($iniFile);
+                } else {
+                    // Fallback: создаем файл вручную
+                    $content = "[database]\n";
+                    foreach ($dbConfig as $key => $value) {
+                        $content .= "{$key} = {$value}\n";
+                    }
+                    @file_put_contents($iniFile, $content);
                 }
+                
+                header('Location: /install?step=tables');
+                exit;
+            } catch (Exception $e) {
+                $error = $e->getMessage();
             }
-            exit;
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo '<h1>Ошибка</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>';
-            exit;
         }
+        
+        $template = __DIR__ . '/engine/templates/installer-database.php';
+        if (file_exists($template)) {
+            include $template;
+        }
+        exit;
+    }
+    
+    if ($step === 'tables') {
+        reloadDatabaseConfig();
+        
+        $template = __DIR__ . '/engine/templates/installer-tables.php';
+        if (file_exists($template)) {
+            include $template;
+        }
+        exit;
+    }
+    
+    if ($step === 'user') {
+        reloadDatabaseConfig();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $username = $_POST['username'] ?? '';
+                $email = $_POST['email'] ?? '';
+                $password = $_POST['password'] ?? '';
+                $passwordConfirm = $_POST['password_confirm'] ?? '';
+                
+                if ($password !== $passwordConfirm) {
+                    $error = 'Паролі не співпадають';
+                } elseif (strlen($password) < 8) {
+                    $error = 'Пароль повинен містити мінімум 8 символів';
+                } else {
+                    $db = DatabaseHelper::getConnection();
+                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    
+                    $stmt = $db->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
+                    $stmt->execute([$username, $email, $hashedPassword]);
+                    
+                    // Устанавливаем флаг установки в БД
+                    if (class_exists('Installer')) {
+                        Installer::getInstance()->setInstallFlag($db);
+                    }
+                    
+                    header('Location: /admin/login');
+                    exit;
+                }
+            } catch (Exception $e) {
+                $error = $e->getMessage();
+            }
+        }
+        
+        $template = __DIR__ . '/engine/templates/installer-user.php';
+        if (file_exists($template)) {
+            include $template;
+        }
+        exit;
     }
 }
 
