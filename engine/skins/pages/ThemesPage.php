@@ -367,11 +367,24 @@ class ThemesPage extends AdminPage {
             $themeSlug = null;
             
             foreach ($entries as $entryName) {
-                if (basename($entryName) === 'theme.json') {
+                // Нормализуем путь (заменяем обратные слеши на прямые для Windows архивов)
+                $normalizedPath = str_replace('\\', '/', $entryName);
+                $normalizedPath = trim($normalizedPath, '/');
+                
+                // Пропускаем директории
+                if (substr($normalizedPath, -1) === '/') {
+                    continue;
+                }
+                
+                // Проверяем, является ли файл theme.json (в любой папке)
+                if (basename($normalizedPath) === 'theme.json') {
                     $hasThemeJson = true;
-                    $themeJsonPath = $entryName;
-                    $pathParts = explode('/', trim($entryName, '/'));
+                    $themeJsonPath = $entryName; // Используем оригинальное имя для извлечения
+                    
+                    // Определяем slug из пути
+                    $pathParts = explode('/', $normalizedPath);
                     if (count($pathParts) >= 2) {
+                        // Первая часть пути - это обычно название темы (slug)
                         $themeSlug = $pathParts[0];
                     }
                     break;
@@ -597,12 +610,24 @@ class ThemesPage extends AdminPage {
             $themeSlug = null;
             
             foreach ($entries as $entryName) {
-                if (basename($entryName) === 'theme.json') {
+                // Нормализуем путь (заменяем обратные слеши на прямые для Windows архивов)
+                $normalizedPath = str_replace('\\', '/', $entryName);
+                $normalizedPath = trim($normalizedPath, '/');
+                
+                // Пропускаем директории
+                if (substr($normalizedPath, -1) === '/') {
+                    continue;
+                }
+                
+                // Проверяем, является ли файл theme.json (в любой папке)
+                if (basename($normalizedPath) === 'theme.json') {
                     $hasThemeJson = true;
-                    $themeJsonPath = $entryName;
-                    // Спробуємо визначити slug з шляху
-                    $pathParts = explode('/', trim($entryName, '/'));
+                    $themeJsonPath = $entryName; // Используем оригинальное имя для извлечения
+                    
+                    // Определяем slug из пути
+                    $pathParts = explode('/', $normalizedPath);
                     if (count($pathParts) >= 2) {
+                        // Первая часть пути - это обычно название темы (slug)
                         $themeSlug = $pathParts[0];
                     }
                     break;

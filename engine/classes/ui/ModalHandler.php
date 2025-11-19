@@ -486,27 +486,79 @@ class ModalHandler {
                             url = '';
                         }
                         
+                        // Используем более тихий подход для валидационных ошибок
                         const response = await fetch(url, {
                             method: form.method || 'POST',
                             body: formData,
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
+                        }).catch(networkError => {
+                            // Сетевые ошибки логируем
+                            console.error('ModalHandler network error:', networkError);
+                            throw networkError;
                         });
                         
                         // Проверяем статус ответа
+                        const isValidationError = response.status >= 400 && response.status < 500;
+                        
                         if (!response.ok) {
-                            const text = await response.text();
-                            let errorMessage = `Помилка сервера (${response.status}): `;
+                            const text = await response.text().catch(() => '');
+                            let errorMessage = '';
                             
                             // Пытаемся извлечь ошибку из HTML ответа
                             if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-                                errorMessage += 'Сервер повернув HTML замість JSON. Можливо, маршрут не знайдено.';
+                                errorMessage = `Помилка сервера (${response.status}): Сервер повернув HTML замість JSON. Можливо, маршрут не знайдено.`;
                             } else {
-                                errorMessage += text.substring(0, 200);
+                                // Пытаемся распарсить JSON и извлечь поле error
+                                try {
+                                    const jsonData = JSON.parse(text);
+                                    if (jsonData && typeof jsonData === 'object' && jsonData.error) {
+                                        errorMessage = jsonData.error;
+                                    } else {
+                                        errorMessage = text.substring(0, 200);
+                                    }
+                                } catch (e) {
+                                    // Не JSON, показываем текст
+                                    errorMessage = text.substring(0, 200);
+                                }
                             }
                             
-                            throw new Error(errorMessage);
+                            // Для валидационных ошибок обрабатываем тихо, без throw
+                            if (isValidationError) {
+                                // Останавливаем прогресс
+                                if (this.activeModals.has(modalId)) {
+                                    const { interval } = this.activeModals.get(modalId);
+                                    if (interval) {
+                                        clearInterval(interval);
+                                    }
+                                }
+                                
+                                if (progressBar) {
+                                    progressBar.classList.add('d-none');
+                                    const bar = progressBar.querySelector('.progress-bar');
+                                    if (bar) {
+                                        bar.style.width = '0%';
+                                    }
+                                }
+                                
+                                // Показываем ошибку пользователю без префикса
+                                this.showResult(modalId, errorMessage, 'danger');
+                                
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalText || 'Зберегти';
+                                }
+                                
+                                // Валидационные ошибки обрабатываем тихо - не логируем в консоль
+                                return;
+                            }
+                            
+                            // Для серверных ошибок (5xx) выбрасываем исключение
+                            const error = new Error(errorMessage);
+                            error.status = response.status;
+                            error.isValidationError = isValidationError;
+                            throw error;
                         }
                         
                         // Проверяем, что ответ JSON
@@ -594,8 +646,55 @@ class ModalHandler {
                             }
                         }, 500);
                     } catch (error) {
-                        console.error('ModalHandler error:', error);
-                        this.showResult(modalId, 'Помилка підключення до сервера: ' + error.message, 'danger');
+                        // Логируем только реальные ошибки (не валидационные 4xx)
+                        const isValidationError = error.isValidationError === true || (error.status >= 400 && error.status < 500);
+                        
+                        if (!isValidationError) {
+                            // Логируем только серверные ошибки (5xx) и сетевые ошибки
+                            console.error('ModalHandler error:', error);
+                        }
+                        
+                        let errorMessage = error.message || 'Помилка підключення до сервера';
+                        
+                        // Если в сообщении об ошибке есть JSON, пытаемся извлечь поле error
+                        try {
+                            // Ищем JSON объект в сообщении (учитываем вложенные объекты и строки)
+                            const jsonStart = error.message.indexOf('{');
+                            if (jsonStart !== -1) {
+                                // Пытаемся найти конец JSON объекта
+                                let braceCount = 0;
+                                let jsonEnd = jsonStart;
+                                for (let i = jsonStart; i < error.message.length; i++) {
+                                    if (error.message[i] === '{') braceCount++;
+                                    if (error.message[i] === '}') {
+                                        braceCount--;
+                                        if (braceCount === 0) {
+                                            jsonEnd = i + 1;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                if (jsonEnd > jsonStart) {
+                                    const jsonStr = error.message.substring(jsonStart, jsonEnd);
+                                    const jsonData = JSON.parse(jsonStr);
+                                    if (jsonData && typeof jsonData === 'object' && jsonData.error) {
+                                        errorMessage = jsonData.error;
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            // Если не удалось распарсить, используем исходное сообщение
+                        }
+                        
+                        // Если ошибка уже извлечена из JSON (не содержит JSON структуру), показываем её без префикса
+                        const isExtractedError = errorMessage && !errorMessage.includes('{') && !errorMessage.includes('success');
+                        // Для валидационных ошибок не добавляем префикс
+                        const finalMessage = (isExtractedError || isValidationError) 
+                            ? errorMessage 
+                            : 'Помилка підключення до сервера: ' + errorMessage;
+                        
+                        this.showResult(modalId, finalMessage, 'danger');
                         
                         if (submitBtn) {
                             submitBtn.disabled = false;

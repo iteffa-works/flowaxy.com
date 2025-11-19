@@ -413,11 +413,24 @@ class PluginsPage extends AdminPage {
             $pluginSlug = null;
             
             foreach ($entries as $entryName) {
-                if (basename($entryName) === 'plugin.json') {
+                // Нормализуем путь (заменяем обратные слеши на прямые для Windows архивов)
+                $normalizedPath = str_replace('\\', '/', $entryName);
+                $normalizedPath = trim($normalizedPath, '/');
+                
+                // Пропускаем директории
+                if (substr($normalizedPath, -1) === '/') {
+                    continue;
+                }
+                
+                // Проверяем, является ли файл plugin.json (в любой папке)
+                if (basename($normalizedPath) === 'plugin.json') {
                     $hasPluginJson = true;
-                    $pluginJsonPath = $entryName;
-                    $pathParts = explode('/', trim($entryName, '/'));
+                    $pluginJsonPath = $entryName; // Используем оригинальное имя для извлечения
+                    
+                    // Определяем slug из пути
+                    $pathParts = explode('/', $normalizedPath);
                     if (count($pathParts) >= 2) {
+                        // Первая часть пути - это обычно название плагина (slug)
                         $pluginSlug = $pathParts[0];
                     }
                     break;

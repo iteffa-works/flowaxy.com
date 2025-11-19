@@ -52,3 +52,49 @@ $containerClass = implode(' ', array_map('htmlspecialchars', $containerClasses))
     <?php endif; ?>
 </div>
 
+<style>
+.empty-state {
+    text-align: center;
+    padding: 100px 30px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+
+.empty-state-icon {
+    width: auto;
+    height: auto;
+    margin: 0 auto 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state-icon i {
+    font-size: 4rem;
+    color: #adb5bd;
+}
+
+.empty-state-title {
+    color: #212529;
+    font-weight: 700;
+    margin-bottom: 16px;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+}
+
+.empty-state-message {
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 0;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-state-actions {
+    margin-top: 32px;
+}
+</style>
+

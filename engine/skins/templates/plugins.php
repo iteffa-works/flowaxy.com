@@ -29,26 +29,8 @@ ob_start();
             </div>
         <?php else: ?>
     <?php
-    // Пустое состояние с кнопками
-    ob_start();
-    $text = 'Завантажити плагін';
-    $type = 'primary';
-    $icon = 'upload';
-    $attributes = ['data-bs-toggle' => 'modal', 'data-bs-target' => '#uploadPluginModal'];
-    unset($url);
-    include __DIR__ . '/../components/button.php';
-    $uploadBtn = ob_get_clean();
-    
-    ob_start();
-    $text = 'Перейти до маркетплейсу';
-    $type = 'outline-primary';
-    $url = 'https://flowaxy.com/marketplace/plugins';
-    $icon = 'store';
-    $attributes = ['target' => '_blank'];
-    include __DIR__ . '/../components/button.php';
-    $marketplaceBtn = ob_get_clean();
-    
-    $actions = $uploadBtn . $marketplaceBtn;
+    // Пустое состояние без кнопок
+    unset($actions);
     include __DIR__ . '/../components/empty-state.php';
     $icon = 'puzzle-piece';
     $title = 'Плагіни відсутні';
@@ -60,11 +42,11 @@ ob_start();
 $sectionContent = ob_get_clean();
 
 // Используем компонент секции контента
-include __DIR__ . '/../components/content-section.php';
 $title = 'Встановлені плагіни';
 $icon = 'puzzle-piece';
 $content = $sectionContent;
 $classes = ['plugins-page'];
+include __DIR__ . '/../components/content-section.php';
 ?>
 
 <script>
@@ -153,6 +135,28 @@ function resetFilters() {
     border: 1px solid #e0e0e0;
     border-top: none;
     padding: 24px;
+}
+
+.content-section-body:has(.plugins-empty-state) {
+    border: 2px dashed #dee2e6;
+    border-radius: 16px;
+    background: #f8f9fa;
+    padding: 60px 24px !important;
+    min-height: calc(100vh - 300px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content-section-body:has(.plugins-empty-state .empty-state) {
+    border: 2px dashed #dee2e6;
+    border-radius: 16px;
+    background: #f8f9fa;
+    padding: 60px 24px !important;
+    min-height: calc(100vh - 300px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .plugins-list {
@@ -325,75 +329,6 @@ function resetFilters() {
     border-color: #5a6268;
 }
 
-.plugins-empty-state {
-    text-align: center;
-    padding: 80px 20px;
-    background: #fff;
-    border: 1px solid #e0e0e0;
-}
-
-.plugins-empty-state .empty-state-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 2.5rem;
-}
-
-.plugins-empty-state h4 {
-    color: #212529;
-    font-weight: 600;
-    margin-bottom: 12px;
-    font-size: 1.5rem;
-}
-
-.plugins-empty-state .text-muted {
-    color: #6c757d;
-    margin-bottom: 32px;
-    font-size: 0.95rem;
-    line-height: 1.6;
-}
-
-.plugins-empty-state .btn {
-    padding: 12px 24px;
-    font-weight: 500;
-    border-radius: 0;
-    border: 1px solid;
-    font-size: 0.9rem;
-    height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-}
-
-.plugins-empty-state .btn-primary {
-    background: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-}
-
-.plugins-empty-state .btn-primary:hover {
-    background: #0b5ed7;
-    border-color: #0b5ed7;
-}
-
-.plugins-empty-state .btn-outline-primary {
-    border-color: #0d6efd;
-    color: #0d6efd;
-    background: transparent;
-}
-
-.plugins-empty-state .btn-outline-primary:hover {
-    background: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-}
 </style>
 
 <!-- Модальне вікно завантаження плагіна через ModalHandler -->
