@@ -114,15 +114,15 @@ class CustomizerPage extends AdminPage {
             $categories = $customizer->getCategories($customizerConfig, $availableSettings);
         } else {
             // Fallback если ThemeCustomizer не загружен
-            $defaultCategories = [
-                'identity' => ['icon' => 'fa-id-card', 'label' => 'Ідентичність сайту'],
-                'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
-                'fonts' => ['icon' => 'fa-font', 'label' => 'Typography'],
-                'menu' => ['icon' => 'fa-bars', 'label' => 'Меню'],
-                'header' => ['icon' => 'fa-window-maximize', 'label' => 'Header Settings'],
-                'footer' => ['icon' => 'fa-window-minimize', 'label' => 'Footer Settings'],
-                'css' => ['icon' => 'fa-code', 'label' => 'Додатковий код CSS'],
-            ];
+        $defaultCategories = [
+            'identity' => ['icon' => 'fa-id-card', 'label' => 'Ідентичність сайту'],
+            'colors' => ['icon' => 'fa-palette', 'label' => 'Кольори'],
+            'fonts' => ['icon' => 'fa-font', 'label' => 'Typography'],
+            'menu' => ['icon' => 'fa-bars', 'label' => 'Меню'],
+            'header' => ['icon' => 'fa-window-maximize', 'label' => 'Header Settings'],
+            'footer' => ['icon' => 'fa-window-minimize', 'label' => 'Footer Settings'],
+            'css' => ['icon' => 'fa-code', 'label' => 'Додатковий код CSS'],
+        ];
             foreach ($defaultCategories as $category => $categoryInfo) {
                 if (isset($availableSettings[$category]) && !empty($availableSettings[$category])) {
                     $categories[$category] = $categoryInfo;

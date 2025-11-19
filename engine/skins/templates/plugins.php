@@ -17,17 +17,17 @@ if (!empty($message)) {
 // Формируем содержимое секции
 ob_start();
 ?>
-<?php if (!empty($installedPlugins)): ?>
-    <div class="plugins-list">
-        <div class="row">
-            <?php foreach ($installedPlugins as $plugin): ?>
+        <?php if (!empty($installedPlugins)): ?>
+            <div class="plugins-list">
+                <div class="row">
+                    <?php foreach ($installedPlugins as $plugin): ?>
                 <?php
                 include __DIR__ . '/../components/plugin-card.php';
                 ?>
-            <?php endforeach; ?>
-        </div>
-    </div>
-<?php else: ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php else: ?>
     <?php
     // Пустое состояние с кнопками
     ob_start();
@@ -55,7 +55,7 @@ ob_start();
     $message = 'Встановіть плагін за замовчуванням або завантажте новий плагін з маркетплейсу.';
     $classes = ['plugins-empty-state'];
     ?>
-<?php endif; ?>
+        <?php endif; ?>
 <?php
 $sectionContent = ob_get_clean();
 
