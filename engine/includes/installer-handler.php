@@ -136,10 +136,8 @@ if ($step === 'user') {
                 $stmt = $db->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
                 $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT)]);
                 
-                if (class_exists('Installer')) {
-                    Installer::getInstance()->setInstallFlag($db);
-                }
-                
+                // Установка завершена - database.ini уже создан на шаге database
+                // Проверка установки делается по наличию файла database.ini
                 header('Location: /admin/login');
                 exit;
             }

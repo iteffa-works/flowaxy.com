@@ -18,8 +18,6 @@ class Installer extends BaseModule {
         'theme_settings'
     ];
     
-    private const INSTALL_FLAG_KEY = 'system_installed';
-    
     /**
      * Инициализация модуля
      */
@@ -175,8 +173,8 @@ class Installer extends BaseModule {
                 // Создаем таблицы
                 $this->createTables($db, $errors);
                 
-                // Устанавливаем флаг установки
-                $this->setInstallFlag($db);
+                // Установка завершена - database.ini уже создан на предыдущем шаге
+                // Проверка установки делается по наличию файла database.ini
                 
                 // Коммитим транзакцию
                 $db->commit();
@@ -220,33 +218,6 @@ class Installer extends BaseModule {
             } catch (PDOException $e) {
                 $errors[] = "Ошибка создания таблицы {$tableName}: " . $e->getMessage();
             }
-        }
-    }
-    
-    /**
-     * Установка флага установки системы
-     * Устанавливает флаг в БД (database.ini уже создан на предыдущем шаге)
-     * 
-     * @param PDO|null $db Подключение к БД
-     * @return void
-     */
-    public function setInstallFlag(?PDO $db = null): void {
-        try {
-            // Устанавливаем флаг в БД, если подключение есть
-            if ($db !== null) {
-                try {
-                    $stmt = $db->prepare("
-                        INSERT INTO site_settings (setting_key, setting_value) 
-                        VALUES (?, '1')
-                        ON DUPLICATE KEY UPDATE setting_value = '1'
-                    ");
-                    $stmt->execute([self::INSTALL_FLAG_KEY]);
-                } catch (PDOException $e) {
-                    // Игнорируем ошибку, если таблица еще не создана
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Error setting install flag: " . $e->getMessage());
         }
     }
     
