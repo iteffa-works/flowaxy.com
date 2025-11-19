@@ -586,10 +586,51 @@ class Database {
                 $this->connect();
             }
             
+            // Проверяем подключение простым запросом
+            if ($this->connection === null) {
+                return false;
+            }
+            
             $stmt = $this->connection->query("SELECT 1");
             return $stmt !== false;
         } catch (Exception $e) {
+            $this->isConnected = false;
+            $this->connection = null;
             $this->logError('Database availability check failed', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+    
+    /**
+     * Проверка существования базы данных
+     * 
+     * @return bool
+     */
+    public function databaseExists(): bool {
+        try {
+            // Подключаемся без указания базы данных
+            $host = DB_HOST;
+            $port = 3306;
+            
+            if (strpos($host, ':') !== false) {
+                [$host, $port] = explode(':', $host, 2);
+                $port = (int)$port;
+            }
+            
+            $dsn = sprintf("mysql:host=%s;port=%d;charset=%s", $host, $port, DB_CHARSET);
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_TIMEOUT => 2,
+            ];
+            
+            $tempConnection = new PDO($dsn, DB_USER, DB_PASS, $options);
+            
+            $stmt = $tempConnection->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?");
+            $stmt->execute([DB_NAME]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result !== false;
+        } catch (Exception $e) {
             return false;
         }
     }

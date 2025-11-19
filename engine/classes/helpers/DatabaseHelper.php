@@ -111,5 +111,68 @@ class DatabaseHelper {
     public static function getInstance(): Database {
         return Database::getInstance();
     }
+    
+    /**
+     * Проверка существования таблицы в базе данных
+     * 
+     * @param string $tableName Имя таблицы
+     * @return bool
+     */
+    public static function tableExists(string $tableName): bool {
+        try {
+            if (!class_exists('Database')) {
+                $dbFile = __DIR__ . '/../data/Database.php';
+                if (file_exists($dbFile)) {
+                    require_once $dbFile;
+                }
+            }
+            
+            $db = Database::getInstance();
+            $connection = $db->getConnection();
+            
+            $stmt = $connection->prepare("
+                SELECT COUNT(*) as count 
+                FROM information_schema.tables 
+                WHERE table_schema = ? 
+                AND table_name = ?
+            ");
+            $stmt->execute([DB_NAME, $tableName]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return isset($result['count']) && (int)$result['count'] > 0;
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('Table existence check failed', [
+                    'table' => $tableName,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            return false;
+        }
+    }
+    
+    /**
+     * Проверка существования всех указанных таблиц
+     * 
+     * @param array $tables Массив имен таблиц
+     * @return array Массив с результатами проверки ['exists' => array, 'missing' => array]
+     */
+    public static function checkTables(array $tables): array {
+        $exists = [];
+        $missing = [];
+        
+        foreach ($tables as $table) {
+            if (self::tableExists($table)) {
+                $exists[] = $table;
+            } else {
+                $missing[] = $table;
+            }
+        }
+        
+        return [
+            'exists' => $exists,
+            'missing' => $missing
+        ];
+    }
 }
 

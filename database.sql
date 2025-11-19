@@ -1,3 +1,6 @@
+-- ВАЖЛИВО: Таблиці тепер створюються автоматично через модуль Installer
+-- Цей файл залишено для довідки. Для установки системи використовуйте /install
+-- 
 -- Dumping structure for таблиця db_flowaxy.plugins
 CREATE TABLE IF NOT EXISTS `plugins` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

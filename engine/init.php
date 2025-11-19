@@ -47,7 +47,7 @@ spl_autoload_register(function (string $className): void {
     $modulesDir = __DIR__ . '/modules/';
     
     // Спочатку перевіряємо модулі (ThemeManager, SettingsManager, ThemeCustomizer тепер в modules)
-    $moduleClasses = ['PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer'];
+    $moduleClasses = ['PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer', 'Installer'];
     if (in_array($className, $moduleClasses, true)) {
         $moduleFile = $modulesDir . $className . '.php';
         if (file_exists($moduleFile) && is_readable($moduleFile)) {
@@ -330,6 +330,20 @@ if (!function_exists('formatBytes')) {
 // Функції для роботи з URL видалені - використовуйте UrlHelper клас
 
 // Функції для роботи з налаштуваннями видалені - використовуйте SettingsManager клас
+
+/**
+ * Получение экземпляра Installer
+ * 
+ * @return Installer|null
+ */
+if (!function_exists('installer')) {
+    function installer(): ?Installer {
+        if (!class_exists('Installer')) {
+            return null;
+        }
+        return Installer::getInstance();
+    }
+}
 
 /**
  * Створення необхідних системних директорій
