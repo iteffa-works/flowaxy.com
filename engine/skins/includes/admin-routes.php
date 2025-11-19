@@ -27,10 +27,7 @@ if (themeSupportsCustomization()) {
     $router->add(['GET', 'POST'], 'customizer', 'CustomizerPage');
 }
 
-// Реєструємо маршрут меню тільки якщо активна тема підтримує навігацію
-if (themeSupportsNavigation()) {
-    $router->add(['GET', 'POST'], 'menus', 'MenusPage');
-}
+// Маршрут меню тепер реєструється через плагін menu-plugin
 
 // Хук для реєстрації маршрутів модулів та плагінів
 doHook('admin_register_routes', $router);

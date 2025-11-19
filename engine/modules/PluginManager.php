@@ -338,17 +338,6 @@ class PluginManager extends BaseModule {
                 $this->loadPlugins($hookName);
                 // Ініціалізуємо плагіни тільки один раз
                 $this->initializePlugins();
-            } elseif (strpos($hookName, 'theme_') === 0 && class_exists('ModuleLoader')) {
-                // Для theme хуків завантажуємо модулі, які можуть зареєструвати хуки
-                static $themeModulesLoaded = [];
-                if (!isset($themeModulesLoaded[$hookName])) {
-                    // Завантажуємо модуль Menu для theme_menu хука
-                    if ($hookName === 'theme_menu' && !ModuleLoader::isModuleLoaded('Menu')) {
-                        ModuleLoader::loadModule('Menu');
-                        // registerHooks() вызывается автоматически в ModuleLoader::loadModule()
-                    }
-                    $themeModulesLoaded[$hookName] = true;
-                }
             } else {
                 return $data;
             }

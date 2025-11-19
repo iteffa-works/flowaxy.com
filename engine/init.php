@@ -47,7 +47,7 @@ spl_autoload_register(function (string $className): void {
     $modulesDir = __DIR__ . '/modules/';
     
     // Спочатку перевіряємо модулі (ThemeManager, SettingsManager, ThemeCustomizer тепер в modules)
-    $moduleClasses = ['Menu', 'PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer'];
+    $moduleClasses = ['PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer'];
     if (in_array($className, $moduleClasses, true)) {
         $moduleFile = $modulesDir . $className . '.php';
         if (file_exists($moduleFile) && is_readable($moduleFile)) {
@@ -67,7 +67,6 @@ spl_autoload_register(function (string $className): void {
         // Data classes
         'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data',
         // Manager classes
-        'MenuManager' => 'managers',
         // Helper classes
         'UrlHelper' => 'helpers', 'DatabaseHelper' => 'helpers', 'SecurityHelper' => 'helpers',
         // Compiler classes
@@ -89,7 +88,7 @@ spl_autoload_register(function (string $className): void {
         // Admin pages
         'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
         'SettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
-        'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages', 'MenusPage' => 'skins/pages',
+        'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages',
         'ThemeEditorPage' => 'skins/pages', 'CacheViewPage' => 'skins/pages', 'LogsViewPage' => 'skins/pages',
     ];
     
