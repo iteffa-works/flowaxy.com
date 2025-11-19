@@ -1,0 +1,11 @@
+{
+  "name": "Test Theme",
+  "slug": "test-theme",
+  "version": "1.0.0",
+  "description": "Тестовая тема для демонстрации работы системы хуков Flowaxy CMS",
+  "author": "Flowaxy CMS",
+  "author_url": "https://flowaxy.com",
+  "requires": "1.0.0",
+  "screenshot": "screenshot.png"
+}
+

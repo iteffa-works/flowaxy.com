@@ -85,7 +85,7 @@ spl_autoload_register(function (string $className): void {
         // UI classes
         'ModalHandler' => 'ui',
         // System classes
-        'ModuleLoader' => 'system',
+        'ModuleLoader' => 'system', 'HookManager' => 'system',
         // Admin pages
         'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
         'SettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',

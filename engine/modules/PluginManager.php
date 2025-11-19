@@ -12,7 +12,8 @@ declare(strict_types=1);
 
 class PluginManager extends BaseModule {
     private $plugins = [];
-    private $hooks = [];
+    private $hooks = []; // Для обратной совместимости
+    private HookManager $hookManager; // Новый менеджер хуков
     private $pluginsDir;
     
     /**
@@ -20,6 +21,8 @@ class PluginManager extends BaseModule {
      */
     protected function init(): void {
         $this->pluginsDir = dirname(__DIR__, 2) . '/plugins/';
+        // Инициализируем HookManager
+        $this->hookManager = HookManager::getInstance();
         // НЕ завантажуємо плагіни при ініціалізації - тільки коли потрібно (lazy loading)
     }
     
@@ -291,28 +294,26 @@ class PluginManager extends BaseModule {
     }
     
     /**
-     * Додавання хука
+     * Додавання хука (использует HookManager)
      */
     public function addHook(string $hookName, callable $callback, int $priority = 10): void {
-        if (empty($hookName)) {
-            return;
-        }
+        // Используем HookManager для добавления хука
+        // По умолчанию добавляем как фильтр (для обратной совместимости)
+        $this->hookManager->addFilter($hookName, $callback, $priority);
         
+        // Сохраняем для обратной совместимости
         if (!isset($this->hooks[$hookName])) {
             $this->hooks[$hookName] = [];
         }
-        
         $this->hooks[$hookName][] = [
             'callback' => $callback,
             'priority' => $priority
         ];
-        
-        // Сортуємо за пріоритетом
         usort($this->hooks[$hookName], fn($a, $b) => $a['priority'] - $b['priority']);
     }
     
     /**
-     * Виконання хука
+     * Виконання хука (использует HookManager с сохранением логики загрузки плагинов)
      */
     public function doHook(string $hookName, $data = null) {
         if (empty($hookName)) {
@@ -331,16 +332,12 @@ class PluginManager extends BaseModule {
         
         // Завантажуємо плагіни тільки для admin хуків і тільки один раз
         // Для theme хуків завантажуємо модулі, щоб вони могли зареєструвати хуки
-        if (!isset($this->hooks[$hookName])) {
+        if (!$this->hookManager->hasHook($hookName) && !isset($this->hooks[$hookName])) {
             // Якщо це admin хуки, завантажуємо плагіни щоб вони могли зареєструвати хуки
             if ($hookName === 'admin_menu' || $hookName === 'admin_register_routes' || $hookName === 'handle_early_request') {
                 $this->loadPlugins($hookName);
                 // Ініціалізуємо плагіни тільки один раз
                 $this->initializePlugins();
-                // Перевіряємо знову після завантаження
-                if (!isset($this->hooks[$hookName])) {
-                    return $data;
-                }
             } elseif (strpos($hookName, 'theme_') === 0 && class_exists('ModuleLoader')) {
                 // Для theme хуків завантажуємо модулі, які можуть зареєструвати хуки
                 static $themeModulesLoaded = [];
@@ -352,38 +349,32 @@ class PluginManager extends BaseModule {
                     }
                     $themeModulesLoaded[$hookName] = true;
                 }
-                // Перевіряємо знову після завантаження модулів
-                if (!isset($this->hooks[$hookName])) {
-                    return $data;
-                }
             } else {
                 return $data;
             }
         }
         
-        // Визначаємо тип хука: об'єктні хуки (admin_register_routes) vs дані (admin_menu)
-        $isObjectHook = ($hookName === 'admin_register_routes');
-        
-        foreach ($this->hooks[$hookName] as $hook) {
-            if (!is_callable($hook['callback'])) {
-                continue;
-            }
-            
-            try {
-                $result = call_user_func($hook['callback'], $data);
-                
-                // Для не-об'єктних хуків використовуємо результат як оновлені дані
-                if (!$isObjectHook && $result !== null) {
-                    $data = $result;
+        // Используем HookManager для выполнения хука
+        // Для admin_register_routes передаем объект напрямую
+        if ($hookName === 'admin_register_routes') {
+            // Для этого хука используем старую логику, так как он передает объект
+            if (isset($this->hooks[$hookName])) {
+                foreach ($this->hooks[$hookName] as $hook) {
+                    if (!is_callable($hook['callback'])) {
+                        continue;
+                    }
+                    try {
+                        call_user_func($hook['callback'], $data);
+                    } catch (Exception $e) {
+                        error_log("Hook execution error for '{$hookName}': " . $e->getMessage());
+                    }
                 }
-            } catch (Exception $e) {
-                error_log("Hook execution error for '{$hookName}': " . $e->getMessage());
-            } catch (Error $e) {
-                error_log("Fatal error in hook '{$hookName}': " . $e->getMessage());
             }
+            return $data;
         }
         
-        return $data;
+        // Для остальных хуков используем HookManager
+        return $this->hookManager->doHook($hookName, $data);
     }
     
     /**
@@ -528,7 +519,15 @@ class PluginManager extends BaseModule {
      * Перевірка існування хука
      */
     public function hasHook(string $hookName): bool {
-        return !empty($hookName) && isset($this->hooks[$hookName]) && !empty($this->hooks[$hookName]);
+        return $this->hookManager->hasHook($hookName) || 
+               (!empty($hookName) && isset($this->hooks[$hookName]) && !empty($this->hooks[$hookName]));
+    }
+    
+    /**
+     * Получить экземпляр HookManager
+     */
+    public function getHookManager(): HookManager {
+        return $this->hookManager;
     }
     
     /**
@@ -1197,7 +1196,32 @@ class PluginManager extends BaseModule {
         // Получаем имя класса плагина
         $className = $this->getPluginClassName($pluginSlug);
         
-        // Удаляем хуки плагина из всех зарегистрированных хуков
+        // Удаляем хуки плагина из HookManager
+        $allHooks = $this->hookManager->getAllHooks();
+        foreach ($allHooks as $hookName => $hooks) {
+            foreach ($hooks as $hook) {
+                $callback = $hook['callback'] ?? null;
+                if ($callback === null) {
+                    continue;
+                }
+                
+                // Проверяем, является ли callback методом этого плагина
+                if (is_array($callback)) {
+                    if (isset($callback[0]) && is_object($callback[0])) {
+                        $objectClass = get_class($callback[0]);
+                        // Если это экземпляр класса плагина, удаляем хук
+                        if ($objectClass === $className || strpos($objectClass, $pluginSlug) !== false) {
+                            $this->hookManager->removeHook($hookName, $callback);
+                        }
+                    }
+                } elseif (is_string($callback) && (strpos($callback, $className) !== false || strpos($callback, $pluginSlug) !== false)) {
+                    // Для строковых callback (функций)
+                    $this->hookManager->removeHook($hookName, $callback);
+                }
+            }
+        }
+        
+        // Удаляем хуки плагина из старого хранилища (для обратной совместимости)
         foreach ($this->hooks as $hookName => $hooks) {
             $filteredHooks = array_filter($hooks, function($hook) use ($className, $pluginSlug) {
                 // Проверяем, является ли callback методом этого плагина
@@ -1273,15 +1297,71 @@ function pluginManager() {
 /**
  * Глобальні функції для роботи з хуками
  */
+
+/**
+ * Добавить хук (обратная совместимость, по умолчанию фильтр)
+ */
 function addHook(string $hookName, callable $callback, int $priority = 10): void {
     pluginManager()->addHook($hookName, $callback, $priority);
 }
 
+/**
+ * Выполнить хук (обратная совместимость)
+ */
 function doHook(string $hookName, $data = null) {
     return pluginManager()->doHook($hookName, $data);
 }
 
+/**
+ * Проверить существование хука
+ */
 function hasHook(string $hookName): bool {
     return pluginManager()->hasHook($hookName);
+}
+
+/**
+ * Добавить фильтр (filter)
+ * Фильтры модифицируют данные и возвращают результат
+ */
+function addFilter(string $hookName, callable $callback, int $priority = 10, ?callable $condition = null): void {
+    pluginManager()->getHookManager()->addFilter($hookName, $callback, $priority, $condition);
+}
+
+/**
+ * Применить фильтр (filter)
+ * Проходит через все зарегистрированные фильтры и модифицирует данные
+ */
+function applyFilter(string $hookName, $data = null, ...$args) {
+    return pluginManager()->getHookManager()->applyFilter($hookName, $data, ...$args);
+}
+
+/**
+ * Добавить событие (action)
+ * События выполняют действия без возврата данных
+ */
+function addAction(string $hookName, callable $callback, int $priority = 10, ?callable $condition = null): void {
+    pluginManager()->getHookManager()->addAction($hookName, $callback, $priority, $condition);
+}
+
+/**
+ * Выполнить событие (action)
+ * Вызывает все зарегистрированные обработчики события
+ */
+function doAction(string $hookName, ...$args): void {
+    pluginManager()->getHookManager()->doAction($hookName, ...$args);
+}
+
+/**
+ * Удалить хук
+ */
+function removeHook(string $hookName, ?callable $callback = null): bool {
+    return pluginManager()->getHookManager()->removeHook($hookName, $callback);
+}
+
+/**
+ * Получить экземпляр HookManager
+ */
+function hookManager(): HookManager {
+    return HookManager::getInstance();
 }
 
