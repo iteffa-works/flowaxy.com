@@ -7,7 +7,7 @@
 <!-- Уведомления -->
 <?php
 if (!empty($message)) {
-    include __DIR__ . '/../../../engine/skins/components/alert.php';
+    include __DIR__ . '/../../../../engine/skins/components/alert.php';
     $type = $messageType ?? 'info';
     $dismissible = true;
 }
@@ -143,7 +143,7 @@ $title = 'Test Hooks';
 $icon = 'code';
 $content = $sectionContent;
 $classes = ['test-hooks-page'];
-include __DIR__ . '/../../../engine/skins/components/content-section.php';
+include __DIR__ . '/../../../../engine/skins/components/content-section.php';
 ?>
 
 <style>
