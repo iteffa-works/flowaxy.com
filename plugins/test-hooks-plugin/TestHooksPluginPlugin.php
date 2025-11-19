@@ -51,7 +51,7 @@ class TestHooksPluginPlugin extends BasePlugin {
     }
     
     /**
-     * Добавление пункта меню в админку
+     * Добавление пункта меню в админку с подменю
      */
     public function addAdminMenuItem(array $menu): array {
         $menu[] = [
@@ -60,7 +60,41 @@ class TestHooksPluginPlugin extends BasePlugin {
             'href' => '/admin/test-hooks-plugin',
             'icon' => 'fas fa-code',
             'order' => 100,
-            'page' => 'test-hooks-plugin'
+            'page' => 'test-hooks-plugin',
+            'submenu' => [
+                [
+                    'text' => 'Главная',
+                    'title' => 'Главная страница',
+                    'href' => '/admin/test-hooks-plugin',
+                    'icon' => 'fas fa-home',
+                    'order' => 10,
+                    'page' => 'test-hooks-plugin'
+                ],
+                [
+                    'text' => 'Фильтры',
+                    'title' => 'Демонстрация фильтров',
+                    'href' => '/admin/test-hooks-plugin?tab=filters',
+                    'icon' => 'fas fa-filter',
+                    'order' => 20,
+                    'page' => 'test-hooks-plugin-filters'
+                ],
+                [
+                    'text' => 'События',
+                    'title' => 'Демонстрация событий',
+                    'href' => '/admin/test-hooks-plugin?tab=actions',
+                    'icon' => 'fas fa-bolt',
+                    'order' => 30,
+                    'page' => 'test-hooks-plugin-actions'
+                ],
+                [
+                    'text' => 'Статистика',
+                    'title' => 'Статистика хуков',
+                    'href' => '/admin/test-hooks-plugin?tab=stats',
+                    'icon' => 'fas fa-chart-bar',
+                    'order' => 40,
+                    'page' => 'test-hooks-plugin-stats'
+                ]
+            ]
         ];
         
         return $menu;
