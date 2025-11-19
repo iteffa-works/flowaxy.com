@@ -163,12 +163,18 @@ $themePath = __DIR__;
 
     <footer class="theme-footer bg-dark text-white mt-5 py-4">
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p>&copy; <?php echo date('Y'); ?> Flowaxy CMS. Все права защищены.</p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <p class="mb-0">Test Theme v1.0.0</p>
+            <!-- Меню футера (будет добавлено через хук theme_footer) -->
+            <?php
+            // Применяем фильтр для добавления меню в футер
+            $footerContent = '';
+            $footerContent = applyFilter('theme_footer', $footerContent);
+            echo $footerContent;
+            ?>
+            
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <p class="mb-1">&copy; <?php echo date('Y'); ?> Flowaxy CMS. Все права защищены.</p>
+                    <p class="mb-0 small">Test Theme v1.0.0</p>
                 </div>
             </div>
         </div>
