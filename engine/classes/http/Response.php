@@ -77,9 +77,24 @@ class Response {
      * @return void
      */
     public function json($data, int $statusCode = 200): void {
+        // Очищаем буфер вывода перед отправкой JSON
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        
+        // Отключаем вывод ошибок на экран (но логируем их)
+        $oldErrorReporting = error_reporting(E_ALL);
+        ini_set('display_errors', '0');
+        
         $this->status($statusCode)->header('Content-Type', 'application/json; charset=UTF-8');
         $this->content(Json::stringify($data));
         $this->send();
+        
+        // Восстанавливаем настройки
+        error_reporting($oldErrorReporting);
+        ini_set('display_errors', '1');
+        
+        exit;
     }
     
     /**

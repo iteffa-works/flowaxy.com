@@ -24,6 +24,14 @@ class AdminPage {
     protected $additionalJS = [];
     
     public function __construct() {
+        // Для AJAX запросов очищаем буфер вывода сразу
+        if (AjaxHandler::isAjax()) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            ini_set('display_errors', '0');
+        }
+        
         // Перевірка авторизації
         SecurityHelper::requireAdmin();
         
@@ -32,10 +40,23 @@ class AdminPage {
             $this->db = DatabaseHelper::getConnection(true);
             if ($this->db === null) {
                 // Якщо підключення не вдалося, DatabaseHelper::getConnection() вже показав сторінку помилки
+                // Для AJAX возвращаем JSON ошибку
+                if (AjaxHandler::isAjax()) {
+                    Response::jsonResponse(['success' => false, 'error' => 'Помилка підключення до бази даних'], 500);
+                }
                 exit;
             }
         } catch (Exception $e) {
-            // Показуємо сторінку помилки
+            // Для AJAX возвращаем JSON ошибку
+            if (AjaxHandler::isAjax()) {
+                Response::jsonResponse([
+                    'success' => false, 
+                    'error' => 'Помилка підключення до бази даних: ' . $e->getMessage()
+                ], 500);
+                exit;
+            }
+            
+            // Показуємо сторінку помилки для обычных запросов
             if (function_exists('showDatabaseError')) {
                 showDatabaseError([
                     'host' => DB_HOST ?? 'unknown',
@@ -301,7 +322,13 @@ class AdminPage {
      * @param int $statusCode HTTP статус код
      */
     protected function sendJsonResponse(array $data, int $statusCode = 200): void {
+        // Очищаем буфер вывода перед отправкой JSON
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        
         Response::jsonResponse($data, $statusCode);
+        // exit вызывается внутри Response::jsonResponse()
     }
     
     /**

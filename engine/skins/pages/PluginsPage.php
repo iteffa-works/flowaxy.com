@@ -84,8 +84,17 @@ class PluginsPage extends AdminPage {
     }
     
     public function handle() {
-        // Обробка AJAX запитів
+        // Обробка AJAX запитів через ModalHandler
         if ($this->isAjaxRequest()) {
+            $modalId = $this->post('modal_id', '');
+            $action = SecurityHelper::sanitizeInput($this->post('action', ''));
+            
+            if (!empty($modalId) && !empty($action)) {
+                $this->handleModalRequest($modalId, $action);
+                return;
+            }
+            
+            // Старый способ обработки AJAX (для обратной совместимости)
             $this->handleAjax();
             return;
         }

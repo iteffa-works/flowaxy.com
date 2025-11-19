@@ -82,6 +82,32 @@ class SecurityHelper {
      */
     public static function requireAdmin(): void {
         if (!self::isAdminLoggedIn()) {
+            // Для AJAX запросов возвращаем JSON ошибку
+            if (class_exists('AjaxHandler') && AjaxHandler::isAjax()) {
+                // Очищаем буфер вывода
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                
+                if (class_exists('Response')) {
+                    Response::jsonResponse([
+                        'success' => false,
+                        'error' => 'Потрібна авторизація',
+                        'auth_required' => true
+                    ], 401);
+                } else {
+                    http_response_code(401);
+                    header('Content-Type: application/json; charset=UTF-8');
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Потрібна авторизація',
+                        'auth_required' => true
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    exit;
+                }
+            }
+            
+            // Для обычных запросов делаем редирект
             if (class_exists('Response')) {
                 Response::redirectStatic(ADMIN_URL . '/login');
             } else {

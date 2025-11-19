@@ -433,10 +433,11 @@ class ModalHandler {
                     const progressBar = modal.querySelector('.progress');
                     const resultAlert = modal.querySelector('.alert');
                     
-                    // Показываем прогресс
+                    // Сохраняем оригинальный текст кнопки в переменной, доступной во всех блоках
+                    let originalText = '';
                     if (submitBtn) {
                         submitBtn.disabled = true;
-                        const originalText = submitBtn.innerHTML;
+                        originalText = submitBtn.innerHTML;
                         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Завантаження...';
                     }
                     
@@ -462,7 +463,29 @@ class ModalHandler {
                     }
                     
                     try {
-                        const url = form.action || this.baseUrl;
+                        // Получаем URL для запроса
+                        // Форма рендерится без action, поэтому используем текущий URL
+                        let url = '';
+                        try {
+                            // Пытаемся получить action из формы
+                            if (form.hasAttribute('action') && form.getAttribute('action')) {
+                                url = form.getAttribute('action');
+                            } else if (form.action && typeof form.action === 'string' && form.action.trim() !== '') {
+                                url = form.action;
+                            } else {
+                                // Используем текущий URL страницы (пустая строка для текущего URL)
+                                url = '';
+                            }
+                        } catch (e) {
+                            // Если не удалось получить action, используем пустую строку (текущий URL)
+                            url = '';
+                        }
+                        
+                        // Если URL пустой, используем пустую строку для запроса на текущий URL
+                        if (!url || url.trim() === '') {
+                            url = '';
+                        }
+                        
                         const response = await fetch(url, {
                             method: form.method || 'POST',
                             body: formData,
@@ -470,6 +493,36 @@ class ModalHandler {
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
                         });
+                        
+                        // Проверяем статус ответа
+                        if (!response.ok) {
+                            const text = await response.text();
+                            let errorMessage = `Помилка сервера (${response.status}): `;
+                            
+                            // Пытаемся извлечь ошибку из HTML ответа
+                            if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+                                errorMessage += 'Сервер повернув HTML замість JSON. Можливо, маршрут не знайдено.';
+                            } else {
+                                errorMessage += text.substring(0, 200);
+                            }
+                            
+                            throw new Error(errorMessage);
+                        }
+                        
+                        // Проверяем, что ответ JSON
+                        const contentType = response.headers.get('content-type');
+                        if (!contentType || !contentType.includes('application/json')) {
+                            const text = await response.text();
+                            let errorMessage = 'Сервер повернув не JSON відповідь. ';
+                            
+                            if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+                                errorMessage += 'Повернуто HTML замість JSON. Можливо, маршрут не знайдено або сталася помилка.';
+                            } else {
+                                errorMessage += 'Тип контенту: ' + contentType + '. Перші 100 символів: ' + text.substring(0, 100);
+                            }
+                            
+                            throw new Error(errorMessage);
+                        }
                         
                         const data = await response.json();
                         
