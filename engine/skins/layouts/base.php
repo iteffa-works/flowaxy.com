@@ -12,6 +12,11 @@
     <meta name="csrf-token" content="<?= SecurityHelper::csrfToken() ?>">
     <title><?= $pageTitle ?? 'Flowaxy CMS - Админ-панель' ?></title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="<?= UrlHelper::admin('assets/images/brand/favicon.png') ?>">
+    <link rel="shortcut icon" type="image/png" href="<?= UrlHelper::admin('assets/images/brand/favicon.png') ?>">
+    <link rel="apple-touch-icon" href="<?= UrlHelper::admin('assets/images/brand/favicon.png') ?>">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
