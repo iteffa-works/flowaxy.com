@@ -504,10 +504,7 @@ class ModalHandler {
                                 // Закрываем модальное окно через 2 секунды или сразу
                                 if (data.closeModal !== false) {
                                     setTimeout(() => {
-                                        const bsModal = bootstrap.Modal.getInstance(modal);
-                                        if (bsModal) {
-                                            bsModal.hide();
-                                        }
+                                        this.hide(modalId);
                                     }, data.closeDelay || 2000);
                                 }
                                 
@@ -634,6 +631,27 @@ class ModalHandler {
                                 const newModal = new bootstrap.Modal(modal);
                                 newModal.hide();
                             }
+                            
+                            // Убеждаемся, что backdrop удален и body восстановлен
+                            setTimeout(() => {
+                                // Удаляем все backdrop элементы, если они остались
+                                const backdrops = document.querySelectorAll('.modal-backdrop');
+                                backdrops.forEach(backdrop => {
+                                    backdrop.remove();
+                                });
+                                
+                                // Удаляем класс modal-open с body
+                                document.body.classList.remove('modal-open');
+                                
+                                // Восстанавливаем padding-right и overflow
+                                document.body.style.paddingRight = '';
+                                document.body.style.overflow = '';
+                                
+                                // Удаляем inline стили с body, если они были добавлены Bootstrap
+                                if (!document.body.hasAttribute('style') || document.body.style.length === 0) {
+                                    document.body.removeAttribute('style');
+                                }
+                            }, 150); // Небольшая задержка для завершения анимации Bootstrap
                         };
                         
                         // Обработка события ПЕРЕД показом модального окна
@@ -678,7 +696,25 @@ class ModalHandler {
                         
                         // Обработка события ПОСЛЕ закрытия модального окна
                         modalElement.addEventListener('hidden.bs.modal', () => {
+                            // Удаляем backdrop если он остался
+                            const backdrops = document.querySelectorAll('.modal-backdrop');
+                            backdrops.forEach(backdrop => {
+                                backdrop.remove();
+                            });
+                            
+                            // Восстанавливаем состояние body
+                            document.body.classList.remove('modal-open');
+                            document.body.style.paddingRight = '';
+                            document.body.style.overflow = '';
+                            
+                            // Удаляем inline стили если они пусты
+                            if (!document.body.hasAttribute('style') || document.body.style.length === 0) {
+                                document.body.removeAttribute('style');
+                            }
+                            
                             document.body.removeAttribute('tabindex');
+                            
+                            // Возвращаем фокус на триггер
                             const triggerElement = document.querySelector('[data-bs-target="#' + modalId + '"]');
                             if (triggerElement) {
                                 try {
@@ -898,10 +934,35 @@ class ModalHandler {
                         return;
                     }
                     
+                    // Убираем фокус перед закрытием
+                    const activeElement = document.activeElement;
+                    if (activeElement && modalElement.contains(activeElement)) {
+                        activeElement.blur();
+                    }
+                    
                     const bsModal = bootstrap.Modal.getInstance(modalElement);
                     if (bsModal) {
                         bsModal.hide();
                     }
+                    
+                    // Убеждаемся, что backdrop удален и body восстановлен
+                    setTimeout(() => {
+                        // Удаляем все backdrop элементы
+                        const backdrops = document.querySelectorAll('.modal-backdrop');
+                        backdrops.forEach(backdrop => {
+                            backdrop.remove();
+                        });
+                        
+                        // Восстанавливаем состояние body
+                        document.body.classList.remove('modal-open');
+                        document.body.style.paddingRight = '';
+                        document.body.style.overflow = '';
+                        
+                        // Удаляем inline стили если они пусты
+                        if (!document.body.hasAttribute('style') || document.body.style.length === 0) {
+                            document.body.removeAttribute('style');
+                        }
+                    }, 150);
                 }
                 
                 /**
