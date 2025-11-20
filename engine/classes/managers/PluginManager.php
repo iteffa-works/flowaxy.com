@@ -20,7 +20,19 @@ class PluginManager extends BaseModule {
      * Ініціалізація модуля
      */
     protected function init(): void {
-        $this->pluginsDir = dirname(__DIR__, 2) . '/plugins/';
+        // Путь к плагинам: из engine/classes/managers/ -> engine/classes/ -> engine/ -> корень проекта -> plugins/
+        // __DIR__ = D:\OSPanel\home\flowaxy.com\engine\classes\managers\
+        // dirname(__DIR__) = D:\OSPanel\home\flowaxy.com\engine\classes\
+        // dirname(__DIR__, 2) = D:\OSPanel\home\flowaxy.com\engine\
+        // dirname(__DIR__, 3) = D:\OSPanel\home\flowaxy.com\ (корень проекта)
+        $rootDir = dirname(__DIR__, 3);
+        $this->pluginsDir = $rootDir . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR;
+        
+        // Логируем путь для отладки
+        if (!is_dir($this->pluginsDir)) {
+            error_log("PluginManager: Plugins directory not found: {$this->pluginsDir}");
+        }
+        
         // Инициализируем HookManager
         $this->hookManager = HookManager::getInstance();
         // НЕ завантажуємо плагіни при ініціалізації - тільки коли потрібно (lazy loading)
@@ -648,8 +660,15 @@ class PluginManager extends BaseModule {
     public function installPlugin(string $pluginSlug): bool {
         try {
             $pluginDir = $this->pluginsDir . $pluginSlug;
+            
+            // Детальное логирование для отладки
+            error_log("PluginManager::installPlugin - Looking for plugin: {$pluginSlug}");
+            error_log("PluginManager::installPlugin - Plugins directory: {$this->pluginsDir}");
+            error_log("PluginManager::installPlugin - Plugin directory: {$pluginDir}");
+            error_log("PluginManager::installPlugin - Directory exists: " . (is_dir($pluginDir) ? 'yes' : 'no'));
+            
             if (!is_dir($pluginDir)) {
-                error_log("Plugin directory not found: {$pluginDir}");
+                error_log("PluginManager::installPlugin - ERROR: Plugin directory not found: {$pluginDir}");
                 return false;
             }
             
@@ -1281,14 +1300,8 @@ class PluginManager extends BaseModule {
 }
 
 /**
- * Глобальна функція для отримання екземпляра модуля PluginManager
- */
-function pluginManager() {
-    return PluginManager::getInstance();
-}
-
-/**
  * Глобальні функції для роботи з хуками
+ * Примітка: функція pluginManager() визначена в engine/includes/functions.php
  */
 
 /**

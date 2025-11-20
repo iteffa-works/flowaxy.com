@@ -12,6 +12,8 @@ class TelegramService {
     private string $botToken;
     private string $apiUrl = 'https://api.telegram.org/bot';
     private const TIMEOUT = 10;
+    private ?string $lastError = null;
+    private ?int $lastErrorCode = null;
     
     /**
      * Конструктор
@@ -57,24 +59,73 @@ class TelegramService {
         }
         
         if ($httpCode !== 200) {
+            $this->lastError = "HTTP error: {$httpCode}";
+            $this->lastErrorCode = $httpCode;
             error_log("Telegram API HTTP error: {$httpCode}, Response: {$response}");
+            error_log("Telegram API Method: {$method}, URL: {$url}");
             return null;
         }
         
         $data = json_decode($response, true);
         
         if (!$data || !isset($data['ok']) || !$data['ok']) {
+            $errorDescription = $data['description'] ?? 'Unknown error';
+            $errorCode = isset($data['error_code']) ? (int)$data['error_code'] : null;
+            $parameters = isset($data['parameters']) ? json_encode($data['parameters']) : 'N/A';
             error_log("Telegram API error response: {$response}");
+            error_log("Telegram API error - Method: {$method}, Code: " . ($errorCode ?? 'N/A') . ", Description: {$errorDescription}, Parameters: {$parameters}");
+            
+            // Сохраняем информацию об ошибке для последующего использования
+            $this->lastError = $errorDescription;
+            $this->lastErrorCode = $errorCode;
+            
+            if (isset($data['error_code'])) {
+                error_log("Telegram API Error Code Details: {$errorCode}");
+                // Коды ошибок Telegram API для более понятных сообщений
+                $errorMessages = [
+                    400 => 'Неверный запрос. Проверьте параметры.',
+                    401 => 'Неверный Bot Token. Проверьте токен бота.',
+                    403 => 'Доступ запрещен. Бот не может отправлять сообщения в этот чат.',
+                    404 => 'Чат не найден. Проверьте Chat ID.',
+                    429 => 'Слишком много запросов. Попробуйте позже.',
+                ];
+                if (isset($errorMessages[$errorCode])) {
+                    error_log("Telegram API Error Message: " . $errorMessages[$errorCode]);
+                }
+            }
+            
             return null;
         }
         
+        // Очищаем предыдущую ошибку при успешном ответе
+        $this->lastError = null;
+        $this->lastErrorCode = null;
+        
         // Возвращаем result, если он есть, иначе пустой массив (для некоторых методов API возвращает true)
         if (isset($data['result'])) {
-            return is_array($data['result']) ? $data['result'] : null;
+            return is_array($data['result']) ? $data['result'] : [];
         }
         
         // Для методов, которые возвращают ok: true без result, возвращаем пустой массив
         return [];
+    }
+    
+    /**
+     * Получение последней ошибки
+     * 
+     * @return string|null
+     */
+    public function getLastError(): ?string {
+        return $this->lastError;
+    }
+    
+    /**
+     * Получение кода последней ошибки
+     * 
+     * @return int|null
+     */
+    public function getLastErrorCode(): ?int {
+        return $this->lastErrorCode;
     }
     
     /**
@@ -96,7 +147,71 @@ class TelegramService {
         }
         
         $result = $this->sendRequest('sendMessage', $params);
-        return $result !== null;
+        $success = $result !== null;
+        
+        // Сохраняем исходящее сообщение в историю
+        $this->saveOutgoingHistory($chatId, $text, $success, $options ?? []);
+        
+        return $success;
+    }
+    
+    /**
+     * Сохранение исходящего сообщения в историю
+     * 
+     * @param int|string $chatId ID чата
+     * @param string $text Текст сообщения
+     * @param bool $success Успешно ли отправлено
+     * @param array $options Дополнительные опции
+     */
+    private function saveOutgoingHistory($chatId, string $text, bool $success, array $options = []): void {
+        try {
+            if (!class_exists('DatabaseHelper')) {
+                return;
+            }
+            
+            $db = DatabaseHelper::getConnection(false);
+            if (!$db) {
+                return;
+            }
+            
+            // Проверяем существование таблицы
+            $stmt = $db->query("SHOW TABLES LIKE 'telegram_history'");
+            if ($stmt->rowCount() === 0) {
+                // Таблица не существует, пытаемся создать
+                $sqlFile = dirname(__DIR__, 2) . '/config/telegram_history.sql';
+                if (file_exists($sqlFile)) {
+                    $sql = file_get_contents($sqlFile);
+                    $db->exec($sql);
+                } else {
+                    return; // Таблица не создана, пропускаем сохранение
+                }
+            }
+            
+            $data = [
+                'chat_id' => $chatId,
+                'text' => $text,
+                'direction' => 'outgoing',
+                'status' => $success ? 'sent' : 'error',
+                'options' => $options
+            ];
+            
+            $rawData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            
+            $stmt = $db->prepare("
+                INSERT INTO telegram_history (
+                    type, chat_id, text, raw_data, direction, status, processed_at
+                ) VALUES ('message', ?, ?, ?, 'outgoing', ?, NOW())
+            ");
+            
+            $stmt->execute([
+                $chatId,
+                $text,
+                $rawData,
+                $success ? 'sent' : 'error'
+            ]);
+        } catch (Exception $e) {
+            error_log("TelegramService saveOutgoingHistory error: " . $e->getMessage());
+        }
     }
     
     /**
@@ -119,8 +234,24 @@ class TelegramService {
             $params['reply_markup'] = json_encode($keyboard);
         }
         
+        error_log("TelegramService: Отправка сообщения с клавиатурой. Chat ID: {$chatId}, Text length: " . strlen($text));
+        
         $result = $this->sendRequest('sendMessage', $params);
-        return $result !== null;
+        $success = $result !== null;
+        
+        // Сохраняем исходящее сообщение в историю
+        $this->saveOutgoingHistory($chatId, $text, $success, [
+            'parse_mode' => $parseMode,
+            'keyboard' => $keyboard
+        ]);
+        
+        if (!$success) {
+            error_log("TelegramService: Отправка сообщения не удалась. sendRequest вернул null");
+        } else {
+            error_log("TelegramService: Сообщение отправлено успешно. Result: " . json_encode($result));
+        }
+        
+        return $success;
     }
     
     /**

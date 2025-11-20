@@ -82,22 +82,7 @@ spl_autoload_register(function (string $className): void {
     $classesDir = __DIR__ . '/classes/';
     $managersDir = __DIR__ . '/classes/managers/';
     
-    // Автоматическая загрузка менеджеров из директории managers/
-    // Проверяем, является ли класс менеджером (имеет суффикс Manager или Customizer)
-    $isManager = (
-        substr($className, -7) === 'Manager' || 
-        $className === 'ThemeCustomizer'
-    );
-    
-    if ($isManager) {
-        $file = $managersDir . $className . '.php';
-        if (file_exists($file)) { 
-            require_once $file; 
-            return; 
-        }
-    }
-    
-    // Маппинг классов
+    // Маппинг классов (загружаем БАЗОВЫЕ классы ПЕРЕД менеджерами!)
     $map = [
         'BaseModule' => 'base', 'BasePlugin' => 'base',
         'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
@@ -119,6 +104,30 @@ spl_autoload_register(function (string $className): void {
     if (isset($map[$className])) {
         $file = $classesDir . $map[$className] . '/' . $className . '.php';
         if (file_exists($file)) { require_once $file; return; }
+    }
+    
+    // Автоматическая загрузка менеджеров из директории managers/
+    // Проверяем, является ли класс менеджером (имеет суффикс Manager или Customizer)
+    // Важно: загружаем ПОСЛЕ базовых классов, чтобы BaseModule был уже загружен
+    $isManager = (
+        substr($className, -7) === 'Manager' || 
+        $className === 'ThemeCustomizer'
+    );
+    
+    if ($isManager) {
+        // Убеждаемся, что BaseModule загружен перед менеджерами
+        if (!class_exists('BaseModule')) {
+            $baseModuleFile = $classesDir . 'base/BaseModule.php';
+            if (file_exists($baseModuleFile)) {
+                require_once $baseModuleFile;
+            }
+        }
+        
+        $file = $managersDir . $className . '.php';
+        if (file_exists($file)) { 
+            require_once $file; 
+            return; 
+        }
     }
     
     // Поиск в подкаталогах

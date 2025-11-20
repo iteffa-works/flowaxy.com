@@ -3,7 +3,7 @@
  * Административная страница для настройки Telegram плагина
  */
 
-require_once dirname(__DIR__, 3) . '/engine/skins/includes/AdminPage.php';
+require_once dirname(__DIR__, 5) . '/engine/skins/includes/AdminPage.php';
 
 class TelegramPluginAdminPage extends AdminPage {
     private TelegramService $telegramService;
@@ -19,7 +19,7 @@ class TelegramPluginAdminPage extends AdminPage {
         $botToken = $settings['bot_token'] ?? '';
         
         if (!empty($botToken)) {
-            $telegramServicePath = dirname(__DIR__) . '/src/services/TelegramService.php';
+            $telegramServicePath = dirname(__DIR__, 2) . '/services/TelegramService.php';
             if (file_exists($telegramServicePath)) {
                 require_once $telegramServicePath;
                 $this->telegramService = new TelegramService($botToken);
@@ -105,6 +105,15 @@ class TelegramPluginAdminPage extends AdminPage {
      * Отправка тестового сообщения
      */
     private function handleTestMessage(): void {
+        // Проверка CSRF токена
+        if (!$this->verifyCsrf()) {
+            Response::jsonResponse([
+                'success' => false,
+                'message' => 'Ошибка безопасности (CSRF токен неверный)'
+            ], 403);
+            return;
+        }
+        
         $settings = $this->getPluginSettings();
         $botToken = $settings['bot_token'] ?? '';
         $chatId = $settings['chat_id'] ?? '';
@@ -119,7 +128,7 @@ class TelegramPluginAdminPage extends AdminPage {
         
         try {
             if (!isset($this->telegramService)) {
-                require_once __DIR__ . '/../src/services/TelegramService.php';
+                require_once dirname(__DIR__, 2) . '/services/TelegramService.php';
                 $this->telegramService = new TelegramService($botToken);
             }
             
@@ -136,6 +145,8 @@ class TelegramPluginAdminPage extends AdminPage {
                 ]
             ];
             
+            error_log("TelegramPlugin: Отправка тестового сообщения. Chat ID: {$chatId}");
+            
             $success = $this->telegramService->sendMessageWithKeyboard(
                 $chatId,
                 "🧪 *Тестовое сообщение из Flowaxy CMS*\n\nЭто тестовое сообщение для проверки интеграции с Telegram.",
@@ -144,12 +155,63 @@ class TelegramPluginAdminPage extends AdminPage {
             );
             
             if ($success) {
-                Response::jsonResponse(['success' => true, 'message' => 'Сообщение отправлено']);
+                error_log("TelegramPlugin: Тестовое сообщение отправлено успешно");
+                Response::jsonResponse([
+                    'success' => true, 
+                    'message' => 'Сообщение отправлено успешно! Проверьте Telegram.'
+                ]);
             } else {
-                Response::jsonResponse(['success' => false, 'message' => 'Ошибка отправки сообщения'], 500);
+                error_log("TelegramPlugin: Ошибка отправки тестового сообщения - метод вернул false");
+                
+                // Получаем детали ошибки из TelegramService
+                $lastError = $this->telegramService->getLastError();
+                $lastErrorCode = $this->telegramService->getLastErrorCode();
+                
+                // Формируем детальное сообщение об ошибке
+                $errorMessage = 'Ошибка отправки сообщения. ';
+                
+                if ($lastErrorCode) {
+                    $errorMessages = [
+                        400 => 'Неверный запрос. Проверьте параметры сообщения.',
+                        401 => 'Неверный Bot Token. Проверьте токен бота в настройках.',
+                        403 => 'Доступ запрещен. Бот не может отправлять сообщения в этот чат. Начните диалог с ботом через /start в Telegram.',
+                        404 => 'Чат не найден. Проверьте Chat ID.',
+                        429 => 'Слишком много запросов. Попробуйте позже.',
+                    ];
+                    
+                    if (isset($errorMessages[$lastErrorCode])) {
+                        $errorMessage = $errorMessages[$lastErrorCode];
+                    } else {
+                        $errorMessage .= "Код ошибки: {$lastErrorCode}. ";
+                    }
+                    
+                    if ($lastError) {
+                        $errorMessage .= "Описание: {$lastError}";
+                    }
+                } else {
+                    $errorMessage .= 'Возможные причины: ';
+                    $errorMessage .= '1) Неверный Bot Token - проверьте токен в настройках бота; ';
+                    $errorMessage .= '2) Неверный Chat ID - убедитесь, что указан правильный ID чата; ';
+                    $errorMessage .= '3) Бот не может отправлять сообщения - начните диалог с ботом через /start в Telegram; ';
+                    $errorMessage .= '4) Проблемы с интернет-соединением. Проверьте логи системы для подробностей.';
+                }
+                
+                Response::jsonResponse([
+                    'success' => false, 
+                    'message' => $errorMessage,
+                    'error_code' => $lastErrorCode,
+                    'error_description' => $lastError
+                ], 500);
             }
         } catch (Exception $e) {
-            Response::jsonResponse(['success' => false, 'message' => 'Ошибка: ' . $e->getMessage()], 500);
+            error_log("TelegramPlugin: Исключение при отправке тестового сообщения: " . $e->getMessage());
+            error_log("TelegramPlugin: Trace: " . $e->getTraceAsString());
+            Response::jsonResponse([
+                'success' => false, 
+                'message' => 'Ошибка: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
         }
     }
     
@@ -170,7 +232,7 @@ class TelegramPluginAdminPage extends AdminPage {
         
         try {
             if (!isset($this->telegramService)) {
-                require_once __DIR__ . '/../src/services/TelegramService.php';
+                require_once dirname(__DIR__, 2) . '/services/TelegramService.php';
                 $this->telegramService = new TelegramService($botToken);
             }
             
@@ -204,7 +266,7 @@ class TelegramPluginAdminPage extends AdminPage {
         
         try {
             if (!isset($this->telegramService)) {
-                require_once __DIR__ . '/../src/services/TelegramService.php';
+                require_once dirname(__DIR__, 2) . '/services/TelegramService.php';
                 $this->telegramService = new TelegramService($botToken);
             }
             
@@ -237,7 +299,7 @@ class TelegramPluginAdminPage extends AdminPage {
         
         try {
             if (!isset($this->telegramService)) {
-                require_once __DIR__ . '/../src/services/TelegramService.php';
+                require_once dirname(__DIR__, 2) . '/services/TelegramService.php';
                 $this->telegramService = new TelegramService($botToken);
             }
             
@@ -317,16 +379,13 @@ class TelegramPluginAdminPage extends AdminPage {
      * Получение пути к шаблону
      */
     protected function getTemplatePath(): string {
-        // __DIR__ в этом файле: plugins/telegram-plugin/admin/
-        // Нужно получить: plugins/telegram-plugin/admin/templates/
-        $path = __DIR__ . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR;
-        // Используем realpath для нормализации пути
-        $realPath = realpath(dirname($path));
+        // Путь к шаблонам: plugins/telegram-plugin/resources/views/admin/
+        $templateDir = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR;
+        $realPath = realpath($templateDir);
         if ($realPath !== false) {
             return $realPath . DIRECTORY_SEPARATOR;
         }
-        // Fallback - возвращаем как есть, но нормализуем слеши
-        return str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $path);
+        return str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $templateDir);
     }
     
     /**
@@ -349,4 +408,3 @@ class TelegramPluginAdminPage extends AdminPage {
         ]);
     }
 }
-

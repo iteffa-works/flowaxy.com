@@ -13,11 +13,18 @@ require_once __DIR__ . '/src/services/TelegramService.php';
 
 class TelegramPluginPlugin extends BasePlugin {
     private TelegramService $telegramService;
+    private static bool $initialized = false;
     
     /**
      * Инициализация плагина
      */
     public function init(): void {
+        // Предотвращаем двойную инициализацию
+        if (self::$initialized) {
+            return;
+        }
+        self::$initialized = true;
+        
         try {
             // Всегда регистрируем меню, независимо от настроек
             $this->registerMenu();
@@ -44,13 +51,39 @@ class TelegramPluginPlugin extends BasePlugin {
      * Регистрация пункта меню
      */
     private function registerMenu(): void {
+        // Используем статическую переменную, чтобы не регистрировать дважды
+        static $registered = false;
+        if ($registered) {
+            return;
+        }
+        $registered = true;
+        
         addHook('admin_menu', function($menu) {
+            // Проверяем, не добавлено ли уже меню Telegram
+            foreach ($menu as $item) {
+                if (isset($item['page']) && $item['page'] === 'telegram-plugin') {
+                    return $menu; // Меню уже добавлено
+                }
+            }
+            
             $menu[] = [
                 'text' => 'Telegram',
                 'icon' => 'fab fa-telegram',
                 'href' => UrlHelper::admin('telegram-plugin'),
                 'page' => 'telegram-plugin',
-                'order' => 50
+                'order' => 50,
+                'submenu' => [
+                    [
+                        'text' => 'Настройки',
+                        'href' => UrlHelper::admin('telegram-plugin'),
+                        'page' => 'telegram-plugin'
+                    ],
+                    [
+                        'text' => 'История',
+                        'href' => UrlHelper::admin('telegram-history'),
+                        'page' => 'telegram-history'
+                    ]
+                ]
             ];
             return $menu;
         }, 10);
@@ -168,6 +201,9 @@ class TelegramPluginPlugin extends BasePlugin {
                 return;
             }
             
+            // Сохраняем входящее обновление в историю
+            $this->saveHistory($update, 'incoming');
+            
             // Обрабатываем сообщение
             if (isset($update['message'])) {
                 $this->handleMessage($update['message']);
@@ -182,6 +218,75 @@ class TelegramPluginPlugin extends BasePlugin {
         } catch (Exception $e) {
             error_log("TelegramPlugin handleWebhook error: " . $e->getMessage());
             Response::jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Сохранение истории взаимодействий с Telegram
+     * 
+     * @param array $data Данные обновления или сообщения
+     * @param string $direction Направление: 'incoming' или 'outgoing'
+     * @param string $type Тип события
+     * @param string|null $status Статус
+     * @param string|null $errorMessage Сообщение об ошибке
+     */
+    private function saveHistory(array $data, string $direction = 'incoming', string $type = 'message', ?string $status = null, ?string $errorMessage = null): void {
+        try {
+            $db = DatabaseHelper::getConnection(false);
+            if (!$db) {
+                return;
+            }
+            
+            // Определяем тип события
+            if (isset($data['message'])) {
+                $type = 'message';
+                $message = $data['message'];
+            } elseif (isset($data['callback_query'])) {
+                $type = 'callback_query';
+                $message = $data['callback_query'];
+            } elseif (isset($data['text'])) {
+                // Исходящее сообщение
+                $type = 'message';
+                $message = $data;
+            } else {
+                $type = 'unknown';
+                $message = $data;
+            }
+            
+            $updateId = $data['update_id'] ?? null;
+            $chatId = $message['chat']['id'] ?? $message['from']['id'] ?? $data['chat_id'] ?? null;
+            $userId = $message['from']['id'] ?? $data['user_id'] ?? null;
+            $username = $message['from']['username'] ?? $data['username'] ?? null;
+            $firstName = $message['from']['first_name'] ?? $data['first_name'] ?? null;
+            $lastName = $message['from']['last_name'] ?? $data['last_name'] ?? null;
+            $text = $message['text'] ?? $data['text'] ?? null;
+            $callbackData = $message['data'] ?? $data['callback_data'] ?? null;
+            $rawData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            
+            $stmt = $db->prepare("
+                INSERT INTO telegram_history (
+                    update_id, type, chat_id, user_id, username, first_name, last_name,
+                    text, callback_data, raw_data, direction, status, error_message, processed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            
+            $stmt->execute([
+                $updateId,
+                $type,
+                $chatId,
+                $userId,
+                $username,
+                $firstName,
+                $lastName,
+                $text,
+                $callbackData,
+                $rawData,
+                $direction,
+                $status,
+                $errorMessage
+            ]);
+        } catch (Exception $e) {
+            error_log("TelegramPlugin saveHistory error: " . $e->getMessage());
         }
     }
     
@@ -333,7 +438,13 @@ class TelegramPluginPlugin extends BasePlugin {
      */
     public function activate(): void {
         try {
-            $this->init();
+            // Создаем таблицу истории при активации
+            $this->createHistoryTable();
+            
+            // Инициализируем, если еще не инициализирован
+            if (!self::$initialized) {
+                $this->init();
+            }
             
             // Устанавливаем webhook, если указан URL
             $settings = $this->getSettings();
@@ -348,6 +459,51 @@ class TelegramPluginPlugin extends BasePlugin {
     }
     
     /**
+     * Создание таблицы истории
+     */
+    private function createHistoryTable(): void {
+        try {
+            $db = DatabaseHelper::getConnection();
+            if (!$db) {
+                error_log("TelegramPlugin: Не удалось подключиться к БД для создания таблицы");
+                return;
+            }
+            
+            // Проверяем, существует ли таблица
+            $stmt = $db->query("SHOW TABLES LIKE 'telegram_history'");
+            if ($stmt->rowCount() > 0) {
+                error_log("TelegramPlugin: Таблица telegram_history уже существует");
+                return;
+            }
+            
+            // Читаем SQL файл
+            $sqlFile = __DIR__ . '/db/telegram_history.sql';
+            if (!file_exists($sqlFile)) {
+                // Пробуем альтернативный путь
+                $sqlFile = __DIR__ . '/config/telegram_history.sql';
+            }
+            
+            if (!file_exists($sqlFile)) {
+                error_log("TelegramPlugin: SQL файл не найден: {$sqlFile}");
+                return;
+            }
+            
+            $sql = file_get_contents($sqlFile);
+            if (empty($sql)) {
+                error_log("TelegramPlugin: SQL файл пуст: {$sqlFile}");
+                return;
+            }
+            
+            // Выполняем SQL
+            $db->exec($sql);
+            error_log("TelegramPlugin: Таблица telegram_history успешно создана");
+        } catch (Exception $e) {
+            error_log("TelegramPlugin: Ошибка создания таблицы telegram_history: " . $e->getMessage());
+            error_log("TelegramPlugin: Trace: " . $e->getTraceAsString());
+        }
+    }
+    
+    /**
      * Деактивация плагина
      */
     public function deactivate(): void {
@@ -355,8 +511,50 @@ class TelegramPluginPlugin extends BasePlugin {
             if (isset($this->telegramService)) {
                 $this->telegramService->deleteWebhook();
             }
+            
+            // НЕ удаляем таблицу при деактивации - данные могут понадобиться
+            // Таблица будет удалена только при полном удалении плагина
         } catch (Exception $e) {
             error_log("TelegramPlugin deactivate error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Удаление плагина (вызывается перед удалением)
+     */
+    public function uninstall(): void {
+        try {
+            // Удаляем таблицу истории при удалении плагина
+            $this->dropHistoryTable();
+        } catch (Exception $e) {
+            error_log("TelegramPlugin uninstall error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Удаление таблицы истории
+     */
+    private function dropHistoryTable(): void {
+        try {
+            $db = DatabaseHelper::getConnection();
+            if (!$db) {
+                error_log("TelegramPlugin: Не удалось подключиться к БД для удаления таблицы");
+                return;
+            }
+            
+            // Проверяем, существует ли таблица
+            $stmt = $db->query("SHOW TABLES LIKE 'telegram_history'");
+            if ($stmt->rowCount() === 0) {
+                error_log("TelegramPlugin: Таблица telegram_history не существует");
+                return;
+            }
+            
+            // Удаляем таблицу
+            $db->exec("DROP TABLE IF EXISTS `telegram_history`");
+            error_log("TelegramPlugin: Таблица telegram_history успешно удалена");
+        } catch (Exception $e) {
+            error_log("TelegramPlugin: Ошибка удаления таблицы telegram_history: " . $e->getMessage());
+            error_log("TelegramPlugin: Trace: " . $e->getTraceAsString());
         }
     }
     

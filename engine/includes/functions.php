@@ -170,6 +170,15 @@ if (!function_exists('installer')) {
 }
 
 /**
+ * Получение экземпляра PluginManager
+ */
+if (!function_exists('pluginManager')) {
+    function pluginManager(): ?PluginManager {
+        return class_exists('PluginManager') ? PluginManager::getInstance() : null;
+    }
+}
+
+/**
  * Определение протокола (http/https) с учетом прокси-серверов
  * 
  * @return string 'https://' или 'http://'

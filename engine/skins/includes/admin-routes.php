@@ -55,7 +55,11 @@ foreach ($activePlugins as $slug => $plugin) {
     }
     $className .= 'AdminPage';
     
-    $adminPageFile = $pluginDir . '/admin/' . $className . '.php';
+    // Сначала пробуем новую структуру (src/admin/pages/), затем старую (admin/)
+    $adminPageFile = $pluginDir . '/src/admin/pages/' . $className . '.php';
+    if (!file_exists($adminPageFile)) {
+        $adminPageFile = $pluginDir . '/admin/' . $className . '.php';
+    }
     
     // Використовуємо File клас для перевірки існування файлу
     if (class_exists('File')) {
@@ -76,6 +80,17 @@ foreach ($activePlugins as $slug => $plugin) {
             require_once $menusPageFile;
             if (class_exists('MenusPage')) {
                 $router->add(['GET', 'POST'], 'menus', 'MenusPage');
+            }
+        }
+    }
+    
+    // Специальная регистрация маршрута /admin/telegram-history для плагина telegram-plugin
+    if ($slug === 'telegram-plugin') {
+        $historyPageFile = $pluginDir . '/src/admin/pages/TelegramHistoryPage.php';
+        if (file_exists($historyPageFile)) {
+            require_once $historyPageFile;
+            if (class_exists('TelegramHistoryPage')) {
+                $router->add(['GET', 'POST'], 'telegram-history', 'TelegramHistoryPage');
             }
         }
     }
