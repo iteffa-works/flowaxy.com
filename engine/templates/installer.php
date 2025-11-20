@@ -1002,7 +1002,8 @@ $error = $error ?? null;
         // Создание таблиц (шаг tables)
         const tablesList = document.getElementById('tablesList');
         if (tablesList) {
-            const tables = ['users', 'site_settings', 'plugins', 'plugin_settings', 'theme_settings'];
+            // Список таблиц для создания (включая api_keys и webhooks)
+            const tables = ['users', 'site_settings', 'plugins', 'plugin_settings', 'theme_settings', 'api_keys', 'webhooks'];
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
             const continueBtn = document.getElementById('continueBtn');
@@ -1038,15 +1039,68 @@ $error = $error ?? null;
                             icon.className = 'table-icon success';
                             li.classList.remove('creating');
                             li.classList.add('success');
+                            
+                            // Удаляем сообщение об ошибке, если было
+                            const errorMsg = li.querySelector('.table-error');
+                            if (errorMsg) {
+                                errorMsg.remove();
+                            }
                         } else {
                             icon.className = 'table-icon error';
                             li.classList.remove('creating');
                             li.classList.add('error');
+                            
+                            // Отображаем детальную информацию об ошибке
+                            let errorMsg = li.querySelector('.table-error');
+                            if (!errorMsg) {
+                                errorMsg = document.createElement('div');
+                                errorMsg.className = 'table-error';
+                                errorMsg.style.cssText = 'font-size: 12px; color: #c53030; margin-top: 4px; padding: 4px 8px; background: #fff5f5; border-radius: 4px; word-break: break-word;';
+                                li.appendChild(errorMsg);
+                            }
+                            
+                            let errorText = data.message || 'Помилка створення таблиці';
+                            
+                            // Добавляем детальную информацию, если доступна
+                            if (data.pdoCode || data.pdoErrorInfo) {
+                                errorText += '<br><small>';
+                                if (data.pdoCode) {
+                                    errorText += 'Код помилки: ' + data.pdoCode + '<br>';
+                                }
+                                if (data.pdoErrorInfo && Array.isArray(data.pdoErrorInfo) && data.pdoErrorInfo.length > 2) {
+                                    errorText += 'SQL State: ' + data.pdoErrorInfo[0] + '<br>';
+                                    errorText += 'Driver Error: ' + data.pdoErrorInfo[1] + '<br>';
+                                    errorText += 'Driver Message: ' + data.pdoErrorInfo[2];
+                                }
+                                errorText += '</small>';
+                            }
+                            
+                            // Добавляем отладочную информацию в режиме разработки
+                            if (data.debug && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                                errorText += '<br><small style="color: #718096;">Debug: ' + JSON.stringify(data.debug) + '</small>';
+                            }
+                            
+                            errorMsg.innerHTML = errorText;
+                            
+                            // Логируем ошибку в консоль
+                            console.error('Ошибка создания таблицы', table, data);
                         }
                     } catch (error) {
                         icon.className = 'table-icon error';
                         li.classList.remove('creating');
                         li.classList.add('error');
+                        
+                        // Отображаем ошибку сети
+                        let errorMsg = li.querySelector('.table-error');
+                        if (!errorMsg) {
+                            errorMsg = document.createElement('div');
+                            errorMsg.className = 'table-error';
+                            errorMsg.style.cssText = 'font-size: 12px; color: #c53030; margin-top: 4px; padding: 4px 8px; background: #fff5f5; border-radius: 4px; word-break: break-word;';
+                            li.appendChild(errorMsg);
+                        }
+                        errorMsg.textContent = 'Ошибка сети: ' + (error.message || 'Неизвестная ошибка');
+                        
+                        console.error('Ошибка сети при создании таблицы', table, error);
                     }
                     
                     const progress = Math.round(((i + 1) / tables.length) * 100);

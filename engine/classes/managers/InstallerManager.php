@@ -311,22 +311,24 @@ class InstallerManager extends BaseModule {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             
             'api_keys' => "CREATE TABLE IF NOT EXISTS `api_keys` (
-                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `name` VARCHAR(255) NOT NULL COMMENT 'Название API ключа',
-                `key_hash` VARCHAR(255) NOT NULL UNIQUE COMMENT 'Хеш API ключа',
+                `key_hash` VARCHAR(255) NOT NULL COMMENT 'Хеш API ключа',
                 `key_preview` VARCHAR(20) NOT NULL COMMENT 'Первые 4 символа ключа для отображения',
                 `permissions` TEXT DEFAULT NULL COMMENT 'JSON массив разрешений',
                 `last_used_at` DATETIME DEFAULT NULL COMMENT 'Последнее использование',
                 `expires_at` DATETIME DEFAULT NULL COMMENT 'Срок действия',
                 `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Активен ли ключ',
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX `idx_key_hash` (`key_hash`),
-                INDEX `idx_is_active` (`is_active`)
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `key_hash` (`key_hash`),
+                KEY `idx_key_hash` (`key_hash`),
+                KEY `idx_is_active` (`is_active`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             
             'webhooks' => "CREATE TABLE IF NOT EXISTS `webhooks` (
-                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `name` VARCHAR(255) NOT NULL COMMENT 'Название webhook',
                 `url` TEXT NOT NULL COMMENT 'URL для отправки',
                 `secret` VARCHAR(255) DEFAULT NULL COMMENT 'Секретный ключ для подписи',
@@ -335,9 +337,10 @@ class InstallerManager extends BaseModule {
                 `last_triggered_at` DATETIME DEFAULT NULL COMMENT 'Последний вызов',
                 `success_count` INT UNSIGNED DEFAULT 0 COMMENT 'Количество успешных отправок',
                 `failure_count` INT UNSIGNED DEFAULT 0 COMMENT 'Количество неудачных отправок',
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX `idx_is_active` (`is_active`)
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_is_active` (`is_active`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         ];
         
