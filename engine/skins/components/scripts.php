@@ -175,12 +175,22 @@ var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         
         console.log('Integrations dropdown initialized');
         
-        // Обработчик клика на кнопку
+        // Обработчик клика на кнопку (работает и на touch устройствах)
         integrationsDropdownToggle.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             console.log('Toggle clicked, isOpen:', isDropdownOpen);
+            toggleDropdown();
+            return false;
+        });
+        
+        // Обработчик для touch устройств
+        integrationsDropdownToggle.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('Toggle touched, isOpen:', isDropdownOpen);
             toggleDropdown();
             return false;
         });
