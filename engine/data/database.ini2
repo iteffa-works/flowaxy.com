@@ -1,8 +1,0 @@
-
-[database]
-host = 127.0.1.26
-port = 3306
-name = db_flowaxy
-user = root
-pass = ""
-charset = utf8mb4
