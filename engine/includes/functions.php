@@ -161,11 +161,11 @@ if (!function_exists('formatBytes')) {
 }
 
 /**
- * Получение экземпляра Installer
+ * Получение экземпляра InstallerManager
  */
 if (!function_exists('installer')) {
-    function installer(): ?Installer {
-        return class_exists('Installer') ? Installer::getInstance() : null;
+    function installer(): ?InstallerManager {
+        return class_exists('InstallerManager') ? InstallerManager::getInstance() : null;
     }
 }
 

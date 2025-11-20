@@ -282,6 +282,150 @@ $error = $error ?? null;
             margin: 20px 0;
         }
         
+        .system-check-section {
+            padding: 24px 0;
+        }
+        
+        .system-checks-list {
+            margin: 24px 0;
+        }
+        
+        .system-check-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #cbd5e0;
+        }
+        
+        .system-check-item.ok {
+            border-left-color: #48bb78;
+            background: #f0fff4;
+        }
+        
+        .system-check-item.error {
+            border-left-color: #f56565;
+            background: #fff5f5;
+        }
+        
+        .system-check-item.warning {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+        
+        .check-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 20px;
+        }
+        
+        .system-check-item.ok .check-icon {
+            color: #48bb78;
+        }
+        
+        .system-check-item.error .check-icon {
+            color: #f56565;
+        }
+        
+        .system-check-item.warning .check-icon {
+            color: #ed8936;
+        }
+        
+        .check-info {
+            flex: 1;
+        }
+        
+        .check-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+        
+        .check-error {
+            font-size: 13px;
+            color: #c53030;
+            margin-top: 4px;
+        }
+        
+        .check-warning {
+            font-size: 13px;
+            color: #c05621;
+            margin-top: 4px;
+        }
+        
+        .check-version {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 4px;
+        }
+        
+        .system-errors,
+        .system-warnings {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .system-errors {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+        }
+        
+        .system-errors h3 {
+            color: #c53030;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .system-errors ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .system-errors li {
+            padding: 8px 0;
+            color: #742a2a;
+            border-bottom: 1px solid #fed7d7;
+        }
+        
+        .system-errors li:last-child {
+            border-bottom: none;
+        }
+        
+        .system-warnings {
+            background: #fffaf0;
+            border: 1px solid #feebc8;
+        }
+        
+        .system-warnings h3 {
+            color: #c05621;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .system-warnings ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .system-warnings li {
+            padding: 8px 0;
+            color: #7c2d12;
+            border-bottom: 1px solid #feebc8;
+        }
+        
+        .system-warnings li:last-child {
+            border-bottom: none;
+        }
+        
         .tables-list li {
             padding: 10px 14px;
             margin-bottom: 6px;
@@ -482,9 +626,10 @@ $error = $error ?? null;
         <div class="installer-content">
             <div class="step-indicator">
                 <div class="step-item <?= $step === 'welcome' ? 'active' : 'completed' ?>" data-step="welcome">1</div>
-                <div class="step-item <?= $step === 'database' ? 'active' : ($step === 'tables' || $step === 'user' ? 'completed' : '') ?>" data-step="database">2</div>
-                <div class="step-item <?= $step === 'tables' ? 'active' : ($step === 'user' ? 'completed' : '') ?>" data-step="tables">3</div>
-                <div class="step-item <?= $step === 'user' ? 'active' : '' ?>" data-step="user">4</div>
+                <div class="step-item <?= $step === 'system-check' ? 'active' : ($step === 'database' || $step === 'tables' || $step === 'user' ? 'completed' : '') ?>" data-step="system-check">2</div>
+                <div class="step-item <?= $step === 'database' ? 'active' : ($step === 'tables' || $step === 'user' ? 'completed' : '') ?>" data-step="database">3</div>
+                <div class="step-item <?= $step === 'tables' ? 'active' : ($step === 'user' ? 'completed' : '') ?>" data-step="tables">4</div>
+                <div class="step-item <?= $step === 'user' ? 'active' : '' ?>" data-step="user">5</div>
             </div>
             
             <!-- Step 1: Welcome -->
@@ -510,11 +655,84 @@ $error = $error ?? null;
                 </div>
                 
                 <div class="installer-actions">
-                    <a href="/install?step=database" class="btn btn-primary btn-full" data-i18n="button.start">Start Installation</a>
+                    <a href="/install?step=system-check" class="btn btn-primary btn-full" data-i18n="button.start">Start Installation</a>
                 </div>
             </div>
             
-            <!-- Step 2: Database -->
+            <!-- Step 2: System Check -->
+            <div class="step-content <?= $step === 'system-check' ? 'active' : '' ?>" id="step-system-check">
+                <div class="system-check-section">
+                    <h2 data-i18n="system-check.title">Перевірка системи</h2>
+                    <p data-i18n="system-check.text">Перевіряємо наявність необхідних компонентів для встановлення системи.</p>
+                    
+                    <div class="system-checks-list">
+                        <?php if (!empty($systemChecks)): ?>
+                            <?php foreach ($systemChecks as $checkName => $check): ?>
+                                <div class="system-check-item <?= $check['status'] ?? 'unknown' ?>">
+                                    <div class="check-icon">
+                                        <?php if (($check['status'] ?? '') === 'ok'): ?>
+                                            <i class="fas fa-check-circle"></i>
+                                        <?php elseif (($check['status'] ?? '') === 'error'): ?>
+                                            <i class="fas fa-times-circle"></i>
+                                        <?php elseif (($check['status'] ?? '') === 'warning'): ?>
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-question-circle"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="check-info">
+                                        <div class="check-name"><?= htmlspecialchars($checkName) ?></div>
+                                        <?php if (isset($check['error'])): ?>
+                                            <div class="check-error"><?= htmlspecialchars($check['error']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['warning'])): ?>
+                                            <div class="check-warning"><?= htmlspecialchars($check['warning']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['version'])): ?>
+                                            <div class="check-version">Версія: <?= htmlspecialchars($check['version']) ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p>Перевірка не виконана</p>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <?php if (!empty($systemErrors)): ?>
+                        <div class="system-errors">
+                            <h3>Помилки:</h3>
+                            <ul>
+                                <?php foreach ($systemErrors as $error): ?>
+                                    <li><?= htmlspecialchars($error) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($systemWarnings)): ?>
+                        <div class="system-warnings">
+                            <h3>Попередження:</h3>
+                            <ul>
+                                <?php foreach ($systemWarnings as $warning): ?>
+                                    <li><?= htmlspecialchars($warning) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="installer-actions">
+                        <a href="/install?step=welcome" class="btn btn-secondary">Назад</a>
+                        <?php if (empty($systemErrors)): ?>
+                            <a href="/install?step=database" class="btn btn-primary">Продовжити</a>
+                        <?php else: ?>
+                            <button type="button" class="btn btn-primary" disabled>Продовжити (є помилки)</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Database -->
             <div class="step-content <?= $step === 'database' ? 'active' : '' ?>" id="step-database">
                 <form id="databaseForm" method="POST" action="/install?step=database">
                     <div class="form-group">

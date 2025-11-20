@@ -3,13 +3,15 @@
  * Модуль установки системы
  * Проверка установки и создание таблиц БД
  * 
+ * Поддерживает MySQL 5.7 и MySQL 8.0+ (приоритет на версию 8+)
+ * 
  * @package Engine\Modules
  * @version 1.0.0
  */
 
 declare(strict_types=1);
 
-class Installer extends BaseModule {
+class InstallerManager extends BaseModule {
     private const REQUIRED_TABLES = [
         'users',
         'site_settings',
@@ -19,6 +21,9 @@ class Installer extends BaseModule {
         'api_keys',
         'webhooks'
     ];
+    
+    private static ?string $mysqlVersion = null;
+    private static ?bool $isMySQL8Plus = null;
     
     /**
      * Инициализация модуля
@@ -39,11 +44,11 @@ class Installer extends BaseModule {
      */
     public function getInfo(): array {
         return [
-            'name' => 'Installer',
+            'name' => 'InstallerManager',
             'title' => 'Установщик системы',
             'description' => 'Проверка и выполнение установки системы',
             'version' => '1.0.0',
-            'author' => 'Flowaxy CMS'
+            'author' => 'Flowaxy Team'
         ];
     }
     
@@ -101,135 +106,147 @@ class Installer extends BaseModule {
     }
     
     /**
-     * Проверка существования конкретной таблицы
+     * Проверка существования таблицы
      * 
-     * @param string $tableName Имя таблицы
+     * @param string $tableName
      * @return bool
      */
-    public function tableExists(string $tableName): bool {
+    private function tableExists(string $tableName): bool {
         try {
             $db = $this->getDB();
             if ($db === null) {
                 return false;
             }
             
-            $stmt = $db->prepare("
-                SELECT COUNT(*) as count 
-                FROM information_schema.tables 
-                WHERE table_schema = ? 
-                AND table_name = ?
-            ");
-            $stmt->execute([DB_NAME, $tableName]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return isset($result['count']) && (int)$result['count'] > 0;
+            $stmt = $db->prepare("SHOW TABLES LIKE ?");
+            $stmt->execute([$tableName]);
+            return $stmt->rowCount() > 0;
         } catch (Exception $e) {
             return false;
         }
     }
     
     /**
-     * Получение списка отсутствующих таблиц
+     * Установка системы
+     * Создает все необходимые таблицы в БД
      * 
      * @return array
      */
-    public function getMissingTables(): array {
-        $missing = [];
-        
-        try {
-            foreach (self::REQUIRED_TABLES as $table) {
-                if (!$this->tableExists($table)) {
-                    $missing[] = $table;
-                }
-            }
-        } catch (Exception $e) {
-            // В случае ошибки возвращаем все таблицы как отсутствующие
-            return self::REQUIRED_TABLES;
-        }
-        
-        return $missing;
-    }
-    
-    /**
-     * Установка системы (создание таблиц)
-     * 
-     * @return array Результат установки ['success' => bool, 'message' => string, 'errors' => array]
-     */
     public function install(): array {
-        $errors = [];
-        
         try {
             $db = $this->getDB();
             if ($db === null) {
                 return [
                     'success' => false,
                     'message' => 'Не удалось подключиться к базе данных',
-                    'errors' => ['Нет подключения к базе данных']
+                    'errors' => []
                 ];
             }
             
-            // Начинаем транзакцию
-            $db->beginTransaction();
+            $errors = [];
+            $tables = $this->getTableDefinitions();
             
-            try {
-                // Создаем таблицы
-                $this->createTables($db, $errors);
-                
-                // Установка завершена - database.ini уже создан на предыдущем шаге
-                // Проверка установки делается по наличию файла database.ini
-                
-                // Коммитим транзакцию
-                $db->commit();
-                
-                return [
-                    'success' => empty($errors),
-                    'message' => empty($errors) ? 'Система успешно установлена' : 'Установка завершена с ошибками',
-                    'errors' => $errors
-                ];
-            } catch (Exception $e) {
-                $db->rollBack();
-                $errors[] = $e->getMessage();
-                return [
-                    'success' => false,
-                    'message' => 'Ошибка при установке: ' . $e->getMessage(),
-                    'errors' => $errors
-                ];
+            foreach ($tables as $tableName => $sql) {
+                try {
+                    $db->exec($sql);
+                } catch (Exception $e) {
+                    $errors[] = "Ошибка при создании таблицы {$tableName}: " . $e->getMessage();
+                }
             }
+            
+            return [
+                'success' => empty($errors),
+                'message' => empty($errors) ? 'Система успешно установлена' : 'Установка завершена с ошибками',
+                'errors' => $errors
+            ];
         } catch (Exception $e) {
             return [
                 'success' => false,
+                'message' => 'Ошибка при установке: ' . $e->getMessage(),
+                'errors' => []
+            ];
+        } catch (Throwable $e) {
+            return [
+                'success' => false,
                 'message' => 'Критическая ошибка: ' . $e->getMessage(),
-                'errors' => [$e->getMessage()]
+                'errors' => []
             ];
         }
     }
     
     /**
-     * Создание всех таблиц
+     * Определение версии MySQL
      * 
-     * @param PDO $db Подключение к БД
-     * @param array &$errors Массив ошибок
-     * @return void
+     * @return string|null
      */
-    private function createTables(PDO $db, array &$errors): void {
-        $tables = $this->getTableDefinitions();
-        
-        foreach ($tables as $tableName => $sql) {
-            try {
-                $db->exec($sql);
-            } catch (PDOException $e) {
-                $errors[] = "Ошибка создания таблицы {$tableName}: " . $e->getMessage();
-            }
+    private function getMySQLVersion(): ?string {
+        if (self::$mysqlVersion !== null) {
+            return self::$mysqlVersion;
         }
+        
+        try {
+            $db = $this->getDB();
+            if ($db === null) {
+                return null;
+            }
+            
+            $stmt = $db->query("SELECT VERSION() as version");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && isset($result['version'])) {
+                self::$mysqlVersion = $result['version'];
+                // Определяем, является ли версия 8.0+
+                $versionParts = explode('.', self::$mysqlVersion);
+                $majorVersion = (int)($versionParts[0] ?? 0);
+                $minorVersion = (int)($versionParts[1] ?? 0);
+                
+                // MySQL 8.0+ определяется как версия >= 8.0 (приоритет на 8+)
+                self::$isMySQL8Plus = ($majorVersion > 8) || ($majorVersion === 8);
+                
+                return self::$mysqlVersion;
+            }
+        } catch (Exception $e) {
+            error_log("InstallerManager: Error detecting MySQL version: " . $e->getMessage());
+        }
+        
+        return null;
     }
     
     /**
-     * Получение определений таблиц
+     * Проверка, является ли MySQL версии 8.0+
+     * 
+     * @return bool
+     */
+    private function isMySQL8Plus(): bool {
+        if (self::$isMySQL8Plus !== null) {
+            return self::$isMySQL8Plus;
+        }
+        
+        $this->getMySQLVersion();
+        return self::$isMySQL8Plus ?? false;
+    }
+    
+    /**
+     * Получение определений таблиц с учетом версии MySQL
      * 
      * @return array
      */
     public function getTableDefinitions(): array {
-        return [
+        $isMySQL8Plus = $this->isMySQL8Plus();
+        
+        // Базовые определения таблиц (совместимы с MySQL 5.7 и 8.0+)
+        return $this->getTableDefinitionsForVersion($isMySQL8Plus);
+    }
+    
+    /**
+     * Получение определений таблиц для конкретной версии MySQL
+     * 
+     * @param bool $isMySQL8Plus Использовать оптимизации для MySQL 8.0+
+     * @return array
+     */
+    private function getTableDefinitionsForVersion(bool $isMySQL8Plus): array {
+        // Базовые определения таблиц (совместимы с MySQL 5.7 и 8.0+)
+        $tables = [
             'plugins' => "CREATE TABLE IF NOT EXISTS `plugins` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -323,6 +340,18 @@ class Installer extends BaseModule {
                 INDEX `idx_is_active` (`is_active`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         ];
+        
+        // Для MySQL 8.0+ можно использовать дополнительные оптимизации
+        // Приоритет на версию 8+, но SQL совместим с MySQL 5.7 и 8.0+
+        if ($isMySQL8Plus) {
+            // В MySQL 8.0+ можно использовать:
+            // - Функциональные индексы
+            // - Улучшенную поддержку JSON
+            // - Оптимизированные запросы
+            // Но для совместимости оставляем базовый вариант
+        }
+        
+        return $tables;
     }
     
     /**

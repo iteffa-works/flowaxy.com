@@ -83,11 +83,10 @@ spl_autoload_register(function (string $className): void {
     $managersDir = __DIR__ . '/classes/managers/';
     
     // Автоматическая загрузка менеджеров из директории managers/
-    // Проверяем, является ли класс менеджером (имеет суффикс Manager, Customizer или Installer)
+    // Проверяем, является ли класс менеджером (имеет суффикс Manager или Customizer)
     $isManager = (
         substr($className, -7) === 'Manager' || 
-        $className === 'ThemeCustomizer' || 
-        $className === 'Installer'
+        $className === 'ThemeCustomizer'
     );
     
     if ($isManager) {
