@@ -15,7 +15,9 @@ class Installer extends BaseModule {
         'site_settings',
         'plugins',
         'plugin_settings',
-        'theme_settings'
+        'theme_settings',
+        'api_keys',
+        'webhooks'
     ];
     
     /**
@@ -289,6 +291,36 @@ class Installer extends BaseModule {
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `username` (`username`),
                 KEY `idx_email` (`email`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            
+            'api_keys' => "CREATE TABLE IF NOT EXISTS `api_keys` (
+                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `name` VARCHAR(255) NOT NULL COMMENT 'Название API ключа',
+                `key_hash` VARCHAR(255) NOT NULL UNIQUE COMMENT 'Хеш API ключа',
+                `key_preview` VARCHAR(20) NOT NULL COMMENT 'Первые 4 символа ключа для отображения',
+                `permissions` TEXT DEFAULT NULL COMMENT 'JSON массив разрешений',
+                `last_used_at` DATETIME DEFAULT NULL COMMENT 'Последнее использование',
+                `expires_at` DATETIME DEFAULT NULL COMMENT 'Срок действия',
+                `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Активен ли ключ',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX `idx_key_hash` (`key_hash`),
+                INDEX `idx_is_active` (`is_active`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            
+            'webhooks' => "CREATE TABLE IF NOT EXISTS `webhooks` (
+                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `name` VARCHAR(255) NOT NULL COMMENT 'Название webhook',
+                `url` TEXT NOT NULL COMMENT 'URL для отправки',
+                `secret` VARCHAR(255) DEFAULT NULL COMMENT 'Секретный ключ для подписи',
+                `events` TEXT DEFAULT NULL COMMENT 'JSON массив событий для отслеживания',
+                `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Активен ли webhook',
+                `last_triggered_at` DATETIME DEFAULT NULL COMMENT 'Последний вызов',
+                `success_count` INT UNSIGNED DEFAULT 0 COMMENT 'Количество успешных отправок',
+                `failure_count` INT UNSIGNED DEFAULT 0 COMMENT 'Количество неудачных отправок',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX `idx_is_active` (`is_active`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         ];
     }

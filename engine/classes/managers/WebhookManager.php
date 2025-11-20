@@ -18,36 +18,7 @@ class WebhookManager {
      */
     public function __construct() {
         $this->db = Database::getInstance();
-        $this->ensureTable();
-    }
-    
-    /**
-     * Создание таблицы webhooks, если она не существует
-     */
-    private function ensureTable(): void {
-        try {
-            $conn = $this->db->getConnection();
-            
-            $sql = "CREATE TABLE IF NOT EXISTS `" . self::TABLE_NAME . "` (
-                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `name` VARCHAR(255) NOT NULL COMMENT 'Название webhook',
-                `url` TEXT NOT NULL COMMENT 'URL для отправки',
-                `secret` VARCHAR(255) DEFAULT NULL COMMENT 'Секретный ключ для подписи',
-                `events` TEXT DEFAULT NULL COMMENT 'JSON массив событий для отслеживания',
-                `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Активен ли webhook',
-                `last_triggered_at` DATETIME DEFAULT NULL COMMENT 'Последний вызов',
-                `success_count` INT UNSIGNED DEFAULT 0 COMMENT 'Количество успешных отправок',
-                `failure_count` INT UNSIGNED DEFAULT 0 COMMENT 'Количество неудачных отправок',
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX `idx_is_active` (`is_active`),
-                INDEX `idx_events` (`events`(255))
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-            
-            $conn->exec($sql);
-        } catch (Exception $e) {
-            error_log("WebhookManager::ensureTable() error: " . $e->getMessage());
-        }
+        // Таблица создается установщиком, создание удалено из ядра
     }
     
     /**

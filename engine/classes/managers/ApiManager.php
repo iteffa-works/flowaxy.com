@@ -18,35 +18,7 @@ class ApiManager {
      */
     public function __construct() {
         $this->db = Database::getInstance();
-        $this->ensureTable();
-    }
-    
-    /**
-     * Создание таблицы API ключей, если она не существует
-     */
-    private function ensureTable(): void {
-        try {
-            $conn = $this->db->getConnection();
-            
-            $sql = "CREATE TABLE IF NOT EXISTS `" . self::TABLE_NAME . "` (
-                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `name` VARCHAR(255) NOT NULL COMMENT 'Название API ключа',
-                `key_hash` VARCHAR(255) NOT NULL UNIQUE COMMENT 'Хеш API ключа',
-                `key_preview` VARCHAR(20) NOT NULL COMMENT 'Первые 4 символа ключа для отображения',
-                `permissions` TEXT DEFAULT NULL COMMENT 'JSON массив разрешений',
-                `last_used_at` DATETIME DEFAULT NULL COMMENT 'Последнее использование',
-                `expires_at` DATETIME DEFAULT NULL COMMENT 'Срок действия',
-                `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Активен ли ключ',
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX `idx_key_hash` (`key_hash`),
-                INDEX `idx_is_active` (`is_active`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-            
-            $conn->exec($sql);
-        } catch (Exception $e) {
-            error_log("ApiManager::ensureTable() error: " . $e->getMessage());
-        }
+        // Таблица создается установщиком, создание удалено из ядра
     }
     
     /**
