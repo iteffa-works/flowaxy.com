@@ -169,3 +169,35 @@ if (!function_exists('installer')) {
     }
 }
 
+/**
+ * Определение протокола (http/https) с учетом прокси-серверов
+ * 
+ * @return string 'https://' или 'http://'
+ */
+if (!function_exists('detectProtocol')) {
+    function detectProtocol(): string {
+        $isHttps = false;
+        
+        // Проверка через заголовки прокси (для Load Balancer, CloudFlare, Nginx и т.д.)
+        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $isHttps = true;
+        }
+        
+        // Проверка через заголовок X-Forwarded-Ssl
+        if (!$isHttps && isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+            $isHttps = true;
+        }
+        
+        // Проверка через стандартные переменные сервера
+        if (!$isHttps) {
+            $isHttps = (
+                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' && $_SERVER['HTTPS'] !== '') ||
+                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+            );
+        }
+        
+        return $isHttps ? 'https://' : 'http://';
+    }
+}
+

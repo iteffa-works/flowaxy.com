@@ -123,7 +123,18 @@ class Request {
      * @return string
      */
     public function url(): string {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        if (!function_exists('detectProtocol')) {
+            // Фоллбэк если функция еще не загружена
+            $isHttps = (
+                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            );
+            $protocol = $isHttps ? 'https' : 'http';
+        } else {
+            $protocol = rtrim(detectProtocol(), '://');
+        }
         return $protocol . '://' . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
     }
     

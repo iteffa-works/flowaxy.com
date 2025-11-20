@@ -92,8 +92,18 @@ class UrlHelper {
      * @return string
      */
     public static function current(bool $withQuery = true): string {
-        $protocol = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
-                     (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)) ? 'https://' : 'http://';
+        if (!function_exists('detectProtocol')) {
+            // Фоллбэк если функция еще не загружена
+            $isHttps = (
+                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            );
+            $protocol = $isHttps ? 'https://' : 'http://';
+        } else {
+            $protocol = detectProtocol();
+        }
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         
