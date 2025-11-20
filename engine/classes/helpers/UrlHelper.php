@@ -113,5 +113,34 @@ class UrlHelper {
         
         return $protocol . $host . $uri;
     }
+    
+    /**
+     * Получение базового URL сайта
+     * 
+     * @param string $path Путь (опционально)
+     * @return string
+     */
+    public static function base(string $path = ''): string {
+        if (!function_exists('detectProtocol')) {
+            // Фоллбэк если функция еще не загружена
+            $isHttps = (
+                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            );
+            $protocol = $isHttps ? 'https://' : 'http://';
+        } else {
+            $protocol = detectProtocol();
+        }
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        
+        $baseUrl = $protocol . $host;
+        if (!empty($path)) {
+            $baseUrl .= '/' . ltrim($path, '/');
+        }
+        
+        return $baseUrl;
+    }
 }
 

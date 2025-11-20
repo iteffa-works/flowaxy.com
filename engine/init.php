@@ -88,6 +88,33 @@ initializeSystem();
 if (function_exists('doHook')) {
     $handled = doHook('handle_early_request', false);
     if ($handled === true) exit;
+    
+    // Регистрируем пункты меню для API и Webhooks
+    addHook('admin_menu', function($menu) {
+        $menu[] = [
+            'text' => 'Интеграции',
+            'icon' => 'fas fa-plug',
+            'href' => '#',
+            'order' => 40,
+            'submenu' => [
+                [
+                    'text' => 'API Ключи',
+                    'icon' => 'fas fa-key',
+                    'href' => UrlHelper::admin('api-keys'),
+                    'page' => 'api-keys',
+                    'order' => 10
+                ],
+                [
+                    'text' => 'Webhooks',
+                    'icon' => 'fas fa-paper-plane',
+                    'href' => UrlHelper::admin('webhooks'),
+                    'page' => 'webhooks',
+                    'order' => 20
+                ]
+            ]
+        ];
+        return $menu;
+    });
 }
 
 // ========== РОУТИНГ ==========

@@ -23,8 +23,8 @@ class ModuleLoader {
         }
         
         // Встановлюємо правильну директорію модулів (відносно engine/)
-        // dirname(__DIR__, 2) отримує engine/ з engine/classes/system/
-        self::$modulesDir = dirname(__DIR__, 2) . '/modules/';
+        // dirname(__DIR__, 1) отримує engine/classes/ з engine/classes/system/
+        self::$modulesDir = dirname(__DIR__, 1) . '/managers/';
         
         // Завантажуємо тільки критично важливі модулі, які потрібні для роботи системи
         $criticalModules = ['PluginManager', 'ThemeManager', 'SettingsManager']; // Модулі, які потрібно завантажити одразу
@@ -55,7 +55,7 @@ class ModuleLoader {
         
         // Перевіряємо, що директорія модулів визначена
         if (empty(self::$modulesDir)) {
-            self::$modulesDir = dirname(__DIR__, 2) . '/modules/';
+            self::$modulesDir = dirname(__DIR__, 1) . '/managers/';
         }
         
         $moduleFile = self::$modulesDir . $moduleName . '.php';

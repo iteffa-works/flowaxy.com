@@ -80,11 +80,16 @@ spl_autoload_register(function (string $className): void {
     if (strpos($className, '\\') !== false) return;
     
     $classesDir = __DIR__ . '/classes/';
-    $modulesDir = __DIR__ . '/modules/';
+    $managersDir = __DIR__ . '/classes/managers/';
+    $modulesDir = __DIR__ . '/modules/'; // Старая директория для обратной совместимости
     
-    // Модули
-    $moduleClasses = ['PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer', 'Installer'];
-    if (in_array($className, $moduleClasses, true)) {
+    // Менеджеры (новое расположение)
+    $managerClasses = ['PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer', 'Installer', 'ApiManager', 'WebhookManager'];
+    if (in_array($className, $managerClasses, true)) {
+        // Сначала пробуем новую директорию
+        $file = $managersDir . $className . '.php';
+        if (file_exists($file)) { require_once $file; return; }
+        // Потом старую для обратной совместимости
         $file = $modulesDir . $className . '.php';
         if (file_exists($file)) { require_once $file; return; }
     }

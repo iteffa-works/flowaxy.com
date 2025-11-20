@@ -1,0 +1,47 @@
+{
+    "name": "Telegram Plugin",
+    "slug": "telegram-plugin",
+    "version": "1.0.0",
+    "description": "Интеграция с Telegram Bot API для отправки уведомлений и управления через Telegram",
+    "author": "Flowaxy CMS",
+    "requires": {
+        "php": "8.3",
+        "cms": "6.0.0"
+    },
+    "settings": {
+        "bot_token": {
+            "type": "text",
+            "label": "Bot Token",
+            "description": "Токен бота от @BotFather",
+            "required": true
+        },
+        "chat_id": {
+            "type": "text",
+            "label": "Chat ID",
+            "description": "ID чата для отправки уведомлений",
+            "required": true
+        },
+        "webhook_url": {
+            "type": "text",
+            "label": "Webhook URL",
+            "description": "URL для получения обновлений от Telegram",
+            "required": false
+        },
+        "notify_events": {
+            "type": "multiselect",
+            "label": "События для уведомлений",
+            "description": "Выберите события, на которые будут отправляться уведомления",
+            "options": [
+                "user.login",
+                "user.logout",
+                "plugin.installed",
+                "plugin.activated",
+                "plugin.deactivated",
+                "theme.activated",
+                "system.error"
+            ],
+            "default": []
+        }
+    }
+}
+

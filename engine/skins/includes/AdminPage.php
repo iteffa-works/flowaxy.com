@@ -136,7 +136,11 @@ class AdminPage {
         $customTemplatePath = $this->getTemplatePath();
         $defaultTemplatePath = __DIR__ . '/../templates/';
         
-        if ($customTemplatePath !== $defaultTemplatePath) {
+        // Нормализуем пути для сравнения (заменяем обратные слеши на прямые)
+        $customPathNormalized = str_replace('\\', '/', rtrim($customTemplatePath, '/\\')) . '/';
+        $defaultPathNormalized = str_replace('\\', '/', rtrim($defaultTemplatePath, '/\\')) . '/';
+        
+        if ($customPathNormalized !== $defaultPathNormalized) {
             // Використовуємо кастомний шаблон з плагіна
             $this->renderCustomTemplate($customTemplatePath, $templateData);
         } else {

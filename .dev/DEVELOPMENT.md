@@ -179,8 +179,8 @@
 - [ ] Поиск по админке
 
 #### 13. Интеграции
-- [ ] API для внешних приложений
-- [ ] Webhooks
+- [x] API для внешних приложений
+- [x] Webhooks
 - [ ] Интеграция с популярными сервисами
 
 ---
@@ -225,6 +225,14 @@
   - MenusPage перенесена в плагин
   - Удалены все старые файлы из engine
   - Обновлена тестовая тема для поддержки меню в header и footer
+- ✅ **API для внешних приложений и Webhooks**
+  - Реализован ApiManager для управления API ключами
+  - Реализован ApiHandler для аутентификации API запросов
+  - Реализован WebhookManager для управления webhooks
+  - Реализован WebhookDispatcher для отправки webhooks
+  - Созданы административные страницы для управления API ключами и webhooks
+  - Реализованы базовые API endpoints (info, status, me, permissions)
+  - Перенос менеджеров из engine/modules в engine/classes/managers
 
 ---
 
