@@ -81,17 +81,21 @@ spl_autoload_register(function (string $className): void {
     
     $classesDir = __DIR__ . '/classes/';
     $managersDir = __DIR__ . '/classes/managers/';
-    $modulesDir = __DIR__ . '/modules/'; // Старая директория для обратной совместимости
     
-    // Менеджеры (новое расположение)
-    $managerClasses = ['PluginManager', 'ThemeManager', 'SettingsManager', 'ThemeCustomizer', 'Installer', 'ApiManager', 'WebhookManager'];
-    if (in_array($className, $managerClasses, true)) {
-        // Сначала пробуем новую директорию
+    // Автоматическая загрузка менеджеров из директории managers/
+    // Проверяем, является ли класс менеджером (имеет суффикс Manager, Customizer или Installer)
+    $isManager = (
+        substr($className, -7) === 'Manager' || 
+        $className === 'ThemeCustomizer' || 
+        $className === 'Installer'
+    );
+    
+    if ($isManager) {
         $file = $managersDir . $className . '.php';
-        if (file_exists($file)) { require_once $file; return; }
-        // Потом старую для обратной совместимости
-        $file = $modulesDir . $className . '.php';
-        if (file_exists($file)) { require_once $file; return; }
+        if (file_exists($file)) { 
+            require_once $file; 
+            return; 
+        }
     }
     
     // Маппинг классов
@@ -130,9 +134,7 @@ spl_autoload_register(function (string $className): void {
         if (file_exists($file)) { require_once $file; return; }
     }
     
-    // Модули (последняя попытка)
-    $file = $modulesDir . $className . '.php';
-    if (file_exists($file)) { require_once $file; return; }
+    // Менеджеры уже загружены выше, дополнительная проверка не нужна
 });
 
 // Подключаем функции

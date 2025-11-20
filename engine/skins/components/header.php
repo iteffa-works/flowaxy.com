@@ -30,7 +30,7 @@
             $isPlugins = ($currentPage === 'plugins');
             $isThemes = ($currentPage === 'themes');
             ?>
-            <div class="header-quick-actions d-flex align-items-center">
+            <div class="header-quick-actions d-flex align-items-center" style="position: relative; overflow: visible;">
                 <a href="<?= UrlHelper::admin('dashboard') ?>" class="header-quick-action-btn <?= $isDashboard ? 'active' : '' ?>" title="Панель управління">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-md-inline ms-1">Панель</span>
@@ -43,6 +43,31 @@
                     <i class="fas fa-palette"></i>
                     <span class="d-none d-md-inline ms-1">Теми</span>
                 </a>
+                
+                <!-- Интеграции - в том же стиле, что и другие кнопки -->
+                <?php
+                $isApiKeys = ($currentPage === 'api-keys');
+                $isWebhooks = ($currentPage === 'webhooks');
+                $isIntegrations = ($isApiKeys || $isWebhooks);
+                ?>
+                <div class="dropdown integrations-dropdown-wrapper" id="integrations-dropdown" style="position: relative; display: inline-block;">
+                    <button type="button" class="header-quick-action-btn <?= $isIntegrations ? 'active' : '' ?>" id="integrations-dropdown-toggle" aria-expanded="false" title="Інтеграції">
+                        <i class="fas fa-plug"></i>
+                        <span class="d-none d-md-inline ms-1">Інтеграції</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end integrations-dropdown-menu" aria-labelledby="integrations-dropdown-toggle">
+                        <li>
+                            <a class="dropdown-item <?= $isApiKeys ? 'active' : '' ?>" href="<?= UrlHelper::admin('api-keys') ?>">
+                                <i class="fas fa-key me-2"></i>API Ключи
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item <?= $isWebhooks ? 'active' : '' ?>" href="<?= UrlHelper::admin('webhooks') ?>">
+                                <i class="fas fa-code-branch me-2"></i>Webhooks
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
             
             <!-- Просмотр сайта -->

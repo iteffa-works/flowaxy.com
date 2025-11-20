@@ -147,6 +147,109 @@ var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl)
 });
 
+// Инициализация dropdown для меню Интеграции
+(function() {
+    let isDropdownOpen = false;
+    let integrationsDropdown = null;
+    let integrationsDropdownToggle = null;
+    let dropdownMenu = null;
+    
+    function initIntegrationsDropdown() {
+        integrationsDropdown = document.getElementById('integrations-dropdown');
+        integrationsDropdownToggle = document.getElementById('integrations-dropdown-toggle');
+        
+        if (!integrationsDropdown || !integrationsDropdownToggle) {
+            console.log('Integrations dropdown elements not found');
+            return;
+        }
+        
+        dropdownMenu = integrationsDropdown.querySelector('.integrations-dropdown-menu');
+        if (!dropdownMenu) {
+            dropdownMenu = integrationsDropdown.querySelector('.dropdown-menu');
+        }
+        
+        if (!dropdownMenu) {
+            console.log('Dropdown menu not found');
+            return;
+        }
+        
+        console.log('Integrations dropdown initialized');
+        
+        // Обработчик клика на кнопку
+        integrationsDropdownToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('Toggle clicked, isOpen:', isDropdownOpen);
+            toggleDropdown();
+            return false;
+        });
+        
+        // Закрываем dropdown при клике вне его
+        document.addEventListener('click', function(e) {
+            if (isDropdownOpen && integrationsDropdown && !integrationsDropdown.contains(e.target)) {
+                console.log('Closing dropdown - click outside');
+                closeDropdown();
+            }
+        }, true);
+        
+        // Закрываем dropdown при клике на пункт меню
+        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', function() {
+                console.log('Closing dropdown - menu item clicked');
+                closeDropdown();
+            });
+        });
+        
+        // Закрываем dropdown при нажатии Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && isDropdownOpen) {
+                closeDropdown();
+            }
+        });
+    }
+    
+    function toggleDropdown() {
+        if (isDropdownOpen) {
+            closeDropdown();
+        } else {
+            openDropdown();
+        }
+    }
+    
+    function openDropdown() {
+        if (!integrationsDropdown || !dropdownMenu) {
+            console.log('Cannot open - elements not found');
+            return;
+        }
+        
+        console.log('Opening dropdown');
+        isDropdownOpen = true;
+        integrationsDropdown.classList.add('show');
+        dropdownMenu.classList.add('show');
+        integrationsDropdownToggle.setAttribute('aria-expanded', 'true');
+    }
+    
+    function closeDropdown() {
+        if (!integrationsDropdown || !dropdownMenu) return;
+        
+        console.log('Closing dropdown');
+        isDropdownOpen = false;
+        integrationsDropdown.classList.remove('show');
+        dropdownMenu.classList.remove('show');
+        integrationsDropdownToggle.setAttribute('aria-expanded', 'false');
+    }
+    
+    // Инициализация при загрузке DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initIntegrationsDropdown);
+    } else {
+        // DOM уже загружен, инициализируем сразу
+        setTimeout(initIntegrationsDropdown, 100);
+    }
+})();
+
 // Подтверждение удаления
 document.querySelectorAll('[data-confirm-delete]').forEach(button => {
     button.addEventListener('click', function(e) {

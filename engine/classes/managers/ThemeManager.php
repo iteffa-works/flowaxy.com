@@ -164,9 +164,10 @@ class ThemeManager extends BaseModule {
      * @return array
      */
     public function getAllThemes(): array {
-        // Путь к темам: engine/modules -> engine -> корень -> themes
-        $baseDir = dirname(__DIR__, 1); // engine
-        $rootDir = dirname($baseDir); // корень проекта
+        // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+        $baseDir = dirname(__DIR__, 1); // engine/classes
+        $engineDir = dirname($baseDir); // engine
+        $rootDir = dirname($engineDir); // корень проекта
         $themesDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
         
         // Нормализуем путь
@@ -267,7 +268,11 @@ class ThemeManager extends BaseModule {
      * Получение пути к скриншоту темы
      */
     private function getThemeScreenshot(string $themeSlug): ?string {
-        $themesDir = dirname(__DIR__, 1) . '/../themes/';
+        // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+        $baseDir = dirname(__DIR__, 1); // engine/classes
+        $engineDir = dirname($baseDir); // engine
+        $rootDir = dirname($engineDir); // корень проекта
+        $themesDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
         $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         $screenshotPath = $themesDir . $themeSlug . '/screenshot.png';
         
@@ -305,7 +310,11 @@ class ThemeManager extends BaseModule {
             return false;
         }
         
-        $themesDir = dirname(__DIR__, 1) . '/../themes/';
+        // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+        $baseDir = dirname(__DIR__, 1); // engine/classes
+        $engineDir = dirname($baseDir); // engine
+        $rootDir = dirname($engineDir); // корень проекта
+        $themesDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
         $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
         $themeFolderSlug = null;
         
@@ -573,7 +582,12 @@ class ThemeManager extends BaseModule {
     public function getThemePath(?string $themeSlug = null): string {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
-        $themesBaseDir = dirname(__DIR__, 1) . '/../themes/';
+        // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+        $baseDir = dirname(__DIR__, 1); // engine/classes
+        $engineDir = dirname($baseDir); // engine
+        $rootDir = dirname($engineDir); // корень проекта
+        $themesBaseDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
+        $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
         $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
         
         if ($theme === null || !isset($theme['slug'])) {
@@ -646,7 +660,11 @@ class ThemeManager extends BaseModule {
             return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
         }
         
-        $themesBaseDir = dirname(__DIR__, 1) . '/../themes/';
+        // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+        $baseDir = dirname(__DIR__, 1); // engine/classes
+        $engineDir = dirname($baseDir); // engine
+        $rootDir = dirname($engineDir); // корень проекта
+        $themesBaseDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
         $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
         $themePath = $themesBaseDir . $slug . '/';
         
@@ -806,7 +824,11 @@ class ThemeManager extends BaseModule {
         
         $cacheKey = 'theme_config_' . $slug;
         return cache_remember($cacheKey, function() use ($slug, $theme) {
-            $themesBaseDir = dirname(__DIR__, 1) . '/../themes/';
+            // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+            $baseDir = dirname(__DIR__, 1); // engine/classes
+            $engineDir = dirname($baseDir); // engine
+            $rootDir = dirname($engineDir); // корень проекта
+            $themesBaseDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
             $themesBaseDir = realpath($themesBaseDir) ? realpath($themesBaseDir) . DIRECTORY_SEPARATOR : $themesBaseDir;
             $jsonFile = $themesBaseDir . $slug . '/theme.json';
             
@@ -950,7 +972,11 @@ class ThemeManager extends BaseModule {
             cache_forget('active_theme_check_' . md5($themeSlug));
         } else {
             // Очищаем кеш для всех тем
-            $themesDir = dirname(__DIR__, 1) . '/../themes/';
+            // Путь к темам: engine/classes/managers -> engine/classes -> engine -> корень -> themes
+            $baseDir = dirname(__DIR__, 1); // engine/classes
+            $engineDir = dirname($baseDir); // engine
+            $rootDir = dirname($engineDir); // корень проекта
+            $themesDir = $rootDir . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR;
             $themesDir = realpath($themesDir) ? realpath($themesDir) . DIRECTORY_SEPARATOR : $themesDir;
             if (is_dir($themesDir)) {
                 $directories = glob($themesDir . '*', GLOB_ONLYDIR);

@@ -410,8 +410,9 @@ class PluginManager extends BaseModule {
         static $modulesList = null;
         
         if ($modulesList === null) {
-            $modulesDir = dirname(__DIR__) . '/modules';
-            $modules = glob($modulesDir . '/*.php');
+            // Используем новую директорию managers вместо modules
+            $managersDir = dirname(__DIR__) . '/managers';
+            $modules = glob($managersDir . '/*.php');
             $modulesList = [];
             
             if ($modules !== false) {
