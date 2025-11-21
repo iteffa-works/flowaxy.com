@@ -17,13 +17,39 @@ class DatabaseHelper {
      * @return PDO|null
      */
     public static function getConnection(bool $showError = true): ?PDO {
-        // Проверяем, что константы БД определены и не пустые
-        if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
+        // Упрощенная логика: приоритет GLOBALS над константами
+        if (isset($GLOBALS['_INSTALLER_DB_HOST']) && !empty($GLOBALS['_INSTALLER_DB_HOST'])) {
+            // Инсталлер: используем GLOBALS
+            $dbHost = $GLOBALS['_INSTALLER_DB_HOST'];
+            $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
+            $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
+            $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
+            $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
+        } else {
+            // Обычная работа: используем константы
+            $dbHost = defined('DB_HOST') ? DB_HOST : '';
+            $dbName = defined('DB_NAME') ? DB_NAME : '';
+            $dbUser = defined('DB_USER') ? DB_USER : 'root';
+            $dbPass = defined('DB_PASS') ? DB_PASS : '';
+            $dbCharset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
+        }
+        
+        // Проверяем, что конфигурация БД доступна
+        if (empty($dbHost) || empty($dbName)) {
             if ($showError && php_sapi_name() !== 'cli') {
                 // Не показываем ошибку БД, если конфигурация не установлена (это нормально для установщика)
                 // Просто возвращаем null
             }
             return null;
+        }
+        
+        // Устанавливаем GLOBALS для Database класса (если еще не установлены)
+        if (!isset($GLOBALS['_INSTALLER_DB_HOST'])) {
+            $GLOBALS['_INSTALLER_DB_HOST'] = $dbHost;
+            $GLOBALS['_INSTALLER_DB_NAME'] = $dbName;
+            $GLOBALS['_INSTALLER_DB_USER'] = $dbUser;
+            $GLOBALS['_INSTALLER_DB_PASS'] = $dbPass;
+            $GLOBALS['_INSTALLER_DB_CHARSET'] = $dbCharset;
         }
         
         try {

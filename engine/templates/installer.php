@@ -501,6 +501,11 @@ $error = $error ?? null;
             border-left: 3px solid #48bb78;
         }
         
+        .tables-list li.exists {
+            background: #fffaf0;
+            border-left: 3px solid #d69e2e;
+        }
+        
         .tables-list li.error {
             background: #fff5f5;
             border-left: 3px solid #f56565;
@@ -524,6 +529,12 @@ $error = $error ?? null;
         .table-icon.success::after {
             content: '✓';
             color: #48bb78;
+            font-weight: bold;
+        }
+        
+        .table-icon.exists::after {
+            content: '✓';
+            color: #d69e2e;
             font-weight: bold;
         }
         
@@ -1246,12 +1257,61 @@ $error = $error ?? null;
                         credentials: 'same-origin'
                     });
                     
-                    const data = await response.json();
+                    // Проверяем статус ответа
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+                    }
+                    
+                    // Проверяем тип контента
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        throw new Error('Сервер вернул не JSON ответ: ' + text.substring(0, 200));
+                    }
+                    
+                    // Парсим JSON с обработкой ошибок
+                    let data;
+                    try {
+                        const text = await response.text();
+                        if (!text || text.trim() === '') {
+                            throw new Error('Пустой ответ от сервера');
+                        }
+                        data = JSON.parse(text);
+                    } catch (parseError) {
+                        const text = await response.text();
+                        throw new Error('Ошибка парсинга JSON: ' + parseError.message + '. Ответ: ' + text.substring(0, 300));
+                    }
                     
                     if (data.success) {
-                        icon.className = 'table-icon success';
-                        li.classList.remove('creating', 'error');
-                        li.classList.add('success');
+                        // Проверяем, существует ли таблица уже
+                        if (data.exists) {
+                            // Таблица уже существует - показываем желтым
+                            icon.className = 'table-icon exists';
+                            li.classList.remove('creating', 'error', 'success');
+                            li.classList.add('exists');
+                            
+                            // Добавляем подсказку, что таблица уже существует
+                            let existsMsg = li.querySelector('.table-exists');
+                            if (!existsMsg) {
+                                existsMsg = document.createElement('div');
+                                existsMsg.className = 'table-exists';
+                                existsMsg.style.cssText = 'font-size: 12px; color: #d69e2e; margin-top: 4px; padding: 4px 8px; background: #fffaf0; border-radius: 4px;';
+                                existsMsg.textContent = data.message || 'Таблиця вже існує';
+                                li.appendChild(existsMsg);
+                            }
+                        } else {
+                            // Таблица создана успешно - показываем зеленым
+                            icon.className = 'table-icon success';
+                            li.classList.remove('creating', 'error', 'exists');
+                            li.classList.add('success');
+                            
+                            // Удаляем сообщение о существовании, если было
+                            const existsMsg = li.querySelector('.table-exists');
+                            if (existsMsg) {
+                                existsMsg.remove();
+                            }
+                        }
                         
                         // Удаляем сообщение об ошибке, если было
                         const errorMsg = li.querySelector('.table-error');

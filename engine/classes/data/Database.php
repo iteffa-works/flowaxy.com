@@ -144,8 +144,30 @@ class Database {
      * @throws Exception
      */
     private function connect(): void {
-        // Проверяем, что константы БД определены и не пустые
-        if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
+        // Упрощенная логика: приоритет GLOBALS над константами
+        // Если GLOBALS установлены (инсталлер), используем их
+        // Иначе используем константы
+        if (isset($GLOBALS['_INSTALLER_DB_HOST']) && !empty($GLOBALS['_INSTALLER_DB_HOST'])) {
+            // Инсталлер: используем GLOBALS
+            $dbHost = $GLOBALS['_INSTALLER_DB_HOST'];
+            $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
+            $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
+            $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
+            $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
+        } else {
+            // Обычная работа: используем константы
+            $dbHost = defined('DB_HOST') ? DB_HOST : '';
+            $dbName = defined('DB_NAME') ? DB_NAME : '';
+            $dbUser = defined('DB_USER') ? DB_USER : 'root';
+            $dbPass = defined('DB_PASS') ? DB_PASS : '';
+            $dbCharset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
+        }
+        
+        // Логируем для диагностики (без пароля)
+        error_log('Database::connect() - Host: ' . $dbHost . ', Name: ' . $dbName . ', User: ' . $dbUser . ', Pass: ' . (strlen($dbPass) > 0 ? '***' : 'empty') . ', Charset: ' . $dbCharset . ', Source: ' . (isset($GLOBALS['_INSTALLER_DB_HOST']) ? 'GLOBALS' : 'constants'));
+        
+        // Проверяем, что конфигурация БД доступна
+        if (empty($dbHost) || empty($dbName)) {
             $this->isConnected = false;
             $this->connection = null;
             throw new Exception('Database configuration is not set');
@@ -161,7 +183,7 @@ class Database {
         $timeStart = $this->getRealTime();
         
         // Быстрая проверка доступности хоста перед подключением PDO
-        $host = DB_HOST;
+        $host = $dbHost;
         $port = 3306;
         
         // Разбираем хост:port если указано
@@ -188,12 +210,13 @@ class Database {
         }
         
         try {
+            // Используем переменные вместо констант (для поддержки установщика)
             $dsn = sprintf(
                 "mysql:host=%s;port=%d;dbname=%s;charset=%s",
                 $host,
                 $port,
-                DB_NAME,
-                DB_CHARSET
+                $dbName,
+                $dbCharset
             );
             
             $options = [
@@ -201,7 +224,7 @@ class Database {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_PERSISTENT => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET . " COLLATE utf8mb4_unicode_ci",
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . $dbCharset . " COLLATE utf8mb4_unicode_ci",
                 PDO::ATTR_TIMEOUT => self::CONNECTION_TIMEOUT,
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
                 PDO::ATTR_STRINGIFY_FETCHES => false,
@@ -212,7 +235,7 @@ class Database {
             ini_set('default_socket_timeout', (string)self::CONNECTION_TIMEOUT);
             
             try {
-                $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+                $this->connection = new PDO($dsn, $dbUser, $dbPass, $options);
             } finally {
                 // Восстанавливаем предыдущий таймаут
                 ini_set('default_socket_timeout', $oldTimeout);
@@ -623,8 +646,29 @@ class Database {
      */
     public function databaseExists(): bool {
         try {
+            // Упрощенная логика: приоритет GLOBALS над константами
+            if (isset($GLOBALS['_INSTALLER_DB_HOST']) && !empty($GLOBALS['_INSTALLER_DB_HOST'])) {
+                // Инсталлер: используем GLOBALS
+                $dbHost = $GLOBALS['_INSTALLER_DB_HOST'];
+                $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
+                $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
+                $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
+                $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
+            } else {
+                // Обычная работа: используем константы
+                $dbHost = defined('DB_HOST') ? DB_HOST : '';
+                $dbName = defined('DB_NAME') ? DB_NAME : '';
+                $dbUser = defined('DB_USER') ? DB_USER : 'root';
+                $dbPass = defined('DB_PASS') ? DB_PASS : '';
+                $dbCharset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
+            }
+            
+            if (empty($dbHost)) {
+                return false;
+            }
+            
             // Подключаемся без указания базы данных
-            $host = DB_HOST;
+            $host = $dbHost;
             $port = 3306;
             
             if (strpos($host, ':') !== false) {
@@ -632,16 +676,16 @@ class Database {
                 $port = (int)$port;
             }
             
-            $dsn = sprintf("mysql:host=%s;port=%d;charset=%s", $host, $port, DB_CHARSET);
+            $dsn = sprintf("mysql:host=%s;port=%d;charset=%s", $host, $port, $dbCharset);
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_TIMEOUT => 2,
             ];
             
-            $tempConnection = new PDO($dsn, DB_USER, DB_PASS, $options);
+            $tempConnection = new PDO($dsn, $dbUser, $dbPass, $options);
             
             $stmt = $tempConnection->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?");
-            $stmt->execute([DB_NAME]);
+            $stmt->execute([$dbName]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             return $result !== false;

@@ -8,6 +8,11 @@ class LoginPage {
     private $error = '';
     
     public function __construct() {
+        // Убеждаемся, что сессия инициализирована для CSRF токена (используем наши классы)
+        if (!Session::isStarted()) {
+            Session::start();
+        }
+        
         // Якщо вже авторизований, перенаправляємо (використовуємо Response клас)
         if (SecurityHelper::isAdminLoggedIn()) {
             Response::redirectStatic(UrlHelper::admin('dashboard'));
@@ -30,11 +35,29 @@ class LoginPage {
      * Обробка входу
      */
     private function processLogin() {
+        // Убеждаемся, что сессия инициализирована (используем наши классы)
+        if (!Session::isStarted()) {
+            Session::start();
+        }
+        
         $request = Request::getInstance();
         $csrfToken = $request->post('csrf_token', '');
         
+        // Получаем токен из сессии для диагностики (используем sessionManager)
+        $session = sessionManager();
+        $sessionToken = $session->get('csrf_token');
+        
+        // Логируем для диагностики (только в режиме разработки)
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log('Login CSRF check - Session token: ' . ($sessionToken ? 'exists' : 'missing') . ', POST token: ' . ($csrfToken ? 'exists' : 'missing'));
+        }
+        
         if (!SecurityHelper::verifyCsrfToken($csrfToken)) {
             $this->error = 'Помилка безпеки. Спробуйте ще раз.';
+            // Если токен отсутствует в сессии, генерируем новый
+            if (empty($sessionToken)) {
+                SecurityHelper::csrfToken(); // Генерируем новый токен
+            }
             return;
         }
         

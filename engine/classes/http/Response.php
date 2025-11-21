@@ -84,15 +84,37 @@ class Response {
         
         // Отключаем вывод ошибок на экран (но логируем их)
         $oldErrorReporting = error_reporting(E_ALL);
+        $oldDisplayErrors = ini_get('display_errors');
         ini_set('display_errors', '0');
         
+        // Убеждаемся, что заголовки еще не отправлены
+        if (headers_sent($file, $line)) {
+            error_log("Response::json() called after headers sent in {$file}:{$line}");
+            // Пытаемся отправить JSON через JavaScript, если возможно
+            echo '<script>if(typeof console !== "undefined") console.error("JSON response failed: headers already sent");</script>';
+            exit;
+        }
+        
         $this->status($statusCode)->header('Content-Type', 'application/json; charset=UTF-8');
-        $this->content(Json::stringify($data));
-        $this->send();
+        
+        try {
+            $jsonContent = Json::stringify($data);
+            $this->content($jsonContent);
+            $this->send();
+        } catch (Exception $e) {
+            error_log("Error encoding JSON response: " . $e->getMessage());
+            // Отправляем ошибку в JSON формате
+            $this->status(500)->header('Content-Type', 'application/json; charset=UTF-8');
+            $this->content(json_encode([
+                'success' => false,
+                'error' => 'Ошибка формирования JSON ответа: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE));
+            $this->send();
+        }
         
         // Восстанавливаем настройки
         error_reporting($oldErrorReporting);
-        ini_set('display_errors', '1');
+        ini_set('display_errors', $oldDisplayErrors);
         
         exit;
     }

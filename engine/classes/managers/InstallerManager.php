@@ -272,41 +272,45 @@ class InstallerManager extends BaseModule {
     }
     
     /**
-     * Получение определений таблиц с учетом версии MySQL
+     * Получение определений таблиц с учетом версии MySQL и кодировки
      * 
+     * @param string $charset Кодировка (по умолчанию utf8mb4)
+     * @param string $collation Коллация (по умолчанию utf8mb4_unicode_ci)
      * @return array
      */
-    public function getTableDefinitions(): array {
+    public function getTableDefinitions(string $charset = 'utf8mb4', string $collation = 'utf8mb4_unicode_ci'): array {
         $isMySQL8Plus = $this->isMySQL8Plus();
         
         // Базовые определения таблиц (совместимы с MySQL 5.7 и 8.0+)
-        return $this->getTableDefinitionsForVersion($isMySQL8Plus);
+        return $this->getTableDefinitionsForVersion($isMySQL8Plus, $charset, $collation);
     }
     
     /**
-     * Получение определений таблиц для конкретной версии MySQL
+     * Получение определений таблиц для конкретной версии MySQL и кодировки
      * 
      * @param bool $isMySQL8Plus Использовать оптимизации для MySQL 8.0+
+     * @param string $charset Кодировка
+     * @param string $collation Коллация
      * @return array
      */
-    private function getTableDefinitionsForVersion(bool $isMySQL8Plus): array {
+    private function getTableDefinitionsForVersion(bool $isMySQL8Plus, string $charset = 'utf8mb4', string $collation = 'utf8mb4_unicode_ci'): array {
         // Базовые определения таблиц (совместимы с MySQL 5.7 и 8.0+)
         $tables = [
             'plugins' => "CREATE TABLE IF NOT EXISTS `plugins` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
-                `slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-                `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-                `description` text COLLATE utf8mb4_unicode_ci,
-                `version` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                `author` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                `slug` varchar(100) COLLATE {$collation} NOT NULL,
+                `name` varchar(100) COLLATE {$collation} NOT NULL,
+                `description` text COLLATE {$collation},
+                `version` varchar(20) COLLATE {$collation} DEFAULT NULL,
+                `author` varchar(100) COLLATE {$collation} DEFAULT NULL,
                 `is_active` tinyint(1) NOT NULL DEFAULT '0',
-                `settings` text COLLATE utf8mb4_unicode_ci,
+                `settings` text COLLATE {$collation},
                 `installed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `slug` (`slug`),
                 KEY `idx_plugins_active` (`is_active`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'plugin_settings' => "CREATE TABLE IF NOT EXISTS `plugin_settings` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -318,7 +322,7 @@ class InstallerManager extends BaseModule {
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `plugin_setting` (`plugin_slug`,`setting_key`),
                 KEY `idx_plugin_slug` (`plugin_slug`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'site_settings' => "CREATE TABLE IF NOT EXISTS `site_settings` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -329,7 +333,7 @@ class InstallerManager extends BaseModule {
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `setting_key` (`setting_key`),
                 KEY `idx_settings_key` (`setting_key`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'theme_settings' => "CREATE TABLE IF NOT EXISTS `theme_settings` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -341,7 +345,7 @@ class InstallerManager extends BaseModule {
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `theme_setting` (`theme_slug`,`setting_key`),
                 KEY `idx_theme_slug` (`theme_slug`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'users' => "CREATE TABLE IF NOT EXISTS `users` (
                 `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -354,7 +358,7 @@ class InstallerManager extends BaseModule {
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `username` (`username`),
                 KEY `idx_email` (`email`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'api_keys' => "CREATE TABLE IF NOT EXISTS `api_keys` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -371,7 +375,7 @@ class InstallerManager extends BaseModule {
                 UNIQUE KEY `key_hash` (`key_hash`),
                 KEY `idx_key_hash` (`key_hash`),
                 KEY `idx_is_active` (`is_active`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'webhooks' => "CREATE TABLE IF NOT EXISTS `webhooks` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -387,7 +391,7 @@ class InstallerManager extends BaseModule {
                 `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
                 KEY `idx_is_active` (`is_active`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'roles' => "CREATE TABLE IF NOT EXISTS `roles` (
                 `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -400,7 +404,7 @@ class InstallerManager extends BaseModule {
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `slug` (`slug`),
                 KEY `name` (`name`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'permissions' => "CREATE TABLE IF NOT EXISTS `permissions` (
                 `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -414,7 +418,7 @@ class InstallerManager extends BaseModule {
                 UNIQUE KEY `slug` (`slug`),
                 KEY `category` (`category`),
                 KEY `name` (`name`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'role_permissions' => "CREATE TABLE IF NOT EXISTS `role_permissions` (
                 `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -427,7 +431,7 @@ class InstallerManager extends BaseModule {
                 KEY `permission_id` (`permission_id`),
                 CONSTRAINT `fk_role_permissions_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
                 CONSTRAINT `fk_role_permissions_permission` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
         ];
         

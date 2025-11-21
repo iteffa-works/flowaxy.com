@@ -11,7 +11,7 @@ declare(strict_types=1);
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $isInstaller = strpos($requestUri, '/install') === 0;
 $databaseIniFile = __DIR__ . '/data/database.ini';
-$defaultTimezone = 'Europe/Kiev';
+$defaultTimezone = 'Europe/Kyiv';
 
 // Установка часового пояса
 $timezone = $defaultTimezone;
@@ -21,11 +21,27 @@ if (!$isInstaller && file_exists($databaseIniFile)) {
     if (class_exists('SettingsManager')) {
         try {
             $tz = settingsManager()->get('timezone', $defaultTimezone);
+            
+            // Автоматическое обновление старого часового пояса на новый
+            if ($tz === 'Europe/Kiev') {
+                $tz = 'Europe/Kyiv';
+                // Обновляем в настройках
+                try {
+                    settingsManager()->set('timezone', 'Europe/Kyiv');
+                } catch (Exception $e) {
+                    error_log("Failed to update timezone setting: " . $e->getMessage());
+                }
+            }
+            
             if (!empty($tz) && in_array($tz, timezone_identifiers_list())) {
                 $timezone = $tz;
+            } else {
+                // Если часовой пояс невалидный, используем значение по умолчанию
+                $timezone = $defaultTimezone;
             }
         } catch (Exception $e) {
             // Используем значение по умолчанию
+            error_log("Error loading timezone: " . $e->getMessage());
         }
     }
 }

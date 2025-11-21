@@ -612,13 +612,17 @@ class AdminPage {
                 $roleId = (int)$userRole['id'];
                 // Разрешения для роли user удалены (разрешения кабинета - это плагин)
                 $permissionSlugs = [];
-                $placeholders = implode(',', array_fill(0, count($permissionSlugs), '?'));
-                $permStmt = $this->db->prepare("SELECT id FROM permissions WHERE slug IN ($placeholders)");
-                $permStmt->execute($permissionSlugs);
-                $permissionIds = $permStmt->fetchAll(PDO::FETCH_COLUMN);
-                $insert = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-                foreach ($permissionIds as $permissionId) {
-                    $insert->execute([$roleId, $permissionId]);
+                
+                // Проверяем, что массив не пустой перед выполнением запроса
+                if (!empty($permissionSlugs)) {
+                    $placeholders = implode(',', array_fill(0, count($permissionSlugs), '?'));
+                    $permStmt = $this->db->prepare("SELECT id FROM permissions WHERE slug IN ($placeholders)");
+                    $permStmt->execute($permissionSlugs);
+                    $permissionIds = $permStmt->fetchAll(PDO::FETCH_COLUMN);
+                    $insert = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                    foreach ($permissionIds as $permissionId) {
+                        $insert->execute([$roleId, $permissionId]);
+                    }
                 }
             }
         } catch (Exception $e) {
