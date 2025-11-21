@@ -46,13 +46,13 @@ class Security {
      * @return string
      */
     public static function csrfToken(): string {
-        Session::start();
+        $session = sessionManager();
         
-        if (!Session::has('csrf_token')) {
-            Session::set('csrf_token', Hash::token(32));
+        if (!$session->has('csrf_token')) {
+            $session->set('csrf_token', Hash::token(32));
         }
         
-        return Session::get('csrf_token');
+        return $session->get('csrf_token');
     }
     
     /**
@@ -62,8 +62,8 @@ class Security {
      * @return bool
      */
     public static function verifyCsrfToken(?string $token = null): bool {
-        Session::start();
-        $sessionToken = Session::get('csrf_token');
+        $session = sessionManager();
+        $sessionToken = $session->get('csrf_token');
         
         if (empty($sessionToken)) {
             return false;
@@ -191,10 +191,10 @@ class Security {
      * @return bool True якщо досягнуто ліміт
      */
     public static function isRateLimited(string $key, int $maxAttempts = 5, int $lockoutTime = 900): bool {
-        Session::start();
+        $session = sessionManager();
         
         $attemptsKey = 'rate_limit_' . md5($key);
-        $attempts = Session::get($attemptsKey, []);
+        $attempts = $session->get($attemptsKey, []);
         $now = time();
         
         // Фільтруємо застарілі спроби
@@ -205,7 +205,7 @@ class Security {
         }
         
         $attempts[] = $now;
-        Session::set($attemptsKey, array_values($attempts));
+        $session->set($attemptsKey, array_values($attempts));
         
         return false;
     }
@@ -217,7 +217,7 @@ class Security {
      * @return void
      */
     public static function resetRateLimit(string $key): void {
-        Session::start();
-        Session::remove('rate_limit_' . md5($key));
+        $session = sessionManager();
+        $session->remove('rate_limit_' . md5($key));
     }
 }

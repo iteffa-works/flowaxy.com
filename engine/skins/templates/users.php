@@ -65,7 +65,8 @@
                                             </button>
                                             <?php if ($user['id'] !== 1): ?>
                                                 <?php
-                                                $currentUserId = (int)Session::get('admin_user_id');
+                                                $session = sessionManager();
+                                                $currentUserId = (int)$session->get('admin_user_id');
                                                 $isCurrentUser = $user['id'] === $currentUserId;
                                                 ?>
                                                 <form method="POST" style="display: inline;" onsubmit="return confirm('Ви впевнені, що хочете видалити цього користувача?')">

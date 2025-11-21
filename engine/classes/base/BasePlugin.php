@@ -241,15 +241,16 @@ abstract class BasePlugin {
      * Создание nonce (аналог wp_create_nonce)
      */
     protected function createNonce(string $action): string {
-        if (!isset($_SESSION['plugin_nonces'])) {
-            $_SESSION['plugin_nonces'] = [];
-        }
+        $session = sessionManager('plugin');
+        $nonces = $session->get('nonces', []);
         
         $nonce = bin2hex(random_bytes(32));
-        $_SESSION['plugin_nonces'][$action] = [
+        $nonces[$action] = [
             'nonce' => $nonce,
             'expires' => time() + 3600 // 1 час
         ];
+        
+        $session->set('nonces', $nonces);
         
         return $nonce;
     }
@@ -258,22 +259,31 @@ abstract class BasePlugin {
      * Проверка nonce (аналог wp_verify_nonce)
      */
     protected function verifyNonce(?string $nonce, string $action): bool {
-        if (empty($nonce) || !isset($_SESSION['plugin_nonces'][$action])) {
+        if (empty($nonce)) {
             return false;
         }
         
-        $stored = $_SESSION['plugin_nonces'][$action];
+        $session = sessionManager('plugin');
+        $nonces = $session->get('nonces', []);
+        
+        if (!isset($nonces[$action])) {
+            return false;
+        }
+        
+        $stored = $nonces[$action];
         
         // Проверяем срок действия
         if (isset($stored['expires']) && $stored['expires'] < time()) {
-            unset($_SESSION['plugin_nonces'][$action]);
+            unset($nonces[$action]);
+            $session->set('nonces', $nonces);
             return false;
         }
         
         // Проверяем nonce
         if (isset($stored['nonce']) && hash_equals($stored['nonce'], $nonce)) {
             // Удаляем использованный nonce (одноразовое использование)
-            unset($_SESSION['plugin_nonces'][$action]);
+            unset($nonces[$action]);
+            $session->set('nonces', $nonces);
             return true;
         }
         

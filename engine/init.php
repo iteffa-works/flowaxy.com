@@ -208,8 +208,9 @@ if (function_exists('addHook')) {
         // Проверяем право доступа или разрешаем для первого пользователя
         $hasAccess = false;
         
-        if (function_exists('Session')) {
-            $userId = Session::get('admin_user_id');
+        if (function_exists('sessionManager')) {
+            $session = sessionManager();
+            $userId = $session->get('admin_user_id');
             // Для первого пользователя всегда разрешаем доступ
             if ($userId == 1) {
                 $hasAccess = true;
@@ -237,8 +238,9 @@ if (function_exists('addHook')) {
         // Проверяем право доступа или разрешаем для первого пользователя
         $hasAccess = false;
         
-        if (function_exists('Session')) {
-            $userId = Session::get('admin_user_id');
+        if (function_exists('sessionManager')) {
+            $session = sessionManager();
+            $userId = $session->get('admin_user_id');
             // Для первого пользователя всегда разрешаем доступ
             if ($userId == 1) {
                 $hasAccess = true;

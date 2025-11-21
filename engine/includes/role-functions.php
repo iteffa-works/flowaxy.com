@@ -41,11 +41,8 @@ if (!function_exists('current_user_can')) {
             return false;
         }
 
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            Session::start();
-        }
-        
-        $userId = Session::get('admin_user_id');
+        $session = sessionManager();
+        $userId = $session->get('admin_user_id');
         if (!$userId) {
             return false;
         }

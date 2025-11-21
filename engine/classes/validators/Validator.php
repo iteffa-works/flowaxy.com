@@ -213,11 +213,29 @@ class Validator {
      * @return bool
      */
     public static function validateCsrfToken(?string $token): bool {
-        if ($token === null || !isset($_SESSION[CSRF_TOKEN_NAME])) {
+        if ($token === null) {
             return false;
         }
         
-        return hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
+        // Используем SessionManager, если доступен, иначе Session
+        if (function_exists('sessionManager')) {
+            $session = sessionManager();
+            $sessionToken = $session->get(CSRF_TOKEN_NAME);
+        } else {
+            if (!class_exists('Session')) {
+                return false;
+            }
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                Session::start();
+            }
+            $sessionToken = Session::get(CSRF_TOKEN_NAME);
+        }
+        
+        if (empty($sessionToken)) {
+            return false;
+        }
+        
+        return hash_equals($sessionToken, $token);
     }
     
     /**

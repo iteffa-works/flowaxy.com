@@ -16,16 +16,17 @@ class LogoutPage {
     }
     
     /**
-     * Вихід з системи (використовуємо Session та Response класи)
+     * Вихід з системи (використовуємо SessionManager та Response класи)
      */
     private function logout() {
-        // Видаляємо дані сесії (використовуємо Session клас)
-        Session::remove(ADMIN_SESSION_NAME);
-        Session::remove('admin_user_id');
-        Session::remove('admin_username');
+        // Видаляємо дані сесії (використовуємо SessionManager)
+        $session = sessionManager();
+        $session->remove(ADMIN_SESSION_NAME);
+        $session->remove('admin_user_id');
+        $session->remove('admin_username');
         
         // Знищуємо сесію
-        Session::destroy();
+        $session->destroy();
         
         // Перенаправляємо на сторінку входу (використовуємо Response клас)
         Response::redirectStatic(UrlHelper::admin('login'));

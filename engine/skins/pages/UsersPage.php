@@ -190,7 +190,8 @@ class UsersPage extends AdminPage {
         }
         
         // Нельзя удалять самого себя
-        $currentUserId = (int)Session::get('admin_user_id');
+        $session = sessionManager();
+        $currentUserId = (int)$session->get('admin_user_id');
         if ($userId === $currentUserId) {
             $this->setMessage('Неможливо видалити себе', 'danger');
             return;

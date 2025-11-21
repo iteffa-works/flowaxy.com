@@ -39,8 +39,9 @@ class ProfilePage extends AdminPage {
      * Получение текущего пользователя
      */
     private function getCurrentUser() {
-        // Використовуємо Session клас
-        $userId = Session::get('admin_user_id');
+        // Використовуємо SessionManager
+        $session = sessionManager();
+        $userId = $session->get('admin_user_id');
         
         if (!$userId) {
             $this->setMessage('Користувач не знайдено', 'danger');
@@ -73,8 +74,9 @@ class ProfilePage extends AdminPage {
             return;
         }
         
-        // Використовуємо Session клас
-        $userId = Session::get('admin_user_id');
+        // Використовуємо SessionManager
+        $session = sessionManager();
+        $userId = $session->get('admin_user_id');
         if (!$userId) {
             $this->setMessage('Користувач не знайдено', 'danger');
             return;
@@ -157,15 +159,17 @@ class ProfilePage extends AdminPage {
                 $stmt = $this->db->prepare("UPDATE users SET username = ?, email = ?, password = ?, updated_at = NOW() WHERE id = ?");
                 $stmt->execute([$username, $email, $hashedPassword, $userId]);
                 
-                // Оновлюємо сесію (використовуємо Session клас)
-                Session::set('admin_username', $username);
+                // Оновлюємо сесію (використовуємо SessionManager)
+                $session = sessionManager();
+                $session->set('admin_username', $username);
             } else {
                 // Оновлюємо тільки username і email
                 $stmt = $this->db->prepare("UPDATE users SET username = ?, email = ?, updated_at = NOW() WHERE id = ?");
                 $stmt->execute([$username, $email, $userId]);
                 
-                // Оновлюємо сесію (використовуємо Session клас)
-                Session::set('admin_username', $username);
+                // Оновлюємо сесію (використовуємо SessionManager)
+                $session = sessionManager();
+                $session->set('admin_username', $username);
             }
             
             $this->db->commit();

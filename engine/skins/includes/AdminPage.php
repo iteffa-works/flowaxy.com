@@ -82,7 +82,8 @@ class AdminPage {
         
         // Проверка прав доступа к адмін-панелі
         if (function_exists('current_user_can')) {
-            $currentUserId = (int)Session::get('admin_user_id');
+            $session = sessionManager();
+            $currentUserId = (int)$session->get('admin_user_id');
             if (!current_user_can('admin.access')) {
                 // Якщо це перший користувач - пробуємо повторно синхронізувати роль та перевірити ще раз
                 if ($currentUserId === 1) {
@@ -99,8 +100,9 @@ class AdminPage {
         }
         
         // Загружаем flash сообщения из сессии (если есть)
-        $flashMessage = Session::flash('admin_message');
-        $flashMessageType = Session::flash('admin_message_type');
+        $session = sessionManager();
+        $flashMessage = $session->flash('admin_message');
+        $flashMessageType = $session->flash('admin_message_type');
         if ($flashMessage) {
             $this->message = $flashMessage;
             $this->messageType = $flashMessageType ?: 'info';
@@ -141,8 +143,9 @@ class AdminPage {
         
         // Если это POST-запрос, сохраняем сообщение в flash для передачи через редирект
         if (Request::getMethod() === 'POST' && !AjaxHandler::isAjax()) {
-            Session::setFlash('admin_message', $message);
-            Session::setFlash('admin_message_type', $type);
+            $session = sessionManager();
+            $session->setFlash('admin_message', $message);
+            $session->setFlash('admin_message_type', $type);
             $this->postProcessed = true;
         }
     }
@@ -488,7 +491,8 @@ class AdminPage {
      * Гарантує, що перший користувач має роль розробника та доступ до адмінки
      */
     private function ensureFirstUserHasAdminAccess(): void {
-        $userId = (int)Session::get('admin_user_id');
+        $session = sessionManager();
+        $userId = (int)$session->get('admin_user_id');
         if ($userId !== 1 || !$this->db) {
             return;
         }

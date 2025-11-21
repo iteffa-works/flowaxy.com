@@ -430,7 +430,14 @@ class RouterManager {
         $databaseIniFile = __DIR__ . '/../../data/database.ini';
         
         // Проверяем, идет ли процесс установки (есть настройки БД в сессии)
-        $isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
+        // Используем Session напрямую, так как sessionManager может быть еще не доступен
+        if (function_exists('sessionManager')) {
+            $session = sessionManager('installer');
+            $isInstallationInProgress = $session->has('db_config') && is_array($session->get('db_config'));
+        } else {
+            // Fallback на прямой доступ к сессии для проверки
+            $isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
+        }
         
         // Если система установлена И процесс установки не идет, блокируем доступ
         if (file_exists($databaseIniFile) && !$isInstallationInProgress) {

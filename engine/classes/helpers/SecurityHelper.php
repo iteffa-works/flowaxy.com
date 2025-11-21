@@ -69,10 +69,8 @@ class SecurityHelper {
         if (!class_exists('Session')) {
             return false;
         }
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            Session::start();
-        }
-        return Session::has(ADMIN_SESSION_NAME) && Session::get(ADMIN_SESSION_NAME) === true;
+        $session = sessionManager();
+        return $session->has(ADMIN_SESSION_NAME) && $session->get(ADMIN_SESSION_NAME) === true;
     }
     
     /**

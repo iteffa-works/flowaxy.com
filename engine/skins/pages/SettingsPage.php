@@ -60,7 +60,8 @@ class SettingsPage extends AdminPage {
         
         // Роли и права
         if (function_exists('current_user_can')) {
-            $userId = Session::get('admin_user_id');
+            $session = sessionManager();
+            $userId = $session->get('admin_user_id');
             $hasRolesAccess = ($userId == 1) || current_user_can('admin.roles');
             
             if ($hasRolesAccess) {
@@ -76,7 +77,8 @@ class SettingsPage extends AdminPage {
         
         // Пользователи (если есть страница)
         if (class_exists('UsersPage') || file_exists(__DIR__ . '/UsersPage.php')) {
-            $userId = Session::get('admin_user_id');
+            $session = sessionManager();
+            $userId = $session->get('admin_user_id');
             $hasUsersAccess = ($userId == 1) || (function_exists('current_user_can') && current_user_can('admin.users'));
             
             if ($hasUsersAccess) {
@@ -170,7 +172,8 @@ class SettingsPage extends AdminPage {
             $categories[$key]['items'] = array_filter($category['items'], function($item) {
                 if (isset($item['permission']) && $item['permission'] !== null) {
                     if (function_exists('current_user_can')) {
-                        $userId = Session::get('admin_user_id');
+                        $session = sessionManager();
+            $userId = $session->get('admin_user_id');
                         // Для первого пользователя всегда разрешаем доступ
                         if ($userId == 1) {
                             return true;

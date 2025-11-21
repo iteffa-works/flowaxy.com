@@ -52,13 +52,14 @@ class LoginPage {
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Успішний вхід (використовуємо Session клас)
-                Session::set(ADMIN_SESSION_NAME, true);
-                Session::set('admin_user_id', $user['id']);
-                Session::set('admin_username', $user['username']);
+                // Успішний вхід (використовуємо SessionManager)
+                $session = sessionManager();
+                $session->set(ADMIN_SESSION_NAME, true);
+                $session->set('admin_user_id', $user['id']);
+                $session->set('admin_username', $user['username']);
                 
                 // Регенеруємо ID сесії для безпеки
-                Session::regenerate();
+                $session->regenerate();
                 
                 Response::redirectStatic(UrlHelper::admin('dashboard'));
             } else {

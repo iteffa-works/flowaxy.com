@@ -18,7 +18,13 @@ $databaseIniFile = __DIR__ . '/../data/database.ini';
 $isAjaxAction = ($action === 'test_db' || $action === 'create_table') && $_SERVER['REQUEST_METHOD'] === 'POST';
 
 // Проверяем, идет ли процесс установки (есть настройки БД в сессии)
-$isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
+if (function_exists('sessionManager')) {
+    $session = sessionManager('installer');
+    $isInstallationInProgress = $session->has('db_config') && is_array($session->get('db_config'));
+} else {
+    // Fallback на прямой доступ к сессии для проверки
+    $isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
+}
 
 // Блокируем доступ только если файл создан И процесс установки не идет
 if (!$isAjaxAction && file_exists($databaseIniFile) && !$isInstallationInProgress) {
@@ -446,8 +452,16 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
  * Загрузка настроек БД из сессии (для использования во время установки)
  */
 function loadDatabaseConfigFromSession(): void {
-    if (isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config'])) {
-        $dbConfig = $_SESSION['install_db_config'];
+    // Используем SessionManager, если доступен, иначе прямой доступ
+    if (function_exists('sessionManager')) {
+        $session = sessionManager('installer');
+        $dbConfig = $session->get('db_config');
+    } else {
+        // Fallback на прямой доступ к сессии
+        $dbConfig = isset($_SESSION['install_db_config']) ? $_SESSION['install_db_config'] : null;
+    }
+    
+    if (is_array($dbConfig) && !empty($dbConfig)) {
         
         // Определяем константы для подключения к БД
         if (!defined('DB_HOST')) {
@@ -466,11 +480,19 @@ function loadDatabaseConfigFromSession(): void {
  * Создание файла database.ini из настроек в сессии
  */
 function saveDatabaseIniFile(): bool {
-    if (!isset($_SESSION['install_db_config']) || !is_array($_SESSION['install_db_config'])) {
+    // Используем SessionManager, если доступен, иначе прямой доступ
+    if (function_exists('sessionManager')) {
+        $session = sessionManager('installer');
+        $dbConfig = $session->get('db_config');
+    } else {
+        // Fallback на прямой доступ к сессии
+        $dbConfig = isset($_SESSION['install_db_config']) ? $_SESSION['install_db_config'] : null;
+    }
+    
+    if (!is_array($dbConfig) || empty($dbConfig)) {
         return false;
     }
     
-    $dbConfig = $_SESSION['install_db_config'];
     $databaseIniFile = __DIR__ . '/../data/database.ini';
     
     try {
@@ -487,7 +509,12 @@ function saveDatabaseIniFile(): bool {
         }
         
         // Очищаем настройки из сессии после успешного сохранения
-        unset($_SESSION['install_db_config']);
+        if (function_exists('sessionManager')) {
+            $session = sessionManager('installer');
+            $session->remove('db_config');
+        } else {
+            unset($_SESSION['install_db_config']);
+        }
         
         return file_exists($databaseIniFile);
     } catch (Exception $e) {
@@ -509,7 +536,13 @@ if ($step === 'database' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         
         // Сохраняем настройки БД в сессию вместо создания файла
-        $_SESSION['install_db_config'] = $dbConfig;
+        if (function_exists('sessionManager')) {
+            $session = sessionManager('installer');
+            $session->set('db_config', $dbConfig);
+        } else {
+            // Fallback на прямой доступ к сессии
+            $_SESSION['install_db_config'] = $dbConfig;
+        }
         
         header('Location: /install?step=tables');
         exit;
@@ -806,8 +839,18 @@ function ensureRolesAndPermissions(PDO $db): void {
 }
 
 // Загружаем настройки БД из сессии для шагов tables и user
-if (($step === 'tables' || $step === 'user') && isset($_SESSION['install_db_config'])) {
-    loadDatabaseConfigFromSession();
+if ($step === 'tables' || $step === 'user') {
+    if (function_exists('sessionManager')) {
+        $session = sessionManager('installer');
+        if ($session->has('db_config')) {
+            loadDatabaseConfigFromSession();
+        }
+    } else {
+        // Fallback на прямой доступ к сессии
+        if (isset($_SESSION['install_db_config'])) {
+            loadDatabaseConfigFromSession();
+        }
+    }
 }
 
 // Передаем результаты проверок системы в шаблон
