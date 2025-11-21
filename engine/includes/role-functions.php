@@ -52,14 +52,29 @@ if (!function_exists('current_user_can')) {
 }
 
 /**
+ * Отримання ID поточного авторизованого користувача (для публічної частини)
+ */
+if (!function_exists('auth_get_current_user_id')) {
+    function auth_get_current_user_id(): ?int {
+        if (!class_exists('Session')) {
+            return null;
+        }
+
+        $session = sessionManager();
+        $userId = $session->get('user_id');
+        if (!$userId) {
+            return null;
+        }
+        
+        return (int)$userId;
+    }
+}
+
+/**
  * Перевірка дозволу у поточного авторизованого користувача (для публічної частини)
  */
 if (!function_exists('auth_user_can')) {
     function auth_user_can(string $permission): bool {
-        if (!function_exists('auth_get_current_user_id')) {
-            return false;
-        }
-        
         $userId = auth_get_current_user_id();
         if (!$userId) {
             return false;
