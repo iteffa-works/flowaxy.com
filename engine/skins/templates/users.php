@@ -27,7 +27,7 @@
                                     <th>ID</th>
                                     <th>Логін</th>
                                     <th>Email</th>
-                                    <th>Ролі</th>
+                                    <th><i class="fas fa-user-shield me-1"></i>Ролі</th>
                                     <th>Створено</th>
                                     <th>Дії</th>
                                 </tr>
@@ -43,11 +43,13 @@
                                             $userRoles = $user['roles'] ?? [];
                                             if (empty($userRoles)):
                                             ?>
-                                                <span class="text-muted">Немає ролей</span>
+                                                <span class="text-muted">
+                                                    <i class="fas fa-user-shield me-1"></i>Немає ролей
+                                                </span>
                                             <?php else: ?>
                                                 <?php foreach ($userRoles as $userRole): ?>
                                                     <span class="badge bg-primary me-1">
-                                                        <?= htmlspecialchars($userRole['name']) ?>
+                                                        <i class="fas fa-user-shield me-1"></i><?= htmlspecialchars($userRole['name']) ?>
                                                     </span>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>

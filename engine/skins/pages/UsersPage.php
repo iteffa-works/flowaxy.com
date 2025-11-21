@@ -103,6 +103,23 @@ class UsersPage extends AdminPage {
             $stmt->execute([$username, $email, $hashedPassword]);
             $userId = (int)$this->db->lastInsertId();
             
+            // Автоматически назначаем роль "Гость" новому пользователю
+            if ($this->roleManager) {
+                try {
+                    // Ищем роль "Гость" по slug 'guest'
+                    $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'guest' LIMIT 1");
+                    $stmt->execute();
+                    $guestRole = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($guestRole && isset($guestRole['id'])) {
+                        $this->roleManager->assignRole($userId, (int)$guestRole['id']);
+                    }
+                } catch (Exception $e) {
+                    // Логируем ошибку, но не прерываем создание пользователя
+                    error_log("Error assigning guest role to user: " . $e->getMessage());
+                }
+            }
+            
             $this->setMessage('Користувач успішно створений', 'success');
             $this->redirect('users');
             exit;

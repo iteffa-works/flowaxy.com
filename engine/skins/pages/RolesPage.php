@@ -144,8 +144,10 @@ class RolesPage extends AdminPage {
                 }
             }
             
-            // Очищаем кеш
-            unset($this->roleManager->rolePermissionsCache[$roleId]);
+            // Очищаем кеш роли через публичный метод RoleManager
+            if ($this->roleManager) {
+                $this->roleManager->clearRoleCache($roleId);
+            }
             
             $this->setMessage('Роль успішно оновлена', 'success');
             Response::redirectStatic(UrlHelper::admin('roles'));
