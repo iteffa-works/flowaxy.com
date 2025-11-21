@@ -164,7 +164,7 @@ class Database {
         }
         
         // Логируем для диагностики (без пароля)
-        error_log('Database::connect() - Host: ' . $dbHost . ', Name: ' . $dbName . ', User: ' . $dbUser . ', Pass: ' . (strlen($dbPass) > 0 ? '***' : 'empty') . ', Charset: ' . $dbCharset . ', Source: ' . (isset($GLOBALS['_INSTALLER_DB_HOST']) ? 'GLOBALS' : 'constants'));
+        // error_log('Database::connect() - Host: ' . $dbHost . ', Name: ' . $dbName . ', User: ' . $dbUser . ', Pass: ' . (strlen($dbPass) > 0 ? '***' : 'empty') . ', Charset: ' . $dbCharset . ', Source: ' . (isset($GLOBALS['_INSTALLER_DB_HOST']) ? 'GLOBALS' : 'constants'));
         
         // Проверяем, что конфигурация БД доступна
         if (empty($dbHost) || empty($dbName)) {
