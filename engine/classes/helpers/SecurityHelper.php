@@ -66,14 +66,13 @@ class SecurityHelper {
      * @return bool
      */
     public static function isAdminLoggedIn(): bool {
-        // Убеждаемся, что Session инициализирован
-        if (!class_exists('Session')) {
+        if (!class_exists('Session') || !Session::isStarted()) {
             return false;
         }
         
         $session = sessionManager();
         
-        // Проверяем базовую авторизацию
+        // Базовая проверка авторизации
         if (!$session->has(ADMIN_SESSION_NAME) || $session->get(ADMIN_SESSION_NAME) !== true) {
             return false;
         }
@@ -86,9 +85,6 @@ class SecurityHelper {
         // Проверяем токен сессии для защиты от одновременного входа
         $sessionToken = $session->get('admin_session_token');
         if (empty($sessionToken)) {
-            // Если токен отсутствует в сессии, проверяем, может быть это старый вход
-            // Разлогиниваем пользователя
-            error_log('SecurityHelper::isAdminLoggedIn() - Session token missing, logging out user ID: ' . $userId);
             self::logout();
             return false;
         }
@@ -101,23 +97,13 @@ class SecurityHelper {
                 $stmt->execute([$userId]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                if (!$user || empty($user['session_token'])) {
-                    // Токен отсутствует в БД - пользователь разлогинен с другого устройства
-                    error_log('SecurityHelper::isAdminLoggedIn() - Session token not found in DB, user logged out from another device. User ID: ' . $userId);
-                    self::logout();
-                    return false;
-                }
-                
-                // Сравниваем токены
-                if (!hash_equals($user['session_token'], $sessionToken)) {
-                    // Токены не совпадают - пользователь зашел с другого устройства
-                    error_log('SecurityHelper::isAdminLoggedIn() - Session tokens do not match, user logged in from another device. User ID: ' . $userId);
+                if (!$user || empty($user['session_token']) || !hash_equals($user['session_token'], $sessionToken)) {
+                    // Токен не совпадает или отсутствует - разлогиниваем
                     self::logout();
                     return false;
                 }
             }
         } catch (Exception $e) {
-            error_log('SecurityHelper::isAdminLoggedIn() - Error checking session token: ' . $e->getMessage());
             // В случае ошибки БД разрешаем доступ (чтобы не блокировать пользователя)
             return true;
         }

@@ -188,16 +188,11 @@
         }
         
         .security-badge small {
-            color: #95a5a6;
             font-size: 0.8125rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-        }
-        
-        .security-badge i {
-            color: #27ae60;
         }
         
         /* Адаптивность */
@@ -244,6 +239,13 @@
                     </div>
                 <?php endif; ?>
                 
+                <?php if (isset($_GET['message']) && $_GET['message'] === 'session_expired'): ?>
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Ваш аккаунт був використаний з іншого пристрою або браузера. Будь ласка, увійдіть знову.
+                    </div>
+                <?php endif; ?>
+                
                 <form method="POST" action="">
                     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
                     
@@ -285,8 +287,13 @@
                 
                 <div class="security-badge">
                     <small>
-                        <i class="fas fa-shield-alt"></i>
-                        Захищено SSL та CSRF токеном
+                        <?php if (isset($isSecureConnection) && $isSecureConnection): ?>
+                            <i class="fas fa-shield-alt" style="color: #27ae60;"></i>
+                            <span style="color: #27ae60;">Захищено SSL та CSRF токеном</span>
+                        <?php else: ?>
+                            <i class="fas fa-shield-alt" style="color: #f39c12;"></i>
+                            <span style="color: #f39c12;">Захищено CSRF токеном</span>
+                        <?php endif; ?>
                     </small>
                 </div>
             </div>

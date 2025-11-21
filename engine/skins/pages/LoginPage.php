@@ -127,18 +127,26 @@ class LoginPage {
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT id, username, password FROM users WHERE username = ?");
+            $stmt = $this->db->prepare("SELECT id, username, password, session_token FROM users WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
+                // Проверяем, есть ли активная сессия (токен в БД)
+                if (!empty($user['session_token'])) {
+                    // Активная сессия существует - блокируем вход
+                    $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
+                    error_log('Login blocked - User ID: ' . $user['id'] . ' already has active session token');
+                    return;
+                }
+                
                 // Успішний вхід (використовуємо SessionManager)
                 $session = sessionManager();
                 
                 // Генерируем уникальный токен сессии для защиты от одновременного входа
                 $sessionToken = bin2hex(random_bytes(32)); // 64 символа
                 
-                // Сохраняем токен в базе данных
+                // Сохраняем токен в БД
                 $stmt = $this->db->prepare("UPDATE users SET session_token = ? WHERE id = ?");
                 $stmt->execute([$sessionToken, $user['id']]);
                 
@@ -146,37 +154,14 @@ class LoginPage {
                 $session->set(ADMIN_SESSION_NAME, true);
                 $session->set('admin_user_id', $user['id']);
                 $session->set('admin_username', $user['username']);
-                $session->set('admin_session_token', $sessionToken); // Сохраняем токен в сессии
+                $session->set('admin_session_token', $sessionToken);
                 
-                error_log('Login: Setting auth data - User ID: ' . $user['id'] . ', Session ID before regenerate: ' . Session::getId());
+                // Регенеруємо ID сесії для безпеки
+                Session::regenerate(true);
                 
-                // Регенеруємо ID сесії для безпеки (данные сохраняются автоматически)
-                $regenerated = Session::regenerate(true);
-                
-                error_log('Login: Session regenerated: ' . ($regenerated ? 'yes' : 'no') . ', New Session ID: ' . Session::getId());
-                
-                // Проверяем, что данные сохранились
-                $session = sessionManager();
-                $checkAuth = $session->get(ADMIN_SESSION_NAME);
-                $checkUserId = $session->get('admin_user_id');
-                $checkToken = $session->get('admin_session_token');
-                error_log('Login: After regenerate - ADMIN_SESSION_NAME: ' . ($checkAuth ? 'true' : 'false') . ', admin_user_id: ' . ($checkUserId ?: 'missing') . ', token: ' . ($checkToken ? 'exists' : 'missing'));
-                
-                // Если данные потерялись, восстанавливаем
-                if (!$checkAuth || !$checkUserId || !$checkToken) {
-                    error_log('Login: WARNING - Auth data lost after regenerate, restoring...');
-                    $session->set(ADMIN_SESSION_NAME, true);
-                    $session->set('admin_user_id', $user['id']);
-                    $session->set('admin_username', $user['username']);
-                    $session->set('admin_session_token', $sessionToken);
-                }
-                
-                error_log('Login successful - User ID: ' . $user['id'] . ', Username: ' . $user['username'] . ', Final Session ID: ' . Session::getId());
-                error_log('Login successful - Final session keys: ' . implode(', ', array_keys($session->all(false))));
-                
-                // НЕ вызываем render() после редиректа
+                // Редирект на dashboard
                 Response::redirectStatic(UrlHelper::admin('dashboard'));
-                exit; // Важно: останавливаем выполнение после редиректа
+                exit;
             } else {
                 $this->error = 'Невірний логін або пароль';
                 error_log('Login failed - Invalid username or password for: ' . $username);
@@ -220,8 +205,25 @@ class LoginPage {
             ]);
         }
         
+        // Определяем, используется ли HTTPS для отображения правильного сообщения
+        $isHttps = false;
+        if (class_exists('UrlHelper')) {
+            $isHttps = UrlHelper::isHttps();
+        } elseif (function_exists('detectProtocol')) {
+            $protocol = detectProtocol();
+            $isHttps = ($protocol === 'https://');
+        } else {
+            $isHttps = (
+                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            );
+        }
+        
         $error = $this->error;
         $csrfToken = SecurityHelper::csrfToken();
+        $isSecureConnection = $isHttps; // Передаем в шаблон
         
         // Логируем для диагностики
         error_log('Login render - Session ID: ' . Session::getId());
