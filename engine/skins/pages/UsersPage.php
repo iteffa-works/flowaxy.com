@@ -303,6 +303,14 @@ class UsersPage extends AdminPage {
             return;
         }
         
+        // Защита: только сам разработчик может менять свой пароль
+        $session = sessionManager();
+        $currentUserId = (int)$session->get('admin_user_id');
+        if ($userId === 1 && $currentUserId !== 1) {
+            $this->setMessage('Неможливо змінити пароль розробника', 'danger');
+            return;
+        }
+        
         if (empty($newPassword) || strlen($newPassword) < 6) {
             $this->setMessage('Пароль має містити мінімум 6 символів', 'danger');
             return;
