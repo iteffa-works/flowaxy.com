@@ -23,11 +23,11 @@ class Logger implements LoggerInterface {
     private ?int $lastRotationTime = null;
     
     // Рівні логування
-    public const LEVEL_DEBUG = 0;
-    public const LEVEL_INFO = 1;
-    public const LEVEL_WARNING = 2;
-    public const LEVEL_ERROR = 3;
-    public const LEVEL_CRITICAL = 4;
+    public const int LEVEL_DEBUG = 0;
+    public const int LEVEL_INFO = 1;
+    public const int LEVEL_WARNING = 2;
+    public const int LEVEL_ERROR = 3;
+    public const int LEVEL_CRITICAL = 4;
     
     private const LEVEL_NAMES = [
         self::LEVEL_DEBUG => 'DEBUG',
