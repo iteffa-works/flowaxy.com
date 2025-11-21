@@ -92,18 +92,21 @@ class WebhookDispatcher {
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
-            curl_close($ch);
+            
+            // В PHP 8.0+ curl_init() повертає CurlHandle об'єкт, який автоматично закривається
+            // curl_close() застаріла для об'єктів, тому просто встановлюємо null
+            $ch = null;
             
             $success = ($httpCode >= 200 && $httpCode < 300) && empty($error);
             
             // Оновлюємо статистику
             $this->webhookManager->updateStats($webhook['id'], $success);
             
-            // Логируем ошибки
+            // Логуємо помилки
             if (!$success) {
                 $logger = logger();
                 if ($logger) {
-                    $logger->warning("Webhook failed: {$webhook['name']}", [
+                    $logger->logWarning("Webhook failed: {$webhook['name']}", [
                         'url' => $url,
                         'event' => $event,
                         'http_code' => $httpCode,
