@@ -6,23 +6,23 @@
  * @version 7.0.0
  */
 
+declare(strict_types=1);
+
 define('FLOWAXY', true);
 define('ROOT_DIR', dirname(__FILE__));
 define('ENGINE_DIR', ROOT_DIR . '/engine');
 
 // Проверка существования необходимых файлов
-$flowaxyFile = ENGINE_DIR . '/flowaxy.php';
-if (!file_exists($flowaxyFile)) {
-    die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ошибка</title></head><body><h1>Файл движка не найден</h1><p>Файл engine/flowaxy.php отсутствует.</p></body></html>');
+$requiredFiles = [
+    'flowaxy.php' => 'Файл движка не найден',
+    'init.php' => 'Файл инициализации не найден'
+];
+
+foreach ($requiredFiles as $file => $errorMessage) {
+    $filePath = ENGINE_DIR . '/' . $file;
+    if (!file_exists($filePath)) {
+        die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ошибка</title></head><body><h1>' . 
+            htmlspecialchars($errorMessage) . '</h1><p>Файл engine/' . htmlspecialchars($file) . ' отсутствует.</p></body></html>');
+    }
+    require_once $filePath;
 }
-
-$initFile = ENGINE_DIR . '/init.php';
-if (!file_exists($initFile)) {
-    die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ошибка</title></head><body><h1>Файл инициализации не найден</h1><p>Файл engine/init.php отсутствует.</p></body></html>');
-}
-
-// Подключаем ядро системы
-require_once $flowaxyFile;
-
-// Подключаем инициализацию
-require_once $initFile;

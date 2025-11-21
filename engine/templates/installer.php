@@ -1004,7 +1004,7 @@ $error = $error ?? null;
         if (tablesList) {
             // Список таблиц для создания (включая api_keys, webhooks и таблицы ролей)
             // Порядок важен: сначала базовые таблицы, затем roles и permissions, затем зависимые таблицы
-            const tables = ['users', 'site_settings', 'plugins', 'plugin_settings', 'theme_settings', 'api_keys', 'webhooks', 'roles', 'permissions', 'role_permissions', 'user_roles'];
+            const tables = ['users', 'site_settings', 'plugins', 'plugin_settings', 'theme_settings', 'api_keys', 'webhooks', 'roles', 'permissions', 'role_permissions'];
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
             const continueBtn = document.getElementById('continueBtn');

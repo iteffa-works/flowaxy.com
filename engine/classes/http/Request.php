@@ -98,16 +98,6 @@ class Request {
         return $_GET[$key] ?? $default;
     }
     
-    /**
-     * Отримання значення з POST (для использования через instance)
-     * 
-     * @param string $key Ключ
-     * @param mixed $default Значення за замовчуванням
-     * @return mixed
-     */
-    public function post(string $key, $default = null) {
-        return $this->postValue($key, $default);
-    }
     
     /**
      * Отримання значення з GET (для использования через instance)
@@ -227,14 +217,4 @@ class Request {
         return $_POST[$key] ?? $default;
     }
     
-    /**
-     * Статичний метод: Швидке отримання значення з GET
-     * 
-     * @param string $key Ключ
-     * @param mixed $default Значення за замовчуванням
-     * @return mixed
-     */
-    public static function get(string $key, $default = null) {
-        return $_GET[$key] ?? $default;
-    }
 }

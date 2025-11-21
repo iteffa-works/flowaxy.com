@@ -12,6 +12,76 @@ $step = $_GET['step'] ?? 'welcome';
 $action = $_GET['action'] ?? '';
 $databaseIniFile = __DIR__ . '/../data/database.ini';
 
+// Блокировка доступа к установщику, если система уже установлена
+// Исключение: AJAX запросы для тестирования БД (action=test_db, create_table)
+// Это нужно для проверки подключения к БД во время установки
+$isAjaxAction = ($action === 'test_db' || $action === 'create_table') && $_SERVER['REQUEST_METHOD'] === 'POST';
+
+if (!$isAjaxAction && file_exists($databaseIniFile)) {
+    // Система уже установлена - блокируем доступ к установщику
+    http_response_code(403);
+    header('Content-Type: text/html; charset=UTF-8');
+    echo '<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Доступ заборонено - Flowaxy CMS</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin: 0 0 20px 0;
+            font-size: 28px;
+        }
+        p {
+            color: #666;
+            margin: 0 0 30px 0;
+            line-height: 1.6;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ Доступ заборонено</h1>
+        <p>Система вже встановлена. Доступ до сторінки установки блокується з метою безпеки.</p>
+        <a href="/" class="btn">Перейти на головну</a>
+        <a href="/admin" class="btn" style="margin-left: 10px; background: #764ba2;">Перейти в адмінку</a>
+    </div>
+</body>
+</html>';
+    exit;
+}
+
 // Инициализация переменных для проверки системы
 $systemChecks = [];
 $systemErrors = [];
@@ -273,8 +343,8 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $conn->exec($sql);
             
-            // После создания последней таблицы ролей (user_roles) выполняем SQL для создания ролей и разрешений
-            if ($table === 'user_roles') {
+            // После создания последней таблицы ролей (role_permissions) выполняем SQL для создания ролей и разрешений
+            if ($table === 'role_permissions') {
                 try {
                     $rolesSqlFile = __DIR__ . '/../db/roles_permissions.sql';
                     if (file_exists($rolesSqlFile)) {
@@ -307,11 +377,11 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                     }
                                 }
                             }
-                            error_log('Roles and permissions SQL executed successfully after user_roles table creation');
+                            error_log('Roles and permissions SQL executed successfully after role_permissions table creation');
                         }
                     }
                 } catch (Exception $e) {
-                    error_log("Error executing roles SQL after user_roles creation: " . $e->getMessage());
+                    error_log("Error executing roles SQL after role_permissions creation: " . $e->getMessage());
                 }
             }
             
@@ -546,7 +616,7 @@ if ($step === 'user') {
             } else {
                 $db = DatabaseHelper::getConnection();
                 
-                // Проверяем, что роли и разрешения созданы (они должны быть созданы после создания таблицы user_roles)
+                // Проверяем, что роли и разрешения созданы (они должны быть созданы после создания таблицы role_permissions)
                 $stmt = $db->query("SELECT COUNT(*) FROM roles");
                 $rolesCount = (int)$stmt->fetchColumn();
                 
@@ -570,8 +640,9 @@ if ($step === 'user') {
                     if ($role) {
                         $roleId = (int)$role['id'];
                         // Назначаем роль разработчика
-                        $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-                        $stmt->execute([$userId, $roleId]);
+                        // Назначаем роль пользователю (role_ids в users)
+                        $stmt = $db->prepare("UPDATE users SET role_ids = ? WHERE id = ?");
+                        $stmt->execute([json_encode([$roleId]), $userId]);
                     } else {
                         // Если роль не найдена, это критическая ошибка
                         error_log("Critical: Role 'developer' not found. Creating it manually...");
@@ -589,8 +660,9 @@ if ($step === 'user') {
                         }
                         
                         // Назначаем роль пользователю
-                        $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-                        $stmt->execute([$userId, $roleId]);
+                        // Назначаем роль пользователю (role_ids в users)
+                        $stmt = $db->prepare("UPDATE users SET role_ids = ? WHERE id = ?");
+                        $stmt->execute([json_encode([$roleId]), $userId]);
                     }
                 } catch (Exception $e) {
                     error_log("Error assigning developer role: " . $e->getMessage());
@@ -617,12 +689,11 @@ function ensureRolesAndPermissions(PDO $db): void {
         $rolesCount = (int)$stmt->fetchColumn();
         
         if ($rolesCount === 0) {
-            // Создаем базовые роли
+            // Создаем базовые роли (только системные: Guest, user, developer)
             $roles = [
                 ['Разработчик', 'developer', 'Полный доступ ко всем функциям системы. Роль создается только при установке движка и не может быть удалена.', 1],
-                ['Администратор', 'admin', 'Полный доступ ко всем функциям системы', 1],
                 ['Пользователь', 'user', 'Обычный пользователь с базовыми правами', 1],
-                ['Модератор', 'moderator', 'Модератор с расширенными правами', 0]
+                ['Гость', 'guest', 'Базовая роль для неавторизованных пользователей', 1]
             ];
             
             foreach ($roles as $role) {
@@ -646,11 +717,6 @@ function ensureRolesAndPermissions(PDO $db): void {
                 ['Просмотр логов', 'admin.logs.view', 'Просмотр системных логов', 'admin'],
                 ['Управление пользователями', 'admin.users', 'Создание, редактирование и удаление пользователей', 'admin'],
                 ['Управление ролями', 'admin.roles', 'Управление ролями и правами доступа', 'admin'],
-                // Кабинет
-                ['Доступ к кабинету', 'cabinet.access', 'Доступ к личному кабинету', 'cabinet'],
-                ['Редактирование профиля', 'cabinet.profile.edit', 'Редактирование собственного профиля', 'cabinet'],
-                ['Просмотр настроек', 'cabinet.settings.view', 'Просмотр настроек кабинета', 'cabinet'],
-                ['Изменение настроек', 'cabinet.settings.edit', 'Изменение настроек кабинета', 'cabinet']
             ];
             
             foreach ($permissions as $permission) {
@@ -673,38 +739,12 @@ function ensureRolesAndPermissions(PDO $db): void {
                 }
             }
             
-            // Назначаем базовые разрешения роли admin
-            $stmt = $db->prepare("SELECT id FROM roles WHERE slug = 'admin' LIMIT 1");
-            $stmt->execute();
-            $adminRole = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($adminRole) {
-                $roleId = (int)$adminRole['id'];
-                $stmt = $db->prepare("SELECT id FROM permissions WHERE category = 'admin'");
-                $stmt->execute();
-                $adminPermissionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                foreach ($adminPermissionIds as $permissionId) {
-                    $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-                    $stmt->execute([$roleId, $permissionId]);
-                }
-            }
-            
             // Назначаем базовые разрешения роли user
             $stmt = $db->prepare("SELECT id FROM roles WHERE slug = 'user' LIMIT 1");
             $stmt->execute();
             $userRole = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($userRole) {
-                $roleId = (int)$userRole['id'];
-                $cabinetPermissions = ['cabinet.access', 'cabinet.profile.edit', 'cabinet.settings.view', 'cabinet.settings.edit'];
-                $stmt = $db->prepare("SELECT id FROM permissions WHERE slug IN ('" . implode("','", $cabinetPermissions) . "')");
-                $stmt->execute();
-                $userPermissionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                foreach ($userPermissionIds as $permissionId) {
-                    $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-                    $stmt->execute([$roleId, $permissionId]);
-                }
-            }
+            // Разрешения для роли user удалены (разрешения кабинета - это плагин)
         }
     } catch (Exception $e) {
         error_log("Error ensuring roles and permissions: " . $e->getMessage());

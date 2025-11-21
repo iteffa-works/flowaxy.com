@@ -10,13 +10,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class RolesPage extends AdminPage {
-    protected string $pageTitle = 'Ролі та права доступу - Flowaxy CMS';
-    protected string $templateName = 'roles';
+    protected $templateName = 'roles';
     
     private ?RoleManager $roleManager = null;
     
     public function __construct() {
         parent::__construct();
+        $this->pageTitle = 'Ролі та права доступу - Flowaxy CMS';
         $this->setPageHeader(
             'Ролі та права доступу',
             'Управління ролями та правами доступу користувачів',
@@ -29,8 +29,10 @@ class RolesPage extends AdminPage {
     }
     
     public function handle(): void {
-        if (Request::getMethod() === 'POST') {
-            $action = Request::post('action', '');
+        $request = Request::getInstance();
+        
+        if ($request->method() === 'POST') {
+            $action = $request->post('action', '');
             
             switch ($action) {
                 case 'create_role':
@@ -57,6 +59,12 @@ class RolesPage extends AdminPage {
             }
         }
         
+        // Проверяем, нужна ли страница редактирования
+        $editId = (int)$request->query('edit', 0);
+        if ($editId > 0) {
+            $this->templateName = 'role-edit';
+        }
+        
         $this->render();
     }
     
@@ -70,9 +78,10 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        $name = Request::post('name', '');
-        $slug = Request::post('slug', '');
-        $description = Request::post('description', '');
+        $request = Request::getInstance();
+        $name = $request->post('name', '');
+        $slug = $request->post('slug', '');
+        $description = $request->post('description', '');
         
         if (empty($name) || empty($slug)) {
             $this->setMessage('Назва та slug ролі обов\'язкові', 'danger');
@@ -93,8 +102,57 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        // TODO: Реализовать обновление роли
-        $this->setMessage('Оновлення ролі буде реалізовано в наступній версії', 'info');
+        if (!$this->roleManager) {
+            $this->setMessage('Помилка: RoleManager не доступний', 'danger');
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $roleId = (int)$request->post('role_id', 0);
+        if ($roleId <= 0) {
+            $this->setMessage('Невірний ID ролі', 'danger');
+            return;
+        }
+        
+        $name = $request->post('name', '');
+        $description = $request->post('description', '');
+        $isDefault = $request->post('is_default', 0) ? 1 : 0;
+        $permissions = $request->post('permissions', []);
+        
+        if (empty($name)) {
+            $this->setMessage('Назва ролі обов\'язкова', 'danger');
+            return;
+        }
+        
+        // Обновляем роль
+        try {
+            $stmt = $this->db->prepare("UPDATE roles SET name = ?, description = ? WHERE id = ?");
+            $stmt->execute([$name, $description, $roleId]);
+            
+            // Удаляем все разрешения роли
+            $stmt = $this->db->prepare("DELETE FROM role_permissions WHERE role_id = ?");
+            $stmt->execute([$roleId]);
+            
+            // Добавляем новые разрешения
+            if (!empty($permissions) && is_array($permissions)) {
+                $stmt = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                foreach ($permissions as $permissionId) {
+                    $permissionId = (int)$permissionId;
+                    if ($permissionId > 0) {
+                        $stmt->execute([$roleId, $permissionId]);
+                    }
+                }
+            }
+            
+            // Очищаем кеш
+            unset($this->roleManager->rolePermissionsCache[$roleId]);
+            
+            $this->setMessage('Роль успішно оновлена', 'success');
+            Response::redirectStatic(UrlHelper::admin('roles'));
+        } catch (Exception $e) {
+            error_log("RolesPage handleUpdateRole error: " . $e->getMessage());
+            $this->setMessage('Помилка при оновленні ролі', 'danger');
+        }
     }
     
     private function handleDeleteRole(): void {
@@ -107,7 +165,8 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        $roleId = (int)Request::post('role_id', 0);
+        $request = Request::getInstance();
+        $roleId = (int)$request->post('role_id', 0);
         
         if ($roleId <= 0) {
             $this->setMessage('Невірний ID ролі', 'danger');
@@ -133,8 +192,9 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        $roleId = (int)Request::post('role_id', 0);
-        $permissionId = (int)Request::post('permission_id', 0);
+        $request = Request::getInstance();
+        $roleId = (int)$request->post('role_id', 0);
+        $permissionId = (int)$request->post('permission_id', 0);
         
         if ($roleId <= 0 || $permissionId <= 0) {
             $this->setMessage('Невірні параметри', 'danger');
@@ -160,8 +220,9 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        $roleId = (int)Request::post('role_id', 0);
-        $permissionId = (int)Request::post('permission_id', 0);
+        $request = Request::getInstance();
+        $roleId = (int)$request->post('role_id', 0);
+        $permissionId = (int)$request->post('permission_id', 0);
         
         if ($roleId <= 0 || $permissionId <= 0) {
             $this->setMessage('Невірні параметри', 'danger');
@@ -187,8 +248,9 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        $userId = (int)Request::post('user_id', 0);
-        $roleId = (int)Request::post('role_id', 0);
+        $request = Request::getInstance();
+        $userId = (int)$request->post('user_id', 0);
+        $roleId = (int)$request->post('role_id', 0);
         
         if ($userId <= 0 || $roleId <= 0) {
             $this->setMessage('Невірні параметри', 'danger');
@@ -214,8 +276,9 @@ class RolesPage extends AdminPage {
             return;
         }
         
-        $userId = (int)Request::post('user_id', 0);
-        $roleId = (int)Request::post('role_id', 0);
+        $request = Request::getInstance();
+        $userId = (int)$request->post('user_id', 0);
+        $roleId = (int)$request->post('role_id', 0);
         
         if ($userId <= 0 || $roleId <= 0) {
             $this->setMessage('Невірні параметри', 'danger');
@@ -234,22 +297,82 @@ class RolesPage extends AdminPage {
     protected function getTemplateData(): array {
         $data = parent::getTemplateData();
         
+        // Проверяем, нужна ли страница редактирования
+        $request = Request::getInstance();
+        $editId = (int)$request->query('edit', 0);
+        
         if ($this->roleManager) {
-            $data['roles'] = $this->roleManager->getAllRoles();
-            $data['permissions'] = $this->roleManager->getAllPermissions();
-            $data['permissionsByCategory'] = $this->groupPermissionsByCategory($data['permissions']);
-            
-            // Получаем пользователей для назначения ролей
-            try {
-                $stmt = $this->db->query("SELECT id, username, email FROM users ORDER BY username");
-                $data['users'] = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (Exception $e) {
-                $data['users'] = [];
-            }
-            
-            // Для каждой роли получаем разрешения
-            foreach ($data['roles'] as &$role) {
-                $role['permissions'] = $this->roleManager->getRolePermissions($role['id']);
+            if ($editId > 0) {
+                // Страница редактирования роли
+                try {
+                    $stmt = $this->db->prepare("SELECT * FROM roles WHERE id = ?");
+                    $stmt->execute([$editId]);
+                    $data['role'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$data['role']) {
+                        $this->setMessage('Роль не знайдена', 'danger');
+                        Response::redirectStatic(UrlHelper::admin('roles'));
+                    }
+                    
+                    // Получаем создателя роли, если поле created_by существует
+                    if (!empty($data['role']['created_by'])) {
+                        try {
+                            $stmt = $this->db->prepare("SELECT username FROM users WHERE id = ?");
+                            $stmt->execute([$data['role']['created_by']]);
+                            $creator = $stmt->fetch(PDO::FETCH_ASSOC);
+                            $data['role']['created_by_username'] = $creator['username'] ?? null;
+                        } catch (Exception $e) {
+                            $data['role']['created_by_username'] = null;
+                        }
+                    }
+                    
+                    // Получаем разрешения роли
+                    $data['role']['permissions'] = $this->roleManager->getRolePermissions($editId);
+                    $rolePermissionIds = array_column($data['role']['permissions'], 'id');
+                    $data['role']['permission_ids'] = $rolePermissionIds;
+                    
+                    // Получаем все разрешения сгруппированные по категориям
+                    $data['permissions'] = $this->roleManager->getAllPermissions();
+                    $data['permissionsByCategory'] = $this->groupPermissionsByCategory($data['permissions']);
+                } catch (Exception $e) {
+                    error_log("RolesPage getTemplateData error: " . $e->getMessage());
+                    $data['role'] = null;
+                } catch (Exception $e) {
+                    error_log("RolesPage getTemplateData error: " . $e->getMessage());
+                    $data['role'] = null;
+                }
+            } else {
+                // Список ролей
+                $data['roles'] = $this->roleManager->getAllRoles();
+                $data['permissions'] = $this->roleManager->getAllPermissions();
+                $data['permissionsByCategory'] = $this->groupPermissionsByCategory($data['permissions']);
+                
+                // Получаем пользователей для назначения ролей
+                try {
+                    $stmt = $this->db->query("SELECT id, username, email FROM users ORDER BY username");
+                    $data['users'] = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (Exception $e) {
+                    $data['users'] = [];
+                }
+                
+                // Для каждой роли получаем разрешения и создателя
+                foreach ($data['roles'] as &$role) {
+                    $role['permissions'] = $this->roleManager->getRolePermissions($role['id']);
+                    
+                    // Получаем создателя роли, если поле created_by существует
+                    if (isset($role['created_by']) && !empty($role['created_by'])) {
+                        try {
+                            $stmt = $this->db->prepare("SELECT username FROM users WHERE id = ?");
+                            $stmt->execute([$role['created_by']]);
+                            $creator = $stmt->fetch(PDO::FETCH_ASSOC);
+                            $role['created_by_username'] = $creator['username'] ?? null;
+                        } catch (Exception $e) {
+                            $role['created_by_username'] = null;
+                        }
+                    } else {
+                        $role['created_by_username'] = null;
+                    }
+                }
             }
         } else {
             $data['roles'] = [];

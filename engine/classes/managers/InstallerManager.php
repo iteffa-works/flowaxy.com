@@ -22,8 +22,7 @@ class InstallerManager extends BaseModule {
         'webhooks',
         'roles',
         'permissions',
-        'role_permissions',
-        'user_roles'
+        'role_permissions'
     ];
     
     private static ?string $mysqlVersion = null;
@@ -349,6 +348,7 @@ class InstallerManager extends BaseModule {
                 `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
                 `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                 `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                `role_ids` JSON DEFAULT NULL COMMENT 'Массив ID ролей пользователя',
                 `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
@@ -429,18 +429,6 @@ class InstallerManager extends BaseModule {
                 CONSTRAINT `fk_role_permissions_permission` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             
-            'user_roles' => "CREATE TABLE IF NOT EXISTS `user_roles` (
-                `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-                `user_id` INT(11) UNSIGNED NOT NULL,
-                `role_id` INT(11) UNSIGNED NOT NULL,
-                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`),
-                UNIQUE KEY `user_role` (`user_id`, `role_id`),
-                KEY `user_id` (`user_id`),
-                KEY `role_id` (`role_id`),
-                CONSTRAINT `fk_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-                CONSTRAINT `fk_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         ];
         
         // Для MySQL 8.0+ можно использовать дополнительные оптимизации

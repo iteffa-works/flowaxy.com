@@ -80,7 +80,7 @@ spl_autoload_register(function (string $className): void {
         'ScssCompiler' => 'compilers', 'Validator' => 'validators',
         'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
         'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
-        'CentralRouter' => 'http',
+        'RouterManager' => 'managers',
         'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
         'ModuleLoader' => 'system', 'HookManager' => 'system',
         'RoleManager' => 'managers',

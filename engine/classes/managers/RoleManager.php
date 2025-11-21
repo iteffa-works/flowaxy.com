@@ -63,14 +63,29 @@ class RoleManager {
      */
     public function getUserPermissions(int $userId): array {
         try {
+            // Получаем role_ids из users
+            $stmt = $this->db->prepare("SELECT role_ids FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user || empty($user['role_ids'])) {
+                return [];
+            }
+            
+            $roleIds = json_decode($user['role_ids'], true);
+            if (!is_array($roleIds) || empty($roleIds)) {
+                return [];
+            }
+            
+            // Получаем разрешения для всех ролей пользователя
+            $placeholders = implode(',', array_fill(0, count($roleIds), '?'));
             $stmt = $this->db->prepare("
                 SELECT DISTINCT p.slug
                 FROM permissions p
                 INNER JOIN role_permissions rp ON p.id = rp.permission_id
-                INNER JOIN user_roles ur ON rp.role_id = ur.role_id
-                WHERE ur.user_id = ?
+                WHERE rp.role_id IN ($placeholders)
             ");
-            $stmt->execute([$userId]);
+            $stmt->execute($roleIds);
             $result = $stmt->fetchAll(PDO::FETCH_COLUMN);
             return $result ?: [];
         } catch (Exception $e) {
@@ -89,14 +104,31 @@ class RoleManager {
         }
         
         try {
-            $stmt = $this->db->prepare("
-                SELECT r.id, r.name, r.slug, r.description, r.is_system
-                FROM roles r
-                INNER JOIN user_roles ur ON r.id = ur.role_id
-                WHERE ur.user_id = ?
-                ORDER BY r.name
-            ");
+            // Получаем role_ids из users
+            $stmt = $this->db->prepare("SELECT role_ids FROM users WHERE id = ?");
             $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user || empty($user['role_ids'])) {
+                $this->userRolesCache[$userId] = [];
+                return [];
+            }
+            
+            $roleIds = json_decode($user['role_ids'], true);
+            if (!is_array($roleIds) || empty($roleIds)) {
+                $this->userRolesCache[$userId] = [];
+                return [];
+            }
+            
+            // Получаем роли по ID
+            $placeholders = implode(',', array_fill(0, count($roleIds), '?'));
+            $stmt = $this->db->prepare("
+                SELECT id, name, slug, description, is_system
+                FROM roles
+                WHERE id IN ($placeholders)
+                ORDER BY name
+            ");
+            $stmt->execute($roleIds);
             $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $this->userRolesCache[$userId] = $roles ?: [];
             return $this->userRolesCache[$userId];
@@ -111,11 +143,24 @@ class RoleManager {
      */
     public function assignRole(int $userId, int $roleId): bool {
         try {
-            $stmt = $this->db->prepare("
-                INSERT IGNORE INTO user_roles (user_id, role_id)
-                VALUES (?, ?)
-            ");
-            $stmt->execute([$userId, $roleId]);
+            // Получаем текущие role_ids
+            $stmt = $this->db->prepare("SELECT role_ids FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $roleIds = [];
+            if ($user && !empty($user['role_ids'])) {
+                $roleIds = json_decode($user['role_ids'], true) ?: [];
+            }
+            
+            // Добавляем новую роль, если её ещё нет
+            if (!in_array($roleId, $roleIds)) {
+                $roleIds[] = $roleId;
+                $roleIdsJson = json_encode($roleIds);
+                
+                $stmt = $this->db->prepare("UPDATE users SET role_ids = ? WHERE id = ?");
+                $stmt->execute([$roleIdsJson, $userId]);
+            }
             
             // Очищаем кеш
             unset($this->userRolesCache[$userId]);
@@ -133,11 +178,26 @@ class RoleManager {
      */
     public function removeRole(int $userId, int $roleId): bool {
         try {
-            $stmt = $this->db->prepare("
-                DELETE FROM user_roles
-                WHERE user_id = ? AND role_id = ?
-            ");
-            $stmt->execute([$userId, $roleId]);
+            // Получаем текущие role_ids
+            $stmt = $this->db->prepare("SELECT role_ids FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user || empty($user['role_ids'])) {
+                return true; // Ролей нет, ничего делать не нужно
+            }
+            
+            $roleIds = json_decode($user['role_ids'], true) ?: [];
+            
+            // Удаляем роль из массива
+            $roleIds = array_filter($roleIds, function($id) use ($roleId) {
+                return (int)$id !== $roleId;
+            });
+            $roleIds = array_values($roleIds); // Переиндексируем массив
+            
+            $roleIdsJson = json_encode($roleIds);
+            $stmt = $this->db->prepare("UPDATE users SET role_ids = ? WHERE id = ?");
+            $stmt->execute([$roleIdsJson, $userId]);
             
             // Очищаем кеш
             unset($this->userRolesCache[$userId]);

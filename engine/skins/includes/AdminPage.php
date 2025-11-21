@@ -496,14 +496,22 @@ class AdminPage {
         try {
             $this->ensureRolesAndPermissionsExist();
 
-            $stmt = $this->db->prepare("
-                SELECT COUNT(*)
-                FROM user_roles ur
-                INNER JOIN roles r ON ur.role_id = r.id
-                WHERE ur.user_id = ? AND r.slug = 'developer'
-            ");
+            // Проверяем, есть ли роль developer у пользователя через role_ids
+            $stmt = $this->db->prepare("SELECT role_ids FROM users WHERE id = ?");
             $stmt->execute([$userId]);
-            $hasDeveloperRole = (int)$stmt->fetchColumn() > 0;
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $hasDeveloperRole = false;
+            if ($user && !empty($user['role_ids'])) {
+                $roleIds = json_decode($user['role_ids'], true) ?: [];
+                // Проверяем, есть ли роль developer
+                $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'developer' LIMIT 1");
+                $stmt->execute();
+                $devRole = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($devRole && in_array((int)$devRole['id'], $roleIds)) {
+                    $hasDeveloperRole = true;
+                }
+            }
 
             if (!$hasDeveloperRole) {
                 $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'developer' LIMIT 1");
@@ -512,8 +520,17 @@ class AdminPage {
 
                 if ($role) {
                     $roleId = (int)$role['id'];
-                    $stmt = $this->db->prepare("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)");
-                    $stmt->execute([$userId, $roleId]);
+                    // Получаем текущие role_ids
+                    $roleIds = [];
+                    if ($user && !empty($user['role_ids'])) {
+                        $roleIds = json_decode($user['role_ids'], true) ?: [];
+                    }
+                    // Добавляем роль developer
+                    if (!in_array($roleId, $roleIds)) {
+                        $roleIds[] = $roleId;
+                        $stmt = $this->db->prepare("UPDATE users SET role_ids = ? WHERE id = ?");
+                        $stmt->execute([json_encode($roleIds), $userId]);
+                    }
                 }
             }
 
@@ -540,9 +557,8 @@ class AdminPage {
             if ($rolesCount === 0) {
                 $roles = [
                     ['Разработчик', 'developer', 'Повний доступ до всіх функцій системи. Роль не може бути видалена.', 1],
-                    ['Администратор', 'admin', 'Повний доступ до адмін-панелі', 1],
                     ['Користувач', 'user', 'Базові права користувача', 1],
-                    ['Модератор', 'moderator', 'Розширені права модератора', 0],
+                    ['Гость', 'guest', 'Базова роль для неавторизованих користувачів', 1],
                 ];
 
                 foreach ($roles as $roleData) {
@@ -563,10 +579,6 @@ class AdminPage {
                     ['Перегляд логів', 'admin.logs.view', 'Перегляд системних логів', 'admin'],
                     ['Управління користувачами', 'admin.users', 'Створення, редагування та видалення користувачів', 'admin'],
                     ['Управління ролями', 'admin.roles', 'Управління ролями та правами доступу', 'admin'],
-                    ['Доступ до кабінету', 'cabinet.access', 'Доступ до особистого кабінету', 'cabinet'],
-                    ['Редагування профілю', 'cabinet.profile.edit', 'Редагування власного профілю', 'cabinet'],
-                    ['Перегляд налаштувань кабінету', 'cabinet.settings.view', 'Перегляд налаштувань кабінету', 'cabinet'],
-                    ['Зміна налаштувань кабінету', 'cabinet.settings.edit', 'Зміна налаштувань кабінету', 'cabinet'],
                 ];
 
                 foreach ($permissions as $permissionData) {
@@ -588,24 +600,14 @@ class AdminPage {
                 }
             }
 
-            $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'admin' LIMIT 1");
-            $stmt->execute();
-            $adminRole = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($adminRole) {
-                $roleId = (int)$adminRole['id'];
-                $permissionIds = $this->db->query("SELECT id FROM permissions WHERE category = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
-                $insert = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-                foreach ($permissionIds as $permissionId) {
-                    $insert->execute([$roleId, $permissionId]);
-                }
-            }
-
+            // Назначаем базовые разрешения роли user
             $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'user' LIMIT 1");
             $stmt->execute();
             $userRole = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($userRole) {
                 $roleId = (int)$userRole['id'];
-                $permissionSlugs = ['cabinet.access', 'cabinet.profile.edit', 'cabinet.settings.view'];
+                // Разрешения для роли user удалены (разрешения кабинета - это плагин)
+                $permissionSlugs = [];
                 $placeholders = implode(',', array_fill(0, count($permissionSlugs), '?'));
                 $permStmt = $this->db->prepare("SELECT id FROM permissions WHERE slug IN ($placeholders)");
                 $permStmt->execute($permissionSlugs);

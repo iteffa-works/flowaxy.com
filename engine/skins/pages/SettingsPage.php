@@ -76,13 +76,18 @@ class SettingsPage extends AdminPage {
         
         // Пользователи (если есть страница)
         if (class_exists('UsersPage') || file_exists(__DIR__ . '/UsersPage.php')) {
-            $categories['users']['items'][] = [
-                'title' => 'Користувачі',
-                'description' => 'Управління користувачами системи',
-                'url' => UrlHelper::admin('users'),
-                'icon' => 'fas fa-user-friends',
-                'permission' => 'admin.users'
-            ];
+            $userId = Session::get('admin_user_id');
+            $hasUsersAccess = ($userId == 1) || (function_exists('current_user_can') && current_user_can('admin.users'));
+            
+            if ($hasUsersAccess) {
+                $categories['users']['items'][] = [
+                    'title' => 'Користувачі',
+                    'description' => 'Управління користувачами системи',
+                    'url' => UrlHelper::admin('users'),
+                    'icon' => 'fas fa-users',
+                    'permission' => 'admin.users'
+                ];
+            }
         }
         
         // Профиль
@@ -132,7 +137,7 @@ class SettingsPage extends AdminPage {
                     'title' => 'Webhooks',
                     'description' => 'Управління webhooks',
                     'url' => UrlHelper::admin('webhooks'),
-                    'icon' => 'fas fa-webhook',
+                    'icon' => 'fas fa-code-branch',
                     'permission' => 'admin.settings'
                 ]
             ]

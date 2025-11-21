@@ -7,6 +7,6 @@
 
 declare(strict_types=1);
 
-$centralRouter = CentralRouter::getInstance();
-$centralRouter->dispatch();
+$routerManager = RouterManager::getInstance();
+$routerManager->dispatch();
 
