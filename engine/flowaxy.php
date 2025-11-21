@@ -80,7 +80,9 @@ spl_autoload_register(function (string $className): void {
         'ScssCompiler' => 'compilers', 'Validator' => 'validators',
         'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
         'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
-        'RouterManager' => 'managers',
+        'StorageInterface' => 'storage',
+        'RouterManager' => 'managers', 'CookieManager' => 'managers', 'SessionManager' => 'managers', 
+        'StorageManager' => 'managers', 'StorageFactory' => 'managers',
         'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
         'ModuleLoader' => 'system', 'HookManager' => 'system',
         'RoleManager' => 'managers',
@@ -112,7 +114,7 @@ spl_autoload_register(function (string $className): void {
         }
     }
     
-    foreach (['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system'] as $dir) {
+    foreach (['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system', 'storage'] as $dir) {
         $file = $classesDir . $dir . '/' . $className . '.php';
         if (file_exists($file)) { require_once $file; return; }
     }

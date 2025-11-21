@@ -17,7 +17,11 @@ $databaseIniFile = __DIR__ . '/../data/database.ini';
 // Это нужно для проверки подключения к БД во время установки
 $isAjaxAction = ($action === 'test_db' || $action === 'create_table') && $_SERVER['REQUEST_METHOD'] === 'POST';
 
-if (!$isAjaxAction && file_exists($databaseIniFile)) {
+// Проверяем, идет ли процесс установки (есть настройки БД в сессии)
+$isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
+
+// Блокируем доступ только если файл создан И процесс установки не идет
+if (!$isAjaxAction && file_exists($databaseIniFile) && !$isInstallationInProgress) {
     // Система уже установлена - блокируем доступ к установщику
     http_response_code(403);
     header('Content-Type: text/html; charset=UTF-8');
@@ -171,8 +175,8 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        // Загрузка конфигурации БД
-        loadDatabaseConfig(true);
+        // Загрузка конфигурации БД из сессии
+        loadDatabaseConfigFromSession();
         
         $data = json_decode(file_get_contents('php://input'), true);
         $table = $data['table'] ?? '';
@@ -438,6 +442,60 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+/**
+ * Загрузка настроек БД из сессии (для использования во время установки)
+ */
+function loadDatabaseConfigFromSession(): void {
+    if (isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config'])) {
+        $dbConfig = $_SESSION['install_db_config'];
+        
+        // Определяем константы для подключения к БД
+        if (!defined('DB_HOST')) {
+            $host = $dbConfig['host'] ?? '127.0.0.1';
+            $port = $dbConfig['port'] ?? 3306;
+            define('DB_HOST', $host . ':' . $port);
+        }
+        if (!defined('DB_NAME')) define('DB_NAME', $dbConfig['name'] ?? '');
+        if (!defined('DB_USER')) define('DB_USER', $dbConfig['user'] ?? 'root');
+        if (!defined('DB_PASS')) define('DB_PASS', $dbConfig['pass'] ?? '');
+        if (!defined('DB_CHARSET')) define('DB_CHARSET', $dbConfig['charset'] ?? 'utf8mb4');
+    }
+}
+
+/**
+ * Создание файла database.ini из настроек в сессии
+ */
+function saveDatabaseIniFile(): bool {
+    if (!isset($_SESSION['install_db_config']) || !is_array($_SESSION['install_db_config'])) {
+        return false;
+    }
+    
+    $dbConfig = $_SESSION['install_db_config'];
+    $databaseIniFile = __DIR__ . '/../data/database.ini';
+    
+    try {
+        if (class_exists('Ini')) {
+            $ini = new Ini();
+            $ini->setSection('database', $dbConfig);
+            $ini->save($databaseIniFile);
+        } else {
+            $content = "[database]\n";
+            foreach ($dbConfig as $k => $v) {
+                $content .= "{$k} = {$v}\n";
+            }
+            @file_put_contents($databaseIniFile, $content);
+        }
+        
+        // Очищаем настройки из сессии после успешного сохранения
+        unset($_SESSION['install_db_config']);
+        
+        return file_exists($databaseIniFile);
+    } catch (Exception $e) {
+        error_log("Error saving database.ini: " . $e->getMessage());
+        return false;
+    }
+}
+
 // Обработка POST запросов
 if ($step === 'database' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -450,17 +508,8 @@ if ($step === 'database' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'charset' => 'utf8mb4'
         ];
         
-        $databaseIniFile = __DIR__ . '/../data/database.ini';
-        
-        if (class_exists('Ini')) {
-            $ini = new Ini();
-            $ini->setSection('database', $dbConfig);
-            $ini->save($databaseIniFile);
-        } else {
-            $content = "[database]\n";
-            foreach ($dbConfig as $k => $v) $content .= "{$k} = {$v}\n";
-            @file_put_contents($databaseIniFile, $content);
-        }
+        // Сохраняем настройки БД в сессию вместо создания файла
+        $_SESSION['install_db_config'] = $dbConfig;
         
         header('Location: /install?step=tables');
         exit;
@@ -600,7 +649,8 @@ if ($step === 'system-check') {
 }
 
 if ($step === 'user') {
-    loadDatabaseConfig(true);
+    // Загружаем настройки БД из сессии
+    loadDatabaseConfigFromSession();
     
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
@@ -669,9 +719,13 @@ if ($step === 'user') {
                     // Не прерываем установку, но логируем ошибку
                 }
                 
-                // Установка завершена - database.ini уже создан на шаге database
-                header('Location: /admin/login');
-                exit;
+                // Установка завершена - создаем файл database.ini только сейчас
+                if (saveDatabaseIniFile()) {
+                    header('Location: /admin/login');
+                    exit;
+                } else {
+                    $error = 'Помилка при збереженні конфігурації бази даних. Перевірте права доступу до директорії engine/data/';
+                }
             }
         } catch (Exception $e) {
             $error = $e->getMessage();
@@ -749,6 +803,11 @@ function ensureRolesAndPermissions(PDO $db): void {
     } catch (Exception $e) {
         error_log("Error ensuring roles and permissions: " . $e->getMessage());
     }
+}
+
+// Загружаем настройки БД из сессии для шагов tables и user
+if (($step === 'tables' || $step === 'user') && isset($_SESSION['install_db_config'])) {
+    loadDatabaseConfigFromSession();
 }
 
 // Передаем результаты проверок системы в шаблон

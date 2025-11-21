@@ -429,8 +429,11 @@ class RouterManager {
     private function blockInstallerIfInstalled(): void {
         $databaseIniFile = __DIR__ . '/../../data/database.ini';
         
-        // Если система установлена, блокируем доступ
-        if (file_exists($databaseIniFile)) {
+        // Проверяем, идет ли процесс установки (есть настройки БД в сессии)
+        $isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
+        
+        // Если система установлена И процесс установки не идет, блокируем доступ
+        if (file_exists($databaseIniFile) && !$isInstallationInProgress) {
             // Проверяем, это AJAX запрос для тестирования БД (разрешен во время установки)
             $action = $_GET['action'] ?? '';
             $isAjaxAction = ($action === 'test_db' || $action === 'create_table') && $_SERVER['REQUEST_METHOD'] === 'POST';

@@ -9,6 +9,9 @@
 <!-- Ajax Helper (глобальний хелпер для AJAX запитів) -->
 <script src="<?= UrlHelper::admin('assets/scripts/ajax-helper.js') ?>?v=<?= time() ?>"></script>
 
+<!-- Storage Manager (управление клиентским хранилищем) -->
+<script src="/engine/skins/assets/js/storage.js?v=<?= time() ?>"></script>
+
 <?php
 // Подключаем центральный обработчик модальных окон
 if (class_exists('ModalHandler')) {
@@ -379,3 +382,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Функция showNotification теперь определена в notifications.php
 </script>
+
+<?php
+// Выводим JavaScript код из StorageManager (если есть)
+if (class_exists('StorageManager')) {
+    $js = StorageManager::outputJavaScript();
+    if (!empty($js)) {
+        echo "\n<!-- StorageManager JavaScript -->\n";
+        echo $js;
+        echo "\n";
+    }
+}
+
+// Вызываем хук admin_footer для дополнительных скриптов
+if (function_exists('doHook')) {
+    doHook('admin_footer');
+}
+?>
+

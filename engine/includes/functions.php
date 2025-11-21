@@ -159,3 +159,65 @@ if (!function_exists('pluginManager')) {
     }
 }
 
+// ============================================================================
+// Хелпер-функции для работы с хранилищами
+// ============================================================================
+
+if (!function_exists('cookieManager')) {
+    /**
+     * Получение менеджера cookies
+     * 
+     * @return CookieManager
+     */
+    function cookieManager(): CookieManager {
+        return CookieManager::getInstance();
+    }
+}
+
+if (!function_exists('sessionManager')) {
+    /**
+     * Получение менеджера сессий
+     * 
+     * @param string $prefix Префикс для ключей (опционально)
+     * @return SessionManager
+     */
+    function sessionManager(string $prefix = ''): SessionManager {
+        $manager = SessionManager::getInstance();
+        if ($prefix) {
+            $manager->setPrefix($prefix);
+        }
+        return $manager;
+    }
+}
+
+if (!function_exists('storageManager')) {
+    /**
+     * Получение менеджера клиентского хранилища
+     * 
+     * @param string $type Тип хранилища (localStorage или sessionStorage)
+     * @param string $prefix Префикс для ключей (опционально)
+     * @return StorageManager
+     */
+    function storageManager(string $type = 'localStorage', string $prefix = ''): StorageManager {
+        $manager = StorageManager::getInstance();
+        $manager->setType($type);
+        if ($prefix) {
+            $manager->setPrefix($prefix);
+        }
+        return $manager;
+    }
+}
+
+if (!function_exists('storageFactory')) {
+    /**
+     * Получение менеджера хранилища через фабрику
+     * 
+     * @param string $type Тип хранилища (cookie, session, localStorage, sessionStorage)
+     * @param string $prefix Префикс для ключей (опционально)
+     * @return StorageInterface|null
+     */
+    function storageFactory(string $type = 'session', string $prefix = ''): ?StorageInterface {
+        return StorageFactory::get($type, $prefix);
+    }
+}
+
