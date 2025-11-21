@@ -55,10 +55,22 @@ class SiteSettingsPage extends AdminPage {
             }
         }
         
+        // Обробка множинних значень для логування
+        if (isset($settings['logging_levels']) && is_array($settings['logging_levels'])) {
+            $settings['logging_levels'] = implode(',', array_filter($settings['logging_levels']));
+        }
+        if (isset($settings['logging_types']) && is_array($settings['logging_types'])) {
+            $settings['logging_types'] = implode(',', array_filter($settings['logging_types']));
+        }
+        
         // Санітизація значень
         $sanitizedSettings = [];
         foreach ($settings as $key => $value) {
-            $sanitizedSettings[$key] = SecurityHelper::sanitizeInput($value);
+            if (is_array($value)) {
+                $sanitizedSettings[$key] = array_map('SecurityHelper::sanitizeInput', $value);
+            } else {
+                $sanitizedSettings[$key] = SecurityHelper::sanitizeInput($value);
+            }
         }
         
         try {
@@ -154,7 +166,9 @@ class SiteSettingsPage extends AdminPage {
             'cache_auto_cleanup' => '1',
             // Настройки логирования
             'logging_enabled' => '1',
-            'logging_level' => 'INFO',
+            'logging_level' => 'INFO', // Для обратной совместимости
+            'logging_levels' => 'INFO,WARNING,ERROR,CRITICAL', // Множественный выбор уровней
+            'logging_types' => 'file,db_errors,slow_queries', // Типы логирования
             'logging_max_file_size' => '10485760', // 10 MB
             'logging_retention_days' => '30',
             'logging_rotation_type' => 'size', // size, time, both
@@ -209,12 +223,27 @@ class SiteSettingsPage extends AdminPage {
                 // Это гарантирует, что если настройка есть в БД (даже со значением '0'), она будет использована
                 $result = array_merge($defaultSettings, $settings);
                 
+                // Конвертуємо строки в массивы для множественного выбора
+                if (isset($result['logging_levels']) && is_string($result['logging_levels'])) {
+                    $result['logging_levels'] = array_filter(explode(',', $result['logging_levels']));
+                }
+                if (isset($result['logging_types']) && is_string($result['logging_types'])) {
+                    $result['logging_types'] = array_filter(explode(',', $result['logging_types']));
+                }
+                
                 return $result;
             } catch (Exception $e) {
                 error_log("Settings load error: " . $e->getMessage());
+                // Конвертуємо строки в массивы для множественного выбора в дефолтных настройках
+                $defaultSettings['logging_levels'] = explode(',', $defaultSettings['logging_levels']);
+                $defaultSettings['logging_types'] = explode(',', $defaultSettings['logging_types']);
                 return $defaultSettings;
             }
         }
+        
+        // Конвертуємо строки в массивы для множественного выбора в дефолтных настройках
+        $defaultSettings['logging_levels'] = explode(',', $defaultSettings['logging_levels']);
+        $defaultSettings['logging_types'] = explode(',', $defaultSettings['logging_types']);
         
         return $defaultSettings;
     }

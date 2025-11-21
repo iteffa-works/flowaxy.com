@@ -408,5 +408,186 @@ class LogsViewPage extends AdminPage {
         $bytes /= pow(1024, $pow);
         return round($bytes, 2) . ' ' . $units[$pow];
     }
+    
+    /**
+     * Застосування фільтрів до логів
+     */
+    private function applyFilters(array $lines, array $filters): array {
+        $filtered = $lines;
+        
+        // Фільтр по рівню
+        if (!empty($filters['level'])) {
+            $level = strtoupper(trim($filters['level']));
+            $filtered = array_filter($filtered, function($line) use ($level) {
+                return isset($line['level']) && strtoupper($line['level']) === $level;
+            });
+        }
+        
+        // Фільтр по даті (від)
+        if (!empty($filters['date_from'])) {
+            $dateFrom = strtotime($filters['date_from']);
+            if ($dateFrom !== false) {
+                $filtered = array_filter($filtered, function($line) use ($dateFrom) {
+                    if (empty($line['timestamp'])) {
+                        return false;
+                    }
+                    $lineDate = strtotime($line['timestamp']);
+                    return $lineDate !== false && $lineDate >= $dateFrom;
+                });
+            }
+        }
+        
+        // Фільтр по даті (до)
+        if (!empty($filters['date_to'])) {
+            $dateTo = strtotime($filters['date_to'] . ' 23:59:59');
+            if ($dateTo !== false) {
+                $filtered = array_filter($filtered, function($line) use ($dateTo) {
+                    if (empty($line['timestamp'])) {
+                        return false;
+                    }
+                    $lineDate = strtotime($line['timestamp']);
+                    return $lineDate !== false && $lineDate <= $dateTo;
+                });
+            }
+        }
+        
+        // Фільтр по тексту (пошук)
+        if (!empty($filters['search'])) {
+            $search = mb_strtolower(trim($filters['search']));
+            $filtered = array_filter($filtered, function($line) use ($search) {
+                $message = mb_strtolower($line['message'] ?? '');
+                $raw = mb_strtolower($line['raw'] ?? '');
+                return str_contains($message, $search) || str_contains($raw, $search);
+            });
+        }
+        
+        // Повертаємо масив з правильними індексами
+        return array_values($filtered);
+    }
+    
+    /**
+     * Експорт логів
+     */
+    private function exportLogs(): void {
+        $format = $_GET['format'] ?? 'txt';
+        $selectedFile = $_GET['file'] ?? null;
+        
+        if (empty($selectedFile)) {
+            http_response_code(400);
+            echo 'Файл не вказано';
+            exit;
+        }
+        
+        $logsDir = dirname(__DIR__, 3) . '/storage/logs/';
+        $filePath = $logsDir . basename($selectedFile);
+        
+        // Безпека: перевіряємо, що файл знаходиться в директорії логів
+        if (!file_exists($filePath) || 
+            !is_file($filePath) || 
+            !is_readable($filePath) ||
+            !str_starts_with(realpath($filePath), realpath($logsDir))) {
+            http_response_code(404);
+            echo 'Файл не знайдено';
+            exit;
+        }
+        
+        // Отримуємо контент з фільтрами
+        $logContent = $this->getLogContent();
+        
+        // Застосовуємо фільтри
+        $filters = [
+            'level' => $_GET['level'] ?? '',
+            'date_from' => $_GET['date_from'] ?? '',
+            'date_to' => $_GET['date_to'] ?? '',
+            'module' => $_GET['module'] ?? '',
+            'search' => $_GET['search'] ?? ''
+        ];
+        
+        if (!empty($logContent['lines']) && !empty(array_filter($filters))) {
+            $logContent['lines'] = $this->applyFilters($logContent['lines'], $filters);
+        }
+        
+        $lines = $logContent['lines'] ?? [];
+        
+        // Генеруємо ім'я файлу для експорту
+        $exportFilename = 'logs-export-' . date('Y-m-d_H-i-s') . '.' . $format;
+        
+        // Встановлюємо заголовки
+        header('Content-Type: ' . match($format) {
+            'csv' => 'text/csv; charset=utf-8',
+            'json' => 'application/json; charset=utf-8',
+            default => 'text/plain; charset=utf-8'
+        });
+        header('Content-Disposition: attachment; filename="' . $exportFilename . '"');
+        
+        // Експортуємо в залежності від формату
+        switch ($format) {
+            case 'csv':
+                $this->exportAsCsv($lines);
+                break;
+                
+            case 'json':
+                $this->exportAsJson($lines);
+                break;
+                
+            default:
+                $this->exportAsTxt($lines);
+                break;
+        }
+        
+        exit;
+    }
+    
+    /**
+     * Експорт у форматі TXT
+     */
+    private function exportAsTxt(array $lines): void {
+        foreach ($lines as $line) {
+            echo $line['raw'] ?? '';
+            echo "\n";
+        }
+    }
+    
+    /**
+     * Експорт у форматі CSV
+     */
+    private function exportAsCsv(array $lines): void {
+        // BOM для правильного відображення кирилиці в Excel
+        echo "\xEF\xBB\xBF";
+        
+        // Заголовки
+        echo "Дата/Час,Рівень,Повідомлення,IP,URL\n";
+        
+        foreach ($lines as $line) {
+            $timestamp = $line['timestamp'] ?? '';
+            $level = $line['level'] ?? '';
+            $message = str_replace(['"', "\n", "\r"], ['""', ' ', ' '], $line['message'] ?? '');
+            $ip = $line['ip'] ?? '';
+            $url = $line['url'] ?? '';
+            
+            echo sprintf(
+                '"%s","%s","%s","%s","%s"' . "\n",
+                $timestamp,
+                $level,
+                $message,
+                $ip,
+                $url
+            );
+        }
+    }
+    
+    /**
+     * Експорт у форматі JSON
+     */
+    private function exportAsJson(array $lines): void {
+        $export = [
+            'export_date' => date('Y-m-d H:i:s'),
+            'file' => $_GET['file'] ?? null,
+            'total_lines' => count($lines),
+            'logs' => $lines
+        ];
+        
+        echo json_encode($export, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
 }
 

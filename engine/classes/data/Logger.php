@@ -95,16 +95,11 @@ class Logger {
             // Використовуємо значення за замовчуванням
             $this->settings = [
                 'enabled' => true,
-                'min_level' => self::LEVEL_INFO,
-                'log_to_file' => true,
-                'log_to_error_log' => false,
-                'log_db_queries' => false,
-                'log_db_errors' => true,
-                'log_slow_queries' => true,
-                'slow_query_threshold' => 1.0,
                 'max_file_size' => $this->maxFileSize,
                 'max_files' => $this->maxFiles,
-                'retention_days' => 30
+                'retention_days' => 30,
+                'logging_levels' => 'DEBUG,INFO,WARNING,ERROR,CRITICAL',
+                'logging_types' => 'file'
             ];
             return;
         }
@@ -115,19 +110,14 @@ class Logger {
         // Налаштування за замовчуванням
         $this->settings = [
             'enabled' => true,
-            'min_level' => self::LEVEL_INFO,
-            'log_to_file' => true,
-            'log_to_error_log' => false,
-            'log_db_queries' => false,
-            'log_db_errors' => true,
-            'log_slow_queries' => true,
-            'slow_query_threshold' => 1.0,
             'max_file_size' => $this->maxFileSize,
             'max_files' => $this->maxFiles,
             'retention_days' => 30,
             'rotation_type' => 'size',
             'rotation_time' => 24,
-            'rotation_time_unit' => 'hours'
+            'rotation_time_unit' => 'hours',
+            'logging_levels' => 'DEBUG,INFO,WARNING,ERROR,CRITICAL',
+            'logging_types' => 'file'
         ];
         
         // Завантажуємо з БД, якщо доступна
@@ -140,7 +130,7 @@ class Logger {
                         // Використовуємо прямий запит до БД для отримання налаштувань
                         $db = DatabaseHelper::getConnection();
                         if ($db !== null) {
-                            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('logging_enabled', 'logging_level', 'logging_max_file_size', 'logging_retention_days', 'logging_rotation_type', 'logging_rotation_time', 'logging_rotation_time_unit')");
+                            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('logging_enabled', 'logging_level', 'logging_levels', 'logging_types', 'logging_max_file_size', 'logging_retention_days', 'logging_rotation_type', 'logging_rotation_time', 'logging_rotation_time_unit')");
                             if ($stmt !== false) {
                                 $dbSettings = [];
                                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -151,19 +141,20 @@ class Logger {
                                 $loggingEnabled = $dbSettings['logging_enabled'] ?? '1';
                                 $this->settings['enabled'] = $loggingEnabled === '1';
                                 
-                                // Рівень логування
-                                $levelStr = $dbSettings['logging_level'] ?? 'INFO';
-                                $this->settings['min_level'] = match(strtoupper($levelStr)) {
-                                    'DEBUG' => self::LEVEL_DEBUG,
-                                    'INFO' => self::LEVEL_INFO,
-                                    'WARNING' => self::LEVEL_WARNING,
-                                    'ERROR' => self::LEVEL_ERROR,
-                                    'CRITICAL' => self::LEVEL_CRITICAL,
-                                    default => self::LEVEL_INFO
-                                };
+                                // Рівні логування (множественний вибір)
+                                if (isset($dbSettings['logging_levels']) && !empty($dbSettings['logging_levels'])) {
+                                    $this->settings['logging_levels'] = $dbSettings['logging_levels'];
+                                }
+                                
+                                // Типи логування
+                                if (isset($dbSettings['logging_types']) && !empty($dbSettings['logging_types'])) {
+                                    $this->settings['logging_types'] = $dbSettings['logging_types'];
+                                } else {
+                                    // Значення за замовчуванням
+                                    $this->settings['log_to_file'] = $this->settings['enabled'];
+                                }
                                 
                                 // Налаштування файлів
-                                $this->settings['log_to_file'] = $this->settings['enabled'];
                                 $maxFileSize = (int)($dbSettings['logging_max_file_size'] ?? $this->maxFileSize);
                                 if ($maxFileSize > 0) {
                                     $this->settings['max_file_size'] = $maxFileSize;
@@ -190,17 +181,17 @@ class Logger {
                                 }
                                 $this->settings['enabled'] = $loggingEnabled === '1';
                                 
-                                $levelStr = $settings->get('logging_level', 'INFO');
-                                $this->settings['min_level'] = match(strtoupper($levelStr)) {
-                                    'DEBUG' => self::LEVEL_DEBUG,
-                                    'INFO' => self::LEVEL_INFO,
-                                    'WARNING' => self::LEVEL_WARNING,
-                                    'ERROR' => self::LEVEL_ERROR,
-                                    'CRITICAL' => self::LEVEL_CRITICAL,
-                                    default => self::LEVEL_INFO
-                                };
+                                // Рівні логування (множественний вибір)
+                                $levelsStr = $settings->get('logging_levels', '');
+                                if (!empty($levelsStr)) {
+                                    $this->settings['logging_levels'] = $levelsStr;
+                                }
                                 
-                                $this->settings['log_to_file'] = $this->settings['enabled'];
+                                // Типи логування
+                                $typesStr = $settings->get('logging_types', '');
+                                if (!empty($typesStr)) {
+                                    $this->settings['logging_types'] = $typesStr;
+                                }
                                 $maxFileSize = (int)$settings->get('logging_max_file_size', (string)$this->maxFileSize);
                                 if ($maxFileSize > 0) {
                                     $this->settings['max_file_size'] = $maxFileSize;
@@ -222,17 +213,6 @@ class Logger {
                         } else {
                             // Якщо БД недоступна, використовуємо значення за замовчуванням
                             $this->settings['enabled'] = true;
-                            $this->settings['min_level'] = self::LEVEL_INFO;
-                            $this->settings['log_to_file'] = true;
-                        }
-                        
-                        // Додаткові налаштування (для сумісності)
-                        if ($settings !== null) {
-                            $this->settings['log_to_error_log'] = $settings->get('logger_log_to_error_log', '0') === '1';
-                            $this->settings['log_db_queries'] = $settings->get('logger_log_db_queries', '0') === '1';
-                            $this->settings['log_db_errors'] = $settings->get('logger_log_db_errors', '1') === '1';
-                            $this->settings['log_slow_queries'] = $settings->get('logger_log_slow_queries', '1') === '1';
-                            $this->settings['slow_query_threshold'] = (float)$settings->get('logger_slow_query_threshold', '1.0');
                         }
                     } catch (Exception $e) {
                         // У разі помилки використовуємо значення за замовчуванням
@@ -309,12 +289,14 @@ class Logger {
             return;
         }
         
-        // Перевіряємо мінімальний рівень
-        if ($level < $this->settings['min_level']) {
+        // Перевіряємо чи дозволено логування цього рівня
+        $levelName = self::LEVEL_NAMES[$level] ?? 'UNKNOWN';
+        $allowedLevels = $this->getAllowedLevels();
+        
+        if (!in_array($levelName, $allowedLevels, true)) {
             return;
         }
         
-        $levelName = self::LEVEL_NAMES[$level] ?? 'UNKNOWN';
         $timestamp = date('Y-m-d H:i:s');
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -338,13 +320,16 @@ class Logger {
             $contextStr
         );
         
+        // Отримуємо дозволені типи логування
+        $loggingTypes = $this->getLoggingTypes();
+        
         // Логуємо у файл
-        if ($this->settings['log_to_file']) {
+        if (in_array('file', $loggingTypes)) {
             $this->writeToFile($logLine);
         }
         
         // Логуємо в error_log
-        if ($this->settings['log_to_error_log']) {
+        if (in_array('error_log', $loggingTypes)) {
             error_log(trim($logLine));
         }
     }
@@ -615,6 +600,41 @@ class Logger {
             'latest_file' => $latestFile ? basename($latestFile) : null,
             'latest_size' => $latestSize !== false ? $latestSize : 0
         ];
+    }
+    
+    /**
+     * Отримання дозволених рівнів логування
+     * 
+     * @return array
+     */
+    private function getAllowedLevels(): array {
+        // Перевіряємо налаштування (множественний вибір)
+        if (isset($this->settings['logging_levels']) && !empty($this->settings['logging_levels'])) {
+            $levels = is_array($this->settings['logging_levels']) 
+                ? $this->settings['logging_levels'] 
+                : explode(',', $this->settings['logging_levels']);
+            return array_map('trim', array_filter($levels));
+        }
+        
+        // Якщо налаштування не встановлено, дозволяємо всі рівні
+        return ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
+    }
+    
+    /**
+     * Отримання дозволених типів логування
+     * 
+     * @return array
+     */
+    private function getLoggingTypes(): array {
+        if (isset($this->settings['logging_types']) && !empty($this->settings['logging_types'])) {
+            $types = is_array($this->settings['logging_types']) 
+                ? $this->settings['logging_types'] 
+                : explode(',', $this->settings['logging_types']);
+            return array_map('trim', array_filter($types));
+        }
+        
+        // Якщо налаштування не встановлено, дозволяємо тільки файл за замовчуванням
+        return ['file'];
     }
     
     // Запобігання клонуванню

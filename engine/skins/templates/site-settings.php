@@ -145,14 +145,59 @@ if (!empty($message)) {
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label for="loggingLevel" class="form-label fw-medium small">Рівень логування</label>
-                            <select class="form-select" id="loggingLevel" name="settings[logging_level]">
-                                <option value="DEBUG" <?= ($settings['logging_level'] ?? 'INFO') === 'DEBUG' ? 'selected' : '' ?>>DEBUG - Всі події</option>
-                                <option value="INFO" <?= ($settings['logging_level'] ?? 'INFO') === 'INFO' ? 'selected' : '' ?>>INFO - Інформаційні події</option>
-                                <option value="WARNING" <?= ($settings['logging_level'] ?? 'INFO') === 'WARNING' ? 'selected' : '' ?>>WARNING - Попередження</option>
-                                <option value="ERROR" <?= ($settings['logging_level'] ?? 'INFO') === 'ERROR' ? 'selected' : '' ?>>ERROR - Тільки помилки</option>
+                            <label for="loggingLevel" class="form-label fw-medium small">Рівні логування</label>
+                            <select class="form-select" id="loggingLevel" name="settings[logging_levels][]" multiple size="5">
+                                <?php 
+                                $selectedLevels = !empty($settings['logging_levels']) 
+                                    ? (is_array($settings['logging_levels']) ? $settings['logging_levels'] : explode(',', $settings['logging_levels']))
+                                    : ['INFO', 'WARNING', 'ERROR', 'CRITICAL'];
+                                ?>
+                                <option value="DEBUG" <?= in_array('DEBUG', $selectedLevels) ? 'selected' : '' ?>>DEBUG - Всі події</option>
+                                <option value="INFO" <?= in_array('INFO', $selectedLevels) ? 'selected' : '' ?>>INFO - Інформаційні події</option>
+                                <option value="WARNING" <?= in_array('WARNING', $selectedLevels) ? 'selected' : '' ?>>WARNING - Попередження</option>
+                                <option value="ERROR" <?= in_array('ERROR', $selectedLevels) ? 'selected' : '' ?>>ERROR - Помилки</option>
+                                <option value="CRITICAL" <?= in_array('CRITICAL', $selectedLevels) ? 'selected' : '' ?>>CRITICAL - Критичні помилки</option>
                             </select>
-                            <div class="form-text small">Мінімальний рівень подій для логування</div>
+                            <div class="form-text small">Виберіть рівні для логування (утримуйте Ctrl/Cmd для множинного вибору)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Типи логування</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="logToFile" name="settings[logging_types][]" value="file" 
+                                       <?= in_array('file', $settings['logging_types'] ?? ['file']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="logToFile">
+                                    Логування у файл
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="logToErrorLog" name="settings[logging_types][]" value="error_log"
+                                       <?= in_array('error_log', $settings['logging_types'] ?? []) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="logToErrorLog">
+                                    Логування в error_log PHP
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="logDbQueries" name="settings[logging_types][]" value="db_queries"
+                                       <?= in_array('db_queries', $settings['logging_types'] ?? []) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="logDbQueries">
+                                    Логування SQL запитів
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="logDbErrors" name="settings[logging_types][]" value="db_errors"
+                                       <?= in_array('db_errors', $settings['logging_types'] ?? ['db_errors']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="logDbErrors">
+                                    Логування помилок БД
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="logSlowQueries" name="settings[logging_types][]" value="slow_queries"
+                                       <?= in_array('slow_queries', $settings['logging_types'] ?? ['slow_queries']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="logSlowQueries">
+                                    Логування повільних запитів
+                                </label>
+                            </div>
+                            <div class="form-text small">Виберіть типи логування для використання</div>
                         </div>
                         <div class="col-md-6">
                             <label for="loggingMaxFileSize" class="form-label fw-medium small">Максимальний розмір файлу (байти)</label>

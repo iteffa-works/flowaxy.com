@@ -15,7 +15,7 @@ if (!empty($message)) {
 
 <!-- Модальное окно подтверждения удаления всех логов -->
 <?php if (!empty($logFiles)): ?>
-<div class="modal fade" id="clearAllLogsModal" tabindex="-1" aria-labelledby="clearAllLogsModalLabel" aria-hidden="true">
+<div class="modal" id="clearAllLogsModal" tabindex="-1" aria-labelledby="clearAllLogsModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
