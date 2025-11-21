@@ -2,8 +2,10 @@
 -- Flowaxy CMS - Core Database Tables Structure
 -- ============================================================================
 -- Все системные таблицы движка в чистом виде
--- Версия: 1.0.0
--- Дата: 2025-01-21
+-- Версия: 7.0.0
+-- Дата: 2025-11-21
+-- PHP: 8.4.0+
+-- MySQL: 5.7+ / MariaDB 10.2+
 -- ============================================================================
 
 -- ============================================================================
@@ -15,15 +17,21 @@
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `username` VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `password` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `email` VARCHAR(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `role_ids` JSON DEFAULT NULL COMMENT 'JSON массив ID ролей пользователя',
-    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `session_token` VARCHAR(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Токен сессии для защиты от одновременного входа',
+    `last_activity` DATETIME DEFAULT NULL COMMENT 'Время последней активности пользователя',
+    `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Статус активности пользователя (1 - активен, 0 - неактивен)',
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `username` (`username`),
-    KEY `idx_email` (`email`)
+    KEY `idx_email` (`email`),
+    KEY `idx_session_token` (`session_token`),
+    KEY `idx_last_activity` (`last_activity`),
+    KEY `idx_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
@@ -83,16 +91,16 @@ CREATE TABLE IF NOT EXISTS `role_permissions` (
 -- 2.1. Таблица плагинов
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `plugins` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `description` text COLLATE utf8mb4_unicode_ci,
-    `version` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-    `author` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-    `is_active` tinyint(1) NOT NULL DEFAULT '0',
-    `settings` text COLLATE utf8mb4_unicode_ci,
-    `installed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `slug` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `name` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `description` TEXT COLLATE utf8mb4_unicode_ci,
+    `version` VARCHAR(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `author` VARCHAR(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `is_active` TINYINT(1) NOT NULL DEFAULT '0',
+    `settings` TEXT COLLATE utf8mb4_unicode_ci,
+    `installed_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `slug` (`slug`),
     KEY `idx_plugins_active` (`is_active`)
@@ -102,14 +110,14 @@ CREATE TABLE IF NOT EXISTS `plugins` (
 -- 2.2. Настройки плагинов
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `plugin_settings` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `plugin_slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `setting_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `setting_value` text COLLATE utf8mb4_unicode_ci,
-    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `plugin_slug` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `setting_key` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `setting_value` TEXT COLLATE utf8mb4_unicode_ci,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `plugin_setting` (`plugin_slug`,`setting_key`),
+    UNIQUE KEY `plugin_setting` (`plugin_slug`, `setting_key`),
     KEY `idx_plugin_slug` (`plugin_slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -121,14 +129,14 @@ CREATE TABLE IF NOT EXISTS `plugin_settings` (
 -- 3.1. Настройки тем
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `theme_settings` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `theme_slug` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `setting_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `setting_value` text COLLATE utf8mb4_unicode_ci,
-    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `theme_slug` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `setting_key` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `setting_value` TEXT COLLATE utf8mb4_unicode_ci,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `theme_setting` (`theme_slug`,`setting_key`),
+    UNIQUE KEY `theme_setting` (`theme_slug`, `setting_key`),
     KEY `idx_theme_slug` (`theme_slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -140,11 +148,11 @@ CREATE TABLE IF NOT EXISTS `theme_settings` (
 -- 4.1. Настройки сайта
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `site_settings` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `setting_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `setting_value` text COLLATE utf8mb4_unicode_ci,
-    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `setting_key` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `setting_value` TEXT COLLATE utf8mb4_unicode_ci,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `setting_key` (`setting_key`),
     KEY `idx_settings_key` (`setting_key`)
@@ -197,6 +205,8 @@ CREATE TABLE IF NOT EXISTS `webhooks` (
 -- ИТОГО: 10 системных таблиц
 -- ============================================================================
 -- 1. users - пользователи системы
+--    - Добавлены поля: session_token, last_activity, is_active
+--    - Добавлены индексы: idx_session_token, idx_last_activity, idx_is_active
 -- 2. roles - роли пользователей
 -- 3. permissions - разрешения
 -- 4. role_permissions - связь ролей и разрешений
@@ -207,4 +217,11 @@ CREATE TABLE IF NOT EXISTS `webhooks` (
 -- 9. api_keys - API ключи
 -- 10. webhooks - webhooks для интеграций
 -- ============================================================================
-
+-- 
+-- ПРИМЕЧАНИЯ:
+-- - Все таблицы используют кодировку utf8mb4_unicode_ci
+-- - Все таблицы используют движок InnoDB
+-- - Все таблицы имеют поля created_at и updated_at с автоматическим обновлением
+-- - Таблица users содержит дополнительные поля для управления сессиями
+-- - Все внешние ключи используют ON DELETE CASCADE
+-- ============================================================================
