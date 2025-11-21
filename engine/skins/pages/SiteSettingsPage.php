@@ -131,7 +131,7 @@ class SiteSettingsPage extends AdminPage {
         // Значення за замовчуванням (используются только если настройка отсутствует в БД)
         $defaultSettings = [
             'admin_email' => 'admin@example.com',
-            'timezone' => 'Europe/Kiev',
+            'timezone' => 'Europe/Kyiv',
             // Настройки кеша
             'cache_enabled' => '1',
             'cache_default_ttl' => '3600',
