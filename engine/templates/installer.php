@@ -139,7 +139,8 @@ $error = $error ?? null;
             letter-spacing: 0.5px;
         }
         
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 10px 14px;
             font-size: 14px;
@@ -149,10 +150,20 @@ $error = $error ?? null;
             background: #ffffff;
         }
         
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234a5568' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
         }
         
         .btn {
@@ -240,6 +251,13 @@ $error = $error ?? null;
             display: block;
         }
         
+        .test-result.warning {
+            background: #fef5e7;
+            border: 1px solid #f6ad55;
+            color: #744210;
+            display: block;
+        }
+        
         .test-result.testing {
             background: #bee3f8;
             border: 1px solid #90cdf4;
@@ -292,37 +310,35 @@ $error = $error ?? null;
         
         .system-check-item {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             padding: 12px 16px;
             margin-bottom: 8px;
-            background: #f7fafc;
-            border-radius: 8px;
-            border-left: 4px solid #cbd5e0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #cbd5e0;
         }
         
         .system-check-item.ok {
             border-left-color: #48bb78;
-            background: #f0fff4;
         }
         
         .system-check-item.error {
             border-left-color: #f56565;
-            background: #fff5f5;
         }
         
         .system-check-item.warning {
             border-left-color: #ed8936;
-            background: #fffaf0;
         }
         
         .check-icon {
-            width: 32px;
-            height: 32px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-right: 12px;
-            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
         }
         
         .system-check-item.ok .check-icon {
@@ -339,30 +355,67 @@ $error = $error ?? null;
         
         .check-info {
             flex: 1;
+            min-width: 0;
         }
         
         .check-name {
             font-weight: 600;
             color: #2d3748;
             margin-bottom: 4px;
+            font-size: 14px;
         }
         
-        .check-error {
-            font-size: 13px;
+        .check-details {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 2px;
+        }
+        
+        .check-error-text {
+            font-size: 12px;
             color: #c53030;
             margin-top: 4px;
         }
         
-        .check-warning {
-            font-size: 13px;
+        .check-warning-text {
+            font-size: 12px;
             color: #c05621;
             margin-top: 4px;
         }
         
-        .check-version {
-            font-size: 12px;
-            color: #718096;
-            margin-top: 4px;
+        .check-path-text {
+            font-size: 11px;
+            color: #a0aec0;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin-top: 2px;
+        }
+        
+        @media (max-width: 768px) {
+            .system-check-item {
+                padding: 10px 12px;
+                margin-bottom: 6px;
+            }
+            
+            .check-icon {
+                width: 18px;
+                height: 18px;
+                margin-right: 10px;
+            }
+            
+            .check-name {
+                font-size: 13px;
+            }
+            
+            .check-details,
+            .check-error-text,
+            .check-warning-text {
+                font-size: 11px;
+            }
+            
+            .check-path-text {
+                font-size: 10px;
+            }
         }
         
         .system-errors,
@@ -665,31 +718,92 @@ $error = $error ?? null;
                     <h2 data-i18n="system-check.title">Перевірка системи</h2>
                     <p data-i18n="system-check.text">Перевіряємо наявність необхідних компонентів для встановлення системи.</p>
                     
+                    <?php if (!empty($systemChecks)): ?>
+                        <?php 
+                        $okCount = 0;
+                        $errorCount = 0;
+                        $warningCount = 0;
+                        foreach ($systemChecks as $check) {
+                            $status = $check['status'] ?? 'unknown';
+                            if ($status === 'ok') $okCount++;
+                            elseif ($status === 'error') $errorCount++;
+                            elseif ($status === 'warning') $warningCount++;
+                        }
+                        $totalCount = count($systemChecks);
+                        ?>
+                        <div style="margin: 20px 0; padding: 16px; background: #f7fafc; border: 1px solid #e2e8f0; display: flex; gap: 20px; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 12px; color: #718096; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Статус перевірки</div>
+                                <div style="font-size: 18px; font-weight: 600; color: #2d3748;">
+                                    <?php if ($errorCount === 0): ?>
+                                        <span style="color: #48bb78;">✓ Всі перевірки пройдені успішно</span>
+                                    <?php else: ?>
+                                        <span style="color: #f56565;">✗ Знайдено помилок: <?= $errorCount ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div style="text-align: right; padding-left: 20px; border-left: 1px solid #e2e8f0;">
+                                <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Успішно: <strong style="color: #48bb78;"><?= $okCount ?></strong></div>
+                                <?php if ($warningCount > 0): ?>
+                                    <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Попереджень: <strong style="color: #ed8936;"><?= $warningCount ?></strong></div>
+                                <?php endif; ?>
+                                <?php if ($errorCount > 0): ?>
+                                    <div style="font-size: 12px; color: #718096;">Помилок: <strong style="color: #f56565;"><?= $errorCount ?></strong></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="system-checks-list">
                         <?php if (!empty($systemChecks)): ?>
                             <?php foreach ($systemChecks as $checkName => $check): ?>
                                 <div class="system-check-item <?= $check['status'] ?? 'unknown' ?>">
                                     <div class="check-icon">
                                         <?php if (($check['status'] ?? '') === 'ok'): ?>
-                                            <i class="fas fa-check-circle"></i>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
+                                            </svg>
                                         <?php elseif (($check['status'] ?? '') === 'error'): ?>
-                                            <i class="fas fa-times-circle"></i>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+                                            </svg>
                                         <?php elseif (($check['status'] ?? '') === 'warning'): ?>
-                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="currentColor"/>
+                                            </svg>
                                         <?php else: ?>
-                                            <i class="fas fa-question-circle"></i>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" fill="currentColor"/>
+                                            </svg>
                                         <?php endif; ?>
                                     </div>
                                     <div class="check-info">
                                         <div class="check-name"><?= htmlspecialchars($checkName) ?></div>
-                                        <?php if (isset($check['error'])): ?>
-                                            <div class="check-error"><?= htmlspecialchars($check['error']) ?></div>
-                                        <?php endif; ?>
-                                        <?php if (isset($check['warning'])): ?>
-                                            <div class="check-warning"><?= htmlspecialchars($check['warning']) ?></div>
+                                        <?php if (isset($check['description'])): ?>
+                                            <div class="check-details" style="color: #4a5568; font-style: italic; margin-bottom: 6px;"><?= htmlspecialchars($check['description']) ?></div>
                                         <?php endif; ?>
                                         <?php if (isset($check['version'])): ?>
-                                            <div class="check-version">Версія: <?= htmlspecialchars($check['version']) ?></div>
+                                            <div class="check-details">Версія: <?= htmlspecialchars($check['version']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['count'])): ?>
+                                            <div class="check-details">Кількість: <?= htmlspecialchars($check['count']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['info'])): ?>
+                                            <div class="check-details"><?= htmlspecialchars($check['info']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['display_path'])): ?>
+                                            <div class="check-path-text">Шлях: <?= htmlspecialchars($check['display_path']) ?></div>
+                                        <?php elseif (isset($check['path'])): ?>
+                                            <div class="check-path-text">Шлях: <?= htmlspecialchars($check['path']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['error'])): ?>
+                                            <div class="check-error-text"><?= htmlspecialchars($check['error']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['warning'])): ?>
+                                            <div class="check-warning-text"><?= htmlspecialchars($check['warning']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (isset($check['created']) && $check['created']): ?>
+                                            <div class="check-details" style="color: #38a169;">✓ Створено автоматично</div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -726,7 +840,7 @@ $error = $error ?? null;
                         <?php if (empty($systemErrors)): ?>
                             <a href="/install?step=database" class="btn btn-primary">Продовжити</a>
                         <?php else: ?>
-                            <button type="button" class="btn btn-primary" disabled>Продовжити (є помилки)</button>
+                            <a href="/install?step=system-check" class="btn btn-primary" data-i18n="button.retry_check" onclick="window.location.reload(); return false;">Повторити перевірку</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -760,6 +874,22 @@ $error = $error ?? null;
                         <input type="password" name="db_pass" value="<?= htmlspecialchars($_POST['db_pass'] ?? '') ?>">
                     </div>
                     
+                    <div class="form-group">
+                        <label data-i18n="label.mysql_version">MySQL Version</label>
+                        <select name="db_version" id="dbVersion" required>
+                            <option value="8.4" <?= ($_POST['db_version'] ?? '8.4') === '8.4' ? 'selected' : '' ?>>MySQL 8.4</option>
+                            <option value="5.7" <?= ($_POST['db_version'] ?? '') === '5.7' ? 'selected' : '' ?>>MySQL 5.7</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label data-i18n="label.charset">Кодування (Charset)</label>
+                        <select name="db_charset" id="dbCharset" required>
+                            <option value="utf8mb4" <?= ($_POST['db_charset'] ?? 'utf8mb4') === 'utf8mb4' ? 'selected' : '' ?>>utf8mb4</option>
+                        </select>
+                        <small style="display: block; margin-top: 4px; color: #718096; font-size: 12px;" data-i18n="label.charset_hint">utf8mb4 підтримує всі Unicode символи, включаючи emoji</small>
+                    </div>
+                    
                     <div class="test-result" id="testResult"></div>
                     
                     <div class="installer-actions">
@@ -780,7 +910,10 @@ $error = $error ?? null;
                 
                 <ul class="tables-list" id="tablesList"></ul>
                 
-                <button class="btn btn-primary btn-full" id="continueBtn" style="display: none;" data-i18n="button.continue" onclick="window.location.href='/install?step=user'">Continue</button>
+                <div id="tablesActions" style="display: none; margin-top: 20px;">
+                    <button class="btn btn-secondary btn-full" id="retryBtn" data-i18n="button.retry" onclick="retryFailedTables()">Повторити</button>
+                    <button class="btn btn-primary btn-full" id="continueBtn" style="display: none; margin-top: 10px;" data-i18n="button.continue" onclick="window.location.href='/install?step=user'">Продовжити</button>
+                </div>
             </div>
             
             <!-- Step 4: User -->
@@ -841,14 +974,20 @@ $error = $error ?? null;
                 'label.password': 'Пароль',
                 'label.password_confirm': 'Підтвердження пароля',
                 'label.email': 'Email',
+                'label.mysql_version': 'Версія MySQL',
+                'label.charset': 'Кодування (Charset)',
+                'label.charset_hint': 'Рекомендується utf8mb4 для підтримки emoji та всіх Unicode символів',
                 'button.test': 'Тестувати підключення',
                 'button.save': 'Зберегти та продовжити',
                 'button.continue': 'Продовжити',
+                'button.retry': 'Повторити',
+                'button.retry_check': 'Повторити перевірку',
                 'button.create': 'Створити та завершити',
                 'test.success': 'Підключення успішне!',
                 'test.error': 'Помилка підключення: ',
                 'test.testing': 'Перевірка підключення...',
                 'progress.text': 'Підготовка...',
+                'progress.retrying': 'Повторюється...',
                 'table.creating': 'Створення',
                 'table.success': 'Створено',
                 'table.error': 'Помилка',
@@ -877,14 +1016,20 @@ $error = $error ?? null;
                 'label.password': 'Пароль',
                 'label.password_confirm': 'Подтверждение пароля',
                 'label.email': 'Email',
+                'label.mysql_version': 'Версия MySQL',
+                'label.charset': 'Кодировка (Charset)',
+                'label.charset_hint': 'Рекомендуется utf8mb4 для поддержки emoji и всех Unicode символов',
                 'button.test': 'Тестировать подключение',
                 'button.save': 'Сохранить и продолжить',
                 'button.continue': 'Продолжить',
+                'button.retry': 'Повторить',
+                'button.retry_check': 'Повторить проверку',
                 'button.create': 'Создать и завершить',
                 'test.success': 'Подключение успешно!',
                 'test.error': 'Ошибка подключения: ',
                 'test.testing': 'Проверка подключения...',
                 'progress.text': 'Подготовка...',
+                'progress.retrying': 'Повторяется...',
                 'table.creating': 'Создание',
                 'table.success': 'Создано',
                 'table.error': 'Ошибка',
@@ -913,14 +1058,20 @@ $error = $error ?? null;
                 'label.password': 'Password',
                 'label.password_confirm': 'Confirm Password',
                 'label.email': 'Email',
+                'label.mysql_version': 'MySQL Version',
+                'label.charset': 'Charset',
+                'label.charset_hint': 'utf8mb4 is recommended for emoji and full Unicode support',
                 'button.test': 'Test Connection',
                 'button.save': 'Save & Continue',
                 'button.continue': 'Continue',
+                'button.retry': 'Retry',
+                'button.retry_check': 'Retry Check',
                 'button.create': 'Create & Finish',
                 'test.success': 'Connection successful!',
                 'test.error': 'Connection error: ',
                 'test.testing': 'Testing connection...',
                 'progress.text': 'Preparing...',
+                'progress.retrying': 'Retrying...',
                 'table.creating': 'Creating',
                 'table.success': 'Created',
                 'table.error': 'Error',
@@ -977,18 +1128,64 @@ $error = $error ?? null;
                 try {
                     const response = await fetch('/install?action=test_db', {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        credentials: 'same-origin'
                     });
                     
                     const data = await response.json();
                     
                     if (data.success) {
-                        resultDiv.className = 'test-result success';
-                        resultDiv.textContent = translations[lang]['test.success'];
-                        saveBtn.disabled = false;
+                        // Проверяем соответствие версий и кодировки
+                        let warnings = [];
+                        let errors = [];
+                        
+                        if (data.version_warning && !data.version_match) {
+                            // Автоматически обновляем селект на правильную версию
+                            const versionSelect = document.getElementById('dbVersion');
+                            if (versionSelect && data.detected_version) {
+                                versionSelect.value = data.detected_version;
+                            }
+                            warnings.push(data.version_warning);
+                        }
+                        
+                        // Проверяем ошибки кодировки (критично)
+                        if (data.charset_error) {
+                            errors.push(data.charset_error);
+                            saveBtn.disabled = true;
+                        } else if (data.charset_warning) {
+                            warnings.push(data.charset_warning);
+                        }
+                        
+                        if (errors.length > 0) {
+                            resultDiv.className = 'test-result error';
+                            resultDiv.innerHTML = '<strong>Помилка підключення!</strong><br>' + 
+                                errors.map(e => '<small style="color: #c53030; margin-top: 4px; display: block; font-weight: 600;">' + e + '</small>').join('');
+                            saveBtn.disabled = true;
+                        } else if (warnings.length > 0) {
+                            resultDiv.className = 'test-result warning';
+                            resultDiv.innerHTML = '<strong>' + translations[lang]['test.success'] + '</strong><br>' + 
+                                warnings.map(w => '<small style="color: #d69e2e; margin-top: 4px; display: block;">' + w + '</small>').join('');
+                            saveBtn.disabled = false;
+                        } else {
+                            resultDiv.className = 'test-result success';
+                            let message = translations[lang]['test.success'];
+                            if (data.mysql_version) {
+                                message += ' (MySQL ' + data.mysql_version;
+                                if (data.db_charset) {
+                                    message += ', ' + data.db_charset;
+                                    if (data.db_collation) {
+                                        message += ' / ' + data.db_collation;
+                                    }
+                                }
+                                message += ')';
+                            }
+                            resultDiv.textContent = message;
+                            saveBtn.disabled = false;
+                        }
                     } else {
                         resultDiv.className = 'test-result error';
                         resultDiv.textContent = translations[lang]['test.error'] + (data.message || 'Unknown error');
+                        saveBtn.disabled = true;
                     }
                 } catch (error) {
                     resultDiv.className = 'test-result error';
@@ -999,9 +1196,11 @@ $error = $error ?? null;
             });
         }
         
-        // Создание таблиц (шаг tables)
+        // Создание таблиц (шаг tables) - только если мы на шаге tables
         const tablesList = document.getElementById('tablesList');
-        if (tablesList) {
+        const currentStep = '<?= $step ?? 'welcome' ?>';
+        
+        if (tablesList && currentStep === 'tables') {
             // Список таблиц для создания (включая api_keys, webhooks и таблицы ролей)
             // Порядок важен: сначала базовые таблицы, затем roles и permissions, затем зависимые таблицы
             const tables = ['users', 'site_settings', 'plugins', 'plugin_settings', 'theme_settings', 'api_keys', 'webhooks', 'roles', 'permissions', 'role_permissions'];
@@ -1019,79 +1218,57 @@ $error = $error ?? null;
                 tablesList.appendChild(li);
             });
             
-            async function createTables() {
-                for (let i = 0; i < tables.length; i++) {
-                    const table = tables[i];
-                    const li = document.getElementById(`table-${table}`);
-                    const icon = li.querySelector('.table-icon');
+            let failedTables = [];
+            let successCount = 0;
+            
+            async function createTable(table, retry = false) {
+                const li = document.getElementById(`table-${table}`);
+                const icon = li.querySelector('.table-icon');
+                
+                // Если это повторная попытка, сбрасываем состояние
+                if (retry) {
+                    icon.className = 'table-icon creating';
+                    li.classList.remove('error');
+                    li.classList.add('creating');
+                    const errorMsg = li.querySelector('.table-error');
+                    if (errorMsg) {
+                        errorMsg.remove();
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                try {
+                    const response = await fetch('/install?action=create_table', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table: table }),
+                        credentials: 'same-origin'
+                    });
                     
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    const data = await response.json();
                     
-                    try {
-                        const response = await fetch('/install?action=create_table', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ table: table })
-                        });
+                    if (data.success) {
+                        icon.className = 'table-icon success';
+                        li.classList.remove('creating', 'error');
+                        li.classList.add('success');
                         
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            icon.className = 'table-icon success';
-                            li.classList.remove('creating');
-                            li.classList.add('success');
-                            
-                            // Удаляем сообщение об ошибке, если было
-                            const errorMsg = li.querySelector('.table-error');
-                            if (errorMsg) {
-                                errorMsg.remove();
-                            }
-                        } else {
-                            icon.className = 'table-icon error';
-                            li.classList.remove('creating');
-                            li.classList.add('error');
-                            
-                            // Отображаем детальную информацию об ошибке
-                            let errorMsg = li.querySelector('.table-error');
-                            if (!errorMsg) {
-                                errorMsg = document.createElement('div');
-                                errorMsg.className = 'table-error';
-                                errorMsg.style.cssText = 'font-size: 12px; color: #c53030; margin-top: 4px; padding: 4px 8px; background: #fff5f5; border-radius: 4px; word-break: break-word;';
-                                li.appendChild(errorMsg);
-                            }
-                            
-                            let errorText = data.message || 'Помилка створення таблиці';
-                            
-                            // Добавляем детальную информацию, если доступна
-                            if (data.pdoCode || data.pdoErrorInfo) {
-                                errorText += '<br><small>';
-                                if (data.pdoCode) {
-                                    errorText += 'Код помилки: ' + data.pdoCode + '<br>';
-                                }
-                                if (data.pdoErrorInfo && Array.isArray(data.pdoErrorInfo) && data.pdoErrorInfo.length > 2) {
-                                    errorText += 'SQL State: ' + data.pdoErrorInfo[0] + '<br>';
-                                    errorText += 'Driver Error: ' + data.pdoErrorInfo[1] + '<br>';
-                                    errorText += 'Driver Message: ' + data.pdoErrorInfo[2];
-                                }
-                                errorText += '</small>';
-                            }
-                            
-                            // Добавляем отладочную информацию в режиме разработки
-                            if (data.debug && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-                                errorText += '<br><small style="color: #718096;">Debug: ' + JSON.stringify(data.debug) + '</small>';
-                            }
-                            
-                            errorMsg.innerHTML = errorText;
-                            
-                            // Логируем ошибку в консоль
-                            console.error('Ошибка создания таблицы', table, data);
+                        // Удаляем сообщение об ошибке, если было
+                        const errorMsg = li.querySelector('.table-error');
+                        if (errorMsg) {
+                            errorMsg.remove();
                         }
-                    } catch (error) {
+                        
+                        successCount++;
+                        // Удаляем из списка неуспешных, если была там
+                        failedTables = failedTables.filter(t => t !== table);
+                        return true;
+                    } else {
                         icon.className = 'table-icon error';
                         li.classList.remove('creating');
                         li.classList.add('error');
                         
-                        // Отображаем ошибку сети
+                        // Отображаем детальную информацию об ошибке
                         let errorMsg = li.querySelector('.table-error');
                         if (!errorMsg) {
                             errorMsg = document.createElement('div');
@@ -1099,18 +1276,126 @@ $error = $error ?? null;
                             errorMsg.style.cssText = 'font-size: 12px; color: #c53030; margin-top: 4px; padding: 4px 8px; background: #fff5f5; border-radius: 4px; word-break: break-word;';
                             li.appendChild(errorMsg);
                         }
-                        errorMsg.textContent = 'Ошибка сети: ' + (error.message || 'Неизвестная ошибка');
                         
-                        console.error('Ошибка сети при создании таблицы', table, error);
+                        let errorText = data.message || 'Помилка створення таблиці';
+                        
+                        // Добавляем детальную информацию, если доступна
+                        if (data.pdoCode || data.pdoErrorInfo) {
+                            errorText += '<br><small>';
+                            if (data.pdoCode) {
+                                errorText += 'Код помилки: ' + data.pdoCode + '<br>';
+                            }
+                            if (data.pdoErrorInfo && Array.isArray(data.pdoErrorInfo) && data.pdoErrorInfo.length > 2) {
+                                errorText += 'SQL State: ' + data.pdoErrorInfo[0] + '<br>';
+                                errorText += 'Driver Error: ' + data.pdoErrorInfo[1] + '<br>';
+                                errorText += 'Driver Message: ' + data.pdoErrorInfo[2];
+                            }
+                            errorText += '</small>';
+                        }
+                        
+                        // Добавляем отладочную информацию в режиме разработки
+                        if (data.debug && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                            errorText += '<br><small style="color: #718096;">Debug: ' + JSON.stringify(data.debug) + '</small>';
+                        }
+                        
+                        errorMsg.innerHTML = errorText;
+                        
+                        // Добавляем в список неуспешных
+                        if (!failedTables.includes(table)) {
+                            failedTables.push(table);
+                        }
+                        
+                        // Логируем ошибку в консоль
+                        console.error('Ошибка создания таблицы', table, data);
+                        return false;
                     }
+                } catch (error) {
+                    icon.className = 'table-icon error';
+                    li.classList.remove('creating');
+                    li.classList.add('error');
+                    
+                    // Отображаем ошибку сети
+                    let errorMsg = li.querySelector('.table-error');
+                    if (!errorMsg) {
+                        errorMsg = document.createElement('div');
+                        errorMsg.className = 'table-error';
+                        errorMsg.style.cssText = 'font-size: 12px; color: #c53030; margin-top: 4px; padding: 4px 8px; background: #fff5f5; border-radius: 4px; word-break: break-word;';
+                        li.appendChild(errorMsg);
+                    }
+                    errorMsg.textContent = 'Ошибка сети: ' + (error.message || 'Неизвестная ошибка');
+                    
+                    // Добавляем в список неуспешных
+                    if (!failedTables.includes(table)) {
+                        failedTables.push(table);
+                    }
+                    
+                    console.error('Ошибка сети при создании таблицы', table, error);
+                    return false;
+                }
+            }
+            
+            async function createTables() {
+                successCount = 0;
+                failedTables = [];
+                
+                for (let i = 0; i < tables.length; i++) {
+                    const table = tables[i];
+                    await createTable(table);
                     
                     const progress = Math.round(((i + 1) / tables.length) * 100);
                     progressFill.style.width = progress + '%';
                     progressText.textContent = translations[lang]['progress.text'].replace('...', `: ${i + 1}/${tables.length}`);
                 }
                 
-                continueBtn.style.display = 'block';
+                // Показываем кнопки действий
+                const tablesActions = document.getElementById('tablesActions');
+                tablesActions.style.display = 'block';
+                
+                // Если все таблицы успешно созданы
+                if (failedTables.length === 0) {
+                    continueBtn.style.display = 'block';
+                    document.getElementById('retryBtn').style.display = 'none';
+                    progressText.textContent = translations[lang]['progress.text'].replace('...', ': Завершено!');
+                } else {
+                    // Есть ошибки - показываем кнопку повтора
+                    continueBtn.style.display = 'none';
+                    document.getElementById('retryBtn').style.display = 'block';
+                    progressText.textContent = translations[lang]['progress.text'].replace('...', `: ${successCount}/${tables.length} успішно, ${failedTables.length} помилок`);
+                }
             }
+            
+            // Функция для повторной попытки создания неуспешных таблиц
+            window.retryFailedTables = async function() {
+                if (failedTables.length === 0) {
+                    return;
+                }
+                
+                const retryBtn = document.getElementById('retryBtn');
+                retryBtn.disabled = true;
+                retryBtn.textContent = translations[lang]['progress.retrying'] || 'Повторюється...';
+                
+                progressText.textContent = translations[lang]['progress.text'].replace('...', ': ' + (translations[lang]['progress.retrying'] || 'Повторна спроба...'));
+                
+                // Повторяем только неуспешные таблицы
+                for (const table of [...failedTables]) {
+                    await createTable(table, true);
+                }
+                
+                // Обновляем прогресс
+                const totalSuccess = tables.length - failedTables.length;
+                progressFill.style.width = Math.round((totalSuccess / tables.length) * 100) + '%';
+                
+                // Проверяем результат
+                if (failedTables.length === 0) {
+                    continueBtn.style.display = 'block';
+                    retryBtn.style.display = 'none';
+                    progressText.textContent = translations[lang]['progress.text'].replace('...', ': Завершено!');
+                } else {
+                    retryBtn.disabled = false;
+                    retryBtn.textContent = translations[lang]['button.retry'] || 'Повторити';
+                    progressText.textContent = translations[lang]['progress.text'].replace('...', `: ${totalSuccess}/${tables.length} успішно, ${failedTables.length} помилок`);
+                }
+            };
             
             createTables();
         }
