@@ -12,6 +12,12 @@ class PluginsPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.plugins.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Керування плагінами - Flowaxy CMS';
         $this->templateName = 'plugins';
         
@@ -53,20 +59,24 @@ class PluginsPage extends AdminPage {
         $this->registerModalHandler('uploadPluginModal', 'upload_plugin', [$this, 'handleUploadPlugin']);
         
         // Використовуємо допоміжні методи для створення кнопок
-        $headerButtons = $this->createButtonGroup([
-            [
-                'text' => 'Завантажити плагін',
-                'type' => 'primary',
-                'options' => [
-                    'icon' => 'upload',
-                    'attributes' => [
-                        'data-bs-toggle' => 'modal', 
-                        'data-bs-target' => '#uploadPluginModal',
-                        'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadPluginModal")'
+        // Кнопка "Завантажити плагін" тільки якщо є право на встановлення
+        $headerButtons = '';
+        if (function_exists('current_user_can') && current_user_can('admin.plugins.install')) {
+            $headerButtons = $this->createButtonGroup([
+                [
+                    'text' => 'Завантажити плагін',
+                    'type' => 'primary',
+                    'options' => [
+                        'icon' => 'upload',
+                        'attributes' => [
+                            'data-bs-toggle' => 'modal', 
+                            'data-bs-target' => '#uploadPluginModal',
+                            'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadPluginModal")'
+                        ]
                     ]
                 ]
-            ]
-        ]);
+            ]);
+        }
         
         $this->setPageHeader(
             'Керування плагінами',
@@ -138,6 +148,19 @@ class PluginsPage extends AdminPage {
         
         $action = $_POST['action'] ?? '';
         $pluginSlug = $_POST['plugin_slug'] ?? '';
+        
+        // Перевірка прав доступу для кожного дії
+        $permissionMap = [
+            'install' => 'admin.plugins.install',
+            'activate' => 'admin.plugins.activate',
+            'deactivate' => 'admin.plugins.deactivate',
+            'uninstall' => 'admin.plugins.delete'
+        ];
+        
+        if (isset($permissionMap[$action]) && (!function_exists('current_user_can') || !current_user_can($permissionMap[$action]))) {
+            $this->setMessage('У вас немає прав на виконання цієї дії', 'danger');
+            return;
+        }
         
         try {
             switch ($action) {
@@ -362,6 +385,11 @@ class PluginsPage extends AdminPage {
     public function handleUploadPlugin(array $data, array $files): array {
         if (!$this->verifyCsrf()) {
             return ['success' => false, 'error' => 'Помилка безпеки', 'reload' => false];
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.plugins.install')) {
+            return ['success' => false, 'error' => 'У вас немає прав на встановлення плагінів', 'reload' => false];
         }
         
         if (!isset($files['plugin_file'])) {

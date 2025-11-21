@@ -12,6 +12,12 @@ class CacheViewPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.cache.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Перегляд кешу - Flowaxy CMS';
         $this->templateName = 'cache-view';
     }
@@ -83,6 +89,15 @@ class CacheViewPage extends AdminPage {
             $this->sendJsonResponse([
                 'success' => false,
                 'message' => 'Помилка безпеки: невірний CSRF токен'
+            ], 403);
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.cache.clear')) {
+            $this->sendJsonResponse([
+                'success' => false,
+                'message' => 'У вас немає прав на очищення кешу'
             ], 403);
             return;
         }
@@ -230,6 +245,12 @@ class CacheViewPage extends AdminPage {
     private function clearCache() {
         if (!$this->verifyCsrf()) {
             $this->setMessage('Помилка безпеки: невірний CSRF токен', 'danger');
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.cache.clear')) {
+            $this->setMessage('У вас немає прав на очищення кешу', 'danger');
             return;
         }
         

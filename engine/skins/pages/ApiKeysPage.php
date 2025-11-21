@@ -13,6 +13,12 @@ class ApiKeysPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.api.keys.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'API Ключі - Flowaxy CMS';
         $this->templateName = 'api-keys';
         $this->apiManager = new ApiManager();
@@ -135,6 +141,14 @@ class ApiKeysPage extends AdminPage {
         
         $action = $this->post('action', '');
         
+        // Перевірка прав доступу для видалення
+        if ($action === 'delete') {
+            if (!function_exists('current_user_can') || !current_user_can('admin.api.keys.delete')) {
+                $this->setMessage('У вас немає прав на видалення API ключів', 'danger');
+                return;
+            }
+        }
+        
         if ($action === 'delete' && $this->post('id')) {
             $id = (int)$this->post('id', 0);
             if ($id > 0 && $this->apiManager->deleteKey($id)) {
@@ -158,6 +172,14 @@ class ApiKeysPage extends AdminPage {
             return [
                 'success' => false,
                 'message' => 'Ошибка безопасности. Попробуйте еще раз.'
+            ];
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.api.keys.create')) {
+            return [
+                'success' => false,
+                'message' => 'У вас немає прав на створення API ключів'
             ];
         }
         
@@ -221,6 +243,12 @@ class ApiKeysPage extends AdminPage {
      * Обработка удаления API ключа
      */
     private function handleDeleteApiKey(): void {
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.api.keys.delete')) {
+            Response::jsonResponse(['success' => false, 'message' => 'У вас немає прав на видалення API ключів'], 403);
+            return;
+        }
+        
         $request = Request::getInstance();
         $id = (int)$request->post('id', 0);
         

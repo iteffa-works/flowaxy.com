@@ -23,13 +23,19 @@ function themeSupportsNavigation() {
 }
 
 function getMenuItems() {
-    // Створюємо унікальний ключ кешу на основі активних плагінів
+    // Створюємо унікальний ключ кешу на основі активних плагінів та користувача
+    // (різні користувачі мають різні права доступу, тому меню може відрізнятися)
     $pluginsHash = cache_remember('active_plugins_hash', function() {
         $activePlugins = pluginManager()->getActivePlugins();
         return md5(implode(',', array_keys($activePlugins)));
     }, 3600); // Кешуємо хеш плагінів на 1 годину
     
-    $cacheKey = 'admin_menu_items_' . $pluginsHash;
+    // Додаємо ID користувача до ключа кешу для урахування прав доступу
+    $session = sessionManager();
+    $userId = (int)$session->get('admin_user_id');
+    $userHash = $userId > 0 ? md5((string)$userId) : 'guest';
+    
+    $cacheKey = 'admin_menu_items_' . $pluginsHash . '_' . $userHash;
     
     return cache_remember($cacheKey, function() {
         // Починаємо з порожнього меню - всі пункти додаються через плагіни
@@ -46,6 +52,62 @@ function getMenuItems() {
         
         // Застосовуємо хук для додавання пунктів меню від плагінів
         $menu = doHook('admin_menu', $menu);
+        
+        // Фільтруємо меню по правам доступу
+        $filteredMenu = [];
+        foreach ($menu as $item) {
+            $hasAccess = true;
+            
+            // Перевіряємо права доступу для основного пункту меню
+            $permission = $item['permission'] ?? null;
+            if ($permission !== null && is_string($permission)) {
+                // Для першого користувача завжди дозволяємо доступ
+                $session = sessionManager();
+                $userId = (int)$session->get('admin_user_id');
+                if ($userId === 1) {
+                    $hasAccess = true;
+                } elseif (function_exists('current_user_can')) {
+                    $hasAccess = current_user_can($permission);
+                } else {
+                    $hasAccess = false;
+                }
+            }
+            
+            // Якщо є підменю, перевіряємо права для кожного підпункту
+            if ($hasAccess && isset($item['submenu']) && is_array($item['submenu'])) {
+                $filteredSubmenu = [];
+                foreach ($item['submenu'] as $subItem) {
+                    $subHasAccess = true;
+                    $subPermission = $subItem['permission'] ?? null;
+                    if ($subPermission !== null && is_string($subPermission)) {
+                        $session = sessionManager();
+                        $userId = (int)$session->get('admin_user_id');
+                        if ($userId === 1) {
+                            $subHasAccess = true;
+                        } elseif (function_exists('current_user_can')) {
+                            $subHasAccess = current_user_can($subPermission);
+                        } else {
+                            $subHasAccess = false;
+                        }
+                    }
+                    if ($subHasAccess) {
+                        $filteredSubmenu[] = $subItem;
+                    }
+                }
+                $item['submenu'] = $filteredSubmenu;
+                
+                // Якщо після фільтрації підменю порожнє і це не прямий посилання, не додаємо пункт меню
+                if (empty($filteredSubmenu) && ($item['href'] ?? '#') === '#') {
+                    $hasAccess = false;
+                }
+            }
+            
+            if ($hasAccess) {
+                $filteredMenu[] = $item;
+            }
+        }
+        
+        $menu = $filteredMenu;
         
         // Сортуємо за order
         usort($menu, function($a, $b) {

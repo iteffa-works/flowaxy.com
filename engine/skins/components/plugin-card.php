@@ -52,26 +52,41 @@ $status = $isActive ? 'active' : ($isInstalled ? 'inactive' : 'available');
         <p class="plugin-description"><?= $pluginDescription ?></p>
         
         <div class="plugin-actions">
+            <?php
+            // Перевірка прав доступу
+            $session = sessionManager();
+            $userId = (int)$session->get('admin_user_id');
+            $hasInstallAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.plugins.install'));
+            $hasActivateAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.plugins.activate'));
+            $hasDeactivateAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.plugins.deactivate'));
+            $hasDeleteAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.plugins.delete'));
+            $hasSettingsAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.plugins.settings'));
+            ?>
+            
             <?php if (!$isInstalled): ?>
-                <?php
-                $text = 'Встановити';
-                $type = 'primary';
-                $icon = 'download';
-                $attributes = ['onclick' => "installPlugin('{$pluginSlug}')"];
-                unset($url);
-                include __DIR__ . '/button.php';
-                ?>
+                <?php if ($hasInstallAccess): ?>
+                    <?php
+                    $text = 'Встановити';
+                    $type = 'primary';
+                    $icon = 'download';
+                    $attributes = ['onclick' => "installPlugin('{$pluginSlug}')"];
+                    unset($url);
+                    include __DIR__ . '/button.php';
+                    ?>
+                <?php endif; ?>
             <?php elseif ($isActive): ?>
-                <?php
-                $text = 'Деактивувати';
-                $type = 'warning';
-                $icon = 'pause';
-                $attributes = ['onclick' => "togglePlugin('{$pluginSlug}', false)"];
-                unset($url);
-                include __DIR__ . '/button.php';
-                ?>
+                <?php if ($hasDeactivateAccess): ?>
+                    <?php
+                    $text = 'Деактивувати';
+                    $type = 'warning';
+                    $icon = 'pause';
+                    $attributes = ['onclick' => "togglePlugin('{$pluginSlug}', false)"];
+                    unset($url);
+                    include __DIR__ . '/button.php';
+                    ?>
+                <?php endif; ?>
                 
-                <?php if ($hasSettings): ?>
+                <?php if ($hasSettings && $hasSettingsAccess): ?>
                     <?php
                     $text = '';
                     $type = 'secondary';
@@ -82,17 +97,19 @@ $status = $isActive ? 'active' : ($isInstalled ? 'inactive' : 'available');
                     ?>
                 <?php endif; ?>
             <?php else: ?>
-                <?php
-                $text = 'Активувати';
-                $type = 'success';
-                $icon = 'play';
-                $attributes = ['onclick' => "togglePlugin('{$pluginSlug}', true)"];
-                unset($url);
-                include __DIR__ . '/button.php';
-                ?>
+                <?php if ($hasActivateAccess): ?>
+                    <?php
+                    $text = 'Активувати';
+                    $type = 'success';
+                    $icon = 'play';
+                    $attributes = ['onclick' => "togglePlugin('{$pluginSlug}', true)"];
+                    unset($url);
+                    include __DIR__ . '/button.php';
+                    ?>
+                <?php endif; ?>
             <?php endif; ?>
             
-            <?php if ($isInstalled): ?>
+            <?php if ($isInstalled && $hasDeleteAccess): ?>
                 <?php if ($isActive): ?>
                     <?php
                     $text = '';

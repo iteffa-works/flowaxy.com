@@ -12,6 +12,12 @@ class ThemesPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
@@ -53,20 +59,24 @@ class ThemesPage extends AdminPage {
         $this->registerModalHandler('uploadThemeModal', 'upload_theme', [$this, 'handleUploadTheme']);
         
         // Використовуємо допоміжні методи для створення кнопок
-        $headerButtons = $this->createButtonGroup([
-            [
-                'text' => 'Завантажити тему',
-                'type' => 'primary',
-                'options' => [
-                    'icon' => 'upload',
-                    'attributes' => [
-                        'data-bs-toggle' => 'modal', 
-                        'data-bs-target' => '#uploadThemeModal',
-                        'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadThemeModal")'
+        // Кнопка "Завантажити тему" тільки якщо є право на встановлення
+        $headerButtons = '';
+        if (function_exists('current_user_can') && current_user_can('admin.themes.install')) {
+            $headerButtons = $this->createButtonGroup([
+                [
+                    'text' => 'Завантажити тему',
+                    'type' => 'primary',
+                    'options' => [
+                        'icon' => 'upload',
+                        'attributes' => [
+                            'data-bs-toggle' => 'modal', 
+                            'data-bs-target' => '#uploadThemeModal',
+                            'onclick' => 'window.ModalHandler && window.ModalHandler.show("uploadThemeModal")'
+                        ]
                     ]
                 ]
-            ]
-        ]);
+            ]);
+        }
         
         $this->setPageHeader(
             'Теми',
@@ -160,6 +170,12 @@ class ThemesPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.activate')) {
+            $this->setMessage('У вас немає прав на активацію тем', 'danger');
+            return;
+        }
+        
         $themeSlug = $_POST['theme_slug'] ?? '';
         
         if (empty($themeSlug)) {
@@ -231,6 +247,12 @@ class ThemesPage extends AdminPage {
     private function ajaxActivateTheme() {
         if (!$this->verifyCsrf()) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.activate')) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'У вас немає прав на активацію тем'], 403);
             return;
         }
         
@@ -329,6 +351,11 @@ class ThemesPage extends AdminPage {
     public function handleUploadTheme(array $data, array $files): array {
         if (!$this->verifyCsrf()) {
             return ['success' => false, 'error' => 'Помилка безпеки', 'reload' => false];
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.install')) {
+            return ['success' => false, 'error' => 'У вас немає прав на встановлення тем', 'reload' => false];
         }
         
         if (!isset($files['theme_file'])) {
@@ -915,6 +942,12 @@ class ThemesPage extends AdminPage {
     private function deleteTheme() {
         if (!$this->verifyCsrf()) {
             $this->setMessage('Помилка безпеки', 'danger');
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.delete')) {
+            $this->setMessage('У вас немає прав на видалення тем', 'danger');
             return;
         }
         

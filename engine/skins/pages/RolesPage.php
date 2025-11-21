@@ -16,25 +16,35 @@ class RolesPage extends AdminPage {
     
     public function __construct() {
         parent::__construct();
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Ролі та права доступу - Flowaxy CMS';
         
         // Підключаємо зовнішні CSS та JS файли
         $this->additionalCSS[] = UrlHelper::admin('assets/styles/roles.css') . '?v=' . time();
         $this->additionalJS[] = UrlHelper::admin('assets/scripts/roles.js') . '?v=' . time();
         
-        // Кнопка створення ролі
-        $headerButtons = $this->createButtonGroup([
-            [
-                'text' => 'Створити роль',
-                'type' => 'outline-secondary',
-                'options' => [
-                    'url' => UrlHelper::admin('roles?action=create'),
-                    'attributes' => [
-                        'class' => 'btn-sm'
+        // Кнопка створення ролі (тільки якщо є право на створення)
+        $headerButtons = '';
+        if (function_exists('current_user_can') && current_user_can('admin.roles.create')) {
+            $headerButtons = $this->createButtonGroup([
+                [
+                    'text' => 'Створити роль',
+                    'type' => 'outline-secondary',
+                    'options' => [
+                        'url' => UrlHelper::admin('roles?action=create'),
+                        'attributes' => [
+                            'class' => 'btn-sm'
+                        ]
                     ]
                 ]
-            ]
-        ]);
+            ]);
+        }
         
         $this->setPageHeader(
             'Ролі та права доступу',
@@ -108,6 +118,12 @@ class RolesPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.create')) {
+            $this->setMessage('У вас немає прав на створення ролей', 'danger');
+            return;
+        }
+        
         if (!$this->roleManager) {
             $this->setMessage('Помилка: RoleManager не доступний', 'danger');
             return;
@@ -143,6 +159,12 @@ class RolesPage extends AdminPage {
     
     private function handleUpdateRole(): void {
         if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.edit')) {
+            $this->setMessage('У вас немає прав на редагування ролей', 'danger');
             return;
         }
         
@@ -206,6 +228,12 @@ class RolesPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.delete')) {
+            $this->setMessage('У вас немає прав на видалення ролей', 'danger');
+            return;
+        }
+        
         if (!$this->roleManager) {
             $this->setMessage('Помилка: RoleManager не доступний', 'danger');
             return;
@@ -230,6 +258,12 @@ class RolesPage extends AdminPage {
     
     private function handleAssignPermission(): void {
         if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.permissions')) {
+            $this->setMessage('У вас немає прав на управління дозволами', 'danger');
             return;
         }
         
@@ -261,6 +295,12 @@ class RolesPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.permissions')) {
+            $this->setMessage('У вас немає прав на управління дозволами', 'danger');
+            return;
+        }
+        
         if (!$this->roleManager) {
             $this->setMessage('Помилка: RoleManager не доступний', 'danger');
             return;
@@ -286,6 +326,12 @@ class RolesPage extends AdminPage {
     
     private function handleAssignUserRole(): void {
         if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.roles')) {
+            $this->setMessage('У вас немає прав на призначення ролей користувачам', 'danger');
             return;
         }
         
@@ -317,6 +363,12 @@ class RolesPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.roles')) {
+            $this->setMessage('У вас немає прав на видалення ролей у користувачів', 'danger');
+            return;
+        }
+        
         if (!$this->roleManager) {
             $this->setMessage('Помилка: RoleManager не доступний', 'danger');
             return;
@@ -342,6 +394,12 @@ class RolesPage extends AdminPage {
     
     private function handleBulkDeleteRoles(): void {
         if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.roles.delete')) {
+            $this->setMessage('У вас немає прав на видалення ролей', 'danger');
             return;
         }
         

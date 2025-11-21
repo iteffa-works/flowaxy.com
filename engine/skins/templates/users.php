@@ -200,6 +200,11 @@
                                 title="Змінити пароль">
                             <i class="fas fa-key"></i>
                         </button>
+                        <button type="button" class="btn btn-outline-info" 
+                                onclick="manageRoles(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>')"
+                                title="Управління ролями">
+                            <i class="fas fa-user-shield"></i>
+                        </button>
                         <?php if ($user['id'] !== 1): ?>
                             <?php
                             $session = sessionManager();
@@ -325,6 +330,54 @@
     </div>
 </div>
 
+<!-- Modal для управления ролями -->
+<div class="modal fade" id="manageRolesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" id="manageRolesForm">
+                <?= SecurityHelper::csrfField() ?>
+                <input type="hidden" name="action" value="manage_user_roles">
+                <input type="hidden" name="user_id" id="roles_user_id">
+                <div class="modal-header">
+                    <h5 class="modal-title">Управління ролями</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Призначення ролей для користувача: <strong id="roles_username"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">Доступні ролі:</label>
+                        <div id="roles_list" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px;">
+                            <?php if (!empty($roles)): ?>
+                                <?php foreach ($roles as $role): ?>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input role-checkbox" 
+                                               type="checkbox" 
+                                               name="role_ids[]" 
+                                               value="<?= $role['id'] ?>" 
+                                               id="role_<?= $role['id'] ?>">
+                                        <label class="form-check-label" for="role_<?= $role['id'] ?>">
+                                            <?= htmlspecialchars($role['name']) ?>
+                                            <?php if (!empty($role['description'])): ?>
+                                                <small class="text-muted d-block"><?= htmlspecialchars($role['description']) ?></small>
+                                            <?php endif; ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p class="text-muted">Ролі не знайдені</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button type="submit" class="btn btn-primary">Зберегти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 function editUser(id, username, email) {
     document.getElementById('edit_user_id').value = id;
@@ -342,6 +395,48 @@ function changePassword(id, username) {
     document.getElementById('password_confirm').value = '';
     
     const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+    modal.show();
+}
+
+function manageRoles(id, username) {
+    document.getElementById('roles_user_id').value = id;
+    document.getElementById('roles_username').textContent = username;
+    
+    // Сбрасываем все чекбоксы
+    document.querySelectorAll('.role-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Загружаем текущие роли пользователя через AJAX
+    const url = '<?= UrlHelper::admin('users') ?>?action=get_user_roles&user_id=' + id;
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.roles) {
+                // Отмечаем роли, которые уже назначены пользователю
+                data.roles.forEach(roleId => {
+                    const checkbox = document.getElementById('role_' + roleId);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Помилка завантаження ролей:', error);
+        });
+    
+    const modal = new bootstrap.Modal(document.getElementById('manageRolesModal'));
     modal.show();
 }
 </script>

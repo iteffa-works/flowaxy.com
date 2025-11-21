@@ -12,6 +12,12 @@ class SiteSettingsPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.settings.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Налаштування сайту - Flowaxy CMS';
         $this->templateName = 'site-settings';
         
@@ -42,6 +48,12 @@ class SiteSettingsPage extends AdminPage {
      */
     private function saveSettings() {
         if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.settings.edit')) {
+            $this->setMessage('У вас немає прав на зміну налаштувань', 'danger');
             return;
         }
         

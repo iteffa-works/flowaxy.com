@@ -123,62 +123,68 @@
 }
 
 .permission-category {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
 }
 
 .permission-category-header {
     background: #f9fafb;
-    padding: 12px 15px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
     border-bottom: 1px solid #e5e7eb;
 }
 
 .permission-category-header input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .permission-category-header span {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     flex: 1;
 }
 
 .permission-category-body {
-    padding: 15px;
+    padding: 10px;
     display: none;
 }
 
 .permission-category-body.active {
-    display: block;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px 12px;
 }
 
 .permission-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 0;
+    gap: 6px;
+    padding: 4px 0;
+    min-width: 0;
 }
 
 .permission-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .permission-item label {
     margin: 0;
     font-weight: 400;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
     flex: 1;
+    line-height: 1.4;
 }
 
 .publish-section h3 {
@@ -214,6 +220,24 @@
 }
 
 /* Респонсивность для мобильных устройств */
+@media (max-width: 1600px) {
+    .permission-category-body.active {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .permission-category-body.active {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .permission-category-body.active {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .role-edit-wrapper {
         flex-direction: column;
@@ -233,6 +257,10 @@
     .permission-flags-controls {
         flex-wrap: wrap;
         width: 100%;
+    }
+    
+    .permission-category-body.active {
+        grid-template-columns: 1fr;
     }
     
     .role-edit-main,
@@ -410,22 +438,8 @@ document.querySelectorAll('.category-checkbox').forEach(checkbox => {
 document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const category = this.dataset.category;
-        const categoryPermissions = document.querySelectorAll(`.permission-checkbox[data-category="${category}"]`);
-        const checkedPermissions = document.querySelectorAll(`.permission-checkbox[data-category="${category}"]:checked`);
-        const categoryCheckbox = document.querySelector(`.category-checkbox[data-category="${category}"]`);
-        
-        if (categoryCheckbox) {
-            categoryCheckbox.checked = categoryPermissions.length === checkedPermissions.length;
-        }
-        
-        // Оновлюємо "Всі дозволи"
-        const allPermissions = document.querySelectorAll('.permission-checkbox');
-        const allCheckedPermissions = document.querySelectorAll('.permission-checkbox:checked');
-        const allPermissionsCheckbox = document.getElementById('allPermissions');
-        
-        if (allPermissionsCheckbox) {
-            allPermissionsCheckbox.checked = allPermissions.length === allCheckedPermissions.length;
-        }
+        updateCategoryCheckbox(category);
+        updateAllPermissionsCheckbox();
     });
 });
 
@@ -453,8 +467,31 @@ document.getElementById('expandAll')?.addEventListener('click', function(e) {
     });
 });
 
-// Ініціалізація - відкриваємо всі категорії за замовчуванням
+// Функція для оновлення стану категорії
+function updateCategoryCheckbox(categoryName) {
+    const categoryPermissions = document.querySelectorAll(`.permission-checkbox[data-category="${categoryName}"]`);
+    const checkedPermissions = document.querySelectorAll(`.permission-checkbox[data-category="${categoryName}"]:checked`);
+    const categoryCheckbox = document.querySelector(`.category-checkbox[data-category="${categoryName}"]`);
+    
+    if (categoryCheckbox && categoryPermissions.length > 0) {
+        categoryCheckbox.checked = categoryPermissions.length === checkedPermissions.length;
+    }
+}
+
+// Функція для оновлення "Всі дозволи"
+function updateAllPermissionsCheckbox() {
+    const allPermissions = document.querySelectorAll('.permission-checkbox');
+    const allCheckedPermissions = document.querySelectorAll('.permission-checkbox:checked');
+    const allPermissionsCheckbox = document.getElementById('allPermissions');
+    
+    if (allPermissionsCheckbox && allPermissions.length > 0) {
+        allPermissionsCheckbox.checked = allPermissions.length === allCheckedPermissions.length;
+    }
+}
+
+// Ініціалізація - відкриваємо всі категорії за замовчуванням та оновлюємо чекбокси
 document.addEventListener('DOMContentLoaded', function() {
+    // Відкриваємо всі категорії
     document.querySelectorAll('.permission-category-body').forEach(body => {
         body.classList.add('active');
     });
@@ -462,6 +499,15 @@ document.addEventListener('DOMContentLoaded', function() {
         icon.classList.remove('fa-chevron-down');
         icon.classList.add('fa-chevron-up');
     });
+    
+    // Оновлюємо чекбокси категорій
+    document.querySelectorAll('.category-checkbox').forEach(checkbox => {
+        const categoryName = checkbox.dataset.category;
+        updateCategoryCheckbox(categoryName);
+    });
+    
+    // Оновлюємо "Всі дозволи"
+    updateAllPermissionsCheckbox();
 });
 </script>
 

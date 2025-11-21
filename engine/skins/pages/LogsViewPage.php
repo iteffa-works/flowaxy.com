@@ -12,6 +12,12 @@ class LogsViewPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.logs.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Перегляд логів - Flowaxy CMS';
         $this->templateName = 'logs-view';
         
@@ -249,6 +255,12 @@ class LogsViewPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.logs.delete')) {
+            $this->setMessage('У вас немає прав на видалення логів', 'danger');
+            return;
+        }
+        
         $file = $this->post('file', null);
         $logsDir = dirname(__DIR__, 3) . '/storage/logs/';
         
@@ -469,6 +481,13 @@ class LogsViewPage extends AdminPage {
      * Експорт логів
      */
     private function exportLogs(): void {
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.logs.export')) {
+            http_response_code(403);
+            echo 'У вас немає прав на експорт логів';
+            exit;
+        }
+        
         $format = $_GET['format'] ?? 'txt';
         $selectedFile = $_GET['file'] ?? null;
         

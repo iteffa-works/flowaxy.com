@@ -86,33 +86,45 @@ $status = $isActive ? 'active' : 'inactive';
         <?php endif; ?>
         
         <div class="theme-actions">
+            <?php
+            // Перевірка прав доступу
+            $session = sessionManager();
+            $userId = (int)$session->get('admin_user_id');
+            $hasActivateAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.themes.activate'));
+            $hasDeleteAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.themes.delete'));
+            $hasCustomizeAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.themes.customize'));
+            $hasEditAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.themes.edit'));
+            ?>
+            
             <?php if (!$isActive): ?>
-                <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= $themeSlug ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
-                    <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                    <input type="hidden" name="theme_slug" value="<?= $themeSlug ?>">
-                    <input type="hidden" name="activate_theme" value="1">
-                    
-                    <?php
-                    // Кнопка активации с спиннером
-                    ob_start();
-                    $text = 'Активувати';
-                    $type = 'primary';
-                    $icon = 'check';
-                    $attributes = ['type' => 'submit', 'class' => 'theme-activate-btn'];
-                    unset($url);
-                    include __DIR__ . '/button.php';
-                    $activateBtn = ob_get_clean();
-                    
-                    // Добавляем спиннер если есть SCSS поддержка
-                    if ($hasScssSupport) {
-                        $activateBtn = str_replace('</button>', '<span class="btn-spinner ms-2" style="display: none;"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span></button>', $activateBtn);
-                    }
-                    echo $activateBtn;
-                    ?>
-                </form>
+                <?php if ($hasActivateAccess): ?>
+                    <form method="POST" class="d-inline theme-activate-form" data-theme-slug="<?= $themeSlug ?>" data-has-scss="<?= $hasScssSupport ? '1' : '0' ?>">
+                        <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+                        <input type="hidden" name="theme_slug" value="<?= $themeSlug ?>">
+                        <input type="hidden" name="activate_theme" value="1">
+                        
+                        <?php
+                        // Кнопка активации с спиннером
+                        ob_start();
+                        $text = 'Активувати';
+                        $type = 'primary';
+                        $icon = 'check';
+                        $attributes = ['type' => 'submit', 'class' => 'theme-activate-btn'];
+                        unset($url);
+                        include __DIR__ . '/button.php';
+                        $activateBtn = ob_get_clean();
+                        
+                        // Добавляем спиннер если есть SCSS поддержка
+                        if ($hasScssSupport) {
+                            $activateBtn = str_replace('</button>', '<span class="btn-spinner ms-2" style="display: none;"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span></button>', $activateBtn);
+                        }
+                        echo $activateBtn;
+                        ?>
+                    </form>
+                <?php endif; ?>
             <?php else: ?>
                 <div class="d-flex gap-2 flex-wrap">
-                    <?php if ($supportsCustomization): ?>
+                    <?php if ($supportsCustomization && $hasCustomizeAccess): ?>
                         <?php
                         $text = 'Кастомізація';
                         $type = 'primary';
@@ -134,7 +146,7 @@ $status = $isActive ? 'active' : 'inactive';
                         ?>
                     <?php endif; ?>
                     
-                    <?php if ($hasSettings): ?>
+                    <?php if ($hasSettings && $hasEditAccess): ?>
                         <?php
                         $text = 'Налаштування';
                         $type = 'outline-secondary';
@@ -147,7 +159,7 @@ $status = $isActive ? 'active' : 'inactive';
                 </div>
             <?php endif; ?>
             
-            <?php if (!$isActive): ?>
+            <?php if (!$isActive && $hasDeleteAccess): ?>
                 <?php
                 $text = '';
                 $type = 'danger';

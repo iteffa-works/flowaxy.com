@@ -13,6 +13,12 @@ class WebhooksPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.webhooks.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Webhooks - Flowaxy CMS';
         $this->templateName = 'webhooks';
         $this->webhookManager = new WebhookManager();
@@ -139,6 +145,14 @@ class WebhooksPage extends AdminPage {
         
         $action = $this->post('action', '');
         
+        // Перевірка прав доступу для видалення
+        if ($action === 'delete') {
+            if (!function_exists('current_user_can') || !current_user_can('admin.webhooks.delete')) {
+                $this->setMessage('У вас немає прав на видалення webhooks', 'danger');
+                return;
+            }
+        }
+        
         if ($action === 'delete' && $this->post('id')) {
             $id = (int)$this->post('id', 0);
             if ($id > 0 && $this->webhookManager->delete($id)) {
@@ -162,6 +176,14 @@ class WebhooksPage extends AdminPage {
             return [
                 'success' => false,
                 'message' => 'Ошибка безопасности. Попробуйте еще раз.'
+            ];
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.webhooks.create')) {
+            return [
+                'success' => false,
+                'message' => 'У вас немає прав на створення webhooks'
             ];
         }
         
@@ -222,6 +244,12 @@ class WebhooksPage extends AdminPage {
      * Обработка удаления webhook
      */
     private function handleDeleteWebhook(): void {
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.webhooks.delete')) {
+            Response::jsonResponse(['success' => false, 'message' => 'У вас немає прав на видалення webhooks'], 403);
+            return;
+        }
+        
         $request = Request::getInstance();
         $id = (int)$request->post('id', 0);
         
@@ -261,6 +289,12 @@ class WebhooksPage extends AdminPage {
      * Тестирование webhook
      */
     private function handleTestWebhook(): void {
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.webhooks.test')) {
+            Response::jsonResponse(['success' => false, 'message' => 'У вас немає прав на тестування webhooks'], 403);
+            return;
+        }
+        
         $request = Request::getInstance();
         $id = (int)$request->post('id', 0);
         

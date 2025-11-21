@@ -29,22 +29,41 @@
             $isDashboard = ($currentPage === 'dashboard');
             $isPlugins = ($currentPage === 'plugins');
             $isThemes = ($currentPage === 'themes');
+            
+            // Перевірка прав доступу
+            $session = sessionManager();
+            $userId = (int)$session->get('admin_user_id');
+            $hasPluginsAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.plugins.view'));
+            $hasThemesAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.themes.view'));
+            $hasApiKeysAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.api.keys.view'));
+            $hasWebhooksAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.webhooks.view'));
+            $hasIntegrationsAccess = $hasApiKeysAccess || $hasWebhooksAccess;
             ?>
             <div class="header-quick-actions d-flex align-items-center" style="position: relative; overflow: visible;">
+                <!-- Панель управління - доступна всім авторизованим -->
                 <a href="<?= UrlHelper::admin('dashboard') ?>" class="header-quick-action-btn <?= $isDashboard ? 'active' : '' ?>" title="Панель управління">
                     <i class="fas fa-home"></i>
                     <span class="d-none d-md-inline ms-1">Панель</span>
                 </a>
+                
+                <!-- Плагіни -->
+                <?php if ($hasPluginsAccess): ?>
                 <a href="<?= UrlHelper::admin('plugins') ?>" class="header-quick-action-btn <?= $isPlugins ? 'active' : '' ?>" title="Плагіни">
                     <i class="fas fa-puzzle-piece"></i>
                     <span class="d-none d-md-inline ms-1">Плагіни</span>
                 </a>
+                <?php endif; ?>
+                
+                <!-- Теми -->
+                <?php if ($hasThemesAccess): ?>
                 <a href="<?= UrlHelper::admin('themes') ?>" class="header-quick-action-btn <?= $isThemes ? 'active' : '' ?>" title="Теми оформлення">
                     <i class="fas fa-palette"></i>
                     <span class="d-none d-md-inline ms-1">Теми</span>
                 </a>
+                <?php endif; ?>
                 
                 <!-- Інтеграції - в тому ж стилі, що й інші кнопки -->
+                <?php if ($hasIntegrationsAccess): ?>
                 <?php
                 $isApiKeys = ($currentPage === 'api-keys');
                 $isWebhooks = ($currentPage === 'webhooks');
@@ -56,18 +75,23 @@
                         <span class="d-none d-md-inline ms-1">Інтеграції</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end integrations-dropdown-menu" aria-labelledby="integrations-dropdown-toggle">
+                        <?php if ($hasApiKeysAccess): ?>
                         <li>
                             <a class="dropdown-item <?= $isApiKeys ? 'active' : '' ?>" href="<?= UrlHelper::admin('api-keys') ?>">
                                 <i class="fas fa-key me-2"></i>API Ключі
                             </a>
                         </li>
+                        <?php endif; ?>
+                        <?php if ($hasWebhooksAccess): ?>
                         <li>
                             <a class="dropdown-item <?= $isWebhooks ? 'active' : '' ?>" href="<?= UrlHelper::admin('webhooks') ?>">
                                 <i class="fas fa-code-branch me-2"></i>Webhooks
                             </a>
                         </li>
+                        <?php endif; ?>
                     </ul>
                 </div>
+                <?php endif; ?>
             </div>
             
             <!-- Перегляд сайту -->
@@ -80,6 +104,10 @@
             </a>
             
             <!-- Управління кешем -->
+            <?php
+            $hasCacheAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.cache.clear'));
+            ?>
+            <?php if ($hasCacheAccess): ?>
             <div class="dropdown">
                 <button class="header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Очистити кеш">
                     <i class="fas fa-database"></i>
@@ -97,6 +125,7 @@
                     </li>
                 </ul>
             </div>
+            <?php endif; ?>
             
             <!-- Dropdown пользователя -->
             <div class="dropdown">

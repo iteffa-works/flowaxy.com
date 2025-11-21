@@ -12,6 +12,9 @@ class ProfilePage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Профіль доступний всім авторизованим користувачам без додаткових перевірок
+        // (базова перевірка авторизації вже виконана в AdminPage::__construct)
+        
         $this->pageTitle = 'Профіль користувача - Flowaxy CMS';
         $this->templateName = 'profile';
         

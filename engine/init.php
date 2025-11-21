@@ -209,186 +209,247 @@ if (file_exists(__DIR__ . '/includes/roles-init.php')) {
 }
 
 // ТИМЧАСОВО: Реєстрація всіх сторінок у бічну панель на час розробки
-// if (function_exists('addHook')) {
-//     addHook('admin_menu', function($menu) {
-//         // Для тимчасової розробки - додаємо всі сторінки
-//         $devMenuItems = [
-//             [
-//                 'text' => 'Панель управління',
-//                 'icon' => 'fas fa-tachometer-alt',
-//                 'href' => UrlHelper::admin('dashboard'),
-//                 'page' => 'dashboard',
-//                 'order' => 1
-//             ],
-//             [
-//                 'text' => 'Налаштування',
-//                 'icon' => 'fas fa-cog',
-//                 'href' => UrlHelper::admin('settings'),
-//                 'page' => 'settings',
-//                 'order' => 10
-//             ],
-//             [
-//                 'text' => 'Налаштування сайту',
-//                 'icon' => 'fas fa-globe',
-//                 'href' => UrlHelper::admin('site-settings'),
-//                 'page' => 'site-settings',
-//                 'order' => 11
-//             ],
-//             [
-//                 'text' => 'Користувачі',
-//                 'icon' => 'fas fa-users',
-//                 'href' => UrlHelper::admin('users'),
-//                 'page' => 'users',
-//                 'order' => 20
-//             ],
-//             [
-//                 'text' => 'Ролі та права',
-//                 'icon' => 'fas fa-user-shield',
-//                 'href' => UrlHelper::admin('roles'),
-//                 'page' => 'roles',
-//                 'order' => 21
-//             ],
-//             [
-//                 'text' => 'Мій профіль',
-//                 'icon' => 'fas fa-user',
-//                 'href' => UrlHelper::admin('profile'),
-//                 'page' => 'profile',
-//                 'order' => 22
-//             ],
-//             [
-//                 'text' => 'Плагіни',
-//                 'icon' => 'fas fa-plug',
-//                 'href' => UrlHelper::admin('plugins'),
-//                 'page' => 'plugins',
-//                 'order' => 30
-//             ],
-//             [
-//                 'text' => 'Теми',
-//                 'icon' => 'fas fa-paint-brush',
-//                 'href' => UrlHelper::admin('themes'),
-//                 'page' => 'themes',
-//                 'order' => 31
-//             ],
-//             [
-//                 'text' => 'Редактор теми',
-//                 'icon' => 'fas fa-code',
-//                 'href' => UrlHelper::admin('theme-editor'),
-//                 'page' => 'theme-editor',
-//                 'order' => 32
-//             ],
-//             [
-//                 'text' => 'API ключі',
-//                 'icon' => 'fas fa-key',
-//                 'href' => UrlHelper::admin('api-keys'),
-//                 'page' => 'api-keys',
-//                 'order' => 40
-//             ],
-//             [
-//                 'text' => 'Webhooks',
-//                 'icon' => 'fas fa-link',
-//                 'href' => UrlHelper::admin('webhooks'),
-//                 'page' => 'webhooks',
-//                 'order' => 41
-//             ],
-//             [
-//                 'text' => 'Логи',
-//                 'icon' => 'fas fa-file-alt',
-//                 'href' => UrlHelper::admin('logs-view'),
-//                 'page' => 'logs-view',
-//                 'order' => 50
-//             ],
-//             [
-//                 'text' => 'Кеш',
-//                 'icon' => 'fas fa-database',
-//                 'href' => UrlHelper::admin('cache-view'),
-//                 'page' => 'cache-view',
-//                 'order' => 51
-//             ]
-//         ];
+if (function_exists('addHook')) {
+    addHook('admin_menu', function($menu) {
+        // Для тимчасової розробки - додаємо всі сторінки з перевіркою прав доступу
+        $devMenuItems = [
+            [
+                'text' => 'Панель управління',
+                'icon' => 'fas fa-tachometer-alt',
+                'href' => UrlHelper::admin('dashboard'),
+                'page' => 'dashboard',
+                'order' => 1,
+                'permission' => null // Доступно всім авторизованим
+            ],
+            [
+                'text' => 'Налаштування',
+                'icon' => 'fas fa-cog',
+                'href' => UrlHelper::admin('settings'),
+                'page' => 'settings',
+                'order' => 10,
+                'permission' => 'admin.settings.view'
+            ],
+            [
+                'text' => 'Налаштування сайту',
+                'icon' => 'fas fa-globe',
+                'href' => UrlHelper::admin('site-settings'),
+                'page' => 'site-settings',
+                'order' => 11,
+                'permission' => 'admin.settings.view'
+            ],
+            [
+                'text' => 'Користувачі',
+                'icon' => 'fas fa-users',
+                'href' => UrlHelper::admin('users'),
+                'page' => 'users',
+                'order' => 20,
+                'permission' => 'admin.users.view'
+            ],
+            [
+                'text' => 'Ролі та права',
+                'icon' => 'fas fa-user-shield',
+                'href' => UrlHelper::admin('roles'),
+                'page' => 'roles',
+                'order' => 21,
+                'permission' => 'admin.roles.view'
+            ],
+            [
+                'text' => 'Мій профіль',
+                'icon' => 'fas fa-user',
+                'href' => UrlHelper::admin('profile'),
+                'page' => 'profile',
+                'order' => 22,
+                'permission' => null // Доступно всім авторизованим
+            ],
+            [
+                'text' => 'Плагіни',
+                'icon' => 'fas fa-plug',
+                'href' => UrlHelper::admin('plugins'),
+                'page' => 'plugins',
+                'order' => 30,
+                'permission' => 'admin.plugins.view'
+            ],
+            [
+                'text' => 'Теми',
+                'icon' => 'fas fa-paint-brush',
+                'href' => UrlHelper::admin('themes'),
+                'page' => 'themes',
+                'order' => 31,
+                'permission' => 'admin.themes.view'
+            ],
+            [
+                'text' => 'Редактор теми',
+                'icon' => 'fas fa-code',
+                'href' => UrlHelper::admin('theme-editor'),
+                'page' => 'theme-editor',
+                'order' => 32,
+                'permission' => 'admin.themes.edit'
+            ],
+            [
+                'text' => 'API ключі',
+                'icon' => 'fas fa-key',
+                'href' => UrlHelper::admin('api-keys'),
+                'page' => 'api-keys',
+                'order' => 40,
+                'permission' => 'admin.api.keys.view'
+            ],
+            [
+                'text' => 'Webhooks',
+                'icon' => 'fas fa-link',
+                'href' => UrlHelper::admin('webhooks'),
+                'page' => 'webhooks',
+                'order' => 41,
+                'permission' => 'admin.webhooks.view'
+            ],
+            [
+                'text' => 'Логи',
+                'icon' => 'fas fa-file-alt',
+                'href' => UrlHelper::admin('logs-view'),
+                'page' => 'logs-view',
+                'order' => 50,
+                'permission' => 'admin.logs.view'
+            ],
+            [
+                'text' => 'Кеш',
+                'icon' => 'fas fa-database',
+                'href' => UrlHelper::admin('cache-view'),
+                'page' => 'cache-view',
+                'order' => 51,
+                'permission' => 'admin.cache.view'
+            ]
+        ];
         
-//         // Додаємо кастомізатор якщо підтримується
-//         if (function_exists('themeSupportsCustomization') && themeSupportsCustomization()) {
-//             $devMenuItems[] = [
-//                 'text' => 'Кастомізатор',
-//                 'icon' => 'fas fa-palette',
-//                 'href' => UrlHelper::admin('customizer'),
-//                 'page' => 'customizer',
-//                 'order' => 33
-//             ];
-//         }
+        // Додаємо кастомізатор якщо підтримується
+        if (function_exists('themeSupportsCustomization') && themeSupportsCustomization()) {
+            $devMenuItems[] = [
+                'text' => 'Кастомізатор',
+                'icon' => 'fas fa-palette',
+                'href' => UrlHelper::admin('customizer'),
+                'page' => 'customizer',
+                'order' => 33,
+                'permission' => 'admin.themes.customize'
+            ];
+        }
         
-//         // Додаємо всі пункти меню
-//         foreach ($devMenuItems as $item) {
-//             $menu[] = $item;
-//         }
+        // Додаємо пункти меню з перевіркою прав доступу
+        foreach ($devMenuItems as $item) {
+            // Перевіряємо права доступу
+            $hasAccess = true;
+            $permission = $item['permission'] ?? null;
+            if ($permission !== null && is_string($permission)) {
+                // Для першого користувача завжди дозволяємо доступ
+                $session = sessionManager();
+                $userId = (int)$session->get('admin_user_id');
+                if ($userId === 1) {
+                    $hasAccess = true;
+                } elseif (function_exists('current_user_can')) {
+                    $hasAccess = current_user_can($permission);
+                } else {
+                    $hasAccess = false;
+                }
+            }
+            
+            // Якщо є підменю, перевіряємо права для кожного підпункту
+            if ($hasAccess && isset($item['submenu']) && is_array($item['submenu'])) {
+                $filteredSubmenu = [];
+                foreach ($item['submenu'] as $subItem) {
+                    $subHasAccess = true;
+                    $subPermission = $subItem['permission'] ?? null;
+                    if ($subPermission !== null && is_string($subPermission)) {
+                        $session = sessionManager();
+                        $userId = (int)$session->get('admin_user_id');
+                        if ($userId === 1) {
+                            $subHasAccess = true;
+                        } elseif (function_exists('current_user_can')) {
+                            $subHasAccess = current_user_can($subPermission);
+                        } else {
+                            $subHasAccess = false;
+                        }
+                    }
+                    if ($subHasAccess) {
+                        $filteredSubmenu[] = $subItem;
+                    }
+                }
+                $item['submenu'] = $filteredSubmenu;
+                
+                // Якщо після фільтрації підменю порожнє, не додаємо пункт меню
+                if (empty($filteredSubmenu) && ($item['href'] ?? '#') === '#') {
+                    $hasAccess = false;
+                }
+            }
+            
+            if ($hasAccess) {
+                $menu[] = $item;
+            }
+        }
         
         
-//         return $menu;
-//     }, 1);
+        return $menu;
+    }, 1);
     
-//     // ТИМЧАСОВО ВИМКНЕНО: Старі хуки для roles та users (тепер все в одному місці вище)
-//     /*
-//     // Регистрация системного пункта меню для управления ролями
-//     addHook('admin_menu', function($menu) {
-//         // Проверяем право доступа или разрешаем для первого пользователя
-//         $hasAccess = false;
+    // ТИМЧАСОВО ВИМКНЕНО: Старі хуки для roles та users (тепер все в одному місці вище)
+    /*
+    // Регистрация системного пункта меню для управления ролями
+    addHook('admin_menu', function($menu) {
+        // Проверяем право доступа или разрешаем для первого пользователя
+        $hasAccess = false;
         
-//         if (function_exists('sessionManager')) {
-//             $session = sessionManager();
-//             $userId = $session->get('admin_user_id');
-//             // Для первого пользователя всегда разрешаем доступ
-//             if ($userId == 1) {
-//                 $hasAccess = true;
-//             } elseif (function_exists('current_user_can')) {
-//                 $hasAccess = current_user_can('admin.roles');
-//             }
-//         } elseif (function_exists('current_user_can')) {
-//             $hasAccess = current_user_can('admin.roles');
-//         }
+        if (function_exists('sessionManager')) {
+            $session = sessionManager();
+            $userId = $session->get('admin_user_id');
+            // Для первого пользователя всегда разрешаем доступ
+            if ($userId == 1) {
+                $hasAccess = true;
+            } elseif (function_exists('current_user_can')) {
+                $hasAccess = current_user_can('admin.roles');
+            }
+        } elseif (function_exists('current_user_can')) {
+            $hasAccess = current_user_can('admin.roles');
+        }
         
-//         if ($hasAccess) {
-//             $menu[] = [
-//                 'text' => 'Ролі та права',
-//                 'icon' => 'fas fa-user-shield',
-//                 'href' => UrlHelper::admin('roles'),
-//                 'page' => 'roles',
-//                 'order' => 30
-//             ];
-//         }
-//         return $menu;
-//     }, 5);
+        if ($hasAccess) {
+            $menu[] = [
+                'text' => 'Ролі та права',
+                'icon' => 'fas fa-user-shield',
+                'href' => UrlHelper::admin('roles'),
+                'page' => 'roles',
+                'order' => 30
+            ];
+        }
+        return $menu;
+    }, 5);
     
-//     // Регистрация системного пункта меню для управления пользователями
-//     addHook('admin_menu', function($menu) {
-//         // Проверяем право доступа или разрешаем для первого пользователя
-//         $hasAccess = false;
+    // Регистрация системного пункта меню для управления пользователями
+    addHook('admin_menu', function($menu) {
+        // Проверяем право доступа или разрешаем для первого пользователя
+        $hasAccess = false;
         
-//         if (function_exists('sessionManager')) {
-//             $session = sessionManager();
-//             $userId = $session->get('admin_user_id');
-//             // Для первого пользователя всегда разрешаем доступ
-//             if ($userId == 1) {
-//                 $hasAccess = true;
-//             } elseif (function_exists('current_user_can')) {
-//                 $hasAccess = current_user_can('admin.users');
-//             }
-//         } elseif (function_exists('current_user_can')) {
-//             $hasAccess = current_user_can('admin.users');
-//         }
+        if (function_exists('sessionManager')) {
+            $session = sessionManager();
+            $userId = $session->get('admin_user_id');
+            // Для первого пользователя всегда разрешаем доступ
+            if ($userId == 1) {
+                $hasAccess = true;
+            } elseif (function_exists('current_user_can')) {
+                $hasAccess = current_user_can('admin.users');
+            }
+        } elseif (function_exists('current_user_can')) {
+            $hasAccess = current_user_can('admin.users');
+        }
         
-//         if ($hasAccess) {
-//             $menu[] = [
-//                 'text' => 'Користувачі',
-//                 'icon' => 'fas fa-users',
-//                 'href' => UrlHelper::admin('users'),
-//                 'page' => 'users',
-//                 'order' => 29
-//             ];
-//         }
-//         return $menu;
-//     }, 5);
-//     */
-// }
+        if ($hasAccess) {
+            $menu[] = [
+                'text' => 'Користувачі',
+                'icon' => 'fas fa-users',
+                'href' => UrlHelper::admin('users'),
+                'page' => 'users',
+                'order' => 29
+            ];
+        }
+        return $menu;
+    }, 5);
+    */
+}
 
 if (function_exists('doHook')) {
     $handled = doHook('handle_early_request', false);

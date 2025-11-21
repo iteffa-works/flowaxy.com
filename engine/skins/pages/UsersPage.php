@@ -16,22 +16,32 @@ class UsersPage extends AdminPage {
     
     public function __construct() {
         parent::__construct();
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Користувачі - Flowaxy CMS';
         
-        // Кнопка створення користувача
-        $headerButtons = $this->createButtonGroup([
-            [
-                'text' => 'Створити користувача',
-                'type' => 'outline-secondary',
-                'options' => [
-                    'attributes' => [
-                        'class' => 'btn-sm',
-                        'data-bs-toggle' => 'modal',
-                        'data-bs-target' => '#createUserModal'
+        // Кнопка створення користувача (тільки якщо є право на створення)
+        $headerButtons = '';
+        if (function_exists('current_user_can') && current_user_can('admin.users.create')) {
+            $headerButtons = $this->createButtonGroup([
+                [
+                    'text' => 'Створити користувача',
+                    'type' => 'outline-secondary',
+                    'options' => [
+                        'attributes' => [
+                            'class' => 'btn-sm',
+                            'data-bs-toggle' => 'modal',
+                            'data-bs-target' => '#createUserModal'
+                        ]
                     ]
                 ]
-            ]
-        ]);
+            ]);
+        }
         
         $this->setPageHeader(
             'Користувачі',
@@ -46,8 +56,16 @@ class UsersPage extends AdminPage {
     }
     
     public function handle(): void {
-        if (Request::getMethod() === 'POST') {
-            $action = Request::post('action', '');
+        $request = Request::getInstance();
+        
+        // Обработка AJAX запроса для получения ролей пользователя
+        if ($request->getMethod() === 'GET' && $request->query('action') === 'get_user_roles') {
+            $this->handleGetUserRoles();
+            return;
+        }
+        
+        if ($request->getMethod() === 'POST') {
+            $action = $request->post('action', '');
             
             switch ($action) {
                 case 'create_user':
@@ -62,6 +80,9 @@ class UsersPage extends AdminPage {
                 case 'change_password':
                     $this->handleChangePassword();
                     break;
+                case 'manage_user_roles':
+                    $this->handleManageUserRoles();
+                    break;
             }
         }
         
@@ -70,6 +91,12 @@ class UsersPage extends AdminPage {
     
     private function handleCreateUser(): void {
         if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.create')) {
+            $this->setMessage('У вас немає прав на створення користувачів', 'danger');
             return;
         }
         
@@ -151,6 +178,12 @@ class UsersPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.edit')) {
+            $this->setMessage('У вас немає прав на редагування користувачів', 'danger');
+            return;
+        }
+        
         $userId = (int)Request::post('user_id', 0);
         $username = SecurityHelper::sanitizeInput(Request::post('username', ''));
         $email = SecurityHelper::sanitizeInput(Request::post('email', ''));
@@ -210,6 +243,12 @@ class UsersPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.delete')) {
+            $this->setMessage('У вас немає прав на видалення користувачів', 'danger');
+            return;
+        }
+        
         $userId = (int)Request::post('user_id', 0);
         
         if ($userId <= 0) {
@@ -249,6 +288,12 @@ class UsersPage extends AdminPage {
             return;
         }
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.password')) {
+            $this->setMessage('У вас немає прав на зміну паролів користувачів', 'danger');
+            return;
+        }
+        
         $userId = (int)Request::post('user_id', 0);
         $newPassword = Request::post('new_password', '');
         $passwordConfirm = Request::post('password_confirm', '');
@@ -279,6 +324,104 @@ class UsersPage extends AdminPage {
         } catch (Exception $e) {
             error_log("Error changing password: " . $e->getMessage());
             $this->setMessage('Помилка при зміні пароля', 'danger');
+        }
+    }
+    
+    private function handleGetUserRoles(): void {
+        $request = Request::getInstance();
+        $userId = (int)$request->query('user_id', 0);
+        
+        if ($userId <= 0) {
+            Response::jsonResponse(['success' => false, 'error' => 'Невірний ID користувача'], 400);
+            return;
+        }
+        
+        if (!$this->roleManager) {
+            Response::jsonResponse(['success' => false, 'error' => 'RoleManager не доступний'], 500);
+            return;
+        }
+        
+        try {
+            $userRoles = $this->roleManager->getUserRoles($userId);
+            $roleIds = array_column($userRoles, 'id');
+            
+            Response::jsonResponse([
+                'success' => true,
+                'roles' => $roleIds
+            ]);
+        } catch (Exception $e) {
+            error_log("Error getting user roles: " . $e->getMessage());
+            Response::jsonResponse(['success' => false, 'error' => 'Помилка отримання ролей'], 500);
+        }
+    }
+    
+    private function handleManageUserRoles(): void {
+        if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.users.roles')) {
+            $this->setMessage('У вас немає прав на управління ролями користувачів', 'danger');
+            return;
+        }
+        
+        if (!$this->roleManager) {
+            $this->setMessage('Помилка: RoleManager не доступний', 'danger');
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $userId = (int)$request->post('user_id', 0);
+        $roleIds = $request->post('role_ids', []);
+        
+        if ($userId <= 0) {
+            $this->setMessage('Невірний ID користувача', 'danger');
+            return;
+        }
+        
+        // Защита от изменения ролей первого пользователя
+        if ($userId === 1) {
+            $this->setMessage('Неможливо змінити ролі першого користувача', 'danger');
+            return;
+        }
+        
+        try {
+            // Получаем текущие роли пользователя
+            $currentRoles = $this->roleManager->getUserRoles($userId);
+            $currentRoleIds = array_column($currentRoles, 'id');
+            
+            // Преобразуем role_ids в массив целых чисел
+            $newRoleIds = [];
+            if (!empty($roleIds) && is_array($roleIds)) {
+                foreach ($roleIds as $roleId) {
+                    $roleId = (int)$roleId;
+                    if ($roleId > 0) {
+                        $newRoleIds[] = $roleId;
+                    }
+                }
+            }
+            
+            // Удаляем роли, которые не выбраны
+            foreach ($currentRoleIds as $currentRoleId) {
+                if (!in_array($currentRoleId, $newRoleIds)) {
+                    $this->roleManager->removeRole($userId, $currentRoleId);
+                }
+            }
+            
+            // Добавляем новые роли
+            foreach ($newRoleIds as $newRoleId) {
+                if (!in_array($newRoleId, $currentRoleIds)) {
+                    $this->roleManager->assignRole($userId, $newRoleId);
+                }
+            }
+            
+            $this->setMessage('Ролі користувача успішно оновлені', 'success');
+            $this->redirect('users');
+            exit;
+        } catch (Exception $e) {
+            error_log("Error managing user roles: " . $e->getMessage());
+            $this->setMessage('Помилка при оновленні ролей користувача', 'danger');
         }
     }
     

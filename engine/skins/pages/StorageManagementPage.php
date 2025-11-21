@@ -15,6 +15,12 @@ class StorageManagementPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.storage.view')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
+        
         $this->pageTitle = 'Управління сховищами - Flowaxy CMS';
         $this->setPageHeader(
             'Управління сховищами',
