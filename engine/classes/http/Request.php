@@ -83,7 +83,7 @@ class Request {
      * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function post(string $key, $default = null) {
+    public function postValue(string $key, $default = null) {
         return $_POST[$key] ?? $default;
     }
     
@@ -94,8 +94,30 @@ class Request {
      * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function query(string $key, $default = null) {
+    public function queryValue(string $key, $default = null) {
         return $_GET[$key] ?? $default;
+    }
+    
+    /**
+     * Отримання значення з POST (для использования через instance)
+     * 
+     * @param string $key Ключ
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public function post(string $key, $default = null) {
+        return $this->postValue($key, $default);
+    }
+    
+    /**
+     * Отримання значення з GET (для использования через instance)
+     * 
+     * @param string $key Ключ
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public function query(string $key, $default = null) {
+        return $this->queryValue($key, $default);
     }
     
     /**
@@ -192,5 +214,27 @@ class Request {
      */
     public static function getMethod(): string {
         return self::getInstance()->method();
+    }
+    
+    /**
+     * Статичний метод: Швидке отримання значення з POST
+     * 
+     * @param string $key Ключ
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public static function post(string $key, $default = null) {
+        return $_POST[$key] ?? $default;
+    }
+    
+    /**
+     * Статичний метод: Швидке отримання значення з GET
+     * 
+     * @param string $key Ключ
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public static function get(string $key, $default = null) {
+        return $_GET[$key] ?? $default;
     }
 }
