@@ -61,7 +61,7 @@ class SecurityHelper {
     
     /**
      * Проверка, залогинен ли админ
-     * Также проверяет токен сессии для защиты от одновременного входа
+     * Проверка только через базу данных (без проверки сессии)
      * 
      * @return bool
      */
@@ -72,65 +72,107 @@ class SecurityHelper {
         
         $session = sessionManager();
         
-        // Базовая проверка авторизации
-        if (!$session->has(ADMIN_SESSION_NAME) || $session->get(ADMIN_SESSION_NAME) !== true) {
-            return false;
-        }
-        
+        // Получаем ID пользователя из сессии
         $userId = (int)$session->get('admin_user_id');
         if ($userId <= 0) {
             return false;
         }
         
-        // Проверяем токен сессии для защиты от одновременного входа
-        $sessionToken = $session->get('admin_session_token');
-        if (empty($sessionToken)) {
-            self::logout();
-            return false;
-        }
-        
-        // Проверяем токен в базе данных
+        // Проверяем авторизацию только через базу данных
         try {
             $db = DatabaseHelper::getConnection();
             if ($db) {
-                $stmt = $db->prepare("SELECT session_token FROM users WHERE id = ? LIMIT 1");
+                // Получаем время жизни сессии из настроек
+                $sessionLifetime = 7200; // По умолчанию 2 часа
+                if (class_exists('SystemConfig')) {
+                    $systemConfig = SystemConfig::getInstance();
+                    $sessionLifetime = $systemConfig->getSessionLifetime();
+                }
+                
+                // Проверяем пользователя в БД: активен ли он и не истекла ли сессия
+                $stmt = $db->prepare("
+                    SELECT id, session_token, last_activity, is_active 
+                    FROM users 
+                    WHERE id = ? 
+                    LIMIT 1
+                ");
                 $stmt->execute([$userId]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                if (!$user || empty($user['session_token']) || !hash_equals($user['session_token'], $sessionToken)) {
-                    // Токен не совпадает или отсутствует - разлогиниваем
+                if (!$user) {
+                    // Пользователь не найден
                     self::logout();
                     return false;
                 }
+                
+                // Проверяем, активен ли пользователь
+                if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
+                    // Пользователь неактивен
+                    self::logout();
+                    return false;
+                }
+                
+                // Проверяем наличие токена сессии
+                if (empty($user['session_token'])) {
+                    // Токен отсутствует - пользователь не авторизован
+                    self::logout();
+                    return false;
+                }
+                
+                // Проверяем валидность сессии по времени последней активности
+                if (!empty($user['last_activity'])) {
+                    $lastActivity = strtotime($user['last_activity']);
+                    $currentTime = time();
+                    $timeDiff = $currentTime - $lastActivity;
+                    
+                    // Если прошло больше времени жизни сессии - сессия истекла
+                    if ($timeDiff > $sessionLifetime) {
+                        // Сессия истекла - помечаем пользователя как неактивного
+                        $stmt = $db->prepare("UPDATE users SET is_active = 0, session_token = NULL, last_activity = NULL WHERE id = ?");
+                        $stmt->execute([$userId]);
+                        self::logout();
+                        return false;
+                    }
+                } else if (!empty($user['session_token'])) {
+                    // Если last_activity отсутствует, но есть токен - устанавливаем время активности
+                    $now = date('Y-m-d H:i:s');
+                    $stmt = $db->prepare("UPDATE users SET last_activity = ? WHERE id = ?");
+                    $stmt->execute([$now, $userId]);
+                }
+                
+                return true;
             }
         } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('Error checking admin login', ['error' => $e->getMessage()]);
+            }
             // В случае ошибки БД разрешаем доступ (чтобы не блокировать пользователя)
             return true;
         }
         
-        return true;
+        return false;
     }
     
     /**
-     * Выход из системы (очистка сессии и токена)
+     * Выход из системы (очистка сессии и пометка пользователя как неактивного)
      * 
      * @return void
      */
-    private static function logout(): void {
+    public static function logout(): void {
         $session = sessionManager();
         $userId = (int)$session->get('admin_user_id');
         
-        // Очищаем токен в базе данных
+        // Помечаем пользователя как неактивного и очищаем токен в базе данных
         if ($userId > 0) {
             try {
                 $db = DatabaseHelper::getConnection();
                 if ($db) {
-                    $stmt = $db->prepare("UPDATE users SET session_token = NULL WHERE id = ?");
+                    $stmt = $db->prepare("UPDATE users SET is_active = 0, session_token = NULL, last_activity = NULL WHERE id = ?");
                     $stmt->execute([$userId]);
                 }
             } catch (Exception $e) {
                 if (class_exists('Logger')) {
-                    Logger::getInstance()->logError('Error clearing session token', ['error' => $e->getMessage()]);
+                    Logger::getInstance()->logError('Error clearing session', ['error' => $e->getMessage()]);
                 }
             }
         }

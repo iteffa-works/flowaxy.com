@@ -39,7 +39,7 @@ class AdminPage {
             ini_set('display_errors', '0');
         }
         
-        // Перевірка авторизації (SecurityHelper::requireAdmin() уже проверяет токен из БД)
+        // Перевірка авторизації (SecurityHelper::requireAdmin() проверяет через БД)
         SecurityHelper::requireAdmin();
         
         // Підключення до БД з обробкою помилок
@@ -76,6 +76,10 @@ class AdminPage {
             }
             exit;
         }
+        
+        // Обновляем время последней активности пользователя (каждые 10 минут)
+        // Вызываем после подключения к БД
+        $this->updateUserActivity();
         
         // Гарантуємо, що перший користувач має доступ до адмінки
         $this->ensureFirstUserHasAdminAccess();
@@ -147,6 +151,62 @@ class AdminPage {
             $session->setFlash('admin_message', $message);
             $session->setFlash('admin_message_type', $type);
             $this->postProcessed = true;
+        }
+    }
+    
+    /**
+     * Обновление времени последней активности пользователя
+     * Вызывается при каждом запросе, но обновляет БД только если прошло больше 10 минут
+     * 
+     * @return void
+     */
+    private function updateUserActivity(): void {
+        $session = sessionManager();
+        $userId = (int)$session->get('admin_user_id');
+        
+        if ($userId <= 0) {
+            return;
+        }
+        
+        try {
+            // Используем уже подключенную БД
+            if ($this->db === null) {
+                return;
+            }
+            
+            // Получаем текущее время последней активности
+            $stmt = $this->db->prepare("SELECT last_activity FROM users WHERE id = ? LIMIT 1");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                $shouldUpdate = false;
+                
+                if (empty($user['last_activity'])) {
+                    // Если last_activity отсутствует - обновляем
+                    $shouldUpdate = true;
+                } else {
+                    // Проверяем, прошло ли больше 10 минут (600 секунд)
+                    $lastActivity = strtotime($user['last_activity']);
+                    $currentTime = time();
+                    $timeDiff = $currentTime - $lastActivity;
+                    
+                    if ($timeDiff >= 600) {
+                        $shouldUpdate = true;
+                    }
+                }
+                
+                if ($shouldUpdate) {
+                    $now = date('Y-m-d H:i:s');
+                    $stmt = $this->db->prepare("UPDATE users SET last_activity = ? WHERE id = ?");
+                    $stmt->execute([$now, $userId]);
+                }
+            }
+        } catch (Exception $e) {
+            // Игнорируем ошибки обновления активности
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logWarning('Error updating user activity', ['error' => $e->getMessage()]);
+            }
         }
     }
     

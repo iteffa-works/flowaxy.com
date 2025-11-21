@@ -171,14 +171,25 @@ if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini
     }
 }
 
-// Выполнение миграций (добавление session_token в users, если нужно)
+// Выполнение миграций
 if (file_exists(__DIR__ . '/data/database.ini')) {
     try {
         $db = DatabaseHelper::getConnection();
-        if ($db && file_exists(__DIR__ . '/includes/migrations/add_session_token_to_users.php')) {
-            require_once __DIR__ . '/includes/migrations/add_session_token_to_users.php';
-            if (function_exists('migration_add_session_token_to_users')) {
-                migration_add_session_token_to_users($db);
+        if ($db) {
+            // Миграция для добавления session_token
+            if (file_exists(__DIR__ . '/includes/migrations/add_session_token_to_users.php')) {
+                require_once __DIR__ . '/includes/migrations/add_session_token_to_users.php';
+                if (function_exists('migration_add_session_token_to_users')) {
+                    migration_add_session_token_to_users($db);
+                }
+            }
+            
+            // Миграция для добавления полей активности сессии
+            if (file_exists(__DIR__ . '/includes/migrations/add_session_activity_to_users.php')) {
+                require_once __DIR__ . '/includes/migrations/add_session_activity_to_users.php';
+                if (function_exists('migration_add_session_activity_to_users')) {
+                    migration_add_session_activity_to_users($db);
+                }
             }
         }
     } catch (Exception $e) {

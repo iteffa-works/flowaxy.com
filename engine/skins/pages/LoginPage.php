@@ -112,28 +112,72 @@ class LoginPage {
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Проверяем, есть ли активная сессия (токен в БД)
-                if (!empty($user['session_token'])) {
-                    // Активная сессия существует - блокируем вход
-                    $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
-                    return;
+                // Проверяем, активен ли пользователь
+                $isActive = isset($user['is_active']) ? (int)$user['is_active'] : 1;
+                if ($isActive === 0) {
+                    // Пользователь неактивен - проверяем, не истекла ли сессия
+                    $sessionLifetime = 7200; // По умолчанию 2 часа
+                    if (class_exists('SystemConfig')) {
+                        $systemConfig = SystemConfig::getInstance();
+                        $sessionLifetime = $systemConfig->getSessionLifetime();
+                    }
+                    
+                    // Если есть last_activity, проверяем, не истекла ли сессия
+                    if (!empty($user['last_activity'])) {
+                        $lastActivity = strtotime($user['last_activity']);
+                        $currentTime = time();
+                        $timeDiff = $currentTime - $lastActivity;
+                        
+                        if ($timeDiff <= $sessionLifetime) {
+                            // Сессия еще валидна - блокируем вход
+                            $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
+                            return;
+                        }
+                    } else if (!empty($user['session_token'])) {
+                        // Если есть токен, но нет last_activity - блокируем вход
+                        $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
+                        return;
+                    }
+                } else if (!empty($user['session_token'])) {
+                    // Пользователь активен, но есть токен - проверяем валидность сессии
+                    $sessionLifetime = 7200;
+                    if (class_exists('SystemConfig')) {
+                        $systemConfig = SystemConfig::getInstance();
+                        $sessionLifetime = $systemConfig->getSessionLifetime();
+                    }
+                    
+                    if (!empty($user['last_activity'])) {
+                        $lastActivity = strtotime($user['last_activity']);
+                        $currentTime = time();
+                        $timeDiff = $currentTime - $lastActivity;
+                        
+                        if ($timeDiff <= $sessionLifetime) {
+                            // Сессия еще валидна - блокируем вход
+                            $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
+                            return;
+                        }
+                    } else {
+                        // Есть токен, но нет last_activity - блокируем вход
+                        $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
+                        return;
+                    }
                 }
                 
-                // Успішний вхід (використовуємо SessionManager)
+                // Успішний вхід
                 $session = sessionManager();
                 
-                // Генерируем уникальный токен сессии для защиты от одновременного входа
+                // Генерируем уникальный токен сессии
                 $sessionToken = bin2hex(random_bytes(32)); // 64 символа
+                $now = date('Y-m-d H:i:s');
                 
-                // Сохраняем токен в БД
-                $stmt = $this->db->prepare("UPDATE users SET session_token = ? WHERE id = ?");
-                $stmt->execute([$sessionToken, $user['id']]);
+                // Сохраняем токен, время активности и помечаем как активного в БД
+                $stmt = $this->db->prepare("UPDATE users SET session_token = ?, last_activity = ?, is_active = 1 WHERE id = ?");
+                $stmt->execute([$sessionToken, $now, $user['id']]);
                 
-                // Сохраняем данные авторизации в сессии
+                // Сохраняем данные авторизации в сессии (только ID пользователя)
                 $session->set(ADMIN_SESSION_NAME, true);
                 $session->set('admin_user_id', $user['id']);
                 $session->set('admin_username', $user['username']);
-                $session->set('admin_session_token', $sessionToken);
                 
                 // Регенеруємо ID сесії для безпеки
                 Session::regenerate(true);
