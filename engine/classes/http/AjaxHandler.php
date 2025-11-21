@@ -21,13 +21,11 @@ class AjaxHandler {
      */
     public function __construct() {
         // Встановлюємо обробник помилок за замовчуванням
-        $this->errorHandler = function($error, $code = 500) {
-            return [
-                'success' => false,
-                'error' => $error,
-                'code' => $code
-            ];
-        };
+        $this->errorHandler = fn($error, $code = 500) => [
+            'success' => false,
+            'error' => $error,
+            'code' => $code
+        ];
     }
     
     /**
