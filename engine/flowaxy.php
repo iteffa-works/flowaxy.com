@@ -132,11 +132,3 @@ loadDatabaseConfig();
 if (!class_exists('Cache')) {
     require_once __DIR__ . '/classes/data/Cache.php';
 }
-
-$dirs = [UPLOADS_DIR, CACHE_DIR, LOGS_DIR];
-foreach ($dirs as $dir) {
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    if ((strpos($dir, 'cache') !== false || strpos($dir, 'logs') !== false) && !file_exists($dir . '.htaccess')) {
-        @file_put_contents($dir . '.htaccess', "Deny from all\n");
-    }
-}
