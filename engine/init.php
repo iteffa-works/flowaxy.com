@@ -29,7 +29,9 @@ if (!$isInstaller && file_exists($databaseIniFile)) {
                 try {
                     settingsManager()->set('timezone', 'Europe/Kyiv');
                 } catch (Exception $e) {
-                    error_log("Failed to update timezone setting: " . $e->getMessage());
+                    if (class_exists('Logger')) {
+                        Logger::getInstance()->logWarning('Failed to update timezone setting', ['error' => $e->getMessage()]);
+                    }
                 }
             }
             
@@ -41,7 +43,9 @@ if (!$isInstaller && file_exists($databaseIniFile)) {
             }
         } catch (Exception $e) {
             // Используем значение по умолчанию
-            error_log("Error loading timezone: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logWarning('Error loading timezone', ['error' => $e->getMessage()]);
+            }
         }
     }
 }
@@ -63,7 +67,9 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
             echo '<pre>' . htmlspecialchars($e->getMessage()) . "\n" . htmlspecialchars($e->getTraceAsString()) . '</pre>';
         } else {
             // Устанавливаем код ответа только если заголовки еще не отправлены
-            if (!headers_sent()) {
+            if (!headers_sent() && class_exists('Response')) {
+                Response::setHeader('Status', '500 Internal Server Error');
+            } elseif (!headers_sent()) {
                 http_response_code(500);
             }
             echo '<h1>Внутрішня помилка сервера</h1>';
@@ -124,9 +130,8 @@ if ($protocolFromSettings === 'https://') {
 
 // Session::start() теперь сам проверяет настройки из базы данных
 // Передаем начальное значение, но оно может быть переопределено внутри Session::start()
+// Параметры сессии будут загружены из настроек в Session::start()
 Session::start([
-    'name' => 'PHPSESSID',
-    'lifetime' => 7200,
     'domain' => '',
     'path' => '/',
     'secure' => $isSecure,
@@ -160,7 +165,9 @@ if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini
             $GLOBALS['_SITE_PROTOCOL'] = $newProtocol;
         }
     } catch (Exception $e) {
-        error_log('init.php: Could not update protocol from settings: ' . $e->getMessage());
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logWarning('Could not update protocol from settings', ['error' => $e->getMessage()]);
+        }
     }
 }
 
@@ -175,7 +182,9 @@ if (file_exists(__DIR__ . '/data/database.ini')) {
             }
         }
     } catch (Exception $e) {
-        error_log('init.php: Could not run migrations: ' . $e->getMessage());
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logError('Could not run migrations', ['error' => $e->getMessage()]);
+        }
     }
 }
 

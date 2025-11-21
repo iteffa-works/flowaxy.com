@@ -19,21 +19,13 @@ if (session_status() === PHP_SESSION_NONE) {
         }
         if (is_dir($customSessionPath) && is_writable($customSessionPath)) {
             session_save_path($customSessionPath);
-            error_log('Installer: Using custom session path: ' . $customSessionPath);
-        } else {
-            error_log('Installer: WARNING - Custom session path not writable: ' . $customSessionPath);
         }
     }
     
     // Инициализируем сессию
     if (!headers_sent()) {
         session_start();
-        error_log('Installer: Session started. ID: ' . session_id() . ', Path: ' . session_save_path());
-    } else {
-        error_log('Installer: WARNING - Headers already sent, cannot start session');
     }
-} else {
-    error_log('Installer: Session already active. ID: ' . session_id() . ', Status: ' . session_status());
 }
 
 // Получаем переменные из запроса
@@ -397,8 +389,10 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if (!empty($checkErrors)) {
-            error_log('InstallerManager System Check Errors: ' . json_encode($checkErrors, JSON_UNESCAPED_UNICODE));
-            error_log('InstallerManager Debug Info: ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+            // Логируем только критичные ошибки
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('InstallerManager System Check Errors', ['errors' => $checkErrors, 'debug' => $debugInfo]);
+            }
             
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
@@ -466,8 +460,6 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $GLOBALS['_INSTALLER_DB_USER'] = $user;
             $GLOBALS['_INSTALLER_DB_PASS'] = $pass;
             $GLOBALS['_INSTALLER_DB_CHARSET'] = $charset;
-            
-            error_log('GLOBALS set for DB config: HOST=' . $GLOBALS['_INSTALLER_DB_HOST'] . ', NAME=' . $GLOBALS['_INSTALLER_DB_NAME'] . ', USER=' . $GLOBALS['_INSTALLER_DB_USER'] . ', PASS=' . (strlen($pass) > 0 ? '***' : 'empty'));
         } else {
             $debugInfo['dbConfigError'] = 'Failed to retrieve dbConfig from any source';
         }
@@ -478,7 +470,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $hasValidConfig = !empty($dbHost) && !empty($dbName);
         
         if (!$hasValidConfig) {
-            error_log('Database configuration not loaded. Debug: ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+            // Database configuration not loaded
             
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
@@ -507,7 +499,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (file_exists($databaseHelperFile)) {
                 require_once $databaseHelperFile;
             } else {
-                error_log('DatabaseHelper not found: ' . $databaseHelperFile);
+                // DatabaseHelper not found
                 
                 // Убеждаемся, что буфер чист перед отправкой
                 while (ob_get_level() > 0) {
@@ -526,7 +518,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if (!class_exists('InstallerManager')) {
-            error_log('InstallerManager class not found after loading. Debug: ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+            // InstallerManager class not found after loading
             
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
@@ -545,7 +537,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $installer = InstallerManager::getInstance();
         if (!$installer) {
-            error_log('Failed to get InstallerManager instance. Debug: ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+            // Failed to get InstallerManager instance
             
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
@@ -622,7 +614,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
                 
                 // Логируем для диагностики (без пароля)
-                error_log('Direct connection attempt - Host: ' . $dbHost . ', Name: ' . $dbName . ', User: ' . $dbUser . ', Pass: ' . (strlen($dbPass) > 0 ? '***' : 'empty') . ', Charset: ' . $dbCharset);
+                // Direct connection attempt
                 
                 // Проверяем, что у нас есть минимальная конфигурация
                 if (empty($dbHost) || empty($dbName)) {
@@ -677,7 +669,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $debugInfo['databaseExists'] = $dbExists;
                     
                     if (!$dbExists) {
-                        error_log('Database does not exist: ' . $dbName);
+                        // Database does not exist
                         
                         // Убеждаемся, что буфер чист перед отправкой
                         while (ob_get_level() > 0) {
@@ -712,9 +704,14 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $debugInfo['directConnectionError'] = $e->getMessage();
                     $debugInfo['directConnectionCode'] = $e->getCode();
                     
-                    error_log('Database connection failed. Debug: ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
-                    error_log('PDO Error: ' . $e->getMessage());
-                    error_log('Last error: ' . ($lastError ? json_encode($lastError, JSON_UNESCAPED_UNICODE) : 'none'));
+                    // Database connection failed - логируем через Logger если доступен
+                    if (class_exists('Logger')) {
+                        Logger::getInstance()->logError('Database connection failed', [
+                            'error' => $e->getMessage(),
+                            'debug' => $debugInfo,
+                            'last_error' => $lastError
+                        ]);
+                    }
                     
                     // Убеждаемся, что буфер чист перед отправкой
                     while (ob_get_level() > 0) {
@@ -735,7 +732,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } catch (Exception $e) {
-            error_log('Exception during database connection: ' . $e->getMessage());
+            // Exception during database connection
             
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
@@ -765,13 +762,13 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $tableExists = $stmt->fetchColumn() > 0;
             $debugInfo['tableExists'] = $tableExists;
         } catch (Exception $e) {
-            error_log('Error checking table existence: ' . $e->getMessage());
+            // Error checking table existence
             // Продолжаем выполнение, если проверка не удалась
         }
         
         // Если таблица уже существует, возвращаем специальный статус
         if ($tableExists) {
-            error_log('Table already exists: ' . $table);
+            // Table already exists
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
                 ob_end_clean();
@@ -823,20 +820,23 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                         // Игнорируем ошибки типа "уже существует" (INSERT IGNORE)
                                         if (stripos($e->getMessage(), 'Duplicate') === false && 
                                             stripos($e->getMessage(), 'already exists') === false) {
-                                            error_log("Roles SQL error: " . $e->getMessage());
+                                            // Roles SQL error - логируем через Logger если доступен
+                                            if (class_exists('Logger')) {
+                                                Logger::getInstance()->logError('Roles SQL error', ['error' => $e->getMessage()]);
+                                            }
                                         }
                                     }
                                 }
                             }
-                            error_log('Roles and permissions SQL executed successfully after role_permissions table creation');
+                            // Roles and permissions SQL executed successfully
                         }
                     }
                 } catch (Exception $e) {
-                    error_log("Error executing roles SQL after role_permissions creation: " . $e->getMessage());
+                    // Error executing roles SQL
                 }
             }
             
-            error_log('Table created successfully: ' . $table);
+            // Table created successfully
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
                 ob_end_clean();
@@ -852,10 +852,16 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } catch (PDOException $e) {
             $errorInfo = $e->errorInfo ?? [];
-            error_log('PDO Error creating table ' . $table . ': ' . $e->getMessage());
-            error_log('PDO Error Code: ' . $e->getCode());
-            error_log('PDO Error Info: ' . json_encode($errorInfo, JSON_UNESCAPED_UNICODE));
-            error_log('SQL: ' . substr($sql, 0, 500));
+            // PDO Error creating table - логируем через Logger если доступен
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('PDO Error creating table', [
+                    'table' => $table,
+                    'error' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'error_info' => $errorInfo,
+                    'sql' => substr($sql, 0, 500)
+                ]);
+            }
             
             // Убеждаемся, что буфер чист перед отправкой
             while (ob_get_level() > 0) {
@@ -897,10 +903,10 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {
-        error_log('Throwable creating table: ' . $e->getMessage());
-        error_log('File: ' . $e->getFile() . ':' . $e->getLine());
-        error_log('Trace: ' . $e->getTraceAsString());
-        error_log('Debug: ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+        // Логируем только критичные ошибки через Logger (если доступен)
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logException($e, ['debug' => $debugInfo]);
+        }
         
         // Убеждаемся, что буфер чист перед отправкой
         while (ob_get_level() > 0) {
@@ -956,7 +962,7 @@ function loadDatabaseConfigFromSession(): void {
         $GLOBALS['_INSTALLER_DB_PASS'] = $pass;
         $GLOBALS['_INSTALLER_DB_CHARSET'] = $charset;
         
-        error_log('loadDatabaseConfigFromSession: GLOBALS set - HOST=' . $GLOBALS['_INSTALLER_DB_HOST'] . ', NAME=' . $GLOBALS['_INSTALLER_DB_NAME'] . ', USER=' . $GLOBALS['_INSTALLER_DB_USER'] . ', PASS=' . (strlen($pass) > 0 ? '***' : 'empty'));
+        // GLOBALS set for database config
     } else {
         // Логируем для отладки
         $sessionKeys = (isset($_SESSION) && is_array($_SESSION)) ? array_keys($_SESSION) : [];

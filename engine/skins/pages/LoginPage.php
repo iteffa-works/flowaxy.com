@@ -91,32 +91,12 @@ class LoginPage {
         $request = Request::getInstance();
         $csrfToken = $request->post('csrf_token', '');
         
-        // Получаем токен из сессии для диагностики (используем sessionManager)
-        $session = sessionManager();
-        $sessionToken = $session->get('csrf_token');
-        
-        // Логируем для диагностики
-        error_log('Login CSRF check - Session ID: ' . Session::getId());
-        error_log('Login CSRF check - Session token: ' . ($sessionToken ? 'exists (' . substr($sessionToken, 0, 10) . '...)' : 'missing'));
-        error_log('Login CSRF check - POST token: ' . ($csrfToken ? 'exists (' . substr($csrfToken, 0, 10) . '...)' : 'missing'));
-        error_log('Login CSRF check - Session keys: ' . implode(', ', array_keys($session->all(false))));
-        error_log('Login CSRF check - Cookie PHPSESSID: ' . (isset($_COOKIE['PHPSESSID']) ? 'exists' : 'missing'));
-        
-        // Если токен отсутствует в сессии, генерируем новый
-        if (empty($sessionToken)) {
-            error_log('Login CSRF: Token missing in session, generating new one');
-            $sessionToken = SecurityHelper::csrfToken();
-        }
-        
+        // Проверка CSRF токена
         if (!SecurityHelper::verifyCsrfToken($csrfToken)) {
-            error_log('Login CSRF: Token verification failed');
             $this->error = 'Помилка безпеки. Спробуйте ще раз.';
-            // Генерируем новый токен для следующей попытки
-            SecurityHelper::csrfToken();
+            SecurityHelper::csrfToken(); // Генерируем новый токен для следующей попытки
             return;
         }
-        
-        error_log('Login CSRF: Token verification successful');
         
         $username = SecurityHelper::sanitizeInput($request->post('username', ''));
         $password = $request->post('password', '');
@@ -136,7 +116,6 @@ class LoginPage {
                 if (!empty($user['session_token'])) {
                     // Активная сессия существует - блокируем вход
                     $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
-                    error_log('Login blocked - User ID: ' . $user['id'] . ' already has active session token');
                     return;
                 }
                 
@@ -164,14 +143,11 @@ class LoginPage {
                 exit;
             } else {
                 $this->error = 'Невірний логін або пароль';
-                error_log('Login failed - Invalid username or password for: ' . $username);
             }
         } catch (Exception $e) {
             $this->error = 'Помилка входу. Спробуйте пізніше.';
-            if (function_exists('logger')) {
-                logger()->logError('Login error', ['error' => $e->getMessage()]);
-            } else {
-                error_log("Login error: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('Login error', ['error' => $e->getMessage()]);
             }
         }
     }
@@ -223,12 +199,7 @@ class LoginPage {
         
         $error = $this->error;
         $csrfToken = SecurityHelper::csrfToken();
-        $isSecureConnection = $isHttps; // Передаем в шаблон
-        
-        // Логируем для диагностики
-        error_log('Login render - Session ID: ' . Session::getId());
-        error_log('Login render - CSRF token generated: ' . ($csrfToken ? 'yes (' . substr($csrfToken, 0, 10) . '...)' : 'no'));
-        error_log('Login render - Cookie PHPSESSID: ' . (isset($_COOKIE['PHPSESSID']) ? $_COOKIE['PHPSESSID'] : 'missing'));
+        $isSecureConnection = $isHttps;
         
         include __DIR__ . '/../templates/login.php';
     }

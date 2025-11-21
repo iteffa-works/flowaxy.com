@@ -13,7 +13,7 @@ class Session {
     private static bool $started = false;
     private static array $config = [
         'name' => 'PHPSESSID',
-        'lifetime' => 7200,
+        'lifetime' => 7200, // Будет переопределено из настроек
         'domain' => '',
         'path' => '/',
         'secure' => false,
@@ -31,6 +31,16 @@ class Session {
         if (self::$started || session_status() === PHP_SESSION_ACTIVE) {
             self::$started = true;
             return;
+        }
+        
+        // Загружаем параметры из настроек, если доступны
+        if (class_exists('SystemConfig')) {
+            $systemConfig = SystemConfig::getInstance();
+            $defaultConfig = [
+                'name' => $systemConfig->getSessionName(),
+                'lifetime' => $systemConfig->getSessionLifetime()
+            ];
+            self::$config = array_merge(self::$config, $defaultConfig);
         }
         
         self::$config = array_merge(self::$config, $config);
@@ -127,35 +137,12 @@ class Session {
             ini_set('session.cookie_samesite', $samesite);
         }
         
-        // Логируем параметры для диагностики
-        error_log("Session::start() - secure: " . ($isSecure ? 'true' : 'false') . ", samesite: " . $samesite . ", domain: '" . ($cookieDomain ?: 'empty (will use current domain)') . "', path: " . self::$config['path']);
-        
         if (!headers_sent()) {
             session_start();
             self::$started = true;
-            
-            // Логируем Session ID после старта
-            $sessionId = session_id();
-            error_log("Session::start() - Session ID: " . $sessionId . ", Session name: " . session_name());
-            
-            // Проверяем, установилась ли cookie
-            $cookieSet = isset($_COOKIE[session_name()]);
-            error_log("Session::start() - Cookie " . session_name() . " in \$_COOKIE: " . ($cookieSet ? 'yes (' . substr($_COOKIE[session_name()], 0, 20) . '...)' : 'no'));
-            
-            // Проверяем заголовки Set-Cookie (если возможно)
-            if (function_exists('headers_list')) {
-                $headers = headers_list();
-                $setCookieHeaders = array_filter($headers, function($h) {
-                    return stripos($h, 'Set-Cookie:') === 0;
-                });
-                if (!empty($setCookieHeaders)) {
-                    error_log("Session::start() - Set-Cookie headers: " . implode('; ', array_slice($setCookieHeaders, 0, 2)));
-                } else {
-                    error_log("Session::start() - WARNING: No Set-Cookie headers found!");
-                }
-            }
-        } else {
-            error_log("Session::start() - WARNING: Headers already sent, cannot start session");
+        } elseif (class_exists('Logger')) {
+            // Логируем только критичные ошибки
+            Logger::getInstance()->logWarning('Session::start() - Headers already sent, cannot start session');
         }
     }
     
@@ -237,8 +224,13 @@ class Session {
         
         $_SESSION = [];
         
+        // Используем наш класс Cookie для удаления cookie
         if (isset($_COOKIE[session_name()])) {
-            setcookie(session_name(), '', time() - 3600, self::$config['path'], self::$config['domain']);
+            if (class_exists('Cookie')) {
+                Cookie::set(session_name(), '', time() - 3600, self::$config['path'], self::$config['domain'], false, true);
+            } else {
+                setcookie(session_name(), '', time() - 3600, self::$config['path'], self::$config['domain']);
+            }
         }
         
         session_destroy();

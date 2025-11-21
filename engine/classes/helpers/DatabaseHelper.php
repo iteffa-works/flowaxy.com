@@ -64,8 +64,6 @@ class DatabaseHelper {
         } catch (Exception $e) {
             if (class_exists('Logger')) {
                 Logger::getInstance()->logError('Database connection failed', ['error' => $e->getMessage()]);
-            } else {
-                error_log("getDB error: " . $e->getMessage());
             }
             
             if ($showError && php_sapi_name() !== 'cli') {

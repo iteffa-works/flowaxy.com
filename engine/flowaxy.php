@@ -102,7 +102,14 @@ if (!defined('CACHE_DIR')) define('CACHE_DIR', $rootDir . '/storage/cache/');
 if (!defined('LOGS_DIR')) define('LOGS_DIR', $rootDir . '/storage/logs/');
 if (!defined('ADMIN_SESSION_NAME')) define('ADMIN_SESSION_NAME', 'cms_admin_logged_in');
 if (!defined('CSRF_TOKEN_NAME')) define('CSRF_TOKEN_NAME', 'csrf_token');
-if (!defined('PASSWORD_MIN_LENGTH')) define('PASSWORD_MIN_LENGTH', 8);
+// PASSWORD_MIN_LENGTH теперь загружается из настроек через SystemConfig
+if (!defined('PASSWORD_MIN_LENGTH')) {
+    if (class_exists('SystemConfig')) {
+        define('PASSWORD_MIN_LENGTH', SystemConfig::getInstance()->getPasswordMinLength());
+    } else {
+        define('PASSWORD_MIN_LENGTH', 8);
+    }
+}
 
 if (!ob_get_level()) ob_start();
 
@@ -117,7 +124,7 @@ spl_autoload_register(function (string $className): void {
         'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
         'Xml' => 'files', 'Csv' => 'files', 'Yaml' => 'files', 'Image' => 'files',
         'Directory' => 'files', 'Upload' => 'files', 'MimeType' => 'files',
-        'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data',
+        'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data', 'SystemConfig' => 'data',
         'UrlHelper' => 'helpers', 'DatabaseHelper' => 'helpers', 'SecurityHelper' => 'helpers',
         'ScssCompiler' => 'compilers', 'Validator' => 'validators',
         'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',

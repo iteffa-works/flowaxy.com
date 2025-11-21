@@ -154,7 +154,25 @@ class SiteSettingsPage extends AdminPage {
             'logging_enabled' => '1',
             'logging_level' => 'INFO',
             'logging_max_file_size' => '10485760', // 10 MB
-            'logging_retention_days' => '30'
+            'logging_retention_days' => '30',
+            // Настройки сессий
+            'session_lifetime' => '7200', // 2 часа
+            'session_name' => 'PHPSESSID',
+            // Настройки базы данных
+            'db_connection_timeout' => '3',
+            'db_max_attempts' => '3',
+            'db_host_check_timeout' => '1',
+            'db_slow_query_threshold' => '1.0',
+            // Настройки загрузки файлов
+            'upload_max_file_size' => '10485760', // 10 MB
+            'upload_allowed_extensions' => 'jpg,jpeg,png,gif,pdf,doc,docx,zip',
+            'upload_allowed_mime_types' => 'image/jpeg,image/png,image/gif,application/pdf',
+            // Настройки безопасности
+            'password_min_length' => '8',
+            'csrf_token_lifetime' => '3600', // 1 час
+            // Настройки производительности
+            'query_optimization_enabled' => '1',
+            'max_queries_per_second' => '100'
         ];
         
         // Используем SettingsManager для получения настроек

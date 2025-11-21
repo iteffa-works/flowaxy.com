@@ -27,6 +27,31 @@ class Upload {
         if ($uploadDir !== null) {
             $this->setUploadDir($uploadDir);
         }
+        
+        // Загружаем параметры из настроек, если доступны
+        $this->loadConfigParams();
+    }
+    
+    /**
+     * Загрузка параметров конфигурации из настроек
+     * 
+     * @return void
+     */
+    private function loadConfigParams(): void {
+        if (class_exists('SystemConfig')) {
+            $systemConfig = SystemConfig::getInstance();
+            $this->maxFileSize = $systemConfig->getUploadMaxFileSize();
+            
+            // Загружаем разрешенные расширения, если они не были установлены вручную
+            if (empty($this->allowedExtensions)) {
+                $this->allowedExtensions = $systemConfig->getUploadAllowedExtensions();
+            }
+            
+            // Загружаем разрешенные MIME типы, если они не были установлены вручную
+            if (empty($this->allowedMimeTypes)) {
+                $this->allowedMimeTypes = $systemConfig->getUploadAllowedMimeTypes();
+            }
+        }
     }
     
     /**

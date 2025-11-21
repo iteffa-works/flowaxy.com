@@ -129,7 +129,9 @@ class SecurityHelper {
                     $stmt->execute([$userId]);
                 }
             } catch (Exception $e) {
-                error_log('SecurityHelper::logout() - Error clearing session token: ' . $e->getMessage());
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('Error clearing session token', ['error' => $e->getMessage()]);
+                }
             }
         }
         
@@ -216,12 +218,10 @@ class SecurityHelper {
         if (is_array($input)) {
             try {
                 return Json::stringify($input);
-            } catch (Exception $e) {
-                if (function_exists('logger')) {
-                    logger()->logError('JSON encoding error', ['error' => $e->getMessage()]);
-                } else {
-                    error_log("JSON encoding error: " . $e->getMessage());
-                }
+                } catch (Exception $e) {
+                    if (class_exists('Logger')) {
+                        Logger::getInstance()->logError('JSON encoding error', ['error' => $e->getMessage()]);
+                    }
                 return '';
             }
         }

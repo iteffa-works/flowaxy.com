@@ -14,16 +14,16 @@ class Database {
     private ?PDO $connection = null;
     private bool $isConnected = false;
     private int $connectionAttempts = 0;
-    private const MAX_CONNECTION_ATTEMPTS = 3;
-    private const CONNECTION_TIMEOUT = 3; // Уменьшено до 3 секунд для быстрой проверки
-    private const HOST_CHECK_TIMEOUT = 1; // Таймаут проверки хоста в секундах
+    private int $maxConnectionAttempts = 3;
+    private int $connectionTimeout = 3;
+    private int $hostCheckTimeout = 1;
     
     // Статистика запросов
     private array $queryList = [];
     private array $queryErrors = [];
     private int $queryCount = 0;
     private float $totalQueryTime = 0.0;
-    private float $slowQueryThreshold = 1.0; // Порог медленных запросов в секундах
+    private float $slowQueryThreshold = 1.0;
     
     // Logger instance
     private $logger = null;
@@ -36,6 +36,24 @@ class Database {
         // НЕ инициализируем logger здесь, чтобы избежать рекурсии:
         // Database::__construct() -> initLogger() -> logger() -> Logger::getInstance() -> BaseModule::__construct() -> getDB() -> Database::getInstance()
         // Logger будет загружен лениво через getLogger() метод
+        
+        // Загружаем параметры из настроек, если доступны
+        $this->loadConfigParams();
+    }
+    
+    /**
+     * Загрузка параметров конфигурации из настроек
+     * 
+     * @return void
+     */
+    private function loadConfigParams(): void {
+        if (class_exists('SystemConfig')) {
+            $systemConfig = SystemConfig::getInstance();
+            $this->maxConnectionAttempts = $systemConfig->getDbMaxAttempts();
+            $this->connectionTimeout = $systemConfig->getDbConnectionTimeout();
+            $this->hostCheckTimeout = $systemConfig->getDbHostCheckTimeout();
+            $this->slowQueryThreshold = $systemConfig->getDbSlowQueryThreshold();
+        }
     }
     
     /**
@@ -54,14 +72,14 @@ class Database {
                     $this->logger = Logger::getInstance();
                 }
                 
-                // Загружаем порог медленных запросов из настроек Logger
-                if ($this->logger && method_exists($this->logger, 'getSetting')) {
+                // Порог медленных запросов уже загружен из SystemConfig в конструкторе
+                // Если SystemConfig недоступен, используем Logger как fallback
+                if ($this->slowQueryThreshold === 1.0 && $this->logger && method_exists($this->logger, 'getSetting')) {
                     $threshold = (float)$this->logger->getSetting('slow_query_threshold', '1.0');
                     $this->slowQueryThreshold = $threshold;
                 }
             } catch (Exception $e) {
                 // Logger недоступен, продолжаем без него
-                error_log("Database: Logger initialization failed: " . $e->getMessage());
             }
         }
         return $this->logger;
@@ -113,7 +131,7 @@ class Database {
             // Используем stream_socket_client с коротким таймаутом
             $context = stream_context_create([
                 'socket' => [
-                    'connect_timeout' => self::HOST_CHECK_TIMEOUT
+                    'connect_timeout' => $this->hostCheckTimeout
                 ]
             ]);
             
@@ -121,7 +139,7 @@ class Database {
                 "tcp://{$host}:{$port}",
                 $errno,
                 $errstr,
-                self::HOST_CHECK_TIMEOUT,
+                $this->hostCheckTimeout,
                 STREAM_CLIENT_CONNECT,
                 $context
             );
@@ -173,7 +191,7 @@ class Database {
             throw new Exception('Database configuration is not set');
         }
         
-        if ($this->connectionAttempts >= self::MAX_CONNECTION_ATTEMPTS) {
+        if ($this->connectionAttempts >= $this->maxConnectionAttempts) {
             $error = 'Превышено максимальное количество попыток подключения к базе данных';
             $this->logError('Database connection failed', ['error' => $error, 'attempts' => $this->connectionAttempts]);
             throw new Exception($error);
@@ -225,14 +243,14 @@ class Database {
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_PERSISTENT => false,
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . $dbCharset . " COLLATE utf8mb4_unicode_ci",
-                PDO::ATTR_TIMEOUT => self::CONNECTION_TIMEOUT,
+                PDO::ATTR_TIMEOUT => $this->connectionTimeout,
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
                 PDO::ATTR_STRINGIFY_FETCHES => false,
             ];
             
             // Устанавливаем короткий таймаут через ini_set для socket
             $oldTimeout = ini_get('default_socket_timeout');
-            ini_set('default_socket_timeout', (string)self::CONNECTION_TIMEOUT);
+            ini_set('default_socket_timeout', (string)$this->connectionTimeout);
             
             try {
                 $this->connection = new PDO($dsn, $dbUser, $dbPass, $options);
@@ -291,13 +309,12 @@ class Database {
             ];
             
             $this->logError('Database connection error', $errorContext);
-            error_log("Database connection error (attempt {$this->connectionAttempts}): " . $errorMessage);
             
             // Если таймаут или хост недоступен, или превышено количество попыток - выбрасываем исключение сразу
-            if ($isTimeout || $this->connectionAttempts >= self::MAX_CONNECTION_ATTEMPTS) {
+            if ($isTimeout || $this->connectionAttempts >= $this->maxConnectionAttempts) {
                 $finalError = $isTimeout 
                     ? "Сервер бази даних недоступен (таймаут подключения: {$host}:{$port})"
-                    : "Ошибка подключения к базе данных после " . self::MAX_CONNECTION_ATTEMPTS . " попыток: " . $errorMessage;
+                    : "Ошибка подключения к базе данных после " . $this->maxConnectionAttempts . " попыток: " . $errorMessage;
                 
                 throw new Exception($finalError);
             }
@@ -577,8 +594,6 @@ class Database {
         $logger = $this->getLogger();
         if ($logger && method_exists($logger, 'logError')) {
             $logger->logError($message, $context);
-        } else {
-            error_log("Database ERROR: {$message} " . json_encode($context));
         }
     }
     
@@ -586,8 +601,6 @@ class Database {
         $logger = $this->getLogger();
         if ($logger && method_exists($logger, 'logWarning')) {
             $logger->logWarning($message, $context);
-        } else {
-            error_log("Database WARNING: {$message} " . json_encode($context));
         }
     }
     

@@ -50,13 +50,11 @@ class Cookie {
         // Если secure=true, но реальное соединение HTTP - отключаем secure для совместимости с Edge
         if ($secure && !$realHttps) {
             $secure = false;
-            error_log("Cookie: secure=true but connection is HTTP, disabling secure flag for compatibility");
         }
         
         // Если SameSite=None, но secure=false - меняем на Lax (Edge требует Secure для None)
         if ($samesite === 'None' && !$secure) {
             $samesite = 'Lax';
-            error_log("Cookie: SameSite=None requires Secure flag, changing to Lax for compatibility");
         }
         
         return setcookie($name, $value, [

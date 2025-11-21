@@ -81,13 +81,11 @@ class CookieManager implements StorageInterface {
         // Если secure=true, но реальное соединение HTTP - отключаем secure для совместимости с Edge
         if ($options['secure'] && !$realHttps) {
             $options['secure'] = false;
-            error_log("CookieManager: secure=true but connection is HTTP, disabling secure flag for compatibility");
         }
         
         // Если SameSite=None, но secure=false - меняем на Lax (Edge требует Secure для None)
         if ($options['samesite'] === 'None' && !$options['secure']) {
             $options['samesite'] = 'Lax';
-            error_log("CookieManager: SameSite=None requires Secure flag, changing to Lax for compatibility");
         }
         
         // Поддержка массива/объекта (JSON)
