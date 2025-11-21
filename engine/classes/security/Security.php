@@ -62,16 +62,34 @@ class Security {
      * @return bool
      */
     public static function verifyCsrfToken(?string $token = null): bool {
+        // Убеждаемся, что сессия запущена
+        if (!Session::isStarted()) {
+            Session::start();
+        }
+        
         $session = sessionManager();
         $sessionToken = $session->get('csrf_token');
         
         if (empty($sessionToken)) {
+            error_log('Security::verifyCsrfToken: Session token is empty');
             return false;
         }
         
         $token = $token ?? $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
         
-        return Hash::equals($sessionToken, $token);
+        if (empty($token)) {
+            error_log('Security::verifyCsrfToken: Token from request is empty');
+            return false;
+        }
+        
+        $result = Hash::equals($sessionToken, $token);
+        if (!$result) {
+            error_log('Security::verifyCsrfToken: Tokens do not match');
+            error_log('Security::verifyCsrfToken: Session token: ' . substr($sessionToken, 0, 20) . '...');
+            error_log('Security::verifyCsrfToken: Request token: ' . substr($token, 0, 20) . '...');
+        }
+        
+        return $result;
     }
     
     /**

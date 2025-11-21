@@ -163,6 +163,13 @@ class SettingsPage extends AdminPage {
                     'url' => UrlHelper::admin('cache-view'),
                     'icon' => 'fas fa-database',
                     'permission' => 'admin.settings'
+                ],
+                [
+                    'title' => 'Сховища',
+                    'description' => 'Управління сесіями, куками та клієнтським сховищем',
+                    'url' => UrlHelper::admin('storage-management'),
+                    'icon' => 'fas fa-boxes',
+                    'permission' => 'admin.settings'
                 ]
             ]
         ];

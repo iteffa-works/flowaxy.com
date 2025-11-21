@@ -39,6 +39,26 @@ class Cookie {
         
         $domain = $domain ?? $_SERVER['HTTP_HOST'] ?? '';
         
+        // Проверяем реальное HTTPS соединение
+        $realHttps = (
+            (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+            (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        );
+        
+        // Если secure=true, но реальное соединение HTTP - отключаем secure для совместимости с Edge
+        if ($secure && !$realHttps) {
+            $secure = false;
+            error_log("Cookie: secure=true but connection is HTTP, disabling secure flag for compatibility");
+        }
+        
+        // Если SameSite=None, но secure=false - меняем на Lax (Edge требует Secure для None)
+        if ($samesite === 'None' && !$secure) {
+            $samesite = 'Lax';
+            error_log("Cookie: SameSite=None requires Secure flag, changing to Lax for compatibility");
+        }
+        
         return setcookie($name, $value, [
             'expires' => $expire,
             'path' => $path,

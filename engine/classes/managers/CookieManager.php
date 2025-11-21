@@ -70,6 +70,26 @@ class CookieManager implements StorageInterface {
     public function set(string $key, $value, array $options = []): bool {
         $options = array_merge($this->defaultOptions, $options);
         
+        // Проверяем реальное HTTPS соединение для корректировки secure
+        $realHttps = (
+            (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+            (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        );
+        
+        // Если secure=true, но реальное соединение HTTP - отключаем secure для совместимости с Edge
+        if ($options['secure'] && !$realHttps) {
+            $options['secure'] = false;
+            error_log("CookieManager: secure=true but connection is HTTP, disabling secure flag for compatibility");
+        }
+        
+        // Если SameSite=None, но secure=false - меняем на Lax (Edge требует Secure для None)
+        if ($options['samesite'] === 'None' && !$options['secure']) {
+            $options['samesite'] = 'Lax';
+            error_log("CookieManager: SameSite=None requires Secure flag, changing to Lax for compatibility");
+        }
+        
         // Поддержка массива/объекта (JSON)
         if (is_array($value) || is_object($value)) {
             $value = json_encode($value, JSON_UNESCAPED_UNICODE);

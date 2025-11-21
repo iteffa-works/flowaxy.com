@@ -79,18 +79,51 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
 }
 
 // Определяем secure на основе протокола из настроек
-// Используем UrlHelper, если доступен, иначе detectProtocol()
+// Приоритет: настройки из базы данных > реальное соединение
 $isSecure = false;
-if (class_exists('UrlHelper')) {
-    $isSecure = UrlHelper::isHttps();
-} elseif (function_exists('detectProtocol')) {
-    $protocol = detectProtocol();
-    $isSecure = ($protocol === 'https://');
-} else {
-    // Fallback на автоматическое определение
-    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+
+// Проверяем настройки протокола из базы данных (если доступны)
+$protocolFromSettings = null;
+if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini')) {
+    try {
+        $settingsManager = settingsManager();
+        $protocolSetting = $settingsManager->get('site_protocol', 'auto');
+        if ($protocolSetting === 'https') {
+            $protocolFromSettings = 'https://';
+        } elseif ($protocolSetting === 'http') {
+            $protocolFromSettings = 'http://';
+        }
+    } catch (Exception $e) {
+        // Игнорируем ошибки при загрузке настроек на этапе инициализации
+    }
 }
 
+// Если в настройках явно указан протокол, используем его
+if ($protocolFromSettings === 'https://') {
+    $isSecure = true;
+} elseif ($protocolFromSettings === 'http://') {
+    $isSecure = false;
+} else {
+    // Если настройки 'auto' или недоступны, определяем автоматически
+    $realHttps = (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+        (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    );
+    
+    if ($realHttps) {
+        $isSecure = true;
+    } elseif (class_exists('UrlHelper')) {
+        $isSecure = UrlHelper::isHttps();
+    } elseif (function_exists('detectProtocol')) {
+        $protocol = detectProtocol();
+        $isSecure = ($protocol === 'https://');
+    }
+}
+
+// Session::start() теперь сам проверяет настройки из базы данных
+// Передаем начальное значение, но оно может быть переопределено внутри Session::start()
 Session::start([
     'name' => 'PHPSESSID',
     'lifetime' => 7200,
@@ -98,7 +131,7 @@ Session::start([
     'path' => '/',
     'secure' => $isSecure,
     'httponly' => true,
-    'samesite' => 'Lax'
+    'samesite' => 'Lax' // Lax работает лучше в Edge, чем None
 ]);
 
 if ($isInstaller) {
@@ -128,6 +161,21 @@ if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini
         }
     } catch (Exception $e) {
         error_log('init.php: Could not update protocol from settings: ' . $e->getMessage());
+    }
+}
+
+// Выполнение миграций (добавление session_token в users, если нужно)
+if (file_exists(__DIR__ . '/data/database.ini')) {
+    try {
+        $db = DatabaseHelper::getConnection();
+        if ($db && file_exists(__DIR__ . '/includes/migrations/add_session_token_to_users.php')) {
+            require_once __DIR__ . '/includes/migrations/add_session_token_to_users.php';
+            if (function_exists('migration_add_session_token_to_users')) {
+                migration_add_session_token_to_users($db);
+            }
+        }
+    } catch (Exception $e) {
+        error_log('init.php: Could not run migrations: ' . $e->getMessage());
     }
 }
 

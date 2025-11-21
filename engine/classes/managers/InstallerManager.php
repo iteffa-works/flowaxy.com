@@ -353,11 +353,13 @@ class InstallerManager extends BaseModule {
                 `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                 `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                 `role_ids` JSON DEFAULT NULL COMMENT 'Массив ID ролей пользователя',
+                `session_token` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Токен сессии для защиты от одновременного входа',
                 `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `username` (`username`),
-                KEY `idx_email` (`email`)
+                KEY `idx_email` (`email`),
+                KEY `idx_session_token` (`session_token`)
             ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
             
             'api_keys' => "CREATE TABLE IF NOT EXISTS `api_keys` (

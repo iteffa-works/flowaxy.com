@@ -35,22 +35,127 @@ class Session {
         
         self::$config = array_merge(self::$config, $config);
         
-        // Налаштування параметрів сесії
-        ini_set('session.cookie_lifetime', self::$config['lifetime']);
-        ini_set('session.cookie_path', self::$config['path']);
-        ini_set('session.cookie_domain', self::$config['domain']);
-        ini_set('session.cookie_secure', self::$config['secure'] ? '1' : '0');
-        ini_set('session.cookie_httponly', self::$config['httponly'] ? '1' : '0');
+        // Определяем secure на основе настроек из базы данных (если доступны)
+        $isSecure = self::$config['secure'];
         
-        if (isset(self::$config['samesite'])) {
-            ini_set('session.cookie_samesite', self::$config['samesite']);
+        // Проверяем настройки протокола из базы данных
+        $protocolFromSettings = null;
+        if (class_exists('SettingsManager') && file_exists(__DIR__ . '/../../data/database.ini')) {
+            try {
+                $settingsManager = settingsManager();
+                $protocolSetting = $settingsManager->get('site_protocol', 'auto');
+                if ($protocolSetting === 'https') {
+                    $protocolFromSettings = 'https://';
+                } elseif ($protocolSetting === 'http') {
+                    $protocolFromSettings = 'http://';
+                }
+            } catch (Exception $e) {
+                // Игнорируем ошибки при загрузке настроек
+            }
+        }
+        
+        // Если в настройках явно указан протокол, используем его
+        if ($protocolFromSettings === 'https://') {
+            $isSecure = true;
+        } elseif ($protocolFromSettings === 'http://') {
+            $isSecure = false;
+        } else {
+            // Если настройки 'auto' или недоступны, проверяем реальное соединение
+            if ($isSecure) {
+                // Дополнительная проверка реального протокола
+                $realHttps = (
+                    (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                    (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                    (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+                    (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                );
+                
+                // Если реальное соединение HTTP, но secure=true, отключаем secure для совместимости
+                if (!$realHttps) {
+                    $isSecure = false;
+                    error_log("Session: secure=true but connection is HTTP, disabling secure flag for compatibility");
+                }
+            }
+        }
+        
+        // SameSite настройка (важно для Edge)
+        $samesite = self::$config['samesite'] ?? 'Lax';
+        // Если SameSite=None, но secure=false, Edge блокирует - меняем на Lax
+        if ($samesite === 'None' && !$isSecure) {
+            $samesite = 'Lax';
+            error_log("Session: SameSite=None requires Secure flag, changing to Lax for compatibility");
         }
         
         session_name(self::$config['name']);
         
+        // Определяем domain правильно для Edge
+        // Edge очень строгий к domain - лучше использовать пустой domain для точного совпадения
+        $cookieDomain = self::$config['domain'];
+        if (empty($cookieDomain)) {
+            // Для Edge лучше использовать пустой domain - браузер сам определит домен
+            // Это гарантирует, что cookie будет работать для точного домена
+            $cookieDomain = '';
+            
+            // Альтернатива: можно использовать текущий домен, но без точки в начале
+            // $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            // $host = preg_replace('/:\d+$/', '', $host);
+            // if ($host !== 'localhost' && !filter_var($host, FILTER_VALIDATE_IP)) {
+            //     $cookieDomain = $host; // Без точки в начале!
+            // }
+        }
+        
+        // ВАЖНО: session_set_cookie_params() должен вызываться ДО session_start()
+        // Это критично для Edge и других браузеров
+        session_set_cookie_params([
+            'lifetime' => self::$config['lifetime'],
+            'path' => self::$config['path'],
+            'domain' => $cookieDomain, // Используем правильно определенный domain
+            'secure' => $isSecure,
+            'httponly' => self::$config['httponly'],
+            'samesite' => $samesite
+        ]);
+        
+        // Налаштування параметрів сесії через ini_set (для совместимости)
+        ini_set('session.cookie_lifetime', self::$config['lifetime']);
+        ini_set('session.cookie_path', self::$config['path']);
+        ini_set('session.cookie_domain', $cookieDomain); // Используем правильно определенный domain
+        ini_set('session.cookie_secure', $isSecure ? '1' : '0');
+        ini_set('session.cookie_httponly', self::$config['httponly'] ? '1' : '0');
+        
+        // Для PHP 7.3+ используем ini_set для SameSite
+        if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
+            ini_set('session.cookie_samesite', $samesite);
+        }
+        
+        // Логируем параметры для диагностики
+        error_log("Session::start() - secure: " . ($isSecure ? 'true' : 'false') . ", samesite: " . $samesite . ", domain: '" . ($cookieDomain ?: 'empty (will use current domain)') . "', path: " . self::$config['path']);
+        
         if (!headers_sent()) {
             session_start();
             self::$started = true;
+            
+            // Логируем Session ID после старта
+            $sessionId = session_id();
+            error_log("Session::start() - Session ID: " . $sessionId . ", Session name: " . session_name());
+            
+            // Проверяем, установилась ли cookie
+            $cookieSet = isset($_COOKIE[session_name()]);
+            error_log("Session::start() - Cookie " . session_name() . " in \$_COOKIE: " . ($cookieSet ? 'yes (' . substr($_COOKIE[session_name()], 0, 20) . '...)' : 'no'));
+            
+            // Проверяем заголовки Set-Cookie (если возможно)
+            if (function_exists('headers_list')) {
+                $headers = headers_list();
+                $setCookieHeaders = array_filter($headers, function($h) {
+                    return stripos($h, 'Set-Cookie:') === 0;
+                });
+                if (!empty($setCookieHeaders)) {
+                    error_log("Session::start() - Set-Cookie headers: " . implode('; ', array_slice($setCookieHeaders, 0, 2)));
+                } else {
+                    error_log("Session::start() - WARNING: No Set-Cookie headers found!");
+                }
+            }
+        } else {
+            error_log("Session::start() - WARNING: Headers already sent, cannot start session");
         }
     }
     

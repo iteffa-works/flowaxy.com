@@ -17,6 +17,7 @@ $router->add(['GET', 'POST'], 'settings', 'SettingsPage');
 $router->add(['GET', 'POST'], 'site-settings', 'SiteSettingsPage');
 $router->add(['GET', 'POST'], 'cache-view', 'CacheViewPage');
 $router->add(['GET', 'POST'], 'logs-view', 'LogsViewPage');
+$router->add(['GET', 'POST'], 'storage-management', 'StorageManagementPage');
 $router->add(['GET', 'POST'], 'profile', 'ProfilePage');
 $router->add(['GET', 'POST'], 'plugins', 'PluginsPage');
 $router->add(['GET', 'POST'], 'themes', 'ThemesPage');

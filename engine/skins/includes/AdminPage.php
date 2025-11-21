@@ -42,6 +42,51 @@ class AdminPage {
         // Перевірка авторизації
         SecurityHelper::requireAdmin();
         
+        // Дополнительная проверка токена сессии для защиты от одновременного входа
+        // (SecurityHelper::isAdminLoggedIn() уже проверяет токен, но делаем дополнительную проверку здесь)
+        $session = sessionManager();
+        $userId = (int)$session->get('admin_user_id');
+        $sessionToken = $session->get('admin_session_token');
+        
+        if ($userId > 0 && !empty($sessionToken)) {
+            try {
+                // Проверяем токен в БД при каждом запросе
+                $db = DatabaseHelper::getConnection();
+                if ($db) {
+                    $stmt = $db->prepare("SELECT session_token FROM users WHERE id = ? LIMIT 1");
+                    $stmt->execute([$userId]);
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$user || empty($user['session_token']) || !hash_equals($user['session_token'], $sessionToken)) {
+                        // Токен не совпадает - пользователь зашел с другого устройства
+                        // Очищаем сессию и перенаправляем на логин
+                        $session->remove(ADMIN_SESSION_NAME);
+                        $session->remove('admin_user_id');
+                        $session->remove('admin_username');
+                        $session->remove('admin_session_token');
+                        
+                        // Для AJAX возвращаем JSON ошибку
+                        if (AjaxHandler::isAjax()) {
+                            Response::jsonResponse([
+                                'success' => false,
+                                'error' => 'Ваш аккаунт был использован с другого устройства. Пожалуйста, войдите снова.',
+                                'auth_required' => true,
+                                'logout_required' => true
+                            ], 401);
+                            exit;
+                        }
+                        
+                        // Для обычных запросов делаем редирект
+                        Response::redirectStatic(UrlHelper::admin('login') . '?message=session_expired');
+                        exit;
+                    }
+                }
+            } catch (Exception $e) {
+                // В случае ошибки БД продолжаем работу (чтобы не блокировать пользователя)
+                error_log('AdminPage::__construct() - Error checking session token: ' . $e->getMessage());
+            }
+        }
+        
         // Підключення до БД з обробкою помилок
         try {
             $this->db = DatabaseHelper::getConnection(true);
