@@ -10,7 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class StorageManagementPage extends AdminPage {
-    protected $templateName = 'storage-management';
+    protected string $templateName = 'storage-management';
     
     public function __construct() {
         parent::__construct();

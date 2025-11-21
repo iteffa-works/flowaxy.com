@@ -67,7 +67,7 @@ function showDatabaseError(array $errorDetails = []): void {
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     $databaseIniFile = __DIR__ . '/../data/database.ini';
     
-    if (strpos($requestUri, '/install') === 0) return;
+    if (str_starts_with($requestUri, '/install')) return;
     if (!file_exists($databaseIniFile) && php_sapi_name() !== 'cli') {
         header('Location: /install');
         exit;
@@ -80,7 +80,7 @@ function showDatabaseError(array $errorDetails = []): void {
     
     if (isset($errorDetails['host']) && !isset($errorDetails['port'])) {
         $host = $errorDetails['host'];
-        if (strpos($host, ':') !== false) {
+        if (str_contains($host, ':')) {
             [$host, $port] = explode(':', $host, 2);
             $errorDetails['host'] = $host;
             $errorDetails['port'] = (int)$port;
@@ -100,7 +100,7 @@ function showDatabaseError(array $errorDetails = []): void {
 function initializeSystem(): void {
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     
-    if (strpos($requestUri, '/install') === 0) return;
+    if (str_starts_with($requestUri, '/install')) return;
     
     $databaseIniFile = __DIR__ . '/../data/database.ini';
     if (!file_exists($databaseIniFile)) {

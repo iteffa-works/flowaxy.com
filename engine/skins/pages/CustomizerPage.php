@@ -3,6 +3,8 @@
  * Сторінка налаштування дизайну (Customizer)
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class CustomizerPage extends AdminPage {
@@ -71,7 +73,7 @@ class CustomizerPage extends AdminPage {
         
         // Отримання активної теми та перевірка підтримки кастомізації
         $activeTheme = themeManager()->getActiveTheme();
-        list($supportsCustomization, $themePath) = $this->checkCustomizationSupport($activeTheme);
+        [$supportsCustomization, $themePath] = $this->checkCustomizationSupport($activeTheme);
         
         if (!$activeTheme) {
             $this->setMessage('Спочатку активуйте тему в розділі "Теми"', 'warning');
@@ -658,8 +660,8 @@ class CustomizerPage extends AdminPage {
                 }
                 // Перевіряємо, що це схоже на URL або шлях
                 if (filter_var($value, FILTER_VALIDATE_URL) || 
-                    (strpos($value, '/') === 0) || 
-                    (strpos($value, 'http') === 0) ||
+                    str_starts_with($value, '/') || 
+                    str_starts_with($value, 'http') ||
                     preg_match('/^[a-zA-Z0-9_\-\.\/\\\:]+$/', $value)) {
                     return $value;
                 }

@@ -27,7 +27,7 @@ if (!isset($submit)) {
 
 // Базовый класс кнопки
 $buttonClass = 'btn d-inline-flex align-items-center';
-if (strpos($type, 'outline-') === 0) {
+if (str_starts_with($type, 'outline-')) {
     $buttonClass .= ' btn-' . $type;
 } else {
     $buttonClass .= ' btn-' . $type;

@@ -159,7 +159,7 @@ class Security {
             
             $ip = $_SERVER[$key];
             
-            if (strpos($ip, ',') !== false) {
+            if (str_contains($ip, ',')) {
                 $ip = trim(explode(',', $ip)[0]);
             }
             
@@ -194,7 +194,7 @@ class Security {
         if (strlen($filename) > 255) {
             $ext = pathinfo($filename, PATHINFO_EXTENSION);
             $name = pathinfo($filename, PATHINFO_FILENAME);
-            $filename = substr($name, 0, 255 - strlen($ext) - 1) . '.' . $ext;
+            $filename = mb_substr($name, 0, 255 - mb_strlen($ext) - 1) . '.' . $ext;
         }
         
         return $filename;

@@ -80,12 +80,12 @@ class UrlHelper {
         }
         
         // Якщо URL вже протокол-відносний, повертаємо як є
-        if (strpos($url, '//') === 0) {
+        if (str_starts_with($url, '//')) {
             return $url;
         }
         
         // Якщо URL відносний, повертаємо як є
-        if (strpos($url, 'http://') !== 0 && strpos($url, 'https://') !== 0) {
+        if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
             return $url;
         }
         
@@ -136,8 +136,8 @@ class UrlHelper {
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         
-        if (!$withQuery && ($pos = strpos($uri, '?')) !== false) {
-            $uri = substr($uri, 0, $pos);
+        if (!$withQuery && str_contains($uri, '?')) {
+            $uri = strstr($uri, '?', true) ?: $uri;
         }
         
         return $protocol . $host . $uri;

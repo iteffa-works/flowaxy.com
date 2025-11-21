@@ -9,9 +9,9 @@
 declare(strict_types=1);
 
 abstract class BasePlugin {
-    protected $pluginData;
-    protected $db;
-    protected $config;
+    protected ?array $pluginData = null;
+    protected ?PDO $db = null;
+    protected array $config = [];
     
     public function __construct() {
         try {

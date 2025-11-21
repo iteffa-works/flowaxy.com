@@ -3,9 +3,12 @@
  * Простий шаблонізатор без складностей
  * Тільки основні функції без MVC
  */
+
+declare(strict_types=1);
+
 class SimpleTemplate {
-    private $templateDir;
-    private $data = [];
+    private string $templateDir;
+    private array $data = [];
     
     public function __construct() {
         $this->templateDir = __DIR__ . '/../templates/';
@@ -14,7 +17,7 @@ class SimpleTemplate {
     /**
      * Рендерити шаблон
      */
-    public function render($template, $data = []) {
+    public function render(string $template, array $data = []): void {
         // Переконуємося, що всі необхідні класи завантажені
         $this->ensureClassesLoaded();
         
@@ -35,7 +38,7 @@ class SimpleTemplate {
     /**
      * Отримує контент шаблону (використовує View клас)
      */
-    public function getContent($templateName, $data = []) {
+    public function getContent(string $templateName, array $data = []): string {
         $templateData = array_merge($this->data, $data);
         
         try {
@@ -59,7 +62,7 @@ class SimpleTemplate {
     /**
      * Рендерить компонент
      */
-    public function component($component, $data = []) {
+    public function component(string $component, array $data = []): void {
         $componentData = array_merge($this->data, $data);
         extract($componentData);
         
@@ -73,7 +76,7 @@ class SimpleTemplate {
     /**
      * Додає дані
      */
-    public function assign($key, $value) {
+    public function assign(string $key, mixed $value): self {
         $this->data[$key] = $value;
         return $this;
     }
@@ -81,14 +84,14 @@ class SimpleTemplate {
     /**
      * Екранує HTML (використовує Security клас)
      */
-    public function escape($string) {
+    public function escape(string $string): string {
         return Security::clean($string);
     }
     
     /**
      * Форматує дату
      */
-    public function formatDate($date, $format = 'd.m.Y H:i') {
+    public function formatDate(string|DateTime $date, string $format = 'd.m.Y H:i'): string {
         if (is_string($date)) {
             $date = new DateTime($date);
         }
@@ -98,7 +101,7 @@ class SimpleTemplate {
     /**
      * Форматує число
      */
-    public function formatNumber($number, $decimals = 0) {
+    public function formatNumber(int|float $number, int $decimals = 0): string {
         return number_format((float)$number, $decimals, ',', ' ');
     }
 }
@@ -106,7 +109,7 @@ class SimpleTemplate {
 /**
  * Глобальна функція для рендерингу
  */
-function renderTemplate($template, $data = []) {
+function renderTemplate(string $template, array $data = []): void {
     $engine = new SimpleTemplate();
     $engine->render($template, $data);
 }

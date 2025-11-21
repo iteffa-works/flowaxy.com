@@ -3,6 +3,8 @@
  * Сторінка перегляду кешу
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class CacheViewPage extends AdminPage {

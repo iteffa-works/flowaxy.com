@@ -3,9 +3,11 @@
  * Сторінка входу в адмінку
  */
 
+declare(strict_types=1);
+
 class LoginPage {
-    private $db;
-    private $error = '';
+    private ?PDO $db = null;
+    private string $error = '';
     
     public function __construct() {
         // Переконуємося, що сесія ініціалізована для CSRF токена (використовуємо наші класи)

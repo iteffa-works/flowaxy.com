@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 class RoleManager {
     private static ?self $instance = null;
-    private $db;
+    private ?PDO $db = null;
     private array $userRolesCache = [];
     private array $userPermissionsCache = [];
     private array $rolePermissionsCache = [];

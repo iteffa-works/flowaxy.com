@@ -4,6 +4,8 @@
  * Спрощена архітектура без MVC
  */
 
+declare(strict_types=1);
+
 // Підключаємо хелпер для компонентів
 require_once __DIR__ . '/ComponentHelper.php';
 
@@ -11,24 +13,24 @@ require_once __DIR__ . '/ComponentHelper.php';
 // Використовуємо їх безпосередньо: Request, AjaxHandler, Validator, File, Directory, Response тощо
 
 class AdminPage {
-    protected $db;
-    protected $message = '';
-    protected $messageType = '';
-    protected $pageTitle = 'Flowaxy CMS';
-    protected $pageHeaderTitle = '';
-    protected $pageHeaderDescription = '';
-    protected $pageHeaderIcon = '';
-    protected $pageHeaderButtons = '';
-    protected $templateName = '';
-    protected $additionalCSS = [];
-    protected $additionalJS = [];
-    protected $additionalInlineCSS = '';
+    protected ?PDO $db = null;
+    protected string $message = '';
+    protected string $messageType = '';
+    protected string $pageTitle = 'Flowaxy CMS';
+    protected string $pageHeaderTitle = '';
+    protected string $pageHeaderDescription = '';
+    protected string $pageHeaderIcon = '';
+    protected string $pageHeaderButtons = '';
+    protected string $templateName = '';
+    protected array $additionalCSS = [];
+    protected array $additionalJS = [];
+    protected string $additionalInlineCSS = '';
     
     // Прапорці для автоматичного редиректу після POST
-    private $postProcessed = false;
-    private $autoRedirectEnabled = true;
-    private $redirectPerformed = false;
-    private $currentPage = '';
+    private bool $postProcessed = false;
+    private bool $autoRedirectEnabled = true;
+    private bool $redirectPerformed = false;
+    private string $currentPage = '';
     
     public function __construct() {
         // Для AJAX запитів очищаємо буфер виводу одразу

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 $step = $_GET['step'] ?? 'welcome';
 $error = $error ?? null;
 ?>

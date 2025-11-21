@@ -3,6 +3,8 @@
  * Сторінка управління плагінами
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class PluginsPage extends AdminPage {
@@ -273,9 +275,9 @@ class PluginsPage extends AdminPage {
         if (file_exists($pluginFile)) {
             $content = @file_get_contents($pluginFile);
             if ($content && (
-                strpos($content, '-settings') !== false ||
-                strpos($content, 'SettingsPage') !== false ||
-                strpos($content, 'registerAdminRoute') !== false
+                str_contains($content, '-settings') ||
+                str_contains($content, 'SettingsPage') ||
+                str_contains($content, 'registerAdminRoute')
             )) {
                 return true;
             }
@@ -413,7 +415,7 @@ class PluginsPage extends AdminPage {
                 $normalizedPath = trim($normalizedPath, '/');
                 
                 // Пропускаем директории
-                if (substr($normalizedPath, -1) === '/') {
+                if (str_ends_with($normalizedPath, '/')) {
                     continue;
                 }
                 
@@ -489,10 +491,10 @@ class PluginsPage extends AdminPage {
             // Розпаковуємо файли
             $extracted = 0;
             foreach ($entries as $entryName) {
-                if (substr($entryName, -1) === '/') continue;
+                if (str_ends_with($entryName, '/')) continue;
                 
                 if ($rootPath) {
-                    if (strpos($entryName, $rootPath . '/') === 0) {
+                    if (str_starts_with($entryName, $rootPath . '/')) {
                         $relativePath = substr($entryName, strlen($rootPath) + 1);
                     } else {
                         continue;
@@ -501,7 +503,7 @@ class PluginsPage extends AdminPage {
                     $relativePath = $entryName;
                 }
                 
-                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                if (str_contains($relativePath, '../') || str_contains($relativePath, '..\\')) {
                     continue;
                 }
                 
@@ -814,14 +816,14 @@ class PluginsPage extends AdminPage {
             $extracted = 0;
             foreach ($entries as $entryName) {
                 // Пропускаємо папки
-                if (substr($entryName, -1) === '/') {
+                if (str_ends_with($entryName, '/')) {
                     continue;
                 }
                 
                 // Визначаємо шлях для витягування
                 if ($rootPath) {
                     // Якщо є коренева папка, видаляємо її з шляху
-                    if (strpos($entryName, $rootPath . '/') === 0) {
+                    if (str_starts_with($entryName, $rootPath . '/')) {
                         $relativePath = substr($entryName, strlen($rootPath) + 1);
                     } else {
                         continue; // Пропускаємо файли поза кореневою папкою
@@ -831,7 +833,7 @@ class PluginsPage extends AdminPage {
                 }
                 
                 // Пропускаємо небезпечні шляхи
-                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                if (str_contains($relativePath, '../') || str_contains($relativePath, '..\\')) {
                     continue;
                 }
                 

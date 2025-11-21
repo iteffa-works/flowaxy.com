@@ -220,14 +220,14 @@ class Router {
      */
     private static function normalizeUriStatic(string $uri, ?string $basePath = null): string {
         // Видаляємо query string
-        if (($pos = strpos($uri, '?')) !== false) {
-            $uri = substr($uri, 0, $pos);
+        if (str_contains($uri, '?')) {
+            $uri = strstr($uri, '?', true) ?: $uri;
         }
         
         // Видаляємо базовий шлях, якщо встановлено
         if ($basePath !== null && $basePath !== '/') {
             $basePathTrimmed = rtrim($basePath, '/');
-            if (strpos($uri, $basePathTrimmed) === 0) {
+            if (str_starts_with($uri, $basePathTrimmed)) {
                 $uri = substr($uri, strlen($basePathTrimmed));
                 $uri = '/' . ltrim($uri, '/');
                 if ($uri === '/') {
@@ -428,7 +428,7 @@ class Router {
         $normalized = self::normalizeUriStatic($uri, '/admin');
         
         // Для адмінки порожній шлях = dashboard
-        if (empty($normalized) && strpos($uri, '/admin') === 0) {
+        if (empty($normalized) && str_starts_with($uri, '/admin')) {
             return 'dashboard';
         }
         

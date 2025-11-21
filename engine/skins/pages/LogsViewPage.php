@@ -3,6 +3,8 @@
  * Сторінка перегляду логів
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class LogsViewPage extends AdminPage {
@@ -136,7 +138,7 @@ class LogsViewPage extends AdminPage {
         if (!file_exists($filePath) || 
             !is_file($filePath) || 
             !is_readable($filePath) ||
-            strpos(realpath($filePath), realpath($logsDir)) !== 0) {
+            !str_starts_with(realpath($filePath), realpath($logsDir))) {
             return [
                 'lines' => [],
                 'total_lines' => 0,
@@ -272,7 +274,7 @@ class LogsViewPage extends AdminPage {
                 is_file($filePath) && 
                 is_writable($filePath)) {
                 // Проверяем, что файл находится в директории логов
-                if (strpos($realFilePath, $realLogsDir) === 0) {
+                if (str_starts_with($realFilePath, $realLogsDir)) {
                     if (@unlink($filePath)) {
                         $this->setMessage('Файл логу успішно видалено', 'success');
                         // Перенаправляем на страницу без выбранного файла

@@ -3,6 +3,8 @@
  * Сторінка налаштувань (головна сторінка зі списком посилань)
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class SettingsPage extends AdminPage {

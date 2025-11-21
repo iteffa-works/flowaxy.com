@@ -135,7 +135,7 @@ class Ini {
         }
         
         // Перевіряємо, чи є секція в ключі
-        if (strpos($key, '.') !== false) {
+        if (str_contains($key, '.')) {
             [$section, $sectionKey] = explode('.', $key, 2);
             
             if (isset($this->data[$section]) && is_array($this->data[$section])) {
@@ -175,7 +175,7 @@ class Ini {
         }
         
         // Перевіряємо, чи є секція в ключі
-        if (strpos($key, '.') !== false) {
+        if (str_contains($key, '.')) {
             [$section, $sectionKey] = explode('.', $key, 2);
             
             if (!isset($this->data[$section]) || !is_array($this->data[$section])) {
@@ -202,7 +202,7 @@ class Ini {
             return false;
         }
         
-        if (strpos($key, '.') !== false) {
+        if (str_contains($key, '.')) {
             [$section, $sectionKey] = explode('.', $key, 2);
             
             if (isset($this->data[$section]) && is_array($this->data[$section])) {
@@ -224,7 +224,7 @@ class Ini {
             return $this;
         }
         
-        if (strpos($key, '.') !== false) {
+        if (str_contains($key, '.')) {
             [$section, $sectionKey] = explode('.', $key, 2);
             
             if (isset($this->data[$section]) && is_array($this->data[$section])) {

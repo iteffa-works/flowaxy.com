@@ -97,7 +97,7 @@ class CookieManager implements StorageInterface {
         $expire = $options['expire'];
         if (is_int($expire) && $expire > 0) {
             $expire = time() + $expire;
-        } elseif (is_string($expire) && strpos($expire, '+') === 0) {
+        } elseif (is_string($expire) && str_starts_with($expire, '+')) {
             // Підтримка формату "+30 days"
             $expire = strtotime($expire);
         }

@@ -10,7 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class RolesPage extends AdminPage {
-    protected $templateName = 'roles';
+    protected string $templateName = 'roles';
     
     private ?RoleManager $roleManager = null;
     

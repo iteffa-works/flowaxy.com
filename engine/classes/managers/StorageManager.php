@@ -185,7 +185,7 @@ class StorageManager implements StorageInterface {
         $prefixLen = $this->prefix ? strlen($this->prefix) + 1 : 0;
         
         foreach ($this->serverStorage as $key => $value) {
-            if (!$this->prefix || strpos($key, $this->prefix . '.') === 0) {
+            if (!$this->prefix || str_starts_with($key, $this->prefix . '.')) {
                 $resultKey = $prefixLen > 0 ? substr($key, $prefixLen) : $key;
                 $result[$resultKey] = $value;
             }
@@ -203,7 +203,7 @@ class StorageManager implements StorageInterface {
         if ($this->prefix) {
             // Очищаем только ключи с префиксом
             foreach ($this->serverStorage as $key => $value) {
-                if (strpos($key, $this->prefix . '.') === 0) {
+                if (str_starts_with($key, $this->prefix . '.')) {
                     unset($this->serverStorage[$key]);
                 }
             }

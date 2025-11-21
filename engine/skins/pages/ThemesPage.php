@@ -3,6 +3,8 @@
  * Сторінка керування темами
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class ThemesPage extends AdminPage {
@@ -383,7 +385,7 @@ class ThemesPage extends AdminPage {
                 $normalizedPath = trim($normalizedPath, '/');
                 
                 // Пропускаем директории
-                if (substr($normalizedPath, -1) === '/') {
+                if (str_ends_with($normalizedPath, '/')) {
                     continue;
                 }
                 
@@ -476,12 +478,12 @@ class ThemesPage extends AdminPage {
             // Распаковываем файлы
             $extracted = 0;
             foreach ($entries as $entryName) {
-                if (substr($entryName, -1) === '/') {
+                if (str_ends_with($entryName, '/')) {
                     continue;
                 }
                 
                 if ($rootPath) {
-                    if (strpos($entryName, $rootPath . '/') === 0) {
+                    if (str_starts_with($entryName, $rootPath . '/')) {
                         $relativePath = substr($entryName, strlen($rootPath) + 1);
                     } else {
                         continue;
@@ -490,7 +492,7 @@ class ThemesPage extends AdminPage {
                     $relativePath = $entryName;
                 }
                 
-                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                if (str_contains($relativePath, '../') || str_contains($relativePath, '..\\')) {
                     continue;
                 }
                 
@@ -613,7 +615,7 @@ class ThemesPage extends AdminPage {
                 $normalizedPath = trim($normalizedPath, '/');
                 
                 // Пропускаем директории
-                if (substr($normalizedPath, -1) === '/') {
+                if (str_ends_with($normalizedPath, '/')) {
                     continue;
                 }
                 
@@ -711,14 +713,14 @@ class ThemesPage extends AdminPage {
             $extracted = 0;
             foreach ($entries as $entryName) {
                 // Пропускаємо папки
-                if (substr($entryName, -1) === '/') {
+                if (str_ends_with($entryName, '/')) {
                     continue;
                 }
                 
                 // Визначаємо шлях для витягування
                 if ($rootPath) {
                     // Якщо є коренева папка, видаляємо її з шляху
-                    if (strpos($entryName, $rootPath . '/') === 0) {
+                    if (str_starts_with($entryName, $rootPath . '/')) {
                         $relativePath = substr($entryName, strlen($rootPath) + 1);
                     } else {
                         continue; // Пропускаємо файли поза кореневою папкою
@@ -728,7 +730,7 @@ class ThemesPage extends AdminPage {
                 }
                 
                 // Пропускаємо небезпечні шляхи
-                if (strpos($relativePath, '../') !== false || strpos($relativePath, '..\\') !== false) {
+                if (str_contains($relativePath, '../') || str_contains($relativePath, '..\\')) {
                     continue;
                 }
                 

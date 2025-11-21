@@ -9,7 +9,7 @@
 declare(strict_types=1);
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-$isInstaller = strpos($requestUri, '/install') === 0;
+$isInstaller = str_starts_with($requestUri, '/install');
 $databaseIniFile = __DIR__ . '/data/database.ini';
 $defaultTimezone = 'Europe/Kyiv';
 

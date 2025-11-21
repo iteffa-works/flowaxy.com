@@ -127,7 +127,7 @@ class SessionManager implements StorageInterface {
         $prefixLen = strlen($this->prefix) + 1; // +1 для точки
         
         foreach ($all as $key => $value) {
-            if (strpos($key, $this->prefix . '.') === 0) {
+            if (str_starts_with($key, $this->prefix . '.')) {
                 $resultKey = substr($key, $prefixLen);
                 $result[$resultKey] = $value;
             }
@@ -154,7 +154,7 @@ class SessionManager implements StorageInterface {
         $prefixLen = strlen($prefix);
         
         foreach ($all as $key => $value) {
-            if (strpos($key, $prefix) === 0) {
+            if (str_starts_with($key, $prefix)) {
                 Session::remove($key);
             }
         }

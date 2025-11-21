@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 class Yaml {
     private string $filePath;
-    private $data = null;
+    private mixed $data = null;
     private bool $hasData = false;
     private int $inline = 2; // Рівень вкладеності для інлайн запису
     private int $indent = 2; // Розмір відступу

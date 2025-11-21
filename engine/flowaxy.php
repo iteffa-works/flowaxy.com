@@ -67,19 +67,19 @@ if (!function_exists('detectProtocol')) {
     }
 }
 
-if (version_compare(PHP_VERSION, '8.3.0', '<')) {
+if (version_compare(PHP_VERSION, '8.4.0', '<')) {
     if (php_sapi_name() !== 'cli') {
         if (!headers_sent()) {
             http_response_code(500);
             header('Content-Type: text/html; charset=UTF-8');
         }
-        die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Помилка версії PHP</title></head><body><h1>Потрібно PHP 8.3+</h1><p>Поточна версія: ' . htmlspecialchars(PHP_VERSION, ENT_QUOTES, 'UTF-8') . '</p></body></html>');
+        die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Помилка версії PHP</title></head><body><h1>Потрібно PHP 8.4+</h1><p>Поточна версія: ' . htmlspecialchars(PHP_VERSION, ENT_QUOTES, 'UTF-8') . '</p></body></html>');
     }
-    die('Ця CMS потребує PHP 8.3 або вище. Поточна версія: ' . PHP_VERSION . PHP_EOL);
+    die('Ця CMS потребує PHP 8.4 або вище. Поточна версія: ' . PHP_VERSION . PHP_EOL);
 }
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-$isInstaller = strpos($requestUri, '/install') === 0;
+$isInstaller = str_starts_with($requestUri, '/install');
 $databaseIniFile = __DIR__ . '/data/database.ini';
 $rootDir = defined('ROOT_DIR') ? ROOT_DIR : dirname(__DIR__);
 
@@ -116,7 +116,7 @@ if (!ob_get_level()) ob_start();
 // Оптимізований автозавантажувач класів з кешуванням мапи
 spl_autoload_register(function (string $className): void {
     // Пропускаємо класи з простором імен
-    if (strpos($className, '\\') !== false) return;
+    if (str_contains($className, '\\')) return;
     
     // Статична мапа для швидкого доступу (кешується між викликами)
     static $classMap = null;
@@ -161,7 +161,7 @@ spl_autoload_register(function (string $className): void {
     }
     
     // Перевірка менеджерів (оптимізовано)
-    $isManager = substr($className, -7) === 'Manager' || $className === 'ThemeCustomizer';
+    $isManager = str_ends_with($className, 'Manager') || $className === 'ThemeCustomizer';
     
     if ($isManager) {
         if (!class_exists('BaseModule')) {
@@ -189,7 +189,7 @@ spl_autoload_register(function (string $className): void {
     }
     
     // Перевірка сторінок адмінки
-    if (strpos($className, 'Page') !== false && strpos($className, 'AdminPage') === false) {
+    if (str_contains($className, 'Page') && !str_contains($className, 'AdminPage')) {
         $file = __DIR__ . '/skins/pages/' . $className . '.php';
         if (file_exists($file)) { 
             require_once $file; 

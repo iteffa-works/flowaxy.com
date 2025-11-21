@@ -83,7 +83,7 @@ class Config {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
         // Розбираємо ключ
-        if (strpos($key, '.') === false) {
+        if (!str_contains($key, '.')) {
             // Якщо ключ без точки, значить це ім'я конфігу
             $configName = $key;
             $path = null;
@@ -121,7 +121,7 @@ class Config {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
         // Розбираємо ключ
-        if (strpos($key, '.') === false) {
+        if (!str_contains($key, '.')) {
             throw new Exception("Для встановлення значення потрібно вказати шлях (наприклад, 'config.key')");
         }
         
@@ -152,7 +152,7 @@ class Config {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
         // Розбираємо ключ
-        if (strpos($key, '.') === false) {
+        if (!str_contains($key, '.')) {
             $configName = $key;
             $path = null;
         } else {
@@ -184,7 +184,7 @@ class Config {
     public function remove(string $key, ?string $extension = null): bool {
         $extension = $extension ?? self::DEFAULT_EXTENSION;
         
-        if (strpos($key, '.') === false) {
+        if (!str_contains($key, '.')) {
             throw new Exception("Для видалення значення потрібно вказати шлях (наприклад, 'config.key')");
         }
         

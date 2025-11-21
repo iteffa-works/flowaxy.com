@@ -3,6 +3,8 @@
  * Сторінка профілю користувача
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class ProfilePage extends AdminPage {

@@ -26,7 +26,7 @@ class Database {
     private float $slowQueryThreshold = 1.0;
     
     // Екземпляр Logger
-    private $logger = null;
+    private ?Logger $logger = null;
     
     /**
      * Конструктор (приватний для Singleton)
@@ -119,7 +119,7 @@ class Database {
      */
     private function checkHostAvailability(string $host, int $port = 3306): bool {
         // Розбираємо хост:port якщо вказано
-        if (strpos($host, ':') !== false) {
+        if (str_contains($host, ':')) {
             [$host, $port] = explode(':', $host, 2);
             $port = (int)$port;
         }
@@ -200,7 +200,7 @@ class Database {
         $port = 3306;
         
         // Розбираємо хост:port якщо вказано
-        if (strpos($host, ':') !== false) {
+        if (str_contains($host, ':')) {
             [$host, $port] = explode(':', $host, 2);
             $port = (int)$port;
         }
@@ -287,9 +287,9 @@ class Database {
             $errorCode = $e->getCode();
             
             // Якщо таймаут або хост недоступний, не повторюємо спроби
-            $isTimeout = strpos($errorMessage, 'timeout') !== false 
-                      || strpos($errorMessage, 'timed out') !== false
-                      || strpos($errorMessage, 'Connection refused') !== false
+            $isTimeout = str_contains($errorMessage, 'timeout') 
+                      || str_contains($errorMessage, 'timed out')
+                      || str_contains($errorMessage, 'Connection refused')
                       || $errorCode == 2002 // SQLSTATE[HY000] [2002] Connection refused
                       || $errorCode == 2003; // SQLSTATE[HY000] [2003] Can't connect to MySQL server
             
@@ -588,7 +588,7 @@ class Database {
         // Використовуємо налаштування Logger, якщо доступні
         $logger = $this->getLogger();
         if ($logger && method_exists($logger, 'getSetting')) {
-            $loggerKey = strpos($key, 'logger_') === 0 ? substr($key, 7) : $key;
+            $loggerKey = str_starts_with($key, 'logger_') ? substr($key, 7) : $key;
             $value = $logger->getSetting($loggerKey, $default);
             return $value !== null ? (string)$value : $default;
         }
@@ -699,7 +699,7 @@ class Database {
             $host = $dbHost;
             $port = 3306;
             
-            if (strpos($host, ':') !== false) {
+            if (str_contains($host, ':')) {
                 [$host, $port] = explode(':', $host, 2);
                 $port = (int)$port;
             }

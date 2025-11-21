@@ -125,10 +125,8 @@ class Session {
         ini_set('session.cookie_secure', $isSecure ? '1' : '0');
         ini_set('session.cookie_httponly', self::$config['httponly'] ? '1' : '0');
         
-        // Для PHP 7.3+ используем ini_set для SameSite
-        if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
-            ini_set('session.cookie_samesite', $samesite);
-        }
+        // Настройка SameSite (PHP 8.4 поддерживает напрямую)
+        ini_set('session.cookie_samesite', $samesite);
         
         if (!headers_sent()) {
             session_start();

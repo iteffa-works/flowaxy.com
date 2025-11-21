@@ -3,6 +3,8 @@
  * Сторінка редактора теми
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../includes/AdminPage.php';
 
 class ThemeEditorPage extends AdminPage {

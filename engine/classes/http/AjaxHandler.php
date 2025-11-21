@@ -13,7 +13,9 @@ class AjaxHandler {
     private array $actions = [];
     private bool $requireCsrf = true;
     private bool $requireAuth = true;
+    /** @var callable|null */
     private $authCallback = null;
+    /** @var callable|null */
     private $errorHandler = null;
     
     /**

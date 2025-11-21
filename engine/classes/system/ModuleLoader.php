@@ -9,9 +9,9 @@
 declare(strict_types=1);
 
 class ModuleLoader {
-    private static $loadedModules = [];
-    private static $modulesDir;
-    private static $initialized = false;
+    private static array $loadedModules = [];
+    private static string $modulesDir = '';
+    private static bool $initialized = false;
     
     /**
      * Ініціалізація завантажувача

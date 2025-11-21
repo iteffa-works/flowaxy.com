@@ -7,6 +7,8 @@
  * @return void
  */
 
+declare(strict_types=1);
+
 // Реєструємо базові маршрути адмінки
 // Увага: всі сторінки адмінки повинні підтримувати GET та POST для AJAX запитів
 $router->add(['GET', 'POST'], '', 'DashboardPage');

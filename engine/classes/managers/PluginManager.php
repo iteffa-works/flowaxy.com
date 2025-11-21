@@ -9,10 +9,10 @@
 declare(strict_types=1);
 
 class PluginManager extends BaseModule {
-    private $plugins = [];
-    private $hooks = [];
+    private array $plugins = [];
+    private array $hooks = [];
     private HookManager $hookManager;
-    private $pluginsDir;
+    private string $pluginsDir = '';
     
     protected function init(): void {
         $rootDir = dirname(__DIR__, 3);
@@ -390,7 +390,7 @@ class PluginManager extends BaseModule {
                 isset($hook['callback'][0]) && 
                 is_object($hook['callback'][0])) {
                 $objectClass = get_class($hook['callback'][0]);
-                if ($objectClass === $moduleName || strpos($objectClass, $moduleName) !== false) {
+                if ($objectClass === $moduleName || str_contains($objectClass, $moduleName)) {
                     return true;
                 }
             }
@@ -852,9 +852,9 @@ class PluginManager extends BaseModule {
                         $db->exec($query);
                     } catch (PDOException $e) {
                         // Ігноруємо помилки "Duplicate column" та "Duplicate key"
-                        if (strpos($e->getMessage(), 'Duplicate column') === false && 
-                            strpos($e->getMessage(), 'Duplicate key') === false &&
-                            strpos($e->getMessage(), 'already exists') === false) {
+                        if (!str_contains($e->getMessage(), 'Duplicate column') && 
+                            !str_contains($e->getMessage(), 'Duplicate key') &&
+                            !str_contains($e->getMessage(), 'already exists')) {
                             throw $e;
                         }
                     }
@@ -980,11 +980,11 @@ class PluginManager extends BaseModule {
                 if (is_array($callback)) {
                     if (isset($callback[0]) && is_object($callback[0])) {
                         $objectClass = get_class($callback[0]);
-                        if ($objectClass === $className || strpos($objectClass, $pluginSlug) !== false) {
+                        if ($objectClass === $className || str_contains($objectClass, $pluginSlug)) {
                             $this->hookManager->removeHook($hookName, $callback);
                         }
                     }
-                } elseif (is_string($callback) && (strpos($callback, $className) !== false || strpos($callback, $pluginSlug) !== false)) {
+                } elseif (is_string($callback) && (str_contains($callback, $className) || str_contains($callback, $pluginSlug))) {
                     $this->hookManager->removeHook($hookName, $callback);
                 }
             }
@@ -997,7 +997,7 @@ class PluginManager extends BaseModule {
                         $object = $hook['callback'][0];
                         if (is_object($object)) {
                             $objectClass = get_class($object);
-                            if ($objectClass === $className || strpos($objectClass, $pluginSlug) !== false) {
+                            if ($objectClass === $className || str_contains($objectClass, $pluginSlug)) {
                                 return false;
                             }
                         }

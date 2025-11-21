@@ -85,7 +85,7 @@ class MimeType {
      */
     public static function fromExtension(string $filePath) {
         // Якщо передано шлях до файлу, витягуємо розширення
-        if (strpos($filePath, '.') !== false && file_exists($filePath)) {
+        if (str_contains($filePath, '.') && file_exists($filePath)) {
             $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         } else {
             // Припускаємо, що це розширення
@@ -110,7 +110,7 @@ class MimeType {
      */
     public static function getAllMimeTypes(string $filePath): array {
         // Якщо передано шлях до файлу, витягуємо розширення
-        if (strpos($filePath, '.') !== false && file_exists($filePath)) {
+        if (str_contains($filePath, '.') && file_exists($filePath)) {
             $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         } else {
             // Припускаємо, що це розширення
@@ -199,7 +199,7 @@ class MimeType {
      */
     public static function isImage(string $filePath): bool {
         $mimeType = self::get($filePath);
-        return strpos($mimeType, 'image/') === 0;
+        return str_starts_with($mimeType, 'image/');
     }
     
     /**
@@ -210,7 +210,7 @@ class MimeType {
      */
     public static function isVideo(string $filePath): bool {
         $mimeType = self::get($filePath);
-        return strpos($mimeType, 'video/') === 0;
+        return str_starts_with($mimeType, 'video/');
     }
     
     /**
@@ -221,7 +221,7 @@ class MimeType {
      */
     public static function isAudio(string $filePath): bool {
         $mimeType = self::get($filePath);
-        return strpos($mimeType, 'audio/') === 0;
+        return str_starts_with($mimeType, 'audio/');
     }
     
     /**
@@ -245,7 +245,7 @@ class MimeType {
         ];
         
         foreach ($documentTypes as $type) {
-            if (strpos($mimeType, $type) === 0) {
+            if (str_starts_with($mimeType, $type)) {
                 return true;
             }
         }
@@ -308,7 +308,7 @@ class MimeType {
         $extensions = [];
         
         foreach (self::$extensionMap as $ext => $mime) {
-            if ($mime === $mimeType || strpos($mime, $mimeType) === 0) {
+            if ($mime === $mimeType || str_starts_with($mime, $mimeType)) {
                 $extensions[] = $ext;
             }
         }

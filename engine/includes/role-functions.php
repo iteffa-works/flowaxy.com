@@ -5,6 +5,8 @@
  * @package Engine\Includes
  */
 
+declare(strict_types=1);
+
 /**
  * Отримання екземпляра RoleManager
  */

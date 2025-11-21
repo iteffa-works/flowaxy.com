@@ -188,7 +188,7 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$versionMatch) {
             // Визначаємо мову для повідомлення (за замовчуванням українська)
             $lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'uk';
-            $isUkrainian = strpos($lang, 'uk') !== false || strpos($lang, 'ru') !== false;
+            $isUkrainian = str_contains($lang, 'uk') || str_contains($lang, 'ru');
             
             if ($isUkrainian) {
                 $versionWarning = "Увага: Вибрана версія MySQL {$version}, але на сервері встановлена версія {$mysqlVersion} (визначено як {$detectedVersion}). Версія автоматично оновлена.";
@@ -248,7 +248,7 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $charsetMatch = false;
                 $connectionSuccess = false; // Блокуємо продовження при невідповідності
                 $lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'uk';
-                $isUkrainian = strpos($lang, 'uk') !== false || strpos($lang, 'ru') !== false;
+                $isUkrainian = str_contains($lang, 'uk') || str_contains($lang, 'ru');
                 
                 if ($databaseExists) {
                     // База существует - это ошибка
@@ -269,9 +269,9 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 // Кодировки совпадают, но могут отличаться collation - показываем информацию
-                if ($dbCollation && strpos(strtolower($dbCollation), strtolower($selectedCharset)) === false) {
+                if ($dbCollation && !str_contains(strtolower($dbCollation), strtolower($selectedCharset))) {
                     $lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'uk';
-                    $isUkrainian = strpos($lang, 'uk') !== false || strpos($lang, 'ru') !== false;
+                    $isUkrainian = str_contains($lang, 'uk') || str_contains($lang, 'ru');
                     
                     if ($isUkrainian) {
                         $charsetWarning = "Кодування співпадає ({$dbCharset}), але collation відрізняється: {$dbCollation}. Рекомендується utf8mb4_unicode_ci.";
@@ -989,8 +989,8 @@ function getInstallerDbConfig(bool $useSession = true): ?array {
                     // Парсим host:port если нужно
                     $host = $dbSection['host'] ?? '127.0.0.1';
                     $port = 3306;
-                    if (strpos($host, ':') !== false) {
-                        list($host, $port) = explode(':', $host, 2);
+                    if (str_contains($host, ':')) {
+                        [$host, $port] = explode(':', $host, 2);
                         $port = (int)$port;
                     } else {
                         $port = (int)($dbSection['port'] ?? 3306);
@@ -1202,7 +1202,7 @@ function saveDatabaseIniFile(): bool {
             $content = "[database]\n";
             foreach ($dbConfig as $k => $v) {
                 // Экранируем значения, если они содержат специальные символы
-                if (is_string($v) && (strpos($v, ' ') !== false || strpos($v, '=') !== false)) {
+                if (is_string($v) && (str_contains($v, ' ') || str_contains($v, '='))) {
                     $v = '"' . addslashes($v) . '"';
                 }
                 $content .= "{$k} = {$v}\n";
@@ -1316,7 +1316,7 @@ if ($step === 'system-check') {
     // Функция для получения относительного пути
     function getRelativePath($absolutePath) {
         $rootDir = dirname(__DIR__, 2); // Корень проекта
-        if (strpos($absolutePath, $rootDir) === 0) {
+        if (str_starts_with($absolutePath, $rootDir)) {
             return str_replace($rootDir, '', $absolutePath);
         }
         return $absolutePath;
@@ -1478,7 +1478,7 @@ if ($step === 'system-check') {
     
     // 4. Проверка версии PHP
     $phpVersion = PHP_VERSION;
-    $phpVersionOk = version_compare($phpVersion, '7.4.0', '>=');
+    $phpVersionOk = version_compare($phpVersion, '8.4.0', '>=');
     if ($phpVersionOk) {
         $systemChecks['PHP'] = [
             'status' => 'ok', 
@@ -1486,11 +1486,11 @@ if ($step === 'system-check') {
             'description' => $componentDescriptions['PHP'] ?? ''
         ];
     } else {
-        $systemWarnings[] = "PHP версия {$phpVersion} ниже рекомендуемой (7.4.0+)";
+        $systemErrors[] = "PHP версия {$phpVersion} ниже требуемой (8.4.0+)";
         $systemChecks['PHP'] = [
-            'status' => 'warning', 
+            'status' => 'error', 
             'version' => $phpVersion, 
-            'warning' => 'Рекомендуется версия 7.4.0+',
+            'error' => 'Требуется версия 8.4.0+',
             'description' => $componentDescriptions['PHP'] ?? ''
         ];
     }

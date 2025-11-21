@@ -108,7 +108,7 @@ class RouterManager {
         $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
         $path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
         
-        if (strpos($path, '/install') === 0) {
+        if (str_starts_with($path, '/install')) {
             $this->blockInstallerIfInstalled();
         }
 
@@ -216,12 +216,12 @@ class RouterManager {
         $path = preg_replace('#/+#', '/', $path);
         
         // Видалення кінцевого слэша (крім кореня)
-        if ($path !== '/' && substr($path, -1) === '/') {
+        if ($path !== '/' && str_ends_with($path, '/')) {
             $path = rtrim($path, '/');
         }
         
         // Переконуємося, що шлях починається зі слэша
-        if (substr($path, 0, 1) !== '/') {
+        if (!str_starts_with($path, '/')) {
             $path = '/' . $path;
         }
         
@@ -270,7 +270,7 @@ class RouterManager {
      */
     private function isAdminPath(string $path): bool {
         // Точне співпадіння /admin або шлях починається з /admin/
-        return $path === '/admin' || strpos($path, '/admin/') === 0;
+        return $path === '/admin' || str_starts_with($path, '/admin/');
     }
 
     /**

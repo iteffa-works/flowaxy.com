@@ -3,6 +3,8 @@
  * Сторінка виходу з адмінки
  */
 
+declare(strict_types=1);
+
 class LogoutPage {
     
     public function handle() {

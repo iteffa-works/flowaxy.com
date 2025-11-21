@@ -27,7 +27,7 @@ class ApiHandler {
      */
     public static function isApiRequest(): bool {
         $path = $_SERVER['REQUEST_URI'] ?? '/';
-        return strpos($path, '/api/') === 0 || strpos($path, '/api/v1/') === 0;
+        return str_starts_with($path, '/api/') || str_starts_with($path, '/api/v1/');
     }
     
     /**

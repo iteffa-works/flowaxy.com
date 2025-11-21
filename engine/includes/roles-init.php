@@ -43,8 +43,8 @@ if (!function_exists('initializeRolesSystem')) {
                                     $db->exec($statement);
                                 } catch (Exception $e) {
                                     // Ігноруємо помилки типу "таблиця вже існує"
-                                    if (strpos($e->getMessage(), 'already exists') === false && 
-                                        strpos($e->getMessage(), 'Duplicate') === false) {
+                                    if (!str_contains($e->getMessage(), 'already exists') && 
+                                        !str_contains($e->getMessage(), 'Duplicate')) {
                                         error_log("Roles system init SQL error: " . $e->getMessage());
                                     }
                                 }

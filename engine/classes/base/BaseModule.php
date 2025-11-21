@@ -9,8 +9,8 @@
 declare(strict_types=1);
 
 abstract class BaseModule {
-    protected $db;
-    protected static $instances = [];
+    protected ?PDO $db = null;
+    protected static array $instances = [];
     private static bool $initializing = false;
     
     /**
