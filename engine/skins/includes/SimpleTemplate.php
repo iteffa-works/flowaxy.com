@@ -28,17 +28,8 @@ class SimpleTemplate {
         include __DIR__ . '/../layouts/base.php';
     }
     
-    /**
-     * Убеждаемся, что все необходимые классы загружены
-     */
     private function ensureClassesLoaded(): void {
-        $classes = ['UrlHelper', 'SecurityHelper', 'DatabaseHelper', 'SettingsManager'];
-        foreach ($classes as $className) {
-            if (!class_exists($className)) {
-                // Пытаемся загрузить через автозагрузчик
-                // Автозагрузчик должен загрузить класс автоматически
-            }
-        }
+        // Классы загружаются автоматически через автозагрузчик
     }
     
     /**

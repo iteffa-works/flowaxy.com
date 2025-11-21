@@ -7,9 +7,6 @@
 
 declare(strict_types=1);
 
-/**
- * Загрузка/перезагрузка конфигурации БД из database.ini
- */
 function loadDatabaseConfig(bool $reload = false): void {
     $databaseIniFile = __DIR__ . '/../data/database.ini';
     
@@ -61,9 +58,6 @@ function loadDatabaseConfig(bool $reload = false): void {
     }
 }
 
-/**
- * Отображение ошибки подключения к БД
- */
 function showDatabaseError(array $errorDetails = []): void {
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     $databaseIniFile = __DIR__ . '/../data/database.ini';
@@ -98,9 +92,6 @@ function showDatabaseError(array $errorDetails = []): void {
     }
 }
 
-/**
- * Инициализация системы
- */
 function initializeSystem(): void {
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     
@@ -125,9 +116,6 @@ function initializeSystem(): void {
     }
 }
 
-/**
- * Рендеринг fallback страницы когда тема не установлена
- */
 function renderThemeFallback(): bool {
     http_response_code(200);
     $template = __DIR__ . '/../templates/theme-not-installed.php';
@@ -139,18 +127,12 @@ function renderThemeFallback(): bool {
     return true;
 }
 
-/**
- * Редирект на URL
- */
 if (!function_exists('redirectTo')) {
     function redirectTo(string $url): void {
         Response::redirectStatic($url);
     }
 }
 
-/**
- * Форматирование размера в байтах
- */
 if (!function_exists('formatBytes')) {
     function formatBytes(int $bytes, int $precision = 2): string {
         if ($bytes === 0) return '0 B';
@@ -160,53 +142,15 @@ if (!function_exists('formatBytes')) {
     }
 }
 
-/**
- * Получение экземпляра InstallerManager
- */
 if (!function_exists('installer')) {
     function installer(): ?InstallerManager {
         return class_exists('InstallerManager') ? InstallerManager::getInstance() : null;
     }
 }
 
-/**
- * Получение экземпляра PluginManager
- */
 if (!function_exists('pluginManager')) {
     function pluginManager(): ?PluginManager {
         return class_exists('PluginManager') ? PluginManager::getInstance() : null;
-    }
-}
-
-/**
- * Определение протокола (http/https) с учетом прокси-серверов
- * 
- * @return string 'https://' или 'http://'
- */
-if (!function_exists('detectProtocol')) {
-    function detectProtocol(): string {
-        $isHttps = false;
-        
-        // Проверка через заголовки прокси (для Load Balancer, CloudFlare, Nginx и т.д.)
-        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-            $isHttps = true;
-        }
-        
-        // Проверка через заголовок X-Forwarded-Ssl
-        if (!$isHttps && isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
-            $isHttps = true;
-        }
-        
-        // Проверка через стандартные переменные сервера
-        if (!$isHttps) {
-            $isHttps = (
-                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' && $_SERVER['HTTPS'] !== '') ||
-                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
-                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
-            );
-        }
-        
-        return $isHttps ? 'https://' : 'http://';
     }
 }
 

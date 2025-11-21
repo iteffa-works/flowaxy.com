@@ -1,7 +1,6 @@
 <?php
 /**
  * Flowaxy CMS - Initialization
- * Загрузка модулей, плагинов, тем и инициализация системы
  * 
  * @package Engine
  * @version 7.0.0
@@ -9,16 +8,13 @@
 
 declare(strict_types=1);
 
-// Получаем переменные из flowaxy.php
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $isInstaller = strpos($requestUri, '/install') === 0;
 $databaseIniFile = __DIR__ . '/data/database.ini';
 
-// Инициализация модулей (только если система установлена)
 if (!$isInstaller && file_exists($databaseIniFile)) {
     ModuleLoader::init();
     
-    // Установка часового пояса
     if (class_exists('SettingsManager')) {
         try {
             $tz = settingsManager()->get('timezone', 'Europe/Kiev');
@@ -35,7 +31,6 @@ if (!$isInstaller && file_exists($databaseIniFile)) {
     @date_default_timezone_set('Europe/Kiev');
 }
 
-// Инициализация логирования (только если система установлена)
 if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
         Logger::getInstance()->log(match($errno) {
@@ -64,7 +59,6 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     });
 }
 
-// Инициализация сессии
 Session::start([
     'name' => 'PHPSESSID',
     'lifetime' => 7200,
@@ -75,22 +69,16 @@ Session::start([
     'samesite' => 'Lax'
 ]);
 
-// ========== ОБРАБОТКА УСТАНОВЩИКА ==========
 if ($isInstaller) {
     require_once __DIR__ . '/includes/installer-handler.php';
     exit;
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ ==========
 initializeSystem();
 
-// Хук для ранних запросов
 if (function_exists('doHook')) {
     $handled = doHook('handle_early_request', false);
     if ($handled === true) exit;
-    
-    // Меню "Интеграции" перенесено в верхнюю навигацию (header.php)
 }
 
-// ========== РОУТИНГ ==========
 require_once __DIR__ . '/includes/router-handler.php';

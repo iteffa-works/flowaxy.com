@@ -7,12 +7,10 @@
 
 declare(strict_types=1);
 
-// Получаем переменную из flowaxy.php
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $isAdminRequest = strpos($requestUri, '/admin') === 0;
 $isApiRequest = strpos($requestUri, '/api/') === 0 || strpos($requestUri, '/api/v1/') === 0;
 
-// API запросы
 if ($isApiRequest) {
     $router = new Router('/api/v1');
     require_once __DIR__ . '/api-routes.php';
@@ -45,12 +43,10 @@ if ($isApiRequest) {
     });
 }
 
-// AJAX запросы
 if (AjaxHandler::isAjax()) {
     while (ob_get_level() > 0) ob_end_clean();
     ini_set('display_errors', '0');
 }
 
-// Обработка запроса
 $router->dispatch();
 
