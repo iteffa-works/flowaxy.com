@@ -22,9 +22,13 @@ Thumbs.db
 *~
 
 # Временные директории для загрузки
+storage/cache/*
+storage/logs/*
 storage/temp/*
-!storage/temp/.htaccess
-!storage/temp/.gitkeep
+storage/sessions/*
+
+plugins
+themes
 
 # IDE
 .idea/
