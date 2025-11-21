@@ -216,7 +216,20 @@ class RolesPage extends AdminPage {
             }
             
             $this->setMessage('Роль успішно оновлена', 'success');
-            Response::redirectStatic(UrlHelper::admin('roles'));
+            
+            // Если указан save_and_exit, перенаправляем на список ролей
+            $saveAndExit = $request->post('save_and_exit', 0);
+            if ($saveAndExit) {
+                // Отмечаем, что редирект выполнен вручную
+                $this->markRedirectPerformed();
+                Response::redirectStatic(UrlHelper::admin('roles'));
+                exit;
+            } else {
+                // Иначе остаемся на странице редактирования - делаем редирект для обновления данных
+                $this->markRedirectPerformed();
+                Response::redirectStatic(UrlHelper::admin('roles?edit=' . $roleId));
+                exit;
+            }
         } catch (Exception $e) {
             error_log("RolesPage handleUpdateRole error: " . $e->getMessage());
             $this->setMessage('Помилка при оновленні ролі', 'danger');
