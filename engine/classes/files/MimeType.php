@@ -156,7 +156,7 @@ class MimeType {
             $finfo = @finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo !== false) {
                 $mimeType = @finfo_file($finfo, $filePath);
-                finfo_close($finfo);
+                $finfo = null; // В PHP 8.0+ finfo об'єкти автоматично звільняють пам'ять через garbage collector
                 if ($mimeType !== false) {
                     return $mimeType;
                 }
