@@ -77,6 +77,27 @@ class AdminPage {
             exit;
         }
         
+        // Гарантуємо, що перший користувач має доступ до адмінки
+        $this->ensureFirstUserHasAdminAccess();
+        
+        // Проверка прав доступа к адмін-панелі
+        if (function_exists('current_user_can')) {
+            $currentUserId = (int)Session::get('admin_user_id');
+            if (!current_user_can('admin.access')) {
+                // Якщо це перший користувач - пробуємо повторно синхронізувати роль та перевірити ще раз
+                if ($currentUserId === 1) {
+                    $this->ensureFirstUserHasAdminAccess();
+                    if (!current_user_can('admin.access')) {
+                        http_response_code(403);
+                        die('Доступ заборонено. У вас немає прав для доступу до адміністративної панелі.');
+                    }
+                } else {
+                    http_response_code(403);
+                    die('Доступ заборонено. У вас немає прав для доступу до адміністративної панелі.');
+                }
+            }
+        }
+        
         // Загружаем flash сообщения из сессии (если есть)
         $flashMessage = Session::flash('admin_message');
         $flashMessageType = Session::flash('admin_message_type');
@@ -460,6 +481,142 @@ class AdminPage {
         // Автоматический редирект после POST-запроса
         if ($this->shouldAutoRedirect()) {
             $this->redirect();
+        }
+    }
+
+    /**
+     * Гарантує, що перший користувач має роль розробника та доступ до адмінки
+     */
+    private function ensureFirstUserHasAdminAccess(): void {
+        $userId = (int)Session::get('admin_user_id');
+        if ($userId !== 1 || !$this->db) {
+            return;
+        }
+
+        try {
+            $this->ensureRolesAndPermissionsExist();
+
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*)
+                FROM user_roles ur
+                INNER JOIN roles r ON ur.role_id = r.id
+                WHERE ur.user_id = ? AND r.slug = 'developer'
+            ");
+            $stmt->execute([$userId]);
+            $hasDeveloperRole = (int)$stmt->fetchColumn() > 0;
+
+            if (!$hasDeveloperRole) {
+                $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'developer' LIMIT 1");
+                $stmt->execute();
+                $role = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($role) {
+                    $roleId = (int)$role['id'];
+                    $stmt = $this->db->prepare("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                    $stmt->execute([$userId, $roleId]);
+                }
+            }
+
+            if (class_exists('RoleManager')) {
+                RoleManager::getInstance()->clearUserCache($userId);
+            }
+        } catch (Exception $e) {
+            error_log('AdminPage ensureFirstUserHasAdminAccess error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Створює базові ролі та дозволи, якщо вони відсутні
+     */
+    private function ensureRolesAndPermissionsExist(): void {
+        if (!$this->db) {
+            return;
+        }
+
+        try {
+            $stmt = $this->db->query("SELECT COUNT(*) FROM roles");
+            $rolesCount = (int)$stmt->fetchColumn();
+
+            if ($rolesCount === 0) {
+                $roles = [
+                    ['Разработчик', 'developer', 'Повний доступ до всіх функцій системи. Роль не може бути видалена.', 1],
+                    ['Администратор', 'admin', 'Повний доступ до адмін-панелі', 1],
+                    ['Користувач', 'user', 'Базові права користувача', 1],
+                    ['Модератор', 'moderator', 'Розширені права модератора', 0],
+                ];
+
+                foreach ($roles as $roleData) {
+                    $stmt = $this->db->prepare("INSERT IGNORE INTO roles (name, slug, description, is_system) VALUES (?, ?, ?, ?)");
+                    $stmt->execute($roleData);
+                }
+            }
+
+            $stmt = $this->db->query("SELECT COUNT(*) FROM permissions");
+            $permissionsCount = (int)$stmt->fetchColumn();
+
+            if ($permissionsCount === 0) {
+                $permissions = [
+                    ['Доступ до адмін-панелі', 'admin.access', 'Доступ до адміністративної панелі', 'admin'],
+                    ['Управління плагінами', 'admin.plugins', 'Установка, активація та видалення плагінів', 'admin'],
+                    ['Управління темами', 'admin.themes', 'Установка та активація тем', 'admin'],
+                    ['Управління налаштуваннями', 'admin.settings', 'Зміна системних налаштувань', 'admin'],
+                    ['Перегляд логів', 'admin.logs.view', 'Перегляд системних логів', 'admin'],
+                    ['Управління користувачами', 'admin.users', 'Створення, редагування та видалення користувачів', 'admin'],
+                    ['Управління ролями', 'admin.roles', 'Управління ролями та правами доступу', 'admin'],
+                    ['Доступ до кабінету', 'cabinet.access', 'Доступ до особистого кабінету', 'cabinet'],
+                    ['Редагування профілю', 'cabinet.profile.edit', 'Редагування власного профілю', 'cabinet'],
+                    ['Перегляд налаштувань кабінету', 'cabinet.settings.view', 'Перегляд налаштувань кабінету', 'cabinet'],
+                    ['Зміна налаштувань кабінету', 'cabinet.settings.edit', 'Зміна налаштувань кабінету', 'cabinet'],
+                ];
+
+                foreach ($permissions as $permissionData) {
+                    $stmt = $this->db->prepare("INSERT IGNORE INTO permissions (name, slug, description, category) VALUES (?, ?, ?, ?)");
+                    $stmt->execute($permissionData);
+                }
+            }
+
+            $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'developer' LIMIT 1");
+            $stmt->execute();
+            $developerRole = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($developerRole) {
+                $roleId = (int)$developerRole['id'];
+                $permissionIds = $this->db->query("SELECT id FROM permissions")->fetchAll(PDO::FETCH_COLUMN);
+                $insert = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                foreach ($permissionIds as $permissionId) {
+                    $insert->execute([$roleId, $permissionId]);
+                }
+            }
+
+            $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'admin' LIMIT 1");
+            $stmt->execute();
+            $adminRole = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($adminRole) {
+                $roleId = (int)$adminRole['id'];
+                $permissionIds = $this->db->query("SELECT id FROM permissions WHERE category = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
+                $insert = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                foreach ($permissionIds as $permissionId) {
+                    $insert->execute([$roleId, $permissionId]);
+                }
+            }
+
+            $stmt = $this->db->prepare("SELECT id FROM roles WHERE slug = 'user' LIMIT 1");
+            $stmt->execute();
+            $userRole = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($userRole) {
+                $roleId = (int)$userRole['id'];
+                $permissionSlugs = ['cabinet.access', 'cabinet.profile.edit', 'cabinet.settings.view'];
+                $placeholders = implode(',', array_fill(0, count($permissionSlugs), '?'));
+                $permStmt = $this->db->prepare("SELECT id FROM permissions WHERE slug IN ($placeholders)");
+                $permStmt->execute($permissionSlugs);
+                $permissionIds = $permStmt->fetchAll(PDO::FETCH_COLUMN);
+                $insert = $this->db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                foreach ($permissionIds as $permissionId) {
+                    $insert->execute([$roleId, $permissionId]);
+                }
+            }
+        } catch (Exception $e) {
+            error_log('AdminPage ensureRolesAndPermissionsExist error: ' . $e->getMessage());
         }
     }
     

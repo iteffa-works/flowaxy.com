@@ -7,6 +7,11 @@
 
 declare(strict_types=1);
 
+// Подключаем функции для работы с ролями
+if (file_exists(__DIR__ . '/role-functions.php')) {
+    require_once __DIR__ . '/role-functions.php';
+}
+
 function loadDatabaseConfig(bool $reload = false): void {
     $databaseIniFile = __DIR__ . '/../data/database.ini';
     

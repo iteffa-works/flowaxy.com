@@ -273,6 +273,48 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $conn->exec($sql);
             
+            // После создания последней таблицы ролей (user_roles) выполняем SQL для создания ролей и разрешений
+            if ($table === 'user_roles') {
+                try {
+                    $rolesSqlFile = __DIR__ . '/../db/roles_permissions.sql';
+                    if (file_exists($rolesSqlFile)) {
+                        $rolesSql = file_get_contents($rolesSqlFile);
+                        if (!empty($rolesSql)) {
+                            // Выполняем SQL по частям, пропуская CREATE TABLE (они уже созданы)
+                            $statements = array_filter(
+                                array_map('trim', explode(';', $rolesSql)),
+                                fn($stmt) => !empty($stmt) && 
+                                    !preg_match('/^--/', $stmt) && 
+                                    !preg_match('/^\/\*/', $stmt) &&
+                                    stripos($stmt, 'CREATE TABLE') === false
+                            );
+                            
+                            foreach ($statements as $statement) {
+                                // Пропускаем комментарии
+                                $statement = preg_replace('/--.*$/m', '', $statement);
+                                $statement = preg_replace('/\/\*.*?\*\//s', '', $statement);
+                                $statement = trim($statement);
+                                
+                                if (!empty($statement)) {
+                                    try {
+                                        $conn->exec($statement);
+                                    } catch (Exception $e) {
+                                        // Игнорируем ошибки типа "уже существует" (INSERT IGNORE)
+                                        if (stripos($e->getMessage(), 'Duplicate') === false && 
+                                            stripos($e->getMessage(), 'already exists') === false) {
+                                            error_log("Roles SQL error: " . $e->getMessage());
+                                        }
+                                    }
+                                }
+                            }
+                            error_log('Roles and permissions SQL executed successfully after user_roles table creation');
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Error executing roles SQL after user_roles creation: " . $e->getMessage());
+                }
+            }
+            
             error_log('Table created successfully: ' . $table);
             echo json_encode([
                 'success' => true, 
@@ -503,8 +545,57 @@ if ($step === 'user') {
                 $error = 'Пароль повинен містити мінімум 8 символів';
             } else {
                 $db = DatabaseHelper::getConnection();
+                
+                // Проверяем, что роли и разрешения созданы (они должны быть созданы после создания таблицы user_roles)
+                $stmt = $db->query("SELECT COUNT(*) FROM roles");
+                $rolesCount = (int)$stmt->fetchColumn();
+                
+                if ($rolesCount === 0) {
+                    // Если ролей нет, создаем их (на случай если SQL не выполнился)
+                    ensureRolesAndPermissions($db);
+                }
+                
+                // Создаем пользователя
                 $stmt = $db->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
                 $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT)]);
+                $userId = (int)$db->lastInsertId();
+                
+                // Назначаем роль разработчика первому пользователю
+                try {
+                    // Получаем ID роли developer
+                    $stmt = $db->prepare("SELECT id FROM roles WHERE slug = 'developer' LIMIT 1");
+                    $stmt->execute();
+                    $role = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($role) {
+                        $roleId = (int)$role['id'];
+                        // Назначаем роль разработчика
+                        $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                        $stmt->execute([$userId, $roleId]);
+                    } else {
+                        // Если роль не найдена, это критическая ошибка
+                        error_log("Critical: Role 'developer' not found. Creating it manually...");
+                        // Создаем роль developer вручную
+                        $stmt = $db->prepare("INSERT INTO roles (name, slug, description, is_system) VALUES (?, ?, ?, ?)");
+                        $stmt->execute(['Разработчик', 'developer', 'Полный доступ ко всем функциям системы. Роль создается только при установке движка и не может быть удалена.', 1]);
+                        $roleId = (int)$db->lastInsertId();
+                        
+                        // Назначаем все разрешения роли developer
+                        $stmt = $db->query("SELECT id FROM permissions");
+                        $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                        foreach ($permissions as $permissionId) {
+                            $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                            $stmt->execute([$roleId, $permissionId]);
+                        }
+                        
+                        // Назначаем роль пользователю
+                        $stmt = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+                        $stmt->execute([$userId, $roleId]);
+                    }
+                } catch (Exception $e) {
+                    error_log("Error assigning developer role: " . $e->getMessage());
+                    // Не прерываем установку, но логируем ошибку
+                }
                 
                 // Установка завершена - database.ini уже создан на шаге database
                 header('Location: /admin/login');
@@ -513,6 +604,110 @@ if ($step === 'user') {
         } catch (Exception $e) {
             $error = $e->getMessage();
         }
+    }
+}
+
+/**
+ * Убеждаемся, что роли и разрешения созданы
+ */
+function ensureRolesAndPermissions(PDO $db): void {
+    try {
+        // Проверяем, есть ли уже роли
+        $stmt = $db->query("SELECT COUNT(*) FROM roles");
+        $rolesCount = (int)$stmt->fetchColumn();
+        
+        if ($rolesCount === 0) {
+            // Создаем базовые роли
+            $roles = [
+                ['Разработчик', 'developer', 'Полный доступ ко всем функциям системы. Роль создается только при установке движка и не может быть удалена.', 1],
+                ['Администратор', 'admin', 'Полный доступ ко всем функциям системы', 1],
+                ['Пользователь', 'user', 'Обычный пользователь с базовыми правами', 1],
+                ['Модератор', 'moderator', 'Модератор с расширенными правами', 0]
+            ];
+            
+            foreach ($roles as $role) {
+                $stmt = $db->prepare("INSERT IGNORE INTO roles (name, slug, description, is_system) VALUES (?, ?, ?, ?)");
+                $stmt->execute($role);
+            }
+        }
+        
+        // Проверяем, есть ли уже разрешения
+        $stmt = $db->query("SELECT COUNT(*) FROM permissions");
+        $permissionsCount = (int)$stmt->fetchColumn();
+        
+        if ($permissionsCount === 0) {
+            // Создаем базовые разрешения
+            $permissions = [
+                // Админка
+                ['Доступ к админ-панели', 'admin.access', 'Доступ к административной панели', 'admin'],
+                ['Управление плагинами', 'admin.plugins', 'Установка, активация и удаление плагинов', 'admin'],
+                ['Управление темами', 'admin.themes', 'Установка и активация тем', 'admin'],
+                ['Управление настройками', 'admin.settings', 'Изменение системных настроек', 'admin'],
+                ['Просмотр логов', 'admin.logs.view', 'Просмотр системных логов', 'admin'],
+                ['Управление пользователями', 'admin.users', 'Создание, редактирование и удаление пользователей', 'admin'],
+                ['Управление ролями', 'admin.roles', 'Управление ролями и правами доступа', 'admin'],
+                // Кабинет
+                ['Доступ к кабинету', 'cabinet.access', 'Доступ к личному кабинету', 'cabinet'],
+                ['Редактирование профиля', 'cabinet.profile.edit', 'Редактирование собственного профиля', 'cabinet'],
+                ['Просмотр настроек', 'cabinet.settings.view', 'Просмотр настроек кабинета', 'cabinet'],
+                ['Изменение настроек', 'cabinet.settings.edit', 'Изменение настроек кабинета', 'cabinet']
+            ];
+            
+            foreach ($permissions as $permission) {
+                $stmt = $db->prepare("INSERT IGNORE INTO permissions (name, slug, description, category) VALUES (?, ?, ?, ?)");
+                $stmt->execute($permission);
+            }
+            
+            // Назначаем все разрешения роли developer
+            $stmt = $db->prepare("SELECT id FROM roles WHERE slug = 'developer' LIMIT 1");
+            $stmt->execute();
+            $developerRole = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($developerRole) {
+                $roleId = (int)$developerRole['id'];
+                $stmt = $db->query("SELECT id FROM permissions");
+                $permissionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($permissionIds as $permissionId) {
+                    $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                    $stmt->execute([$roleId, $permissionId]);
+                }
+            }
+            
+            // Назначаем базовые разрешения роли admin
+            $stmt = $db->prepare("SELECT id FROM roles WHERE slug = 'admin' LIMIT 1");
+            $stmt->execute();
+            $adminRole = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($adminRole) {
+                $roleId = (int)$adminRole['id'];
+                $stmt = $db->prepare("SELECT id FROM permissions WHERE category = 'admin'");
+                $stmt->execute();
+                $adminPermissionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($adminPermissionIds as $permissionId) {
+                    $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                    $stmt->execute([$roleId, $permissionId]);
+                }
+            }
+            
+            // Назначаем базовые разрешения роли user
+            $stmt = $db->prepare("SELECT id FROM roles WHERE slug = 'user' LIMIT 1");
+            $stmt->execute();
+            $userRole = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($userRole) {
+                $roleId = (int)$userRole['id'];
+                $cabinetPermissions = ['cabinet.access', 'cabinet.profile.edit', 'cabinet.settings.view', 'cabinet.settings.edit'];
+                $stmt = $db->prepare("SELECT id FROM permissions WHERE slug IN ('" . implode("','", $cabinetPermissions) . "')");
+                $stmt->execute();
+                $userPermissionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($userPermissionIds as $permissionId) {
+                    $stmt = $db->prepare("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                    $stmt->execute([$roleId, $permissionId]);
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error ensuring roles and permissions: " . $e->getMessage());
     }
 }
 

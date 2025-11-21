@@ -14,6 +14,7 @@ $router->add(['GET', 'POST'], 'dashboard', 'DashboardPage');
 $router->add(['GET', 'POST'], 'login', 'LoginPage');
 $router->add(['GET', 'POST'], 'logout', 'LogoutPage');
 $router->add(['GET', 'POST'], 'settings', 'SettingsPage');
+$router->add(['GET', 'POST'], 'site-settings', 'SiteSettingsPage');
 $router->add(['GET', 'POST'], 'cache-view', 'CacheViewPage');
 $router->add(['GET', 'POST'], 'logs-view', 'LogsViewPage');
 $router->add(['GET', 'POST'], 'profile', 'ProfilePage');
@@ -22,6 +23,7 @@ $router->add(['GET', 'POST'], 'themes', 'ThemesPage');
 $router->add(['GET', 'POST'], 'theme-editor', 'ThemeEditorPage');
 $router->add(['GET', 'POST'], 'api-keys', 'ApiKeysPage');
 $router->add(['GET', 'POST'], 'webhooks', 'WebhooksPage');
+$router->add(['GET', 'POST'], 'roles', 'RolesPage');
 
 // Реєструємо маршрут кастомізатора тільки якщо активна тема підтримує кастомізацію
 require_once __DIR__ . '/menu-items.php';

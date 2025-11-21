@@ -19,7 +19,11 @@ class InstallerManager extends BaseModule {
         'plugin_settings',
         'theme_settings',
         'api_keys',
-        'webhooks'
+        'webhooks',
+        'roles',
+        'permissions',
+        'role_permissions',
+        'user_roles'
     ];
     
     private static ?string $mysqlVersion = null;
@@ -151,6 +155,48 @@ class InstallerManager extends BaseModule {
                     $db->exec($sql);
                 } catch (Exception $e) {
                     $errors[] = "Ошибка при создании таблицы {$tableName}: " . $e->getMessage();
+                }
+            }
+            
+            // После создания таблиц ролей выполняем SQL для создания базовых ролей и разрешений
+            if (empty($errors)) {
+                try {
+                    $rolesSqlFile = dirname(__DIR__) . '/db/roles_permissions.sql';
+                    if (file_exists($rolesSqlFile)) {
+                        $rolesSql = file_get_contents($rolesSqlFile);
+                        if (!empty($rolesSql)) {
+                            // Выполняем SQL по частям, пропуская CREATE TABLE (они уже созданы)
+                            $statements = array_filter(
+                                array_map('trim', explode(';', $rolesSql)),
+                                fn($stmt) => !empty($stmt) && 
+                                    !preg_match('/^--/', $stmt) && 
+                                    !preg_match('/^\/\*/', $stmt) &&
+                                    stripos($stmt, 'CREATE TABLE') === false
+                            );
+                            
+                            foreach ($statements as $statement) {
+                                // Пропускаем комментарии
+                                $statement = preg_replace('/--.*$/m', '', $statement);
+                                $statement = preg_replace('/\/\*.*?\*\//s', '', $statement);
+                                $statement = trim($statement);
+                                
+                                if (!empty($statement)) {
+                                    try {
+                                        $db->exec($statement);
+                                    } catch (Exception $e) {
+                                        // Игнорируем ошибки типа "уже существует" (INSERT IGNORE)
+                                        if (stripos($e->getMessage(), 'Duplicate') === false && 
+                                            stripos($e->getMessage(), 'already exists') === false) {
+                                            error_log("Roles SQL error: " . $e->getMessage());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Error loading roles SQL: " . $e->getMessage());
+                    // Не добавляем в errors, так как это не критично
                 }
             }
             
@@ -299,7 +345,7 @@ class InstallerManager extends BaseModule {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             
             'users' => "CREATE TABLE IF NOT EXISTS `users` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
                 `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
                 `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                 `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -341,6 +387,59 @@ class InstallerManager extends BaseModule {
                 `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
                 KEY `idx_is_active` (`is_active`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            
+            'roles' => "CREATE TABLE IF NOT EXISTS `roles` (
+                `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+                `name` VARCHAR(100) NOT NULL,
+                `slug` VARCHAR(100) NOT NULL,
+                `description` TEXT DEFAULT NULL,
+                `is_system` TINYINT(1) DEFAULT 0 COMMENT 'Системная роль (нельзя удалить)',
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `slug` (`slug`),
+                KEY `name` (`name`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            
+            'permissions' => "CREATE TABLE IF NOT EXISTS `permissions` (
+                `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+                `name` VARCHAR(100) NOT NULL,
+                `slug` VARCHAR(100) NOT NULL,
+                `description` TEXT DEFAULT NULL,
+                `category` VARCHAR(50) DEFAULT NULL COMMENT 'Категория разрешения (admin, cabinet, plugin, etc.)',
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `slug` (`slug`),
+                KEY `category` (`category`),
+                KEY `name` (`name`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            
+            'role_permissions' => "CREATE TABLE IF NOT EXISTS `role_permissions` (
+                `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+                `role_id` INT(11) UNSIGNED NOT NULL,
+                `permission_id` INT(11) UNSIGNED NOT NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `role_permission` (`role_id`, `permission_id`),
+                KEY `role_id` (`role_id`),
+                KEY `permission_id` (`permission_id`),
+                CONSTRAINT `fk_role_permissions_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+                CONSTRAINT `fk_role_permissions_permission` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            
+            'user_roles' => "CREATE TABLE IF NOT EXISTS `user_roles` (
+                `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+                `user_id` INT(11) UNSIGNED NOT NULL,
+                `role_id` INT(11) UNSIGNED NOT NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `user_role` (`user_id`, `role_id`),
+                KEY `user_id` (`user_id`),
+                KEY `role_id` (`role_id`),
+                CONSTRAINT `fk_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+                CONSTRAINT `fk_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         ];
         

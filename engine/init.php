@@ -76,6 +76,45 @@ if ($isInstaller) {
 
 initializeSystem();
 
+// Инициализация системы ролей (проверка и создание таблиц при необходимости)
+if (file_exists(__DIR__ . '/includes/roles-init.php')) {
+    require_once __DIR__ . '/includes/roles-init.php';
+    if (function_exists('initializeRolesSystem')) {
+        initializeRolesSystem();
+    }
+}
+
+// Регистрация системного пункта меню для управления ролями
+if (function_exists('addHook')) {
+    addHook('admin_menu', function($menu) {
+        // Проверяем право доступа или разрешаем для первого пользователя
+        $hasAccess = false;
+        
+        if (function_exists('Session')) {
+            $userId = Session::get('admin_user_id');
+            // Для первого пользователя всегда разрешаем доступ
+            if ($userId == 1) {
+                $hasAccess = true;
+            } elseif (function_exists('current_user_can')) {
+                $hasAccess = current_user_can('admin.roles');
+            }
+        } elseif (function_exists('current_user_can')) {
+            $hasAccess = current_user_can('admin.roles');
+        }
+        
+        if ($hasAccess) {
+            $menu[] = [
+                'text' => 'Ролі та права',
+                'icon' => 'fas fa-user-shield',
+                'href' => UrlHelper::admin('roles'),
+                'page' => 'roles',
+                'order' => 30
+            ];
+        }
+        return $menu;
+    }, 5);
+}
+
 if (function_exists('doHook')) {
     $handled = doHook('handle_early_request', false);
     if ($handled === true) exit;

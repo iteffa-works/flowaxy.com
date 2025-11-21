@@ -82,6 +82,7 @@ spl_autoload_register(function (string $className): void {
         'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
         'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
         'ModuleLoader' => 'system', 'HookManager' => 'system',
+        'RoleManager' => 'managers',
         'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
         'SettingsPage' => 'skins/pages', 'SiteSettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
         'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages',
@@ -122,6 +123,7 @@ spl_autoload_register(function (string $className): void {
 });
 
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/role-functions.php';
 loadDatabaseConfig();
 
 if (!class_exists('Cache')) {
