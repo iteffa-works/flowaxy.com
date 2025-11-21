@@ -62,7 +62,10 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
         if (defined('DEBUG_MODE') && constant('DEBUG_MODE')) {
             echo '<pre>' . htmlspecialchars($e->getMessage()) . "\n" . htmlspecialchars($e->getTraceAsString()) . '</pre>';
         } else {
-            http_response_code(500);
+            // Устанавливаем код ответа только если заголовки еще не отправлены
+            if (!headers_sent()) {
+                http_response_code(500);
+            }
             echo '<h1>Внутрішня помилка сервера</h1>';
         }
     });

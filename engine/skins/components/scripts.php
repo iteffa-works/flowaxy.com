@@ -386,7 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php
 // Выводим JavaScript код из StorageManager (если есть)
 if (class_exists('StorageManager')) {
-    $js = StorageManager::outputJavaScript();
+    $storageManager = StorageManager::getInstance();
+    $js = $storageManager->getJavaScript();
     if (!empty($js)) {
         echo "\n<!-- StorageManager JavaScript -->\n";
         echo $js;
