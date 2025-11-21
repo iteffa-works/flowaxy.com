@@ -127,7 +127,7 @@ class Cookie {
      */
     public static function encrypted(string $name, string $value, int $expire = 0, ?string $key = null): bool {
         try {
-            $encrypted = Encryption::encrypt($value, $key);
+            $encrypted = Encryption::quickEncrypt($value, $key);
             return self::set($name, $encrypted, $expire);
         } catch (Exception $e) {
             error_log("Cookie encryption error: " . $e->getMessage());
@@ -151,7 +151,7 @@ class Cookie {
         }
         
         try {
-            return Encryption::decrypt($encrypted, $key);
+            return Encryption::quickDecrypt($encrypted, $key);
         } catch (Exception $e) {
             error_log("Cookie decryption error: " . $e->getMessage());
             return $default;
