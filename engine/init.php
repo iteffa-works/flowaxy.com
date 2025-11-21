@@ -74,6 +74,11 @@ if ($isInstaller) {
     exit;
 }
 
+// Установка security headers для защиты от атак
+if (!headers_sent() && class_exists('Response')) {
+    Response::setSecurityHeaders();
+}
+
 initializeSystem();
 
 // Инициализация системы ролей (проверка и создание таблиц при необходимости)

@@ -177,4 +177,78 @@ class Response {
     public static function redirectStatic(string $url, int $statusCode = 302): void {
         (new self())->redirect($url, $statusCode);
     }
+    
+    /**
+     * Установка security headers для защиты от атак
+     * 
+     * @param array $options Настройки security headers
+     * @return self
+     */
+    public function securityHeaders(array $options = []): self {
+        $defaults = [
+            'csp' => "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net data:;",
+            'x_frame_options' => 'SAMEORIGIN',
+            'x_content_type_options' => 'nosniff',
+            'x_xss_protection' => '1; mode=block',
+            'referrer_policy' => 'strict-origin-when-cross-origin',
+            'strict_transport_security' => 'max-age=31536000; includeSubDomains',
+            'permissions_policy' => 'geolocation=(), microphone=(), camera=()',
+        ];
+        
+        $options = array_merge($defaults, $options);
+        
+        // Content-Security-Policy
+        if (!empty($options['csp'])) {
+            $this->header('Content-Security-Policy', $options['csp']);
+        }
+        
+        // X-Frame-Options (защита от clickjacking)
+        if (!empty($options['x_frame_options'])) {
+            $this->header('X-Frame-Options', $options['x_frame_options']);
+        }
+        
+        // X-Content-Type-Options (защита от MIME sniffing)
+        if (!empty($options['x_content_type_options'])) {
+            $this->header('X-Content-Type-Options', $options['x_content_type_options']);
+        }
+        
+        // X-XSS-Protection (защита от XSS)
+        if (!empty($options['x_xss_protection'])) {
+            $this->header('X-XSS-Protection', $options['x_xss_protection']);
+        }
+        
+        // Referrer-Policy (контроль передачи referrer)
+        if (!empty($options['referrer_policy'])) {
+            $this->header('Referrer-Policy', $options['referrer_policy']);
+        }
+        
+        // Strict-Transport-Security (HSTS) - только для HTTPS
+        if (!empty($options['strict_transport_security']) && 
+            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) {
+            $this->header('Strict-Transport-Security', $options['strict_transport_security']);
+        }
+        
+        // Permissions-Policy (контроль доступа к браузерным API)
+        if (!empty($options['permissions_policy'])) {
+            $this->header('Permissions-Policy', $options['permissions_policy']);
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * Статический метод: Установка security headers
+     * 
+     * @param array $options Настройки security headers
+     * @return void
+     */
+    public static function setSecurityHeaders(array $options = []): void {
+        if (headers_sent()) {
+            return;
+        }
+        
+        $response = new self();
+        $response->securityHeaders($options);
+        $response->send();
+    }
 }
