@@ -10,8 +10,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../interfaces/LoggerInterface.php';
+require_once __DIR__ . '/../../interfaces/DatabaseInterface.php';
 
-class Database {
+class Database implements DatabaseInterface {
     private static ?self $instance = null;
     private ?PDO $connection = null;
     private bool $isConnected = false;
@@ -67,11 +68,16 @@ class Database {
     private function getLogger(): ?LoggerInterface {
         if ($this->logger === null) {
             try {
-                // Намагаємося отримати Logger через функцію
+                // Намагаємося отримати Logger через функцію (повертає LoggerInterface)
                 if (function_exists('logger')) {
-                    $this->logger = logger();
+                    /** @var LoggerInterface $loggerFromFunction */
+                    $loggerFromFunction = logger();
+                    $this->logger = $loggerFromFunction;
                 } elseif (class_exists('Logger') && method_exists('Logger', 'getInstance')) {
-                    $this->logger = Logger::getInstance();
+                    // Logger реалізує LoggerInterface, тому можемо безпечно використовувати
+                    /** @var LoggerInterface $loggerInstance */
+                    $loggerInstance = Logger::getInstance();
+                    $this->logger = $loggerInstance;
                 }
                 
                 // Поріг повільних запитів вже завантажено з SystemConfig в конструкторі

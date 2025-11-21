@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../interfaces/DatabaseInterface.php';
+
 class DatabaseHelper {
     /**
      * Отримання підключення до БД
@@ -144,9 +146,9 @@ class DatabaseHelper {
     /**
      * Отримання екземпляра Database
      * 
-     * @return Database
+     * @return DatabaseInterface
      */
-    public static function getInstance(): Database {
+    public static function getInstance(): DatabaseInterface {
         return Database::getInstance();
     }
     

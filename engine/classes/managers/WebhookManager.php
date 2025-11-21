@@ -9,8 +9,10 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../interfaces/DatabaseInterface.php';
+
 class WebhookManager {
-    private Database $db;
+    private DatabaseInterface $db;
     private const TABLE_NAME = 'webhooks';
     
     /**
