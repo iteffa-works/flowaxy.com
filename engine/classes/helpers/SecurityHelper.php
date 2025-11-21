@@ -66,14 +66,15 @@ class SecurityHelper {
      * @return bool
      */
     public static function isAdminLoggedIn(): bool {
+        // Проверяем авторизацию только через базу данных
+        // Сессия нужна только для получения ID пользователя
         if (!class_exists('Session') || !Session::isStarted()) {
             return false;
         }
         
         $session = sessionManager();
-        
-        // Получаем ID пользователя из сессии
         $userId = (int)$session->get('admin_user_id');
+        
         if ($userId <= 0) {
             return false;
         }
@@ -181,7 +182,6 @@ class SecurityHelper {
         $session->remove(ADMIN_SESSION_NAME);
         $session->remove('admin_user_id');
         $session->remove('admin_username');
-        $session->remove('admin_session_token');
     }
     
     /**

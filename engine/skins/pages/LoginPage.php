@@ -34,27 +34,23 @@ class LoginPage {
             ]);
         }
         
-        // Якщо вже авторизований, перенаправляємо (використовуємо Response клас)
-        if (SecurityHelper::isAdminLoggedIn()) {
-            Response::redirectStatic(UrlHelper::admin('dashboard'));
-        }
-        
         $this->db = DatabaseHelper::getConnection();
     }
     
     public function handle() {
+        // Якщо вже авторизований (не через POST), перенаправляємо
+        // Но только если это не POST запрос (чтобы обработать форму входа)
+        if ((Request::getMethod() !== 'POST' && empty($_POST)) && SecurityHelper::isAdminLoggedIn()) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            return;
+        }
+        
         // Обробка форми входу (используем Request напрямую из engine/classes)
         if (Request::getMethod() === 'POST' || !empty($_POST)) {
             $this->processLogin();
-            // Если после processLogin() произошел редирект, не вызываем render()
-            // Проверяем, был ли установлен редирект
-            if (headers_sent() || ob_get_level() > 0) {
-                // Если заголовки уже отправлены или есть буфер, значит редирект уже выполнен
-                return;
-            }
         }
         
-        // Рендеримо сторінку только если не было редиректа
+        // Всегда рендерим страницу (с ошибкой, если она есть)
         $this->render();
     }
     
@@ -107,9 +103,9 @@ class LoginPage {
         }
         
         try {
-            $stmt = $this->db->prepare("SELECT id, username, password, session_token FROM users WHERE username = ?");
+            $stmt = $this->db->prepare("SELECT id, username, password, session_token, last_activity, is_active FROM users WHERE username = ?");
             $stmt->execute([$username]);
-            $user = $stmt->fetch();
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($user && password_verify($password, $user['password'])) {
                 // Проверяем, активен ли пользователь
@@ -174,7 +170,7 @@ class LoginPage {
                 $stmt = $this->db->prepare("UPDATE users SET session_token = ?, last_activity = ?, is_active = 1 WHERE id = ?");
                 $stmt->execute([$sessionToken, $now, $user['id']]);
                 
-                // Сохраняем данные авторизации в сессии (только ID пользователя)
+                // Сохраняем данные авторизации в сессии
                 $session->set(ADMIN_SESSION_NAME, true);
                 $session->set('admin_user_id', $user['id']);
                 $session->set('admin_username', $user['username']);
