@@ -188,26 +188,59 @@
                             <?= !empty($user['created_at']) ? date('d.m.Y H:i', strtotime($user['created_at'])) : '-' ?>
                         </span>
                     </div>
+                    <?php
+                    // Перевірка прав доступу для кнопок дій
+                    $session = sessionManager();
+                    $userId = (int)$session->get('admin_user_id');
+                    $hasEditAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.users.edit'));
+                    $hasPasswordAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.users.password'));
+                    $hasRolesAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.users.roles'));
+                    $hasDeleteAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.users.delete'));
+                    
+                    // Показуємо блок дій тільки якщо є хоча б одне право
+                    $hasAnyActionAccess = $hasEditAccess || $hasPasswordAccess || $hasRolesAccess || $hasDeleteAccess;
+                    ?>
+                    <?php if ($hasAnyActionAccess): ?>
                     <div class="user-card-actions">
+                        <?php if ($hasEditAccess): ?>
                         <button type="button" class="btn btn-outline-primary" 
                                 onclick="editUser(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>', '<?= htmlspecialchars($user['email'] ?? '', ENT_QUOTES) ?>')"
                                 <?= $user['id'] === 1 ? 'disabled title="Неможливо редагувати першого користувача"' : '' ?>
                                 title="Редагувати">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-warning" 
-                                onclick="changePassword(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>')"
-                                title="Змінити пароль">
-                            <i class="fas fa-key"></i>
-                        </button>
+                        <?php endif; ?>
+                        
+                        <?php if ($hasPasswordAccess): ?>
+                            <?php
+                            // Только сам разработчик может менять свой пароль
+                            $canChangePassword = true;
+                            if ($user['id'] === 1) {
+                                $session = sessionManager();
+                                $currentUserId = (int)$session->get('admin_user_id');
+                                $canChangePassword = ($currentUserId === 1);
+                            }
+                            ?>
+                            <?php if ($canChangePassword): ?>
+                            <button type="button" class="btn btn-outline-warning" 
+                                    onclick="changePassword(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>')"
+                                    title="Змінити пароль">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <?php if ($hasRolesAccess): ?>
                         <button type="button" class="btn btn-outline-info" 
                                 onclick="manageRoles(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>')"
+                                <?= $user['id'] === 1 ? 'disabled title="Неможливо змінити ролі першого користувача"' : '' ?>
                                 title="Управління ролями">
                             <i class="fas fa-user-shield"></i>
                         </button>
-                        <?php if ($user['id'] !== 1): ?>
+                        <?php endif; ?>
+                        
+                        <?php if ($hasDeleteAccess && $user['id'] !== 1): ?>
                             <?php
-                            $session = sessionManager();
                             $currentUserId = (int)$session->get('admin_user_id');
                             $isCurrentUser = $user['id'] === $currentUserId;
                             ?>
@@ -223,6 +256,7 @@
                             </form>
                         <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
