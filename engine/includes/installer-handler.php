@@ -1,18 +1,18 @@
 <?php
 /**
- * Обработчик установщика
+ * Обробник установщика
  * 
  * @package Engine\Includes
  */
 
 declare(strict_types=1);
 
-// Инициализация сессии для установщика (важно для Linux)
+// Ініціалізація сесії для установщика (важливо для Linux)
 if (session_status() === PHP_SESSION_NONE) {
-    // Убеждаемся, что директория для сессий существует и доступна для записи
+    // Переконуємося, що директорія для сесій існує та доступна для запису
     $sessionSavePath = session_save_path();
     if (empty($sessionSavePath) || !is_writable($sessionSavePath)) {
-        // Пытаемся использовать директорию storage/sessions
+        // Намагаємося використати директорію storage/sessions
         $customSessionPath = __DIR__ . '/../../storage/sessions';
         if (!is_dir($customSessionPath)) {
             @mkdir($customSessionPath, 0755, true);
@@ -22,34 +22,34 @@ if (session_status() === PHP_SESSION_NONE) {
         }
     }
     
-    // Инициализируем сессию
+    // Ініціалізуємо сесію
     if (!headers_sent()) {
         session_start();
     }
 }
 
-// Получаем переменные из запроса
+// Отримуємо змінні з запиту
 $step = $_GET['step'] ?? 'welcome';
 $action = $_GET['action'] ?? '';
 $databaseIniFile = __DIR__ . '/../data/database.ini';
 
-// Блокировка доступа к установщику, если система уже установлена
-// Исключение: AJAX запросы для тестирования БД (action=test_db, create_table)
-// Это нужно для проверки подключения к БД во время установки
+// Блокування доступу до установщика, якщо система вже встановлена
+// Виняток: AJAX запити для тестування БД (action=test_db, create_table)
+// Це потрібно для перевірки підключення до БД під час установки
 $isAjaxAction = ($action === 'test_db' || $action === 'create_table') && $_SERVER['REQUEST_METHOD'] === 'POST';
 
-// Проверяем, идет ли процесс установки (есть настройки БД в сессии)
+// Перевіряємо, чи йде процес установки (є налаштування БД в сесії)
 if (function_exists('sessionManager')) {
     $session = sessionManager('installer');
     $isInstallationInProgress = $session->has('db_config') && is_array($session->get('db_config'));
 } else {
-    // Fallback на прямой доступ к сессии для проверки
+    // Fallback на прямий доступ до сесії для перевірки
     $isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
 }
 
-// Блокируем доступ только если файл создан И процесс установки не идет
+// Блокуємо доступ тільки якщо файл створено І процес установки не йде
 if (!$isAjaxAction && file_exists($databaseIniFile) && !$isInstallationInProgress) {
-    // Система уже установлена - блокируем доступ к установщику
+    // Система вже встановлена - блокуємо доступ до установщика
     http_response_code(403);
     header('Content-Type: text/html; charset=UTF-8');
     echo '<!DOCTYPE html>
@@ -113,7 +113,7 @@ if (!$isAjaxAction && file_exists($databaseIniFile) && !$isInstallationInProgres
     exit;
 }
 
-// Инициализация переменных для проверки системы
+// Ініціалізація змінних для перевірки системи
 $systemChecks = [];
 $systemErrors = [];
 $systemWarnings = [];
@@ -129,7 +129,7 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $pass = $_POST['db_pass'] ?? '';
         $version = $_POST['db_version'] ?? '8.4';
         
-        // Настройки подключения в зависимости от версии MySQL
+        // Налаштування підключення залежно від версії MySQL
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_TIMEOUT => 3
@@ -137,21 +137,21 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $selectedCharset = $_POST['db_charset'] ?? 'utf8mb4';
         
-        // Для MySQL 5.7 используем старый способ подключения
+        // Для MySQL 5.7 використовуємо старий спосіб підключення
         if ($version === '5.7') {
             $dsn = "mysql:host={$host};port={$port};charset={$selectedCharset}";
         } else {
-            // Для MySQL 8.4 используем новый способ
+            // Для MySQL 8.4 використовуємо новий спосіб
             $dsn = "mysql:host={$host};port={$port};charset={$selectedCharset}";
         }
         
         $pdo = new PDO($dsn, $user, $pass, $options);
         
-        // Проверяем версию MySQL
+        // Перевіряємо версію MySQL
         $versionStmt = $pdo->query("SELECT VERSION()");
         $mysqlVersion = $versionStmt->fetchColumn();
         
-        // Проверяем кодировку базы данных
+        // Перевіряємо кодування бази даних
         $charsetInfo = null;
         $dbCharset = null;
         $dbCollation = null;
@@ -166,27 +166,27 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } catch (Exception $e) {
-            // Игнорируем ошибку проверки кодировки
+            // Ігноруємо помилку перевірки кодування
         }
         
-        // Определяем мажорную версию MySQL
+        // Визначаємо мажорну версію MySQL
         $versionParts = explode('.', $mysqlVersion);
         $majorVersion = (int)($versionParts[0] ?? 0);
         $minorVersion = (int)($versionParts[1] ?? 0);
         
-        // Определяем, какая версия установлена (для селекта)
+        // Визначаємо, яка версія встановлена (для селекта)
         $detectedVersion = '8.4';
         if ($majorVersion === 5) {
-            $detectedVersion = '5.7'; // Для всех версий 5.x (5.5, 5.6, 5.7) считаем как 5.7
+            $detectedVersion = '5.7'; // Для всіх версій 5.x (5.5, 5.6, 5.7) вважаємо як 5.7
         } elseif ($majorVersion >= 8) {
-            $detectedVersion = '8.4'; // Для всех версий 8.x (8.0, 8.1, 8.2, 8.3, 8.4) считаем как 8.4
+            $detectedVersion = '8.4'; // Для всіх версій 8.x (8.0, 8.1, 8.2, 8.3, 8.4) вважаємо як 8.4
         }
         
-        // Проверяем соответствие выбранной версии реальной
+        // Перевіряємо відповідність вибраної версії реальній
         $versionMatch = ($version === $detectedVersion);
         $versionWarning = '';
         if (!$versionMatch) {
-            // Определяем язык для сообщения (по умолчанию украинский)
+            // Визначаємо мову для повідомлення (за замовчуванням українська)
             $lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'uk';
             $isUkrainian = strpos($lang, 'uk') !== false || strpos($lang, 'ru') !== false;
             
@@ -207,7 +207,7 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $charsetMatch = true;
         $connectionSuccess = true;
         
-        // Если база данных существует, но кодировка не была получена, пытаемся получить еще раз
+        // Якщо база даних існує, але кодування не було отримано, намагаємося отримати ще раз
         if ($databaseExists && !$dbCharset) {
             try {
                 $charsetStmt = $pdo->prepare("SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?");
@@ -218,11 +218,11 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $dbCollation = $charsetInfo['DEFAULT_COLLATION_NAME'] ?? null;
                 }
             } catch (Exception $e) {
-                // Игнорируем ошибку
+                // Ігноруємо помилку
             }
         }
         
-        // Если база данных не существует, получаем кодировку сервера по умолчанию
+        // Якщо база даних не існує, отримуємо кодування сервера за замовчуванням
         if (!$databaseExists && !$dbCharset) {
             try {
                 $defaultCharsetStmt = $pdo->query("SELECT @@character_set_server, @@collation_server");
@@ -232,21 +232,21 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $dbCollation = $defaultCharset[1] ?? null;
                 }
             } catch (Exception $e) {
-                // Игнорируем ошибку
+                // Ігноруємо помилку
             }
         }
         
-        // Проверяем соответствие выбранной кодировки кодировке БД или сервера
+        // Перевіряємо відповідність вибраного кодування кодуванню БД або сервера
         if ($dbCharset) {
-            // Нормализуем кодировки для сравнения - извлекаем базовую кодировку
-            // Например: utf8mb4_0900_ai_ci -> utf8mb4, utf8mb4_unicode_ci -> utf8mb4
+            // Нормалізуємо кодування для порівняння - витягуємо базове кодування
+            // Наприклад: utf8mb4_0900_ai_ci -> utf8mb4, utf8mb4_unicode_ci -> utf8mb4
             $normalizedDbCharset = strtolower(preg_replace('/[^a-z0-9]/', '', explode('_', $dbCharset)[0]));
             $normalizedSelectedCharset = strtolower($selectedCharset);
             
-            // Проверяем совпадение базовых кодировок
+            // Перевіряємо збіг базових кодувань
             if ($normalizedDbCharset !== $normalizedSelectedCharset) {
                 $charsetMatch = false;
-                $connectionSuccess = false; // Блокируем продолжение при несовпадении
+                $connectionSuccess = false; // Блокуємо продовження при невідповідності
                 $lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'uk';
                 $isUkrainian = strpos($lang, 'uk') !== false || strpos($lang, 'ru') !== false;
                 
@@ -306,28 +306,28 @@ if ($action === 'test_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// AJAX: создание таблицы
+// AJAX: створення таблиці
 if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Очищаем буфер вывода перед отправкой JSON
+    // Очищаємо буфер виводу перед відправкою JSON
     while (ob_get_level() > 0) {
         ob_end_clean();
     }
     
-    // Устанавливаем заголовки
+    // Встановлюємо заголовки
     if (!headers_sent()) {
         header('Content-Type: application/json; charset=UTF-8');
     }
     
-    // Отключаем вывод ошибок на экран (но логируем их)
+    // Вимікаємо вивід помилок на екран (але логуємо їх)
     $oldErrorReporting = error_reporting(E_ALL);
     $oldDisplayErrors = ini_get('display_errors');
     ini_set('display_errors', '0');
     
-    // Регистрируем обработчик ошибок для гарантии JSON ответа
+    // Реєструємо обробник помилок для гарантії JSON відповіді
     register_shutdown_function(function() {
         $error = error_get_last();
         if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-            // Если была фатальная ошибка, отправляем JSON с ошибкой
+            // Якщо була фатальна помилка, відправляємо JSON з помилкою
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
@@ -336,7 +336,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             echo json_encode([
                 'success' => false,
-                'message' => 'Критическая ошибка PHP: ' . $error['message'],
+                'message' => 'Критична помилка PHP: ' . $error['message'],
                 'file' => $error['file'],
                 'line' => $error['line']
             ], JSON_UNESCAPED_UNICODE);
@@ -347,10 +347,10 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $debugInfo = [];
     
     try {
-        // Проверка системы перед созданием таблицы
+        // Перевірка системи перед створенням таблиці
         $checkErrors = [];
         
-        // 1. Загрузка BaseModule
+        // 1. Завантаження BaseModule
         if (!class_exists('BaseModule')) {
             $baseModuleFile = __DIR__ . '/../classes/base/BaseModule.php';
             $debugInfo['baseModuleFile'] = $baseModuleFile;
@@ -359,14 +359,14 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 require_once $baseModuleFile;
                 $debugInfo['baseModuleLoaded'] = class_exists('BaseModule');
             } else {
-                $checkErrors[] = 'BaseModule не найден: ' . $baseModuleFile;
+                $checkErrors[] = 'BaseModule не знайдено: ' . $baseModuleFile;
             }
         } else {
             $debugInfo['baseModuleExists'] = true;
             $debugInfo['baseModuleLoaded'] = true;
         }
         
-        // 2. Загрузка InstallerManager
+        // 2. Завантаження InstallerManager
         if (!class_exists('InstallerManager')) {
             $installerFile = __DIR__ . '/../classes/managers/InstallerManager.php';
             $debugInfo['installerFile'] = $installerFile;
@@ -378,10 +378,10 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $debugInfo['installerLoaded'] = class_exists('InstallerManager');
                 
                 if (!class_exists('InstallerManager')) {
-                    $checkErrors[] = 'InstallerManager не загрузился после require_once: ' . $installerFile;
+                    $checkErrors[] = 'InstallerManager не завантажився після require_once: ' . $installerFile;
                 }
             } else {
-                $checkErrors[] = 'InstallerManager не найден: ' . $installerFile;
+                $checkErrors[] = 'InstallerManager не знайдено: ' . $installerFile;
             }
         } else {
             $debugInfo['installerFileExists'] = true;
@@ -389,19 +389,19 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if (!empty($checkErrors)) {
-            // Логируем только критичные ошибки
+            // Логуємо тільки критичні помилки
             if (class_exists('Logger')) {
                 Logger::getInstance()->logError('InstallerManager System Check Errors', ['errors' => $checkErrors, 'debug' => $debugInfo]);
             }
             
-            // Убеждаемся, что буфер чист перед отправкой
+            // Переконуємося, що буфер чистий перед відправкою
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
             
             $response = [
                 'success' => false, 
-                'message' => 'Ошибка проверки системы: ' . implode('; ', $checkErrors),
+                'message' => 'Помилка перевірки системи: ' . implode('; ', $checkErrors),
                 'errors' => $checkErrors,
                 'debug' => $debugInfo
             ];
@@ -410,7 +410,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        // Загрузка конфигурации БД из сессии
+        // Завантаження конфігурації БД з сесії
         loadDatabaseConfigFromSession();
         
         $data = json_decode(file_get_contents('php://input'), true);
@@ -430,13 +430,13 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $debugInfo['dbUser'] = defined('DB_USER') ? DB_USER : 'not defined';
         $debugInfo['dbPass'] = defined('DB_PASS') ? (empty(DB_PASS) ? 'empty' : '***') : 'not defined';
         
-        // Проверка наличия конфигурации БД
+        // Перевірка наявності конфігурації БД
         $databaseIniFile = __DIR__ . '/../data/database.ini';
         $debugInfo['databaseIniFile'] = $databaseIniFile;
         $debugInfo['databaseIniExists'] = file_exists($databaseIniFile);
         $debugInfo['databaseIniReadable'] = file_exists($databaseIniFile) ? is_readable($databaseIniFile) : false;
         
-        // Загружаем конфигурацию БД
+        // Завантажуємо конфігурацію БД
         $dbConfig = getInstallerDbConfig();
         $debugInfo['dbConfigRetrieved'] = is_array($dbConfig);
         
@@ -446,7 +446,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $debugInfo['dbConfigName'] = $dbConfig['name'] ?? 'not set';
             $debugInfo['dbConfigHasPass'] = isset($dbConfig['pass']) && $dbConfig['pass'] !== '';
             
-            // Получаем значения из конфигурации
+            // Отримуємо значення з конфігурації
             $host = $dbConfig['host'] ?? '127.0.0.1';
             $port = $dbConfig['port'] ?? 3306;
             $name = $dbConfig['name'] ?? '';
@@ -454,7 +454,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $pass = $dbConfig['pass'] ?? '';
             $charset = $dbConfig['charset'] ?? 'utf8mb4';
             
-            // Упрощенная логика: используем ТОЛЬКО GLOBALS для инсталлера
+            // Спрощена логіка: використовуємо ТІЛЬКИ GLOBALS для установщика
             $GLOBALS['_INSTALLER_DB_HOST'] = $host . ':' . $port;
             $GLOBALS['_INSTALLER_DB_NAME'] = $name;
             $GLOBALS['_INSTALLER_DB_USER'] = $user;
@@ -464,7 +464,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $debugInfo['dbConfigError'] = 'Failed to retrieve dbConfig from any source';
         }
         
-        // Проверяем наличие валидной конфигурации (из GLOBALS)
+        // Перевіряємо наявність валідної конфігурації (з GLOBALS)
         $dbHost = $GLOBALS['_INSTALLER_DB_HOST'] ?? '';
         $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
         $hasValidConfig = !empty($dbHost) && !empty($dbName);
@@ -472,14 +472,14 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$hasValidConfig) {
             // Database configuration not loaded
             
-            // Убеждаемся, что буфер чист перед отправкой
+            // Переконуємося, що буфер чистий перед відправкою
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
             
             $response = [
                 'success' => false, 
-                'message' => 'Конфигурация базы данных не загружена. Проверьте настройки подключения на предыдущем шаге.',
+                'message' => 'Конфігурація бази даних не завантажена. Перевірте налаштування підключення на попередньому кроці.',
                 'debug' => $debugInfo
             ];
             
@@ -487,13 +487,13 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        // Обновляем debug info с финальными значениями
+        // Оновлюємо debug info з фінальними значеннями
         $debugInfo['finalDbHost'] = defined('DB_HOST') ? DB_HOST : 'not defined';
         $debugInfo['finalDbName'] = defined('DB_NAME') ? DB_NAME : 'not defined';
         $debugInfo['finalDbUser'] = defined('DB_USER') ? DB_USER : 'not defined';
         $debugInfo['finalDbCharset'] = defined('DB_CHARSET') ? DB_CHARSET : 'not defined';
         
-        // Проверка наличия DatabaseHelper
+        // Перевірка наявності DatabaseHelper
         if (!class_exists('DatabaseHelper')) {
             $databaseHelperFile = __DIR__ . '/../classes/helpers/DatabaseHelper.php';
             if (file_exists($databaseHelperFile)) {
@@ -501,14 +501,14 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // DatabaseHelper not found
                 
-                // Убеждаемся, что буфер чист перед отправкой
+                // Переконуємося, що буфер чистий перед відправкою
                 while (ob_get_level() > 0) {
                     ob_end_clean();
                 }
                 
                 $response = [
                     'success' => false, 
-                    'message' => 'DatabaseHelper не найден: ' . $databaseHelperFile,
+                    'message' => 'DatabaseHelper не знайдено: ' . $databaseHelperFile,
                     'debug' => $debugInfo
                 ];
                 
@@ -520,7 +520,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!class_exists('InstallerManager')) {
             // InstallerManager class not found after loading
             
-            // Убеждаемся, что буфер чист перед отправкой
+            // Переконуємося, що буфер чистий перед відправкою
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
@@ -539,7 +539,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$installer) {
             // Failed to get InstallerManager instance
             
-            // Убеждаемся, что буфер чист перед отправкой
+            // Переконуємося, що буфер чистий перед відправкою
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
@@ -554,7 +554,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        // Получаем кодировку из конфигурации
+        // Отримуємо кодування з конфігурації
         $charset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
         $collation = 'utf8mb4_unicode_ci';
         if ($charset === 'utf8') {
@@ -563,11 +563,11 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $collation = 'latin1_swedish_ci';
         }
         
-        // Пробуем получить из конфигурации установщика
+        // Намагаємося отримати з конфігурації установщика
         $dbConfig = getInstallerDbConfig();
         if (is_array($dbConfig) && isset($dbConfig['charset'])) {
             $charset = $dbConfig['charset'];
-            // Определяем collation на основе charset
+            // Визначаємо collation на основі charset
             if ($charset === 'utf8mb4') {
                 $collation = 'utf8mb4_unicode_ci';
             } elseif ($charset === 'utf8') {
@@ -584,7 +584,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($tables[$table])) {
             error_log('Table not found: ' . $table . '. Available: ' . implode(', ', array_keys($tables)));
             
-            // Убеждаемся, что буфер чист перед отправкой
+            // Переконуємося, що буфер чистий перед відправкою
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
@@ -600,32 +600,32 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        // Попытка подключения к БД
+        // Спроба підключення до БД
         try {
-            $conn = DatabaseHelper::getConnection(false); // Не показываем страницу ошибки
+            $conn = DatabaseHelper::getConnection(false); // Не показуємо сторінку помилки
             if (!$conn) {
                 $lastError = error_get_last();
                 
-                // Упрощенная логика: используем ТОЛЬКО GLOBALS для инсталлера
+                // Спрощена логіка: використовуємо ТІЛЬКИ GLOBALS для установщика
                 $dbHost = $GLOBALS['_INSTALLER_DB_HOST'] ?? '127.0.0.1';
                 $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
                 $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
                 $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
                 $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
                 
-                // Логируем для диагностики (без пароля)
+                // Логуємо для діагностики (без пароля)
                 // Direct connection attempt
                 
-                // Проверяем, что у нас есть минимальная конфигурация
+                // Перевіряємо, що у нас є мінімальна конфігурація
                 if (empty($dbHost) || empty($dbName)) {
-                    // Убеждаемся, что буфер чист перед отправкой
+                    // Переконуємося, що буфер чистий перед відправкою
                     while (ob_get_level() > 0) {
                         ob_end_clean();
                     }
                     
                     $response = [
                         'success' => false,
-                        'message' => 'Конфигурация базы данных не загружена. Проверьте настройки подключения на предыдущем шаге.',
+                        'message' => 'Конфігурація бази даних не завантажена. Перевірте налаштування підключення на попередньому кроці.',
                         'debug' => array_merge($debugInfo, [
                             'dbHost' => $dbHost,
                             'dbName' => $dbName,
@@ -644,7 +644,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
                 
-                // Попытка прямого подключения для диагностики
+                // Спроба прямого підключення для діагностики
                 try {
                     $hostParts = explode(':', $dbHost);
                     $host = $hostParts[0] ?? '127.0.0.1';
@@ -660,7 +660,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         ]
                     );
                     
-                    // Проверка существования базы данных
+                    // Перевірка існування бази даних
                     $stmt = $testConn->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?");
                     $stmt->execute([$dbName]);
                     $dbExists = $stmt->fetch() !== false;
@@ -671,14 +671,14 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!$dbExists) {
                         // Database does not exist
                         
-                        // Убеждаемся, что буфер чист перед отправкой
+                        // Переконуємося, що буфер чистий перед відправкою
                         while (ob_get_level() > 0) {
                             ob_end_clean();
                         }
                         
                         $response = [
                             'success' => false, 
-                            'message' => 'База данных "' . $dbName . '" не существует. Создайте её в панели управления хостингом.',
+                            'message' => 'База даних "' . $dbName . '" не існує. Створіть її в панелі управління хостингом.',
                             'debug' => $debugInfo,
                             'lastError' => $lastError
                         ];
@@ -687,7 +687,7 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         exit;
                     }
                     
-                    // Если база существует, пробуем подключиться к ней
+                    // Якщо база існує, намагаємося підключитися до неї
                     $testConn = new PDO(
                         "mysql:host={$host};port={$port};dbname={$dbName};charset={$dbCharset}",
                         $dbUser,
@@ -1286,15 +1286,15 @@ if ($step === 'database' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Шаг проверки системы (перед настройкой БД)
+// Крок перевірки системи (перед налаштуванням БД)
 if ($step === 'system-check') {
-    // Проверка системы перед настройкой БД
-    // Выполняем проверки без подключения к БД
+    // Перевірка системи перед налаштуванням БД
+    // Виконуємо перевірки без підключення до БД
     $systemChecks = [];
     $systemErrors = [];
     $systemWarnings = [];
     
-    // Описания компонентов для пользователей
+    // Опис компонентів для користувачів
     $componentDescriptions = [
         'BaseModule' => 'Базовий клас модулів системи',
         'InstallerManager' => 'Менеджер установки системи',

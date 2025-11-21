@@ -1,13 +1,13 @@
 <?php
 /**
- * Компонент таблицы
+ * Компонент таблиці
  * 
- * @param array $headers Заголовки таблицы (массив строк или ['text' => '...', 'class' => '...'])
- * @param array $rows Строки таблицы (массив массивов)
- * @param bool $striped Чередование строк
- * @param bool $hover Эффект при наведении
+ * @param array $headers Заголовки таблиці (масив рядків або ['text' => '...', 'class' => '...'])
+ * @param array $rows Рядки таблиці (масив масивів)
+ * @param bool $striped Чергування рядків
+ * @param bool $hover Ефект при наведенні
  * @param bool $bordered Рамки
- * @param array $classes Дополнительные CSS классы
+ * @param array $classes Додаткові CSS класи
  */
 if (!isset($headers)) {
     $headers = [];

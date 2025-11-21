@@ -35,7 +35,7 @@ class Mail {
             $this->body($body);
         }
         
-        // Устанавливаем отправителя из настроек, если доступно
+        // Встановлюємо відправника з налаштувань, якщо доступно
         if (class_exists('SettingsManager')) {
             try {
                 $adminEmail = settingsManager()->get('admin_email', '');
@@ -43,7 +43,7 @@ class Mail {
                     $this->from($adminEmail, 'Flowaxy CMS');
                 }
             } catch (Exception $e) {
-                // В случае ошибки используем стандартный отправитель
+                // У разі помилки використовуємо стандартного відправника
             }
         }
         

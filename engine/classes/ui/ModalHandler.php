@@ -1,7 +1,7 @@
 <?php
 /**
- * Центральный обработчик модальных окон
- * Работает для сайта и админки
+ * Центральний обробник модальних вікон
+ * Працює для сайту та адмінки
  * 
  * @package Engine\Classes\UI
  * @version 1.0.0
@@ -13,10 +13,10 @@ class ModalHandler {
     private static ?self $instance = null;
     private array $modals = [];
     private array $handlers = [];
-    private string $context = 'admin'; // 'admin' или 'frontend'
+    private string $context = 'admin'; // 'admin' або 'frontend'
     
     /**
-     * Получить экземпляр (Singleton)
+     * Отримати екземпляр (Singleton)
      */
     public static function getInstance(): self {
         if (self::$instance === null) {
@@ -26,7 +26,7 @@ class ModalHandler {
     }
     
     /**
-     * Установить контекст (admin или frontend)
+     * Встановити контекст (admin або frontend)
      */
     public function setContext(string $context): self {
         $this->context = $context;
@@ -34,17 +34,17 @@ class ModalHandler {
     }
     
     /**
-     * Получить контекст
+     * Отримати контекст
      */
     public function getContext(): string {
         return $this->context;
     }
     
     /**
-     * Регистрация модального окна
+     * Реєстрація модального вікна
      * 
-     * @param string $id ID модального окна
-     * @param array $config Конфигурация модального окна
+     * @param string $id ID модального вікна
+     * @param array $config Конфігурація модального вікна
      * @return self
      */
     public function register(string $id, array $config = []): self {
@@ -73,11 +73,11 @@ class ModalHandler {
     }
     
     /**
-     * Регистрация обработчика для модального окна
+     * Реєстрація обробника для модального вікна
      * 
-     * @param string $modalId ID модального окна
-     * @param string $action Действие
-     * @param callable $handler Обработчик
+     * @param string $modalId ID модального вікна
+     * @param string $action Дія
+     * @param callable $handler Обробник
      * @return self
      */
     public function registerHandler(string $modalId, string $action, callable $handler): self {
@@ -87,13 +87,13 @@ class ModalHandler {
     }
     
     /**
-     * Обработка AJAX запроса от модального окна
+     * Обробка AJAX запиту від модального вікна
      * 
-     * @param string $modalId ID модального окна
-     * @param string $action Действие
-     * @param array $data Данные запроса
-     * @param array $files Файлы
-     * @return array Результат обработки
+     * @param string $modalId ID модального вікна
+     * @param string $action Дія
+     * @param array $data Дані запиту
+     * @param array $files Файли
+     * @return array Результат обробки
      */
     public function handle(string $modalId, string $action, array $data = [], array $files = []): array {
         $key = $modalId . ':' . $action;

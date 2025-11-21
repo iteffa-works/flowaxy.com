@@ -77,20 +77,20 @@ class Response {
      * @return void
      */
     public function json($data, int $statusCode = 200): void {
-        // Очищаем буфер вывода перед отправкой JSON
+        // Очищаємо буфер виводу перед відправкою JSON
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
         
-        // Отключаем вывод ошибок на экран (но логируем их)
+        // Вимікаємо вивід помилок на екран (але логуємо їх)
         $oldErrorReporting = error_reporting(E_ALL);
         $oldDisplayErrors = ini_get('display_errors');
         ini_set('display_errors', '0');
         
-        // Убеждаемся, что заголовки еще не отправлены
+        // Переконуємося, що заголовки ще не відправлені
         if (headers_sent($file, $line)) {
-            error_log("Response::json() called after headers sent in {$file}:{$line}");
-            // Пытаемся отправить JSON через JavaScript, если возможно
+            error_log("Response::json() викликано після відправки заголовків у {$file}:{$line}");
+            // Намагаємося відправити JSON через JavaScript, якщо можливо
             echo '<script>if(typeof console !== "undefined") console.error("JSON response failed: headers already sent");</script>';
             exit;
         }
@@ -102,17 +102,17 @@ class Response {
             $this->content($jsonContent);
             $this->send();
         } catch (Exception $e) {
-            error_log("Error encoding JSON response: " . $e->getMessage());
-            // Отправляем ошибку в JSON формате
+            error_log("Помилка кодування JSON відповіді: " . $e->getMessage());
+            // Відправляємо помилку у JSON форматі
             $this->status(500)->header('Content-Type', 'application/json; charset=UTF-8');
             $this->content(json_encode([
                 'success' => false,
-                'error' => 'Ошибка формирования JSON ответа: ' . $e->getMessage()
+                'error' => 'Помилка формування JSON відповіді: ' . $e->getMessage()
             ], JSON_UNESCAPED_UNICODE));
             $this->send();
         }
         
-        // Восстанавливаем настройки
+        // Відновлюємо налаштування
         error_reporting($oldErrorReporting);
         ini_set('display_errors', $oldDisplayErrors);
         
@@ -201,9 +201,9 @@ class Response {
     }
     
     /**
-     * Установка security headers для защиты от атак
+     * Встановлення security headers для захисту від атак
      * 
-     * @param array $options Настройки security headers
+     * @param array $options Налаштування security headers
      * @return self
      */
     public function securityHeaders(array $options = []): self {
@@ -224,27 +224,27 @@ class Response {
             $this->header('Content-Security-Policy', $options['csp']);
         }
         
-        // X-Frame-Options (защита от clickjacking)
+        // X-Frame-Options (захист від clickjacking)
         if (!empty($options['x_frame_options'])) {
             $this->header('X-Frame-Options', $options['x_frame_options']);
         }
         
-        // X-Content-Type-Options (защита от MIME sniffing)
+        // X-Content-Type-Options (захист від MIME sniffing)
         if (!empty($options['x_content_type_options'])) {
             $this->header('X-Content-Type-Options', $options['x_content_type_options']);
         }
         
-        // X-XSS-Protection (защита от XSS)
+        // X-XSS-Protection (захист від XSS)
         if (!empty($options['x_xss_protection'])) {
             $this->header('X-XSS-Protection', $options['x_xss_protection']);
         }
         
-        // Referrer-Policy (контроль передачи referrer)
+        // Referrer-Policy (контроль передачі referrer)
         if (!empty($options['referrer_policy'])) {
             $this->header('Referrer-Policy', $options['referrer_policy']);
         }
         
-        // Strict-Transport-Security (HSTS) - только для HTTPS
+        // Strict-Transport-Security (HSTS) - тільки для HTTPS
         $isHttps = false;
         if (class_exists('UrlHelper')) {
             $isHttps = UrlHelper::isHttps();
@@ -258,7 +258,7 @@ class Response {
             $this->header('Strict-Transport-Security', $options['strict_transport_security']);
         }
         
-        // Permissions-Policy (контроль доступа к браузерным API)
+        // Permissions-Policy (контроль доступу до браузерних API)
         if (!empty($options['permissions_policy'])) {
             $this->header('Permissions-Policy', $options['permissions_policy']);
         }
@@ -267,9 +267,9 @@ class Response {
     }
     
     /**
-     * Статический метод: Установка security headers
+     * Статичний метод: Встановлення security headers
      * 
-     * @param array $options Настройки security headers
+     * @param array $options Налаштування security headers
      * @return void
      */
     public static function setSecurityHeaders(array $options = []): void {

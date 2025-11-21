@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления пользователями
+ * Сторінка управління користувачами
  * 
  * @package Engine\Skins\Pages
  */
@@ -61,7 +61,7 @@ class UsersPage extends AdminPage {
         $password = Request::post('password', '');
         $passwordConfirm = Request::post('password_confirm', '');
         
-        // Валидация
+        // Валідація
         if (!Validator::validateString($username, 3, 50)) {
             $this->setMessage('Логін має містити від 3 до 50 символів', 'danger');
             return;
@@ -82,7 +82,7 @@ class UsersPage extends AdminPage {
             return;
         }
         
-        // Проверка уникальности username
+        // Перевірка унікальності username
         try {
             $stmt = $this->db->prepare("SELECT id FROM users WHERE username = ?");
             $stmt->execute([$username]);
@@ -96,7 +96,7 @@ class UsersPage extends AdminPage {
             return;
         }
         
-        // Создание пользователя
+        // Створення користувача
         try {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $this->db->prepare("INSERT INTO users (username, email, password, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");

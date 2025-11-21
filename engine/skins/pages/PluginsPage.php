@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления плагинами
+ * Сторінка управління плагінами
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -13,7 +13,7 @@ class PluginsPage extends AdminPage {
         $this->pageTitle = 'Керування плагінами - Flowaxy CMS';
         $this->templateName = 'plugins';
         
-        // Регистрируем модальное окно загрузки плагина через ModalHandler
+        // Реєструємо модальне вікно завантаження плагіна через ModalHandler
         $this->registerModal('uploadPluginModal', [
             'title' => 'Завантажити плагін',
             'type' => 'upload',
@@ -47,10 +47,10 @@ class PluginsPage extends AdminPage {
             ]
         ]);
         
-        // Регистрируем обработчик загрузки плагина
+        // Реєструємо обробник завантаження плагіна
         $this->registerModalHandler('uploadPluginModal', 'upload_plugin', [$this, 'handleUploadPlugin']);
         
-        // Используем вспомогательные методы для создания кнопок
+        // Використовуємо допоміжні методи для створення кнопок
         $headerButtons = $this->createButtonGroup([
             [
                 'text' => 'Завантажити плагін',
@@ -85,18 +85,18 @@ class PluginsPage extends AdminPage {
                 return;
             }
             
-            // Старый способ обработки AJAX (для обратной совместимости)
+            // Старий спосіб обробки AJAX (для зворотної сумісності)
             $this->handleAjax();
             return;
         }
         
-        // Обработка действий
+        // Обробка дій
         if ($_POST) {
             $this->handleAction();
         }
         
-        // Автоматическое обнаружение новых плагинов ТОЛЬКО по запросу пользователя
-        // (через параметр ?discover=1 или через POST)
+        // Автоматичне виявлення нових плагінів ТІЛЬКИ за запитом користувача
+        // (через параметр ?discover=1 або через POST)
         if (isset($_GET['discover']) && $_GET['discover'] == '1') {
             try {
                 $discovered = pluginManager()->autoDiscoverPlugins();

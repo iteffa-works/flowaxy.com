@@ -1,7 +1,7 @@
 <?php
 /**
- * Компилятор SCSS в CSS
- * Поддержка компиляции SCSS файлов для тем
+ * Компілятор SCSS в CSS
+ * Підтримка компіляції SCSS файлів для тем
  * 
  * @package Core
  * @version 1.0.0
@@ -19,9 +19,9 @@ class ScssCompiler {
     /**
      * Конструктор
      * 
-     * @param string $themePath Путь к папке темы
-     * @param string $mainScssFile Главный файл SCSS (например, main.scss)
-     * @param string $outputCssFile Выходной файл CSS
+     * @param string $themePath Шлях до папки теми
+     * @param string $mainScssFile Головний файл SCSS (наприклад, main.scss)
+     * @param string $outputCssFile Вихідний файл CSS
      */
     public function __construct(string $themePath, string $mainScssFile = 'assets/scss/main.scss', string $outputCssFile = 'assets/css/style.css') {
         $this->themePath = rtrim($themePath, '/') . '/';
@@ -32,7 +32,7 @@ class ScssCompiler {
     }
     
     /**
-     * Проверка наличия SCSS файлов в теме
+     * Перевірка наявності SCSS файлів в темі
      * 
      * @return bool
      */
@@ -42,10 +42,10 @@ class ScssCompiler {
     }
     
     /**
-     * Компиляция SCSS в CSS
+     * Компіляція SCSS в CSS
      * 
-     * @param bool $force Принудительная перекомпиляция
-     * @return bool Успешность компиляции
+     * @param bool $force Примусова перекомпіляція
+     * @return bool Успішність компіляції
      */
     public function compile(bool $force = false): bool {
         $mainFile = $this->themePath . $this->mainScssFile;
@@ -57,15 +57,15 @@ class ScssCompiler {
         
         $outputFile = $this->themePath . $this->outputCssFile;
         
-        // Проверяем, нужно ли компилировать
+        // Перевіряємо, чи потрібно компілювати
         if (!$force && file_exists($outputFile)) {
-            // Проверяем, изменились ли SCSS файлы
+            // Перевіряємо, чи змінилися SCSS файли
             if ($this->isUpToDate($mainFile, $outputFile)) {
-                return true; // Уже скомпилировано и актуально
+                return true; // Вже скомпільовано і актуально
             }
         }
         
-        // Создаем директорию для CSS, если не существует
+        // Створюємо директорію для CSS, якщо не існує
         if (!is_dir($this->cssDir)) {
             if (!mkdir($this->cssDir, 0755, true)) {
                 error_log("ScssCompiler: Cannot create CSS directory: {$this->cssDir}");
@@ -73,12 +73,12 @@ class ScssCompiler {
             }
         }
         
-        // Пробуем использовать scssphp, если доступен
+        // Намагаємося використати scssphp, якщо доступний
         if ($this->compileWithScssphp($mainFile, $outputFile)) {
             return true;
         }
         
-        // Пробуем использовать внешний процесс (sass/node-sass)
+        // Намагаємося використати зовнішній процес (sass/node-sass)
         if ($this->compileWithExternalProcess($mainFile, $outputFile)) {
             return true;
         }
@@ -88,14 +88,14 @@ class ScssCompiler {
     }
     
     /**
-     * Компиляция с использованием scssphp
+     * Компіляція з використанням scssphp
      * 
-     * @param string $inputFile Входной файл SCSS
-     * @param string $outputFile Выходной файл CSS
+     * @param string $inputFile Вхідний файл SCSS
+     * @param string $outputFile Вихідний файл CSS
      * @return bool
      */
     private function compileWithScssphp(string $inputFile, string $outputFile): bool {
-        // Пробуем загрузить scssphp
+        // Намагаємося завантажити scssphp
         $scssphpFile = __DIR__ . '/../vendor/scssphp/scssphp/src/Compiler.php';
         if (file_exists($scssphpFile)) {
             require_once $scssphpFile;

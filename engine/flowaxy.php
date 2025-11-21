@@ -1,6 +1,6 @@
 <?php
 /**
- * Flowaxy CMS - Core Engine
+ * Flowaxy CMS - Основний рушій системи
  * 
  * @package Engine
  * @version 7.0.0
@@ -10,24 +10,24 @@ declare(strict_types=1);
 
 if (!function_exists('detectProtocol')) {
     /**
-     * Определение протокола (HTTP/HTTPS)
-     * Проверяет настройку из базы данных, если доступна, иначе определяет автоматически
+     * Визначення протоколу (HTTP/HTTPS)
+     * Перевіряє налаштування з бази даних, якщо доступна, інакше визначає автоматично
      * 
-     * @return string Протокол (http:// или https://)
+     * @return string Протокол (http:// або https://)
      */
     function detectProtocol(): string {
-        // Сначала проверяем глобальную переменную (установленную в init.php)
+        // Спочатку перевіряємо глобальну змінну (встановлену в init.php)
         if (isset($GLOBALS['_SITE_PROTOCOL']) && !empty($GLOBALS['_SITE_PROTOCOL'])) {
             return $GLOBALS['_SITE_PROTOCOL'];
         }
         
-        // Затем проверяем настройку из базы данных (если доступна)
+        // Потім перевіряємо налаштування з бази даних (якщо доступна)
         if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini')) {
             try {
                 $settingsManager = settingsManager();
                 $protocolSetting = $settingsManager->get('site_protocol', 'auto');
                 
-                // Если настройка установлена явно, используем её
+                // Якщо налаштування встановлено явно, використовуємо його
                 if ($protocolSetting === 'https') {
                     $GLOBALS['_SITE_PROTOCOL'] = 'https://';
                     return 'https://';
@@ -35,14 +35,14 @@ if (!function_exists('detectProtocol')) {
                     $GLOBALS['_SITE_PROTOCOL'] = 'http://';
                     return 'http://';
                 }
-                // Если 'auto', продолжаем автоматическое определение
+                // Якщо 'auto', продовжуємо автоматичне визначення
             } catch (Exception $e) {
-                // Если не удалось загрузить настройки, продолжаем автоматическое определение
-                error_log('detectProtocol: Could not load settings: ' . $e->getMessage());
+                // Якщо не вдалося завантажити налаштування, продовжуємо автоматичне визначення
+                error_log('detectProtocol: Не вдалося завантажити налаштування: ' . $e->getMessage());
             }
         }
         
-        // Автоматическое определение протокола
+        // Автоматичне визначення протоколу
         if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
             $protocol = 'https://';
             $GLOBALS['_SITE_PROTOCOL'] = $protocol;
@@ -91,7 +91,7 @@ if (!$isInstaller && !file_exists($databaseIniFile) && php_sapi_name() !== 'cli'
 $protocol = detectProtocol();
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-// Сохраняем протокол в глобальной переменной для возможного обновления после загрузки настроек
+// Зберігаємо протокол у глобальній змінній для можливого оновлення після завантаження налаштувань
 $GLOBALS['_SITE_PROTOCOL'] = $protocol;
 
 if (!defined('SITE_URL')) define('SITE_URL', $protocol . $host);
@@ -102,7 +102,7 @@ if (!defined('CACHE_DIR')) define('CACHE_DIR', $rootDir . '/storage/cache/');
 if (!defined('LOGS_DIR')) define('LOGS_DIR', $rootDir . '/storage/logs/');
 if (!defined('ADMIN_SESSION_NAME')) define('ADMIN_SESSION_NAME', 'cms_admin_logged_in');
 if (!defined('CSRF_TOKEN_NAME')) define('CSRF_TOKEN_NAME', 'csrf_token');
-// PASSWORD_MIN_LENGTH теперь загружается из настроек через SystemConfig
+// PASSWORD_MIN_LENGTH тепер завантажується з налаштувань через SystemConfig
 if (!defined('PASSWORD_MIN_LENGTH')) {
     if (class_exists('SystemConfig')) {
         define('PASSWORD_MIN_LENGTH', SystemConfig::getInstance()->getPasswordMinLength());
@@ -113,39 +113,54 @@ if (!defined('PASSWORD_MIN_LENGTH')) {
 
 if (!ob_get_level()) ob_start();
 
+// Оптимізований автозавантажувач класів з кешуванням мапи
 spl_autoload_register(function (string $className): void {
+    // Пропускаємо класи з простором імен
     if (strpos($className, '\\') !== false) return;
     
-    $classesDir = __DIR__ . '/classes/';
-    $managersDir = __DIR__ . '/classes/managers/';
+    // Статична мапа для швидкого доступу (кешується між викликами)
+    static $classMap = null;
+    static $classesDir = null;
+    static $managersDir = null;
     
-    $map = [
-        'BaseModule' => 'base', 'BasePlugin' => 'base',
-        'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
-        'Xml' => 'files', 'Csv' => 'files', 'Yaml' => 'files', 'Image' => 'files',
-        'Directory' => 'files', 'Upload' => 'files', 'MimeType' => 'files',
-        'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data', 'SystemConfig' => 'data',
-        'UrlHelper' => 'helpers', 'DatabaseHelper' => 'helpers', 'SecurityHelper' => 'helpers',
-        'ScssCompiler' => 'compilers', 'Validator' => 'validators',
-        'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
-        'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
-        'StorageInterface' => 'storage',
-        'RouterManager' => 'managers', 'CookieManager' => 'managers', 'SessionManager' => 'managers', 
-        'StorageManager' => 'managers', 'StorageFactory' => 'managers',
-        'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
-        'ModuleLoader' => 'system', 'HookManager' => 'system',
-        'RoleManager' => 'managers',
-        'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
-        'SettingsPage' => 'skins/pages', 'SiteSettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
-        'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages',
-        'ThemeEditorPage' => 'skins/pages', 'CacheViewPage' => 'skins/pages', 'LogsViewPage' => 'skins/pages',
-    ];
-    
-    if (isset($map[$className])) {
-        $file = $classesDir . $map[$className] . '/' . $className . '.php';
-        if (file_exists($file)) { require_once $file; return; }
+    if ($classMap === null) {
+        $classesDir = __DIR__ . '/classes/';
+        $managersDir = $classesDir . 'managers/';
+        
+        // Оптимізована мапа класів для швидкого пошуку
+        $classMap = [
+            'BaseModule' => 'base', 'BasePlugin' => 'base',
+            'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
+            'Xml' => 'files', 'Csv' => 'files', 'Yaml' => 'files', 'Image' => 'files',
+            'Directory' => 'files', 'Upload' => 'files', 'MimeType' => 'files',
+            'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data', 'SystemConfig' => 'data',
+            'UrlHelper' => 'helpers', 'DatabaseHelper' => 'helpers', 'SecurityHelper' => 'helpers',
+            'ScssCompiler' => 'compilers', 'Validator' => 'validators',
+            'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
+            'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
+            'StorageInterface' => 'storage',
+            'RouterManager' => 'managers', 'CookieManager' => 'managers', 'SessionManager' => 'managers', 
+            'StorageManager' => 'managers', 'StorageFactory' => 'managers',
+            'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
+            'ModuleLoader' => 'system', 'HookManager' => 'system',
+            'RoleManager' => 'managers',
+            'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
+            'SettingsPage' => 'skins/pages', 'SiteSettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
+            'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages',
+            'ThemeEditorPage' => 'skins/pages', 'CacheViewPage' => 'skins/pages', 'LogsViewPage' => 'skins/pages',
+        ];
     }
     
+    // Швидкий пошук у мапі
+    if (isset($classMap[$className])) {
+        $file = $classesDir . $classMap[$className] . '/' . $className . '.php';
+        if (file_exists($file)) { 
+            require_once $file; 
+            return; 
+        }
+    }
+    
+    // Перевірка менеджерів (оптимізовано)
     $isManager = substr($className, -7) === 'Manager' || $className === 'ThemeCustomizer';
     
     if ($isManager) {
@@ -163,14 +178,23 @@ spl_autoload_register(function (string $className): void {
         }
     }
     
-    foreach (['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system', 'storage'] as $dir) {
+    // Пошук у стандартних директоріях (тільки якщо не знайдено в мапі)
+    static $dirs = ['base', 'files', 'data', 'managers', 'compilers', 'validators', 'security', 'http', 'view', 'mail', 'helpers', 'ui', 'system', 'storage'];
+    foreach ($dirs as $dir) {
         $file = $classesDir . $dir . '/' . $className . '.php';
-        if (file_exists($file)) { require_once $file; return; }
+        if (file_exists($file)) { 
+            require_once $file; 
+            return; 
+        }
     }
     
+    // Перевірка сторінок адмінки
     if (strpos($className, 'Page') !== false && strpos($className, 'AdminPage') === false) {
         $file = __DIR__ . '/skins/pages/' . $className . '.php';
-        if (file_exists($file)) { require_once $file; return; }
+        if (file_exists($file)) { 
+            require_once $file; 
+            return; 
+        }
     }
 });
 

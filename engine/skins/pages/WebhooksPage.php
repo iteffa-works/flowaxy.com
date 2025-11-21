@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления Webhooks
+ * Сторінка управління Webhooks
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -15,9 +15,9 @@ class WebhooksPage extends AdminPage {
         $this->templateName = 'webhooks';
         $this->webhookManager = new WebhookManager();
         
-        // Регистрируем модальное окно создания webhook
+        // Реєструємо модальне вікно створення webhook
         $this->registerModal('createWebhookModal', [
-            'title' => 'Создать Webhook',
+            'title' => 'Створити Webhook',
             'type' => 'form',
             'action' => 'create_webhook',
             'method' => 'POST',
@@ -25,33 +25,33 @@ class WebhooksPage extends AdminPage {
                 [
                     'type' => 'text',
                     'name' => 'name',
-                    'label' => 'Название',
-                    'placeholder' => 'Например: Уведомления в Telegram',
+                    'label' => 'Назва',
+                    'placeholder' => 'Наприклад: Сповіщення в Telegram',
                     'required' => true
                 ],
                 [
                     'type' => 'url',
                     'name' => 'url',
-                    'label' => 'URL для отправки',
+                    'label' => 'URL для відправки',
                     'placeholder' => 'https://example.com/webhook',
                     'required' => true
                 ],
                 [
                     'type' => 'textarea',
                     'name' => 'events',
-                    'label' => 'События (по одному на строку)',
+                    'label' => 'Події (по одному на рядок)',
                     'placeholder' => 'plugin.installed\nplugin.activated\ntheme.changed',
-                    'help' => 'Оставьте пустым для отслеживания всех событий. Доступные события: plugin.installed, plugin.activated, plugin.deactivated, plugin.deleted, theme.activated, theme.deleted, user.created, user.updated, system.updated'
+                    'help' => 'Залиште порожнім для відстеження всіх подій. Доступні події: plugin.installed, plugin.activated, plugin.deactivated, plugin.deleted, theme.activated, theme.deleted, user.created, user.updated, system.updated'
                 ]
             ],
             'buttons' => [
                 [
-                    'text' => 'Отменить',
+                    'text' => 'Скасувати',
                     'type' => 'secondary',
                     'action' => 'close'
                 ],
                 [
-                    'text' => 'Создать',
+                    'text' => 'Створити',
                     'type' => 'primary',
                     'icon' => 'plus',
                     'action' => 'submit'
@@ -59,13 +59,13 @@ class WebhooksPage extends AdminPage {
             ]
         ]);
         
-        // Регистрируем обработчик создания webhook
+        // Реєструємо обробник створення webhook
         $this->registerModalHandler('createWebhookModal', 'create_webhook', [$this, 'handleCreateWebhook']);
         
-        // Кнопка создания webhook
+        // Кнопка створення webhook
         $headerButtons = $this->createButtonGroup([
             [
-                'text' => 'Создать Webhook',
+                'text' => 'Створити Webhook',
                 'type' => 'primary',
                 'options' => [
                     'icon' => 'plus',
@@ -80,20 +80,20 @@ class WebhooksPage extends AdminPage {
         
         $this->setPageHeader(
             'Webhooks',
-            'Управление webhooks для отправки уведомлений внешним сервисам',
+            'Управління webhooks для відправки сповіщень зовнішнім сервісам',
             'fas fa-paper-plane',
             $headerButtons
         );
     }
     
     public function handle() {
-        // Обработка AJAX запросов
+        // Обробка AJAX запитів
         if ($this->isAjaxRequest()) {
             $this->handleAjax();
             return;
         }
         
-        // Обработка действий
+        // Обробка дій
         if ($_POST) {
             $this->handleAction();
         }

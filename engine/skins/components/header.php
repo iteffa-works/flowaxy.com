@@ -3,13 +3,13 @@
  * Компонент Header
  */
 ?>
-<!-- Верхняя зеленая полоска -->
+<!-- Верхня зелена смужка -->
 <div class="header-top-bar"></div>
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container-fluid">
-        <!-- Левая часть навбара -->
+        <!-- Ліва частина навбара -->
         <div class="d-flex align-items-center">
-            <!-- Кнопка мобильного меню -->
+            <!-- Кнопка мобільного меню -->
             <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Відкрити меню" title="Відкрити меню">
                 <i class="fas fa-bars"></i>
             </button>
@@ -20,11 +20,11 @@
             </a>
         </div>
 
-        <!-- Правая часть навбара - иконки в ряд -->
+        <!-- Права частина навбара - іконки в ряд -->
         <div class="d-flex align-items-center gap-2 header-right-actions">
-            <!-- Иконки быстрого доступа к разделам -->
+            <!-- Іконки швидкого доступу до розділів -->
             <?php
-            // Определяем текущую страницу
+            // Визначаємо поточну сторінку
             $currentPage = Router::getCurrentPage();
             $isDashboard = ($currentPage === 'dashboard');
             $isPlugins = ($currentPage === 'plugins');
@@ -44,7 +44,7 @@
                     <span class="d-none d-md-inline ms-1">Теми</span>
                 </a>
                 
-                <!-- Интеграции - в том же стиле, что и другие кнопки -->
+                <!-- Інтеграції - в тому ж стилі, що й інші кнопки -->
                 <?php
                 $isApiKeys = ($currentPage === 'api-keys');
                 $isWebhooks = ($currentPage === 'webhooks');
@@ -58,7 +58,7 @@
                     <ul class="dropdown-menu dropdown-menu-end integrations-dropdown-menu" aria-labelledby="integrations-dropdown-toggle">
                         <li>
                             <a class="dropdown-item <?= $isApiKeys ? 'active' : '' ?>" href="<?= UrlHelper::admin('api-keys') ?>">
-                                <i class="fas fa-key me-2"></i>API Ключи
+                                <i class="fas fa-key me-2"></i>API Ключі
                             </a>
                         </li>
                         <li>
@@ -70,7 +70,7 @@
                 </div>
             </div>
             
-            <!-- Просмотр сайта -->
+            <!-- Перегляд сайту -->
             <a href="<?= class_exists('UrlHelper') ? UrlHelper::site() : '/' ?>" 
                class="header-view-site-btn" 
                target="_blank" 
@@ -79,7 +79,7 @@
                 <i class="fas fa-external-link-square-alt"></i>
             </a>
             
-            <!-- Управление кешем -->
+            <!-- Управління кешем -->
             <div class="dropdown">
                 <button class="header-dropdown-btn" type="button" data-bs-toggle="dropdown" title="Очистити кеш">
                     <i class="fas fa-database"></i>

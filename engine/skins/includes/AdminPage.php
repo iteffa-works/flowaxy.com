@@ -4,11 +4,11 @@
  * Спрощена архітектура без MVC
  */
 
-// Подключаем хелпер для компонентов
+// Підключаємо хелпер для компонентів
 require_once __DIR__ . '/ComponentHelper.php';
 
-// Классы из engine/classes загружаются автоматически через autoloader в engine/init.php
-// Используем их напрямую: Request, AjaxHandler, Validator, File, Directory, Response и т.д.
+// Класи з engine/classes завантажуються автоматично через autoloader в engine/init.php
+// Використовуємо їх безпосередньо: Request, AjaxHandler, Validator, File, Directory, Response тощо
 
 class AdminPage {
     protected $db;
@@ -24,14 +24,14 @@ class AdminPage {
     protected $additionalJS = [];
     protected $additionalInlineCSS = '';
     
-    // Флаги для автоматического редиректа после POST
+    // Прапорці для автоматичного редиректу після POST
     private $postProcessed = false;
     private $autoRedirectEnabled = true;
     private $redirectPerformed = false;
     private $currentPage = '';
     
     public function __construct() {
-        // Для AJAX запросов очищаем буфер вывода сразу
+        // Для AJAX запитів очищаємо буфер виводу одразу
         if (AjaxHandler::isAjax()) {
             while (ob_get_level() > 0) {
                 ob_end_clean();
@@ -39,7 +39,7 @@ class AdminPage {
             ini_set('display_errors', '0');
         }
         
-        // Перевірка авторизації (SecurityHelper::requireAdmin() проверяет через БД)
+        // Перевірка авторизації (SecurityHelper::requireAdmin() перевіряє через БД)
         SecurityHelper::requireAdmin();
         
         // Підключення до БД з обробкою помилок
@@ -47,14 +47,14 @@ class AdminPage {
             $this->db = DatabaseHelper::getConnection(true);
             if ($this->db === null) {
                 // Якщо підключення не вдалося, DatabaseHelper::getConnection() вже показав сторінку помилки
-                // Для AJAX возвращаем JSON ошибку
+                // Для AJAX повертаємо JSON помилку
                 if (AjaxHandler::isAjax()) {
                     Response::jsonResponse(['success' => false, 'error' => 'Помилка підключення до бази даних'], 500);
                 }
                 exit;
             }
         } catch (Exception $e) {
-            // Для AJAX возвращаем JSON ошибку
+            // Для AJAX повертаємо JSON помилку
             if (AjaxHandler::isAjax()) {
                 Response::jsonResponse([
                     'success' => false, 
@@ -63,7 +63,7 @@ class AdminPage {
                 exit;
             }
             
-            // Показуємо сторінку помилки для обычных запросов
+            // Показуємо сторінку помилки для звичайних запитів
             if (function_exists('showDatabaseError')) {
                 showDatabaseError([
                     'host' => DB_HOST ?? 'unknown',
@@ -77,19 +77,19 @@ class AdminPage {
             exit;
         }
         
-        // Обновляем время последней активности пользователя (каждые 10 минут)
-        // Вызываем после подключения к БД
+        // Оновлюємо час останньої активності користувача (кожні 10 хвилин)
+        // Викликаємо після підключення до БД
         $this->updateUserActivity();
         
         // Гарантуємо, що перший користувач має доступ до адмінки
         $this->ensureFirstUserHasAdminAccess();
         
-        // Проверка прав доступа к адмін-панелі
+        // Перевірка прав доступу до адмін-панелі
         if (function_exists('current_user_can')) {
             $session = sessionManager();
             $currentUserId = (int)$session->get('admin_user_id');
             if (!current_user_can('admin.access')) {
-                // Якщо це перший користувач - пробуємо повторно синхронізувати роль та перевірити ще раз
+                // Якщо це перший користувач - намагаємося повторно синхронізувати роль та перевірити ще раз
                 if ($currentUserId === 1) {
                     $this->ensureFirstUserHasAdminAccess();
                     if (!current_user_can('admin.access')) {
@@ -103,7 +103,7 @@ class AdminPage {
             }
         }
         
-        // Загружаем flash сообщения из сессии (если есть)
+        // Завантажуємо flash повідомлення з сесії (якщо є)
         $session = sessionManager();
         $flashMessage = $session->flash('admin_message');
         $flashMessageType = $session->flash('admin_message_type');
@@ -112,26 +112,26 @@ class AdminPage {
             $this->messageType = $flashMessageType ?: 'info';
         }
         
-        // Определяем текущую страницу для редиректа
+        // Визначаємо поточну сторінку для редиректу
         $request = Request::getInstance();
-        // Пытаемся определить из query параметра 'page'
+        // Намагаємося визначити з query параметра 'page'
         $this->currentPage = $request->query('page', '');
         if (empty($this->currentPage)) {
-            // Пытаемся определить из URL (последняя часть пути после /admin/)
+            // Намагаємося визначити з URL (остання частина шляху після /admin/)
             $path = $request->path();
             $path = trim($path, '/');
             $parts = explode('/', $path);
-            // Ищем часть после 'admin'
+            // Шукаємо частину після 'admin'
             $adminIndex = array_search('admin', $parts);
             if ($adminIndex !== false && isset($parts[$adminIndex + 1])) {
                 $this->currentPage = $parts[$adminIndex + 1];
             } elseif (!empty($parts)) {
-                // Если 'admin' не найден, берем последнюю часть
+                // Якщо 'admin' не знайдено, беремо останню частину
                 $this->currentPage = end($parts);
             }
         }
         
-        // Если все еще пусто, используем 'dashboard' по умолчанию
+        // Якщо все ще порожньо, використовуємо 'dashboard' за замовчуванням
         if (empty($this->currentPage)) {
             $this->currentPage = 'dashboard';
         }
@@ -139,13 +139,13 @@ class AdminPage {
     
     /**
      * Встановлення повідомлення
-     * При POST-запросе автоматически сохраняет в flash для передачи через редирект
+     * При POST-запиті автоматично зберігає в flash для передачі через редирект
      */
     protected function setMessage($message, $type = 'info') {
         $this->message = $message;
         $this->messageType = $type;
         
-        // Если это POST-запрос, сохраняем сообщение в flash для передачи через редирект
+        // Якщо це POST-запит, зберігаємо повідомлення в flash для передачі через редирект
         if (Request::getMethod() === 'POST' && !AjaxHandler::isAjax()) {
             $session = sessionManager();
             $session->setFlash('admin_message', $message);
@@ -155,8 +155,8 @@ class AdminPage {
     }
     
     /**
-     * Обновление времени последней активности пользователя
-     * Вызывается при каждом запросе, но обновляет БД только если прошло больше 10 минут
+     * Оновлення часу останньої активності користувача
+     * Викликається при кожному запиті, але оновлює БД тільки якщо пройшло більше 10 хвилин
      * 
      * @return void
      */
@@ -169,12 +169,12 @@ class AdminPage {
         }
         
         try {
-            // Используем уже подключенную БД
+            // Використовуємо вже підключену БД
             if ($this->db === null) {
                 return;
             }
             
-            // Получаем текущее время последней активности
+            // Отримуємо поточний час останньої активності
             $stmt = $this->db->prepare("SELECT last_activity FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$userId]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -183,10 +183,10 @@ class AdminPage {
                 $shouldUpdate = false;
                 
                 if (empty($user['last_activity'])) {
-                    // Если last_activity отсутствует - обновляем
+                    // Якщо last_activity відсутня - оновлюємо
                     $shouldUpdate = true;
                 } else {
-                    // Проверяем, прошло ли больше 10 минут (600 секунд)
+                    // Перевіряємо, чи пройшло більше 10 хвилин (600 секунд)
                     $lastActivity = strtotime($user['last_activity']);
                     $currentTime = time();
                     $timeDiff = $currentTime - $lastActivity;
@@ -203,7 +203,7 @@ class AdminPage {
                 }
             }
         } catch (Exception $e) {
-            // Игнорируем ошибки обновления активности
+            // Ігноруємо помилки оновлення активності
             if (class_exists('Logger')) {
                 Logger::getInstance()->logWarning('Error updating user activity', ['error' => $e->getMessage()]);
             }
@@ -211,15 +211,15 @@ class AdminPage {
     }
     
     /**
-     * Отключить автоматический редирект после POST
-     * Используйте этот метод, если нужно обработать POST без редиректа
+     * Вимкнути автоматичний редирект після POST
+     * Використовуйте цей метод, якщо потрібно обробити POST без редиректу
      */
     protected function preventAutoRedirect(): void {
         $this->autoRedirectEnabled = false;
     }
     
     /**
-     * Отметить, что редирект был выполнен вручную
+     * Відзначити, що редирект був виконаний вручну
      */
     protected function markRedirectPerformed(): void {
         $this->redirectPerformed = true;
@@ -283,7 +283,7 @@ class AdminPage {
         $customTemplatePath = $this->getTemplatePath();
         $defaultTemplatePath = __DIR__ . '/../templates/';
         
-        // Нормализуем пути для сравнения (заменяем обратные слеши на прямые)
+        // Нормалізуємо шляхи для порівняння (замінюємо зворотні слеші на прямі)
         $customPathNormalized = str_replace('\\', '/', rtrim($customTemplatePath, '/\\')) . '/';
         $defaultPathNormalized = str_replace('\\', '/', rtrim($defaultTemplatePath, '/\\')) . '/';
         
@@ -324,7 +324,7 @@ class AdminPage {
     }
     
     /**
-     * Вспомогательный метод для рендеринга компонента alert
+     * Допоміжний метод для рендерингу компонента alert
      */
     protected function renderAlert($message, $type = 'info', $dismissible = true, $icon = null) {
         $alertPath = __DIR__ . '/../components/alert.php';
@@ -334,7 +334,7 @@ class AdminPage {
     }
     
     /**
-     * Вспомогательный метод для рендеринга компонента button
+     * Допоміжний метод для рендерингу компонента button
      */
     protected function renderButton($text, $type = 'primary', $options = []) {
         $buttonPath = __DIR__ . '/../components/button.php';
@@ -348,7 +348,7 @@ class AdminPage {
     }
     
     /**
-     * Вспомогательный метод для рендеринга компонента empty-state
+     * Допоміжний метод для рендерингу компонента empty-state
      */
     protected function renderEmptyState($icon, $title, $message, $actions = '', $classes = []) {
         $emptyStatePath = __DIR__ . '/../components/empty-state.php';
@@ -358,7 +358,7 @@ class AdminPage {
     }
     
     /**
-     * Вспомогательный метод для получения HTML компонента через ob_start/ob_get_clean
+     * Допоміжний метод для отримання HTML компонента через ob_start/ob_get_clean
      */
     protected function getComponent($componentName, $data = []) {
         $componentPath = __DIR__ . '/../components/' . $componentName . '.php';
@@ -366,7 +366,7 @@ class AdminPage {
             return '';
         }
         
-        // Извлекаем переменные из данных
+        // Витягуємо змінні з даних
         extract($data);
         
         ob_start();
@@ -375,11 +375,11 @@ class AdminPage {
     }
     
     /**
-     * Создание кнопки через компонент и возврат HTML
+     * Створення кнопки через компонент та повернення HTML
      * 
      * @param string $text Текст кнопки
-     * @param string $type Тип кнопки (primary, secondary, success, danger, warning, info, outline-primary, etc.)
-     * @param array $options Опции: url, icon, attributes, submit
+     * @param string $type Тип кнопки (primary, secondary, success, danger, warning, info, outline-primary, тощо)
+     * @param array $options Опції: url, icon, attributes, submit
      * @return string HTML кнопки
      */
     protected function createButton($text, $type = 'primary', $options = []) {
@@ -390,11 +390,11 @@ class AdminPage {
     }
     
     /**
-     * Создание группы кнопок для header
+     * Створення групи кнопок для header
      * 
-     * @param array $buttons Массив кнопок: [['text' => '...', 'type' => '...', 'options' => [...]], ...]
-     * @param string $wrapperClass CSS класс для обертки (по умолчанию 'd-flex gap-2')
-     * @return string HTML группы кнопок
+     * @param array $buttons Масив кнопок: [['text' => '...', 'type' => '...', 'options' => [...]], ...]
+     * @param string $wrapperClass CSS клас для обгортки (за замовчуванням 'd-flex gap-2')
+     * @return string HTML групи кнопок
      */
     protected function createButtonGroup($buttons, $wrapperClass = 'd-flex gap-2') {
         $buttonsHtml = '';

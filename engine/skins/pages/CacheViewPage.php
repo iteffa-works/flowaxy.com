@@ -24,7 +24,7 @@ class CacheViewPage extends AdminPage {
         // Обробка очистки кешу через форму
         if ($_POST && isset($_POST['clear_cache'])) {
             $this->clearCache();
-            // После очистки делаем редирект для обновления статистики
+            // Після очистки робимо редирект для оновлення статистики
             Response::redirectStatic(UrlHelper::admin('cache-view'));
             exit;
         }
@@ -33,7 +33,7 @@ class CacheViewPage extends AdminPage {
         $cacheStats = $this->getCacheStats();
         $cacheFiles = $this->getCacheFiles();
         
-        // Кнопки в заголовке
+        // Кнопки в заголовку
         $headerButtons = $this->createButtonGroup([
             [
                 'text' => 'Очистити весь кеш',

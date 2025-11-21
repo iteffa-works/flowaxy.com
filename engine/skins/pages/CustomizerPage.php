@@ -9,7 +9,7 @@ class CustomizerPage extends AdminPage {
     
     /**
      * Завантаження конфігурації кастомізера з теми
-     * Используем ThemeCustomizer модуль
+     * Використовуємо ThemeCustomizer модуль
      */
     private function getCustomizerConfig($themePath) {
         if (class_exists('ThemeCustomizer')) {

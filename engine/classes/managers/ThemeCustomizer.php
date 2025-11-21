@@ -1,7 +1,7 @@
 <?php
 /**
- * Модуль кастомизации тем
- * Управление настройками кастомизации для тем
+ * Модуль кастомізації тем
+ * Управління налаштуваннями кастомізації для тем
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -12,48 +12,48 @@ declare(strict_types=1);
 class ThemeCustomizer extends BaseModule {
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
-        // Модуль ThemeCustomizer не требует дополнительной инициализации
+        // Модуль ThemeCustomizer не потребує додаткової ініціалізації
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Модуль ThemeCustomizer не регистрирует хуки
+        // Модуль ThemeCustomizer не реєструє хуки
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      */
     public function getInfo(): array {
         return [
             'name' => 'ThemeCustomizer',
-            'title' => 'Кастомизатор тем',
-            'description' => 'Управление настройками кастомизации для тем',
+            'title' => 'Кастомізатор тем',
+            'description' => 'Управління налаштуваннями кастомізації для тем',
             'version' => '1.0.0',
             'author' => 'Flowaxy CMS'
         ];
     }
     
     /**
-     * Получение API методов модуля
+     * Отримання API методів модуля
      */
     public function getApiMethods(): array {
         return [
-            'getCustomizerConfig' => 'Получение конфигурации кастомизатора темы',
-            'validateAndSaveSettings' => 'Валидация и сохранение настроек темы',
-            'getCategories' => 'Получение категорий настроек',
-            'getDefaultCategories' => 'Получение категорий по умолчанию'
+            'getCustomizerConfig' => 'Отримання конфігурації кастомізатора теми',
+            'validateAndSaveSettings' => 'Валідація та збереження налаштувань теми',
+            'getCategories' => 'Отримання категорій налаштувань',
+            'getDefaultCategories' => 'Отримання категорій за замовчуванням'
         ];
     }
     
     /**
-     * Загрузка конфигурации кастомизатора из темы
+     * Завантаження конфігурації кастомізатора з теми
      * 
-     * @param string $themePath Путь к теме
+     * @param string $themePath Шлях до теми
      * @return array
      */
     public function getCustomizerConfig(string $themePath): array {
@@ -77,10 +77,10 @@ class ThemeCustomizer extends BaseModule {
     }
     
     /**
-     * Валидация и сохранение настроек темы
+     * Валідація та збереження налаштувань теми
      * 
-     * @param array $settings Массив настроек
-     * @return array Результат операции
+     * @param array $settings Масив налаштувань
+     * @return array Результат операції
      */
     public function validateAndSaveSettings(array $settings): array {
         if (empty($settings)) {

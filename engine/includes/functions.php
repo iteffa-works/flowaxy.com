@@ -1,13 +1,13 @@
 <?php
 /**
- * Вспомогательные функции системы
+ * Допоміжні функції системи
  * 
  * @package Engine\Includes
  */
 
 declare(strict_types=1);
 
-// Подключаем функции для работы с ролями
+// Підключаємо функції для роботи з ролями
 if (file_exists(__DIR__ . '/role-functions.php')) {
     require_once __DIR__ . '/role-functions.php';
 }
@@ -160,12 +160,12 @@ if (!function_exists('pluginManager')) {
 }
 
 // ============================================================================
-// Хелпер-функции для работы с хранилищами
+// Хелпер-функції для роботи з сховищами
 // ============================================================================
 
 if (!function_exists('cookieManager')) {
     /**
-     * Получение менеджера cookies
+     * Отримання менеджера cookies
      * 
      * @return CookieManager
      */
@@ -176,9 +176,9 @@ if (!function_exists('cookieManager')) {
 
 if (!function_exists('sessionManager')) {
     /**
-     * Получение менеджера сессий
+     * Отримання менеджера сесій
      * 
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return SessionManager
      */
     function sessionManager(string $prefix = ''): SessionManager {
@@ -192,10 +192,10 @@ if (!function_exists('sessionManager')) {
 
 if (!function_exists('storageManager')) {
     /**
-     * Получение менеджера клиентского хранилища
+     * Отримання менеджера клієнтського сховища
      * 
-     * @param string $type Тип хранилища (localStorage или sessionStorage)
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $type Тип сховища (localStorage або sessionStorage)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return StorageManager
      */
     function storageManager(string $type = 'localStorage', string $prefix = ''): StorageManager {
@@ -210,10 +210,10 @@ if (!function_exists('storageManager')) {
 
 if (!function_exists('storageFactory')) {
     /**
-     * Получение менеджера хранилища через фабрику
+     * Отримання менеджера сховища через фабрику
      * 
-     * @param string $type Тип хранилища (cookie, session, localStorage, sessionStorage)
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $type Тип сховища (cookie, session, localStorage, sessionStorage)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return StorageInterface|null
      */
     function storageFactory(string $type = 'session', string $prefix = ''): ?StorageInterface {

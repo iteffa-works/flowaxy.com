@@ -1,6 +1,6 @@
 <?php
 /**
- * Хелпер для работы с URL
+ * Хелпер для роботи з URL
  * 
  * @package Engine\Classes\Helpers
  * @version 1.0.0
@@ -10,17 +10,17 @@ declare(strict_types=1);
 
 class UrlHelper {
     /**
-     * Получение протокола из настроек системы
-     * Использует detectProtocol() для получения актуального протокола
+     * Отримання протоколу з налаштувань системи
+     * Використовує detectProtocol() для отримання актуального протоколу
      * 
-     * @return string Протокол (http:// или https://)
+     * @return string Протокол (http:// або https://)
      */
     public static function getProtocol(): string {
         if (function_exists('detectProtocol')) {
             return detectProtocol();
         }
         
-        // Fallback на автоматическое определение, если функция не доступна
+        // Fallback на автоматичне визначення, якщо функція не доступна
         if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
             return 'https://';
         }
@@ -39,7 +39,7 @@ class UrlHelper {
     }
     
     /**
-     * Проверка, используется ли HTTPS протокол
+     * Перевірка, чи використовується HTTPS протокол
      * 
      * @return bool
      */
@@ -48,9 +48,9 @@ class UrlHelper {
     }
     
     /**
-     * Получение протокол-относительного URL (для избежания Mixed Content)
+     * Отримання протокол-відносного URL (для уникнення Mixed Content)
      * 
-     * @param string $path Путь
+     * @param string $path Шлях
      * @return string
      */
     public static function protocolRelative(string $path = ''): string {
@@ -59,9 +59,9 @@ class UrlHelper {
     }
     
     /**
-     * Получение URL загрузок с правильным протоколом
+     * Отримання URL завантажень з правильним протоколом
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return string
      */
     public static function uploads(string $filePath = ''): string {
@@ -69,7 +69,7 @@ class UrlHelper {
     }
     
     /**
-     * Конвертация абсолютного URL в протокол-относительный
+     * Конвертація абсолютного URL в протокол-відносний
      * 
      * @param string $url URL
      * @return string
@@ -79,17 +79,17 @@ class UrlHelper {
             return $url;
         }
         
-        // Если URL уже протокол-относительный, возвращаем как есть
+        // Якщо URL вже протокол-відносний, повертаємо як є
         if (strpos($url, '//') === 0) {
             return $url;
         }
         
-        // Если URL относительный, возвращаем как есть
+        // Якщо URL відносний, повертаємо як є
         if (strpos($url, 'http://') !== 0 && strpos($url, 'https://') !== 0) {
             return $url;
         }
         
-        // Конвертируем абсолютный URL в протокол-относительный
+        // Конвертуємо абсолютний URL в протокол-відносний
         $parsed = parse_url($url);
         if ($parsed && isset($parsed['host'])) {
             $path = $parsed['path'] ?? '';
@@ -102,9 +102,9 @@ class UrlHelper {
     }
     
     /**
-     * Генерация URL админки
+     * Генерація URL адмінки
      * 
-     * @param string $path Путь
+     * @param string $path Шлях
      * @return string
      */
     public static function admin(string $path = ''): string {
@@ -114,9 +114,9 @@ class UrlHelper {
     }
     
     /**
-     * Генерация URL сайта
+     * Генерація URL сайту
      * 
-     * @param string $path Путь
+     * @param string $path Шлях
      * @return string
      */
     public static function site(string $path = ''): string {
@@ -126,9 +126,9 @@ class UrlHelper {
     }
     
     /**
-     * Получение текущего URL
+     * Отримання поточного URL
      * 
-     * @param bool $withQuery Включать query string
+     * @param bool $withQuery Включати query string
      * @return string
      */
     public static function current(bool $withQuery = true): string {
@@ -144,9 +144,9 @@ class UrlHelper {
     }
     
     /**
-     * Получение базового URL сайта
+     * Отримання базового URL сайту
      * 
-     * @param string $path Путь (опционально)
+     * @param string $path Шлях (опціонально)
      * @return string
      */
     public static function base(string $path = ''): string {

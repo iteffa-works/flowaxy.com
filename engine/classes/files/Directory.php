@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с директориями
- * Создание, удаление, копирование директорий и работа с файлами внутри
+ * Клас для роботи з директоріями
+ * Створення, видалення, копіювання директорій та робота з файлами всередині
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
@@ -16,7 +16,7 @@ if (!class_exists('Directory')) {
     /**
      * Конструктор
      * 
-     * @param string|null $path Путь к директории
+     * @param string|null $path Шлях до директорії
      */
     public function __construct(?string $path = null) {
         if ($path !== null) {
@@ -25,9 +25,9 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Установка пути к директории
+     * Встановлення шляху до директорії
      * 
-     * @param string $path Путь к директории
+     * @param string $path Шлях до директорії
      * @return self
      */
     public function setPath(string $path): self {
@@ -36,7 +36,7 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Получение пути к директории
+     * Отримання шляху до директорії
      * 
      * @return string
      */
@@ -45,7 +45,7 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Проверка существования директории
+     * Перевірка існування директорії
      * 
      * @return bool
      */
@@ -54,51 +54,51 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Создание директории
+     * Створення директорії
      * 
-     * @param int $mode Права доступа (по умолчанию 0755)
-     * @param bool $recursive Создавать ли вложенные директории
+     * @param int $mode Права доступу (за замовчуванням 0755)
+     * @param bool $recursive Створювати чи вкладені директорії
      * @return bool
-     * @throws Exception Если не удалось создать
+     * @throws Exception Якщо не вдалося створити
      */
     public function create(int $mode = 0755, bool $recursive = true): bool {
         if ($this->exists()) {
-            return true; // Директория уже существует
+            return true; // Директорія вже існує
         }
         
         if (!@mkdir($this->path, $mode, $recursive)) {
-            throw new Exception("Не удалось создать директорию: {$this->path}");
+            throw new Exception("Не вдалося створити директорію: {$this->path}");
         }
         
         return true;
     }
     
     /**
-     * Удаление директории
+     * Видалення директорії
      * 
-     * @param bool $recursive Удалять ли содержимое рекурсивно
+     * @param bool $recursive Видаляти чи вміст рекурсивно
      * @return bool
-     * @throws Exception Если не удалось удалить
+     * @throws Exception Якщо не вдалося видалити
      */
     public function delete(bool $recursive = true): bool {
         if (!$this->exists()) {
-            return true; // Директория уже не существует
+            return true; // Директорія вже не існує
         }
         
         if ($recursive) {
             return $this->removeRecursive($this->path);
         } else {
             if (!@rmdir($this->path)) {
-                throw new Exception("Не удалось удалить директорию: {$this->path}");
+                throw new Exception("Не вдалося видалити директорію: {$this->path}");
             }
             return true;
         }
     }
     
     /**
-     * Рекурсивное удаление директории
+     * Рекурсивне видалення директорії
      * 
-     * @param string $dir Путь к директории
+     * @param string $dir Шлях до директорії
      * @return bool
      */
     private function removeRecursive(string $dir): bool {
@@ -122,24 +122,24 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Копирование директории
+     * Копіювання директорії
      * 
-     * @param string $destinationPath Путь назначения
-     * @param bool $overwrite Перезаписывать ли существующие файлы
+     * @param string $destinationPath Шлях призначення
+     * @param bool $overwrite Перезаписувати чи існуючі файли
      * @return bool
-     * @throws Exception Если не удалось скопировать
+     * @throws Exception Якщо не вдалося скопіювати
      */
     public function copy(string $destinationPath, bool $overwrite = true): bool {
         if (!$this->exists()) {
-            throw new Exception("Исходная директория не существует: {$this->path}");
+            throw new Exception("Вихідна директорія не існує: {$this->path}");
         }
         
         $destinationPath = rtrim($destinationPath, '/\\') . DIRECTORY_SEPARATOR;
         
-        // Создаем директорию назначения
+        // Створюємо директорію призначення
         if (!is_dir($destinationPath)) {
             if (!@mkdir($destinationPath, 0755, true)) {
-                throw new Exception("Не удалось создать директорию назначения: {$destinationPath}");
+                throw new Exception("Не вдалося створити директорію призначення: {$destinationPath}");
             }
         }
         
@@ -147,11 +147,11 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Рекурсивное копирование
+     * Рекурсивне копіювання
      * 
-     * @param string $source Исходный путь
-     * @param string $destination Путь назначения
-     * @param bool $overwrite Перезаписывать ли
+     * @param string $source Вихідний шлях
+     * @param string $destination Шлях призначення
+     * @param bool $overwrite Перезаписувати чи
      * @return bool
      */
     private function copyRecursive(string $source, string $destination, bool $overwrite): bool {
@@ -190,10 +190,10 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Получение списка файлов в директории
+     * Отримання списку файлів у директорії
      * 
      * @param bool $recursive Рекурсивно
-     * @param string|null $pattern Паттерн для фильтрации (например, '*.php')
+     * @param string|null $pattern Паттерн для фільтрації (наприклад, '*.php')
      * @return array
      */
     public function getFiles(bool $recursive = false, ?string $pattern = null): array {
@@ -240,7 +240,7 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Получение списка директорий
+     * Отримання списку директорій
      * 
      * @param bool $recursive Рекурсивно
      * @return array
@@ -283,9 +283,9 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Получение размера директории
+     * Отримання розміру директорії
      * 
-     * @param bool $format Форматировать ли размер (KB, MB и т.д.)
+     * @param bool $format Форматувати чи розмір (KB, MB тощо)
      * @return int|string
      */
     public function getSize(bool $format = false) {
@@ -310,9 +310,9 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Форматирование размера
+     * Форматування розміру
      * 
-     * @param int $bytes Размер в байтах
+     * @param int $bytes Розмір у байтах
      * @return string
      */
     private function formatSize(int $bytes): string {
@@ -327,7 +327,7 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Очистка директории (удаление всех файлов и поддиректорий)
+     * Очищення директорії (видалення всіх файлів та піддиректорій)
      * 
      * @return bool
      */
@@ -340,9 +340,9 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Установка прав доступа к директории
+     * Встановлення прав доступу до директорії
      * 
-     * @param int $mode Права доступа
+     * @param int $mode Права доступу
      * @return bool
      */
     public function chmod(int $mode): bool {
@@ -354,10 +354,10 @@ if (!class_exists('Directory')) {
     }
     
     /**
-     * Статический метод: Создание директории
+     * Статичний метод: Створення директорії
      * 
-     * @param string $path Путь к директории
-     * @param int $mode Права доступа
+     * @param string $path Шлях до директорії
+     * @param int $mode Права доступу
      * @param bool $recursive Рекурсивно
      * @return bool
      */
@@ -366,15 +366,15 @@ if (!class_exists('Directory')) {
         try {
             return $dir->create($mode, $recursive);
         } catch (Exception $e) {
-            error_log("Directory::make error: " . $e->getMessage());
+            error_log("Directory::make помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Статический метод: Удаление директории
+     * Статичний метод: Видалення директорії
      * 
-     * @param string $path Путь к директории
+     * @param string $path Шлях до директорії
      * @param bool $recursive Рекурсивно
      * @return bool
      */
@@ -383,17 +383,17 @@ if (!class_exists('Directory')) {
         try {
             return $dir->delete($recursive);
         } catch (Exception $e) {
-            error_log("Directory::remove error: " . $e->getMessage());
+            error_log("Directory::remove помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Статический метод: Копирование директории
+     * Статичний метод: Копіювання директорії
      * 
-     * @param string $sourcePath Исходный путь
-     * @param string $destinationPath Путь назначения
-     * @param bool $overwrite Перезаписывать ли
+     * @param string $sourcePath Вихідний шлях
+     * @param string $destinationPath Шлях призначення
+     * @param bool $overwrite Перезаписувати чи
      * @return bool
      */
     public static function copyDirectory(string $sourcePath, string $destinationPath, bool $overwrite = true): bool {
@@ -401,20 +401,20 @@ if (!class_exists('Directory')) {
         try {
             return $dir->copy($destinationPath, $overwrite);
         } catch (Exception $e) {
-            error_log("Directory::copyDirectory error: " . $e->getMessage());
+            error_log("Directory::copyDirectory помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Статический метод: Проверка существования директории
+     * Статичний метод: Перевірка існування директорії
      * 
-     * @param string $path Путь к директории
+     * @param string $path Шлях до директорії
      * @return bool
      */
     public static function directoryExists(string $path): bool {
         return is_dir($path);
     }
-    } // Конец класса Directory
+    } // Кінець класу Directory
 }
 

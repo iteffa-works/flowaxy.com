@@ -1,7 +1,7 @@
 <?php
 /**
- * Модуль управления настройками сайта
- * Централизованная работа с настройками через класс
+ * Модуль управління налаштуваннями сайту
+ * Централізована робота з налаштуваннями через клас
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -14,49 +14,49 @@ class SettingsManager extends BaseModule {
     private bool $loaded = false;
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
-        // Настройки загружаются лениво при первом обращении
+        // Налаштування завантажуються ліниво при першому зверненні
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Модуль SettingsManager не регистрирует хуки
+        // Модуль SettingsManager не реєструє хуки
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      */
     public function getInfo(): array {
         return [
             'name' => 'SettingsManager',
-            'title' => 'Менеджер настроек',
-            'description' => 'Централизованное управление настройками сайта',
+            'title' => 'Менеджер налаштувань',
+            'description' => 'Централізоване управління налаштуваннями сайту',
             'version' => '1.0.0',
             'author' => 'Flowaxy CMS'
         ];
     }
     
     /**
-     * Получение API методов модуля
+     * Отримання API методів модуля
      */
     public function getApiMethods(): array {
         return [
-            'get' => 'Получение настройки',
-            'set' => 'Сохранение настройки',
-            'delete' => 'Удаление настройки',
-            'all' => 'Получение всех настроек',
-            'has' => 'Проверка существования настройки'
+            'get' => 'Отримання налаштування',
+            'set' => 'Збереження налаштування',
+            'delete' => 'Видалення налаштування',
+            'all' => 'Отримання всіх налаштувань',
+            'has' => 'Перевірка існування налаштування'
         ];
     }
     
     /**
-     * Загрузка всех настроек из БД
+     * Завантаження всіх налаштувань з БД
      * 
-     * @param bool $force Принудительная перезагрузка
+     * @param bool $force Примусова перезавантаження
      * @return void
      */
     public function load(bool $force = false): void {
@@ -64,18 +64,18 @@ class SettingsManager extends BaseModule {
             return;
         }
         
-        // Если принудительная перезагрузка, очищаем кеш перед загрузкой
+        // Якщо примусова перезавантаження, очищаємо кеш перед завантаженням
         if ($force && function_exists('cache_forget')) {
             cache_forget('site_settings');
         }
         
-        // Используем кеш только если не принудительная перезагрузка
+        // Використовуємо кеш тільки якщо не примусова перезавантаження
         if (!$force && function_exists('cache_remember')) {
             $this->settings = cache_remember('site_settings', function(): array {
                 return $this->loadFromDatabase();
             }, 3600);
         } else {
-            // Загружаем напрямую из БД (минуя кеш)
+            // Завантажуємо безпосередньо з БД (минаючи кеш)
             $this->settings = $this->loadFromDatabase();
         }
         
@@ -83,7 +83,7 @@ class SettingsManager extends BaseModule {
     }
     
     /**
-     * Загрузка настроек из БД
+     * Завантаження налаштувань з БД
      * 
      * @return array
      */

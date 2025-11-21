@@ -1,7 +1,7 @@
 <?php
 /**
- * Обработчик API запросов
- * Аутентификация и обработка API запросов
+ * Обробник API запитів
+ * Аутентифікація та обробка API запитів
  * 
  * @package Engine\Classes\Http
  * @version 1.0.0
@@ -21,7 +21,7 @@ class ApiHandler {
     }
     
     /**
-     * Проверка, является ли запрос API запросом
+     * Перевірка, чи є запит API запитом
      * 
      * @return bool
      */
@@ -31,36 +31,36 @@ class ApiHandler {
     }
     
     /**
-     * Аутентификация по API ключу
+     * Аутентифікація за API ключем
      * 
      * @return bool
      */
     public function authenticate(): bool {
         $request = Request::getInstance();
         
-        // Получаем API ключ из заголовка или параметра
+        // Отримуємо API ключ з заголовка або параметра
         $apiKey = null;
         
-        // Проверяем заголовок Authorization (Bearer token)
+        // Перевіряємо заголовок Authorization (Bearer token)
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
             $apiKey = $matches[1];
         }
         
-        // Если не найден в заголовке, проверяем параметр
+        // Якщо не знайдено в заголовку, перевіряємо параметр
         if (empty($apiKey)) {
             $apiKey = $request->query('api_key', $request->post('api_key', null));
         }
         
         if (empty($apiKey)) {
-            $this->sendError('API ключ не указан', 401);
+            $this->sendError('API ключ не вказано', 401);
             return false;
         }
         
-        // Валидируем ключ
+        // Валідуємо ключ
         $keyData = $this->apiManager->validateKey($apiKey);
         if ($keyData === null) {
-            $this->sendError('Невалидный или истекший API ключ', 401);
+            $this->sendError('Невалідний або закінчений API ключ', 401);
             return false;
         }
         
@@ -69,7 +69,7 @@ class ApiHandler {
     }
     
     /**
-     * Получение данных аутентифицированного ключа
+     * Отримання даних аутентифікованого ключа
      * 
      * @return array|null
      */
@@ -78,9 +78,9 @@ class ApiHandler {
     }
     
     /**
-     * Проверка разрешения
+     * Перевірка дозволу
      * 
-     * @param string $permission Разрешение
+     * @param string $permission Дозвіл
      * @return bool
      */
     public function hasPermission(string $permission): bool {
@@ -92,10 +92,10 @@ class ApiHandler {
     }
     
     /**
-     * Отправка ошибки
+     * Відправка помилки
      * 
-     * @param string $message Сообщение
-     * @param int $statusCode Код статуса
+     * @param string $message Повідомлення
+     * @param int $statusCode Код статусу
      */
     public function sendError(string $message, int $statusCode = 400): void {
         Response::jsonResponse([

@@ -1,6 +1,6 @@
 <?php
 /**
- * Менеджер плагинов системы
+ * Менеджер плагінів системи
  * 
  * @package Engine\Managers
  * @version 1.0.0
@@ -29,8 +29,8 @@ class PluginManager extends BaseModule {
     public function getInfo(): array {
         return [
             'name' => 'PluginManager',
-            'title' => 'Менеджер плагинов',
-            'description' => 'Управление плагинами системы',
+            'title' => 'Менеджер плагінів',
+            'description' => 'Управління плагінами системи',
             'version' => '1.0.0',
             'author' => 'Flowaxy CMS'
         ];
@@ -839,7 +839,7 @@ class PluginManager extends BaseModule {
         
         try {
             $sql = $file->read();
-            // Удаляем комментарии
+            // Видаляємо коментарі
             $sql = preg_replace('/--.*$/m', '', $sql);
             $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
             
@@ -851,7 +851,7 @@ class PluginManager extends BaseModule {
                     try {
                         $db->exec($query);
                     } catch (PDOException $e) {
-                        // Игнорируем ошибки "Duplicate column" и "Duplicate key"
+                        // Ігноруємо помилки "Duplicate column" та "Duplicate key"
                         if (strpos($e->getMessage(), 'Duplicate column') === false && 
                             strpos($e->getMessage(), 'Duplicate key') === false &&
                             strpos($e->getMessage(), 'already exists') === false) {

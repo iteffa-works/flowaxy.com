@@ -1,7 +1,7 @@
 <?php
 /**
- * Контроллер API
- * Базовые endpoints для API
+ * Контролер API
+ * Базові endpoints для API
  * 
  * @package Engine\Classes\Http
  * @version 1.0.0
@@ -20,12 +20,12 @@ class ApiController {
     }
     
     /**
-     * Информация о системе
+     * Інформація про систему
      * 
      * @return void
      */
     public function info(): void {
-        // Не требует аутентификации
+        // Не потребує аутентифікації
         $info = [
             'name' => 'Flowaxy CMS',
             'version' => '6.0.0',
@@ -37,12 +37,12 @@ class ApiController {
     }
     
     /**
-     * Статус системы
+     * Статус системи
      * 
      * @return void
      */
     public function status(): void {
-        // Не требует аутентификации
+        // Не потребує аутентифікації
         try {
             $db = Database::getInstance();
             $db->getConnection();
@@ -61,7 +61,7 @@ class ApiController {
     }
     
     /**
-     * Информация об аутентифицированном ключе
+     * Інформація про аутентифікований ключ
      * 
      * @return void
      */
@@ -72,20 +72,20 @@ class ApiController {
         
         $keyData = $this->handler->getAuthenticatedKey();
         if ($keyData === null) {
-            $this->handler->sendError('Не удалось получить данные ключа', 500);
+            $this->handler->sendError('Не вдалося отримати дані ключа', 500);
             return;
         }
         
-        // Не возвращаем чувствительные данные
+        // Не повертаємо чутливі дані
         unset($keyData['key_hash']);
         
         $this->handler->sendSuccess($keyData);
     }
     
     /**
-     * Проверка разрешения
+     * Перевірка дозволу
      * 
-     * @param array $params Параметры маршрута
+     * @param array $params Параметри маршруту
      * @return void
      */
     public function checkPermission(array $params = []): void {
@@ -97,7 +97,7 @@ class ApiController {
         $permission = $request->query('permission', $params['permission'] ?? null);
         
         if (empty($permission)) {
-            $this->handler->sendError('Разрешение не указано', 400);
+            $this->handler->sendError('Дозвіл не вказано', 400);
             return;
         }
         
@@ -110,7 +110,7 @@ class ApiController {
     }
     
     /**
-     * Список доступных разрешений
+     * Список доступних дозволів
      * 
      * @return void
      */
@@ -120,23 +120,23 @@ class ApiController {
         }
         
         $permissions = [
-            'system.read' => 'Чтение информации о системе',
-            'system.write' => 'Изменение настроек системы',
-            'content.read' => 'Чтение контента',
-            'content.write' => 'Создание и редактирование контента',
-            'content.delete' => 'Удаление контента',
-            'users.read' => 'Чтение информации о пользователях',
-            'users.write' => 'Управление пользователями',
-            'plugins.read' => 'Чтение информации о плагинах',
-            'plugins.write' => 'Управление плагинами',
-            'themes.read' => 'Чтение информации о темах',
-            'themes.write' => 'Управление темами',
-            '*' => 'Полный доступ'
+            'system.read' => 'Читання інформації про систему',
+            'system.write' => 'Зміна налаштувань системи',
+            'content.read' => 'Читання контенту',
+            'content.write' => 'Створення та редагування контенту',
+            'content.delete' => 'Видалення контенту',
+            'users.read' => 'Читання інформації про користувачів',
+            'users.write' => 'Управління користувачами',
+            'plugins.read' => 'Читання інформації про плагіни',
+            'plugins.write' => 'Управління плагінами',
+            'themes.read' => 'Читання інформації про теми',
+            'themes.write' => 'Управління темами',
+            '*' => 'Повний доступ'
         ];
         
         $this->handler->sendSuccess([
             'permissions' => $permissions,
-            'description' => 'Список доступных разрешений для API ключей'
+            'description' => 'Список доступних дозволів для API ключів'
         ]);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления хранилищами (сессии, куки, сторейджи)
+ * Сторінка управління сховищами (сесії, куки, сторейджи)
  * 
  * @package Engine\Skins\Pages
  */
@@ -52,7 +52,7 @@ class StorageManagementPage extends AdminPage {
     }
     
     /**
-     * Очистка сессий
+     * Очистка сесій
      */
     private function handleClearSessions(): void {
         if (!$this->verifyCsrf()) {
@@ -73,13 +73,13 @@ class StorageManagementPage extends AdminPage {
                 }
             }
             
-            // Также очищаем текущую сессию (кроме админской авторизации)
+            // Також очищаємо поточну сесію (крім адмінської авторизації)
             $session = sessionManager();
             $adminUserId = $session->get('admin_user_id');
             $csrfToken = $session->get('csrf_token');
             $session->clear();
             
-            // Восстанавливаем важные данные
+            // Відновлюємо важливі дані
             if ($adminUserId) {
                 $session->set('admin_user_id', $adminUserId);
             }

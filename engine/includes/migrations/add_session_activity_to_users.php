@@ -1,8 +1,8 @@
 <?php
 /**
- * Миграция: Добавление полей для отслеживания активности сессии
- * last_activity - время последней активности
- * is_active - статус активности пользователя
+ * Міграція: Додавання полів для відстеження активності сесії
+ * last_activity - час останньої активності
+ * is_active - статус активності користувача
  * 
  * @package Engine\Includes\Migrations
  */
@@ -10,22 +10,22 @@
 declare(strict_types=1);
 
 /**
- * Выполнение миграции
+ * Виконання міграції
  * 
- * @param PDO $db Подключение к базе данных
- * @return bool Успешность выполнения
+ * @param PDO $db Підключення до бази даних
+ * @return bool Успішність виконання
  */
 function migration_add_session_activity_to_users(PDO $db): bool {
     try {
-        // Проверяем, существует ли поле last_activity
+        // Перевіряємо, чи існує поле last_activity
         $stmt = $db->query("SHOW COLUMNS FROM users LIKE 'last_activity'");
         $lastActivityExists = $stmt->fetch() !== false;
         
         if (!$lastActivityExists) {
-            // Добавляем поле last_activity
-            $db->exec("ALTER TABLE users ADD COLUMN last_activity DATETIME DEFAULT NULL COMMENT 'Время последней активности пользователя' AFTER session_token");
+            // Додаємо поле last_activity
+            $db->exec("ALTER TABLE users ADD COLUMN last_activity DATETIME DEFAULT NULL COMMENT 'Час останньої активності користувача' AFTER session_token");
             
-            // Добавляем индекс для быстрого поиска
+            // Додаємо індекс для швидкого пошуку
             $db->exec("ALTER TABLE users ADD INDEX idx_last_activity (last_activity)");
             
             if (class_exists('Logger')) {
@@ -33,18 +33,18 @@ function migration_add_session_activity_to_users(PDO $db): bool {
             }
         }
         
-        // Проверяем, существует ли поле is_active
+        // Перевіряємо, чи існує поле is_active
         $stmt = $db->query("SHOW COLUMNS FROM users LIKE 'is_active'");
         $isActiveExists = $stmt->fetch() !== false;
         
         if (!$isActiveExists) {
-            // Добавляем поле is_active (по умолчанию 1 - активен)
-            $db->exec("ALTER TABLE users ADD COLUMN is_active TINYINT(1) DEFAULT 1 COMMENT 'Статус активности пользователя (1 - активен, 0 - неактивен)' AFTER last_activity");
+            // Додаємо поле is_active (за замовчуванням 1 - активний)
+            $db->exec("ALTER TABLE users ADD COLUMN is_active TINYINT(1) DEFAULT 1 COMMENT 'Статус активності користувача (1 - активний, 0 - неактивний)' AFTER last_activity");
             
-            // Добавляем индекс для быстрого поиска
+            // Додаємо індекс для швидкого пошуку
             $db->exec("ALTER TABLE users ADD INDEX idx_is_active (is_active)");
             
-            // Устанавливаем всех существующих пользователей как активных
+            // Встановлюємо всіх існуючих користувачів як активних
             $db->exec("UPDATE users SET is_active = 1 WHERE is_active IS NULL");
             
             if (class_exists('Logger')) {

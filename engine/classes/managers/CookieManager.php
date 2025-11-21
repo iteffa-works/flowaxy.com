@@ -1,7 +1,7 @@
 <?php
 /**
- * Менеджер для работы с cookies
- * Централизованное управление cookies с расширенными возможностями
+ * Менеджер для роботи з cookies
+ * Централізоване управління cookies з розширеними можливостями
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -14,30 +14,30 @@ require_once __DIR__ . '/../storage/StorageInterface.php';
 class CookieManager implements StorageInterface {
     private static ?self $instance = null;
     private array $defaultOptions = [
-        'expire' => 0,          // 0 = до закрытия браузера
+        'expire' => 0,          // 0 = до закриття браузера
         'path' => '/',
         'domain' => null,
-        'secure' => false,      // Автоматически определяется
+        'secure' => false,      // Автоматично визначається
         'httponly' => true,
         'samesite' => 'Lax'
     ];
     
     private function __construct() {
-        // Определяем secure автоматически на основе протокола из настроек
+        // Визначаємо secure автоматично на основі протоколу з налаштувань
         if (class_exists('UrlHelper')) {
             $this->defaultOptions['secure'] = UrlHelper::isHttps();
         } elseif (function_exists('detectProtocol')) {
             $protocol = detectProtocol();
             $this->defaultOptions['secure'] = ($protocol === 'https://');
         } else {
-            // Fallback на автоматическое определение
+            // Fallback на автоматичне визначення
             $this->defaultOptions['secure'] = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
         }
         $this->defaultOptions['domain'] = $_SERVER['HTTP_HOST'] ?? null;
     }
     
     /**
-     * Получение экземпляра (Singleton)
+     * Отримання екземпляра (Singleton)
      * 
      * @return self
      */
@@ -49,10 +49,10 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Получение значения из cookie
+     * Отримання значення з cookie
      * 
      * @param string $key Ключ
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function get(string $key, $default = null) {
@@ -60,17 +60,17 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка значения в cookie
+     * Встановлення значення в cookie
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
-     * @param array $options Дополнительные опции
+     * @param mixed $value Значення
+     * @param array $options Додаткові опції
      * @return bool
      */
     public function set(string $key, $value, array $options = []): bool {
         $options = array_merge($this->defaultOptions, $options);
         
-        // Проверяем реальное HTTPS соединение для корректировки secure
+        // Перевіряємо реальне HTTPS з'єднання для корекції secure
         $realHttps = (
             (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
             (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
@@ -78,27 +78,27 @@ class CookieManager implements StorageInterface {
             (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
         );
         
-        // Если secure=true, но реальное соединение HTTP - отключаем secure для совместимости с Edge
+        // Якщо secure=true, але реальне з'єднання HTTP - вимикаємо secure для сумісності з Edge
         if ($options['secure'] && !$realHttps) {
             $options['secure'] = false;
         }
         
-        // Если SameSite=None, но secure=false - меняем на Lax (Edge требует Secure для None)
+        // Якщо SameSite=None, але secure=false - змінюємо на Lax (Edge вимагає Secure для None)
         if ($options['samesite'] === 'None' && !$options['secure']) {
             $options['samesite'] = 'Lax';
         }
         
-        // Поддержка массива/объекта (JSON)
+        // Підтримка масиву/об'єкта (JSON)
         if (is_array($value) || is_object($value)) {
             $value = json_encode($value, JSON_UNESCAPED_UNICODE);
         }
         
-        // Поддержка времени в днях
+        // Підтримка часу в днях
         $expire = $options['expire'];
         if (is_int($expire) && $expire > 0) {
             $expire = time() + $expire;
         } elseif (is_string($expire) && strpos($expire, '+') === 0) {
-            // Поддержка формата "+30 days"
+            // Підтримка формату "+30 days"
             $expire = strtotime($expire);
         }
         
@@ -115,7 +115,7 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Проверка наличия ключа в cookie
+     * Перевірка наявності ключа в cookie
      * 
      * @param string $key Ключ
      * @return bool
@@ -125,10 +125,10 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Удаление значения из cookie
+     * Видалення значення з cookie
      * 
      * @param string $key Ключ
-     * @param array $options Дополнительные опции
+     * @param array $options Додаткові опції
      * @return bool
      */
     public function remove(string $key, array $options = []): bool {
@@ -137,7 +137,7 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Получение всех данных из cookie
+     * Отримання всіх даних з cookie
      * 
      * @return array
      */
@@ -146,7 +146,7 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Очистка всех данных из cookie (не рекомендуется)
+     * Очищення всіх даних з cookie (не рекомендується)
      * 
      * @return bool
      */
@@ -161,9 +161,9 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Получение нескольких значений по ключам
+     * Отримання кількох значень за ключами
      * 
-     * @param array $keys Массив ключей
+     * @param array $keys Масив ключів
      * @return array
      */
     public function getMultiple(array $keys): array {
@@ -175,9 +175,9 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка нескольких значений
+     * Встановлення кількох значень
      * 
-     * @param array $values Массив ключ => значение
+     * @param array $values Масив ключ => значення
      * @return bool
      */
     public function setMultiple(array $values): bool {
@@ -191,10 +191,10 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка нескольких значений с опциями
+     * Встановлення кількох значень з опціями
      * 
-     * @param array $values Массив ключ => значение
-     * @param array $options Дополнительные опции
+     * @param array $values Масив ключ => значення
+     * @param array $options Додаткові опції
      * @return bool
      */
     public function setMultipleWithOptions(array $values, array $options = []): bool {
@@ -208,10 +208,10 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Удаление нескольких значений
+     * Видалення кількох значень
      * 
-     * @param array $keys Массив ключей
-     * @param array $options Дополнительные опции
+     * @param array $keys Масив ключів
+     * @param array $options Додаткові опції
      * @return bool
      */
     public function removeMultiple(array $keys, array $options = []): bool {
@@ -225,11 +225,11 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка постоянной cookie (на год)
+     * Встановлення постійної cookie (на рік)
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
-     * @param int $days Количество дней
+     * @param mixed $value Значення
+     * @param int $days Кількість днів
      * @return bool
      */
     public function forever(string $key, $value, int $days = 365): bool {
@@ -237,10 +237,10 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка временной cookie (до закрытия браузера)
+     * Встановлення тимчасової cookie (до закриття браузера)
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
+     * @param mixed $value Значення
      * @return bool
      */
     public function temporary(string $key, $value): bool {
@@ -248,12 +248,12 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка зашифрованной cookie
+     * Встановлення зашифрованої cookie
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
-     * @param int $expire Время истечения
-     * @param string|null $encryptionKey Ключ шифрования
+     * @param mixed $value Значення
+     * @param int $expire Час закінчення
+     * @param string|null $encryptionKey Ключ шифрування
      * @return bool
      */
     public function encrypted(string $key, $value, int $expire = 0, ?string $encryptionKey = null): bool {
@@ -261,11 +261,11 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Получение расшифрованной cookie
+     * Отримання розшифрованої cookie
      * 
      * @param string $key Ключ
-     * @param mixed $default Значение по умолчанию
-     * @param string|null $encryptionKey Ключ шифрования
+     * @param mixed $default Значення за замовчуванням
+     * @param string|null $encryptionKey Ключ шифрування
      * @return mixed
      */
     public function decrypted(string $key, $default = null, ?string $encryptionKey = null) {
@@ -273,10 +273,10 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Получение значения как JSON (автоматическое декодирование)
+     * Отримання значення як JSON (автоматичне декодування)
      * 
      * @param string $key Ключ
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function getJson(string $key, $default = null) {
@@ -290,11 +290,11 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка значения как JSON (автоматическое кодирование)
+     * Встановлення значення як JSON (автоматичне кодування)
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение (будет закодировано в JSON)
-     * @param array $options Дополнительные опции
+     * @param mixed $value Значення (буде закодовано в JSON)
+     * @param array $options Додаткові опції
      * @return bool
      */
     public function setJson(string $key, $value, array $options = []): bool {
@@ -306,9 +306,9 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Установка настроек по умолчанию
+     * Встановлення налаштувань за замовчуванням
      * 
-     * @param array $options Опции
+     * @param array $options Опції
      * @return void
      */
     public function setDefaultOptions(array $options): void {
@@ -316,7 +316,7 @@ class CookieManager implements StorageInterface {
     }
     
     /**
-     * Получение настроек по умолчанию
+     * Отримання налаштувань за замовчуванням
      * 
      * @return array
      */

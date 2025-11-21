@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с CSV файлами
- * Чтение, запись и манипуляции с CSV данными
+ * Клас для роботи з CSV файлами
+ * Читання, запис та маніпуляції з CSV даними
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
@@ -20,10 +20,10 @@ class Csv {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к CSV файлу
-     * @param string $delimiter Разделитель полей (по умолчанию ',')
-     * @param string $enclosure Символ обрамления полей (по умолчанию '"')
-     * @param string $escape Символ экранирования (по умолчанию '\\')
+     * @param string|null $filePath Шлях до CSV файлу
+     * @param string $delimiter Роздільник полів (за замовчуванням ',')
+     * @param string $enclosure Символ обрамлення полів (за замовчуванням '"')
+     * @param string $escape Символ екранування (за замовчуванням '\\')
      */
     public function __construct(?string $filePath = null, string $delimiter = ',', string $enclosure = '"', string $escape = '\\') {
         $this->delimiter = $delimiter;
@@ -36,9 +36,9 @@ class Csv {
     }
     
     /**
-     * Установка пути к файлу
+     * Встановлення шляху до файлу
      * 
-     * @param string $filePath Путь к CSV файлу
+     * @param string $filePath Шлях до CSV файлу
      * @return self
      */
     public function setFile(string $filePath): self {
@@ -54,30 +54,30 @@ class Csv {
     }
     
     /**
-     * Загрузка CSV файла
+     * Завантаження CSV файлу
      * 
-     * @param bool $hasHeader Имеет ли файл заголовки в первой строке
+     * @param bool $hasHeader Чи має файл заголовки в першому рядку
      * @return self
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
     public function load(bool $hasHeader = true): self {
         if (empty($this->filePath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
         if (!file_exists($this->filePath)) {
-            throw new Exception("CSV файл не существует: {$this->filePath}");
+            throw new Exception("CSV файл не існує: {$this->filePath}");
         }
         
         if (!is_readable($this->filePath)) {
-            throw new Exception("CSV файл недоступен для чтения: {$this->filePath}");
+            throw new Exception("CSV файл недоступний для читання: {$this->filePath}");
         }
         
         $this->data = [];
         $header = null;
         
         if (($handle = @fopen($this->filePath, 'r')) === false) {
-            throw new Exception("Не удалось открыть CSV файл: {$this->filePath}");
+            throw new Exception("Не вдалося відкрити CSV файл: {$this->filePath}");
         }
         
         $lineNumber = 0;
@@ -87,7 +87,7 @@ class Csv {
                 $header = $row;
             } else {
                 if ($hasHeader && $header !== null) {
-                    // Используем заголовки как ключи
+                    // Використовуємо заголовки як ключі
                     $rowData = [];
                     foreach ($header as $index => $key) {
                         $rowData[$key] = $row[$index] ?? '';
@@ -107,44 +107,44 @@ class Csv {
     }
     
     /**
-     * Сохранение данных в CSV файл
+     * Збереження даних у CSV файл
      * 
-     * @param string|null $filePath Путь к файлу (если null, используется текущий)
-     * @param bool $writeHeader Записывать ли заголовки
+     * @param string|null $filePath Шлях до файлу (якщо null, використовується поточний)
+     * @param bool $writeHeader Записувати чи заголовки
      * @return bool
-     * @throws Exception Если не удалось сохранить
+     * @throws Exception Якщо не вдалося зберегти
      */
     public function save(?string $filePath = null, bool $writeHeader = true): bool {
         $targetPath = $filePath ?? $this->filePath;
         
         if (empty($targetPath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
-        // Создаем директорию, если её нет
+        // Створюємо директорію, якщо її немає
         $dir = dirname($targetPath);
         if (!is_dir($dir)) {
             if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
+                throw new Exception("Не вдалося створити директорію: {$dir}");
             }
         }
         
         if (($handle = @fopen($targetPath, 'w')) === false) {
-            throw new Exception("Не удалось открыть CSV файл для записи: {$targetPath}");
+            throw new Exception("Не вдалося відкрити CSV файл для запису: {$targetPath}");
         }
         
         if (!empty($this->data)) {
-            // Определяем заголовки
+            // Визначаємо заголовки
             $headers = null;
             if ($writeHeader && is_array($this->data[0]) && !is_numeric(key($this->data[0]))) {
                 $headers = array_keys($this->data[0]);
                 fputcsv($handle, $headers, $this->delimiter, $this->enclosure, $this->escape);
             }
             
-            // Записываем данные
+            // Записуємо дані
             foreach ($this->data as $row) {
                 if ($headers !== null) {
-                    // Используем порядок заголовков
+                    // Використовуємо порядок заголовків
                     $orderedRow = [];
                     foreach ($headers as $key) {
                         $orderedRow[] = $row[$key] ?? '';
@@ -167,7 +167,7 @@ class Csv {
     }
     
     /**
-     * Получение всех данных
+     * Отримання всіх даних
      * 
      * @return array
      */
@@ -176,10 +176,10 @@ class Csv {
     }
     
     /**
-     * Получение строки по индексу
+     * Отримання рядка за індексом
      * 
-     * @param int $index Индекс строки
-     * @param array $default Значение по умолчанию
+     * @param int $index Індекс рядка
+     * @param array $default Значення за замовчуванням
      * @return array
      */
     public function getRow(int $index, array $default = []): array {
@@ -187,9 +187,9 @@ class Csv {
     }
     
     /**
-     * Добавление строки
+     * Додавання рядка
      * 
-     * @param array $row Данные строки
+     * @param array $row Дані рядка
      * @return self
      */
     public function addRow(array $row): self {
@@ -199,10 +199,10 @@ class Csv {
     }
     
     /**
-     * Обновление строки
+     * Оновлення рядка
      * 
-     * @param int $index Индекс строки
-     * @param array $row Новые данные
+     * @param int $index Індекс рядка
+     * @param array $row Нові дані
      * @return self
      */
     public function updateRow(int $index, array $row): self {
@@ -213,21 +213,21 @@ class Csv {
     }
     
     /**
-     * Удаление строки
+     * Видалення рядка
      * 
-     * @param int $index Индекс строки
+     * @param int $index Індекс рядка
      * @return self
      */
     public function removeRow(int $index): self {
         if (isset($this->data[$index])) {
             unset($this->data[$index]);
-            $this->data = array_values($this->data); // Переиндексация
+            $this->data = array_values($this->data); // Переіндексація
         }
         return $this;
     }
     
     /**
-     * Получение количества строк
+     * Отримання кількості рядків
      * 
      * @return int
      */
@@ -236,7 +236,7 @@ class Csv {
     }
     
     /**
-     * Очистка данных
+     * Очищення даних
      * 
      * @return self
      */
@@ -247,9 +247,9 @@ class Csv {
     }
     
     /**
-     * Установка данных
+     * Встановлення даних
      * 
-     * @param array $data Данные
+     * @param array $data Дані
      * @return self
      */
     public function setData(array $data): self {
@@ -259,9 +259,9 @@ class Csv {
     }
     
     /**
-     * Установка разделителя
+     * Встановлення роздільника
      * 
-     * @param string $delimiter Разделитель
+     * @param string $delimiter Роздільник
      * @return self
      */
     public function setDelimiter(string $delimiter): self {
@@ -270,9 +270,9 @@ class Csv {
     }
     
     /**
-     * Установка символа обрамления
+     * Встановлення символу обрамлення
      * 
-     * @param string $enclosure Символ обрамления
+     * @param string $enclosure Символ обрамлення
      * @return self
      */
     public function setEnclosure(string $enclosure): self {
@@ -281,7 +281,7 @@ class Csv {
     }
     
     /**
-     * Проверка, загружены ли данные
+     * Перевірка, чи завантажені дані
      * 
      * @return bool
      */
@@ -290,7 +290,7 @@ class Csv {
     }
     
     /**
-     * Получение пути к файлу
+     * Отримання шляху до файлу
      * 
      * @return string
      */
@@ -299,12 +299,12 @@ class Csv {
     }
     
     /**
-     * Статический метод: Чтение CSV файла
+     * Статичний метод: Читання CSV файлу
      * 
-     * @param string $filePath Путь к файлу
-     * @param string $delimiter Разделитель
-     * @param string $enclosure Символ обрамления
-     * @param bool $hasHeader Имеет ли файл заголовки
+     * @param string $filePath Шлях до файлу
+     * @param string $delimiter Роздільник
+     * @param string $enclosure Символ обрамлення
+     * @param bool $hasHeader Чи має файл заголовки
      * @return array
      */
     public static function read(string $filePath, string $delimiter = ',', string $enclosure = '"', bool $hasHeader = true): array {
@@ -314,13 +314,13 @@ class Csv {
     }
     
     /**
-     * Статический метод: Запись CSV файла
+     * Статичний метод: Запис CSV файлу
      * 
-     * @param string $filePath Путь к файлу
-     * @param array $data Данные
-     * @param string $delimiter Разделитель
-     * @param string $enclosure Символ обрамления
-     * @param bool $writeHeader Записывать ли заголовки
+     * @param string $filePath Шлях до файлу
+     * @param array $data Дані
+     * @param string $delimiter Роздільник
+     * @param string $enclosure Символ обрамлення
+     * @param bool $writeHeader Записувати чи заголовки
      * @return bool
      */
     public static function write(string $filePath, array $data, string $delimiter = ',', string $enclosure = '"', bool $writeHeader = true): bool {
@@ -330,11 +330,11 @@ class Csv {
     }
     
     /**
-     * Статический метод: Конвертация массива в CSV строку
+     * Статичний метод: Конвертація масиву в CSV рядок
      * 
-     * @param array $data Данные
-     * @param string $delimiter Разделитель
-     * @param string $enclosure Символ обрамления
+     * @param array $data Дані
+     * @param string $delimiter Роздільник
+     * @param string $enclosure Символ обрамлення
      * @return string
      */
     public static function arrayToString(array $data, string $delimiter = ',', string $enclosure = '"'): string {

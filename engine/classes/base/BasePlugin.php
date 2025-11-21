@@ -24,55 +24,72 @@ abstract class BasePlugin {
     }
     
     /**
-     * Загрузка конфигурации плагина
+     * Завантаження конфігурації плагіна
+     * 
+     * @return void
      */
-    private function loadConfig() {
+    private function loadConfig(): void {
         $reflection = new ReflectionClass($this);
         $pluginDir = dirname($reflection->getFileName());
         $configFile = $pluginDir . '/plugin.json';
         
         if (file_exists($configFile)) {
-            $this->config = json_decode(file_get_contents($configFile), true);
+            $configContent = file_get_contents($configFile);
+            if ($configContent !== false) {
+                $this->config = json_decode($configContent, true) ?? [];
+            }
         }
     }
     
     /**
-     * Инициализация плагина (вызывается при загрузке)
+     * Ініціалізація плагіна (викликається при завантаженні)
+     * 
+     * @return void
      */
-    public function init() {
-        // Переопределяется в дочерних классах
+    public function init(): void {
+        // Перевизначається в дочірніх класах
     }
     
     /**
-     * Активация плагина
+     * Активування плагіна
+     * 
+     * @return void
      */
-    public function activate() {
-        // Переопределяется в дочерних классах
+    public function activate(): void {
+        // Перевизначається в дочірніх класах
     }
     
     /**
-     * Деактивация плагина
+     * Деактивування плагіна
+     * 
+     * @return void
      */
-    public function deactivate() {
-        // Переопределяется в дочерних классах
+    public function deactivate(): void {
+        // Перевизначається в дочірніх класах
     }
     
     /**
-     * Установка плагина (создание таблиц, настроек и т.д.)
+     * Встановлення плагіна (створення таблиць, налаштувань тощо)
+     * 
+     * @return void
      */
-    public function install() {
-        // Переопределяется в дочерних классах
+    public function install(): void {
+        // Перевизначається в дочірніх класах
     }
     
     /**
-     * Удаление плагина (очистка данных)
+     * Видалення плагіна (очищення даних)
+     * 
+     * @return void
      */
-    public function uninstall() {
-        // Переопределяется в дочерних классах
+    public function uninstall(): void {
+        // Перевизначається в дочірніх класах
     }
     
     /**
-     * Получение настроек плагина с кешированием
+     * Отримання налаштувань плагіна з кешуванням
+     * 
+     * @return array Масив налаштувань
      */
     public function getSettings(): array {
         if (!$this->db) {
@@ -99,14 +116,18 @@ abstract class BasePlugin {
                 
                 return $settings;
             } catch (Exception $e) {
-                error_log("BasePlugin getSettings error: " . $e->getMessage());
+                error_log("BasePlugin getSettings помилка: " . $e->getMessage());
                 return [];
             }
-        }, 1800); // Кешируем на 30 минут
+        }, 1800); // Кешуємо на 30 хвилин
     }
     
     /**
-     * Сохранение настройки плагина
+     * Збереження налаштування плагіна
+     * 
+     * @param string $key Ключ налаштування
+     * @param mixed $value Значення налаштування
+     * @return bool Успіх операції
      */
     public function setSetting(string $key, $value): bool {
         if (!$this->db || empty($key)) {
@@ -123,19 +144,23 @@ abstract class BasePlugin {
             $result = $stmt->execute([$this->getSlug(), $key, $value]);
             
             if ($result) {
-                // Очищаем кеш настроек
+                // Очищаємо кеш налаштувань
                 cache_forget('plugin_settings_' . $this->getSlug());
             }
             
             return $result;
         } catch (Exception $e) {
-            error_log("BasePlugin setSetting error: " . $e->getMessage());
+            error_log("BasePlugin setSetting помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Получение настройки плагина
+     * Отримання налаштування плагіна
+     * 
+     * @param string $key Ключ налаштування
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed Значення налаштування
      */
     public function getSetting(string $key, $default = null) {
         $settings = $this->getSettings();
@@ -143,66 +168,85 @@ abstract class BasePlugin {
     }
     
     /**
-     * Получение слага плагина
+     * Отримання слагу плагіна
+     * 
+     * @return string Слаг плагіна
      */
     public function getSlug(): string {
         return $this->config['slug'] ?? strtolower(get_class($this));
     }
     
     /**
-     * Получение имени плагина
+     * Отримання імені плагіна
+     * 
+     * @return string Ім'я плагіна
      */
     public function getName(): string {
         return $this->config['name'] ?? get_class($this);
     }
     
     /**
-     * Получение версии плагина
+     * Отримання версії плагіна
+     * 
+     * @return string Версія плагіна
      */
     public function getVersion(): string {
         return $this->config['version'] ?? '1.0.0';
     }
     
     /**
-     * Получение описания плагина
+     * Отримання опису плагіна
+     * 
+     * @return string Опис плагіна
      */
     public function getDescription(): string {
         return $this->config['description'] ?? '';
     }
     
     /**
-     * Получение автора плагина
+     * Отримання автора плагіна
+     * 
+     * @return string Автор плагіна
      */
     public function getAuthor(): string {
         return $this->config['author'] ?? '';
     }
     
     /**
-     * Получение URL плагина
+     * Отримання URL плагіна
+     * 
+     * @return string URL плагіна
      */
     public function getPluginUrl(): string {
         $pluginDir = basename(dirname((new ReflectionClass($this))->getFileName()));
-        // Используем UrlHelper для получения актуального URL с правильным протоколом
+        // Використовуємо UrlHelper для отримання актуального URL з правильним протоколом
         if (class_exists('UrlHelper')) {
             return UrlHelper::site('/plugins/' . $pluginDir . '/');
         }
-        // Fallback на константу, если UrlHelper не доступен
+        // Fallback на константу, якщо UrlHelper не доступний
         $siteUrl = defined('SITE_URL') ? SITE_URL : '';
         return $siteUrl . '/plugins/' . $pluginDir . '/';
     }
     
     /**
-     * Получение пути к плагину
+     * Отримання шляху до плагіна
+     * 
+     * @return string Шлях до плагіна
      */
     public function getPluginPath(): string {
         return dirname((new ReflectionClass($this))->getFileName()) . '/';
     }
     
     /**
-     * Подключение CSS файла плагина
-     * Использует хук theme_head для подключения стилей
+     * Підключення CSS файлу плагіна
+     * Використовує хук theme_head для підключення стилів
+     * 
+     * @param string $handle Ідентифікатор стилю
+     * @param string $file Відносний шлях до файлу
+     * @param array $dependencies Залежності (не використовується, для сумісності)
+     * @return void
      */
-    public function enqueueStyle($handle, $file, $dependencies = []) {
+    public function enqueueStyle(string $handle, string $file, array $dependencies = []): void {
         $url = $this->getPluginUrl() . $file;
         
         addHook('theme_head', function() use ($url, $handle) {
@@ -211,10 +255,16 @@ abstract class BasePlugin {
     }
     
     /**
-     * Подключение JS файла плагина
-     * Использует хук theme_footer для подключения скриптов
+     * Підключення JS файлу плагіна
+     * Використовує хук theme_footer для підключення скриптів
+     * 
+     * @param string $handle Ідентифікатор скрипту
+     * @param string $file Відносний шлях до файлу
+     * @param array $dependencies Залежності (не використовується, для сумісності)
+     * @param bool $inFooter Чи підключати в футері
+     * @return void
      */
-    public function enqueueScript($handle, $file, $dependencies = [], $inFooter = true) {
+    public function enqueueScript(string $handle, string $file, array $dependencies = [], bool $inFooter = true): void {
         $url = $this->getPluginUrl() . $file;
         
         $hookName = $inFooter ? 'theme_footer' : 'theme_head';
@@ -225,26 +275,41 @@ abstract class BasePlugin {
     }
     
     /**
-     * Добавление пункта меню в админку
+     * Додавання пункту меню в адмінку
+     * 
+     * @param string $title Назва пункту меню
+     * @param string $capability Право доступу
+     * @param string $menuSlug Слаг меню
+     * @param callable $callback Функція зворотного виклику
+     * @param string $icon Іконка (Font Awesome клас)
+     * @return void
      */
-    public function addAdminMenu($title, $capability, $menuSlug, $callback, $icon = '') {
+    public function addAdminMenu(string $title, string $capability, string $menuSlug, callable $callback, string $icon = ''): void {
         addHook('admin_menu', function() use ($title, $capability, $menuSlug, $callback, $icon) {
             // Логика добавления меню будет реализована в админке
         });
     }
     
     /**
-     * Локализация скрипта (аналог wp_localize_script)
+     * Локалізація скрипту (аналог wp_localize_script)
+     * 
+     * @param string $handle Ідентифікатор скрипту
+     * @param string $objectName Назва JavaScript об'єкта
+     * @param array $data Дані для передачі
+     * @return void
      */
-    protected function localizeScript($handle, $objectName, $data) {
-        // Добавляем JavaScript переменную
+    protected function localizeScript(string $handle, string $objectName, array $data): void {
+        // Додаємо JavaScript змінну
         addHook('theme_footer', function() use ($objectName, $data) {
             echo "<script>var {$objectName} = " . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . ";</script>\n";
         });
     }
     
     /**
-     * Создание nonce (аналог wp_create_nonce)
+     * Створення nonce (аналог wp_create_nonce)
+     * 
+     * @param string $action Дія для nonce
+     * @return string Nonce токен
      */
     protected function createNonce(string $action): string {
         $session = sessionManager('plugin');
@@ -253,7 +318,7 @@ abstract class BasePlugin {
         $nonce = bin2hex(random_bytes(32));
         $nonces[$action] = [
             'nonce' => $nonce,
-            'expires' => time() + 3600 // 1 час
+            'expires' => time() + 3600 // 1 година
         ];
         
         $session->set('nonces', $nonces);
@@ -262,7 +327,11 @@ abstract class BasePlugin {
     }
     
     /**
-     * Проверка nonce (аналог wp_verify_nonce)
+     * Перевірка nonce (аналог wp_verify_nonce)
+     * 
+     * @param string|null $nonce Nonce токен для перевірки
+     * @param string $action Дія для nonce
+     * @return bool Чи валідний nonce
      */
     protected function verifyNonce(?string $nonce, string $action): bool {
         if (empty($nonce)) {
@@ -278,16 +347,16 @@ abstract class BasePlugin {
         
         $stored = $nonces[$action];
         
-        // Проверяем срок действия
+        // Перевіряємо термін дії
         if (isset($stored['expires']) && $stored['expires'] < time()) {
             unset($nonces[$action]);
             $session->set('nonces', $nonces);
             return false;
         }
         
-        // Проверяем nonce
+        // Перевіряємо nonce
         if (isset($stored['nonce']) && hash_equals($stored['nonce'], $nonce)) {
-            // Удаляем использованный nonce (одноразовое использование)
+            // Видаляємо використаний nonce (одноразове використання)
             unset($nonces[$action]);
             $session->set('nonces', $nonces);
             return true;
@@ -297,7 +366,11 @@ abstract class BasePlugin {
     }
     
     /**
-     * Отправка JSON ответа
+     * Відправка JSON відповіді
+     * 
+     * @param bool $success Чи успішна операція
+     * @param mixed $data Дані для відправки
+     * @return void
      */
     private function sendJsonResponse(bool $success, $data): void {
         if (!headers_sent()) {
@@ -308,21 +381,31 @@ abstract class BasePlugin {
     }
     
     /**
-     * Отправка JSON успеха (аналог wp_send_json_success)
+     * Відправка JSON успіху (аналог wp_send_json_success)
+     * 
+     * @param mixed $data Дані для відправки
+     * @return void
      */
     protected function sendJsonSuccess($data): void {
         $this->sendJsonResponse(true, $data);
     }
     
     /**
-     * Отправка JSON ошибки (аналог wp_send_json_error)
+     * Відправка JSON помилки (аналог wp_send_json_error)
+     * 
+     * @param mixed $data Дані помилки
+     * @return void
      */
     protected function sendJsonError($data): void {
         $this->sendJsonResponse(false, $data);
     }
     
     /**
-     * Логирование действий плагина
+     * Логування дій плагіна
+     * 
+     * @param string $message Повідомлення для логування
+     * @param string $level Рівень логування (info, warning, error)
+     * @return void
      */
     public function log(string $message, string $level = 'info'): void {
         $logMessage = "[" . date('Y-m-d H:i:s') . "] [{$this->getName()}] [{$level}] {$message}";
@@ -330,7 +413,9 @@ abstract class BasePlugin {
     }
     
     /**
-     * Проверка зависимостей плагина
+     * Перевірка залежностей плагіна
+     * 
+     * @return bool Чи всі залежності встановлені
      */
     public function checkDependencies(): bool {
         if (!isset($this->config['dependencies']) || !is_array($this->config['dependencies'])) {
@@ -349,7 +434,7 @@ abstract class BasePlugin {
                 }
             }
         } catch (Exception $e) {
-            error_log("Plugin dependency check error: " . $e->getMessage());
+            error_log("Помилка перевірки залежностей плагіна: " . $e->getMessage());
             return false;
         }
         
@@ -357,7 +442,9 @@ abstract class BasePlugin {
     }
     
     /**
-     * Получение конфигурации плагина
+     * Отримання конфігурації плагіна
+     * 
+     * @return array Масив конфігурації
      */
     public function getConfig(): array {
         return $this->config ?? [];

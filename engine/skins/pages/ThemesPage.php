@@ -13,7 +13,7 @@ class ThemesPage extends AdminPage {
         $this->pageTitle = 'Теми - Flowaxy CMS';
         $this->templateName = 'themes';
         
-        // Регистрируем модальное окно загрузки темы через ModalHandler
+        // Реєструємо модальне вікно завантаження теми через ModalHandler
         $this->registerModal('uploadThemeModal', [
             'title' => 'Завантажити тему',
             'type' => 'upload',
@@ -47,10 +47,10 @@ class ThemesPage extends AdminPage {
             ]
         ]);
         
-        // Регистрируем обработчик загрузки темы
+        // Реєструємо обробник завантаження теми
         $this->registerModalHandler('uploadThemeModal', 'upload_theme', [$this, 'handleUploadTheme']);
         
-        // Используем вспомогательные методы для создания кнопок
+        // Використовуємо допоміжні методи для створення кнопок
         $headerButtons = $this->createButtonGroup([
             [
                 'text' => 'Завантажити тему',
@@ -85,7 +85,7 @@ class ThemesPage extends AdminPage {
                 return;
             }
             
-            // Старый способ обработки AJAX (для обратной совместимости)
+            // Старий спосіб обробки AJAX (для зворотної сумісності)
             $this->handleAjax();
             return;
         }

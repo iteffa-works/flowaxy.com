@@ -1,7 +1,7 @@
 <?php
 /**
- * Менеджер маршрутизации системы
- * Определяет контекст (админка / API / публичная часть) и управляет маршрутами
+ * Менеджер маршрутизації системи
+ * Визначає контекст (адмінка / API / публічна частина) та управляє маршрутами
  *
  * @package Engine\Classes\Managers
  * @version 2.0.0
@@ -32,7 +32,7 @@ class RouterManager {
     }
 
     /**
-     * Получение экземпляра (Singleton)
+     * Отримання екземпляра (Singleton)
      * 
      * @return self
      * @throws Exception
@@ -45,7 +45,7 @@ class RouterManager {
     }
 
     /**
-     * Получение объекта Router
+     * Отримання об'єкта Router
      * 
      * @return Router
      */
@@ -54,7 +54,7 @@ class RouterManager {
     }
 
     /**
-     * Получение текущего контекста
+     * Отримання поточного контексту
      * 
      * @return string
      */
@@ -63,7 +63,7 @@ class RouterManager {
     }
 
     /**
-     * Проверка, является ли текущий контекст админкой
+     * Перевірка, чи є поточний контекст адмінкою
      * 
      * @return bool
      */
@@ -72,7 +72,7 @@ class RouterManager {
     }
 
     /**
-     * Проверка, является ли текущий контекст API
+     * Перевірка, чи є поточний контекст API
      * 
      * @return bool
      */
@@ -81,7 +81,7 @@ class RouterManager {
     }
 
     /**
-     * Проверка, является ли текущий контекст публичной частью
+     * Перевірка, чи є поточний контекст публічною частиною
      * 
      * @return bool
      */
@@ -90,7 +90,7 @@ class RouterManager {
     }
 
     /**
-     * Получение базового пути для текущего контекста
+     * Отримання базового шляху для поточного контексту
      * 
      * @return string
      */
@@ -99,12 +99,12 @@ class RouterManager {
     }
 
     /**
-     * Выполнение диспетчеризации маршрутов
+     * Виконання диспетчеризації маршрутів
      * 
      * @return void
      */
     public function dispatch(): void {
-        // Блокировка доступа к /install, если система уже установлена
+        // Блокування доступу до /install, якщо система вже встановлена
         $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
         $path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
         
@@ -112,7 +112,7 @@ class RouterManager {
             $this->blockInstallerIfInstalled();
         }
 
-        // Обработка AJAX запросов
+        // Обробка AJAX запитів
         if (class_exists('AjaxHandler') && AjaxHandler::isAjax()) {
             while (ob_get_level() > 0) {
                 ob_end_clean();
@@ -120,7 +120,7 @@ class RouterManager {
             ini_set('display_errors', '0');
         }
 
-        // Загружаем дополнительные маршруты из плагинов, если еще не загружены
+        // Завантажуємо додаткові маршрути з плагінів, якщо ще не завантажені
         if (!$this->routesLoaded) {
             $this->loadPluginRoutes();
             $this->routesLoaded = true;
@@ -130,12 +130,12 @@ class RouterManager {
     }
 
     /**
-     * Добавление маршрута в текущий контекст
+     * Додавання маршруту в поточний контекст
      * 
-     * @param string|array $methods HTTP методы (GET, POST, PUT, DELETE и т.д.)
-     * @param string $path Путь маршрута
-     * @param callable|string $handler Обработчик (функция, замыкание, класс)
-     * @param array $options Дополнительные опции (middleware, name, etc.)
+     * @param string|array $methods HTTP методи (GET, POST, PUT, DELETE тощо)
+     * @param string $path Шлях маршруту
+     * @param callable|string $handler Обробник (функція, замикання, клас)
+     * @param array $options Додаткові опції (middleware, name, тощо)
      * @return self
      */
     public function addRoute($methods, string $path, $handler, array $options = []): self {
@@ -144,11 +144,11 @@ class RouterManager {
     }
 
     /**
-     * Регистрация страницы админки в виде класса
+     * Реєстрація сторінки адмінки у вигляді класу
      * 
-     * @param string $slug Slug страницы
-     * @param string $className Имя класса страницы
-     * @param array $options Дополнительные опции
+     * @param string $slug Slug сторінки
+     * @param string $className Ім'я класу сторінки
+     * @param array $options Додаткові опції
      * @return void
      */
     public function registerAdminPage(string $slug, string $className, array $options = []): void {
@@ -160,10 +160,10 @@ class RouterManager {
     }
 
     /**
-     * Выполнение callback только в определенном контексте
+     * Виконання callback тільки в певному контексті
      * 
      * @param string $context Контекст (CONTEXT_ADMIN, CONTEXT_API, CONTEXT_PUBLIC)
-     * @param callable $callback Callback функция
+     * @param callable $callback Callback функція
      * @return void
      */
     public function when(string $context, callable $callback): void {
@@ -173,8 +173,8 @@ class RouterManager {
     }
 
     /**
-     * Определение контекста на основе URI
-     * Оптимизированная версия с улучшенной обработкой путей
+     * Визначення контексту на основі URI
+     * Оптимізована версія з покращеною обробкою шляхів
      * 
      * @return void
      */
@@ -182,45 +182,45 @@ class RouterManager {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $path = parse_url($uri, PHP_URL_PATH) ?? '/';
 
-        // Нормализация пути
+        // Нормалізація шляху
         $path = $this->normalizePath($path);
 
-        // Проверяем контексты в порядке приоритета
-        // 1. API (высший приоритет)
+        // Перевіряємо контексти в порядку пріоритету
+        // 1. API (найвищий пріоритет)
         if ($this->isApiPath($path)) {
             $this->context = self::CONTEXT_API;
             $this->basePath = $this->detectApiBasePath($path);
             return;
         }
 
-        // 2. Админка
+        // 2. Адмінка
         if ($this->isAdminPath($path)) {
             $this->context = self::CONTEXT_ADMIN;
             $this->basePath = '/admin';
             return;
         }
 
-        // 3. Публичная часть (по умолчанию)
+        // 3. Публічна частина (за замовчуванням)
         $this->context = self::CONTEXT_PUBLIC;
         $this->basePath = '/';
     }
 
     /**
-     * Нормализация пути (удаление дублирующихся слэшей, очистка)
+     * Нормалізація шляху (видалення дублюючих слэшів, очищення)
      * 
-     * @param string $path Путь для нормализации
-     * @return string Нормализованный путь
+     * @param string $path Шлях для нормалізації
+     * @return string Нормалізований шлях
      */
     private function normalizePath(string $path): string {
-        // Удаление дублирующихся слэшей
+        // Видалення дублюючих слэшів (оптимізовано)
         $path = preg_replace('#/+#', '/', $path);
         
-        // Удаление конечного слэша (кроме корня)
+        // Видалення кінцевого слэша (крім кореня)
         if ($path !== '/' && substr($path, -1) === '/') {
             $path = rtrim($path, '/');
         }
         
-        // Убеждаемся, что путь начинается со слэша
+        // Переконуємося, що шлях починається зі слэша
         if (substr($path, 0, 1) !== '/') {
             $path = '/' . $path;
         }
@@ -229,69 +229,69 @@ class RouterManager {
     }
 
     /**
-     * Проверка, является ли путь API путём
+     * Перевірка, чи є шлях API шляхом
      * 
-     * @param string $path Путь для проверки
+     * @param string $path Шлях для перевірки
      * @return bool
      */
     private function isApiPath(string $path): bool {
-        // Проверяем различные варианты API путей
-        // /api, /api/, /api/v1, /api/v2, /api-v1 и т.д.
+        // Перевіряємо різні варіанти API шляхів
+        // /api, /api/, /api/v1, /api/v2, /api-v1 тощо
         return preg_match('#^/api(/v\d+)?(/|$)#', $path) === 1 ||
                preg_match('#^/api-v?\d+#', $path) === 1;
     }
 
     /**
-     * Определение базового пути для API
+     * Визначення базового шляху для API
      * 
-     * @param string $path Путь запроса
-     * @return string Базовый путь API
+     * @param string $path Шлях запиту
+     * @return string Базовий шлях API
      */
     private function detectApiBasePath(string $path): string {
-        // Проверяем версию API в пути /api/v1, /api/v2 и т.д.
+        // Перевіряємо версію API в шляху /api/v1, /api/v2 тощо
         if (preg_match('#^/api/v(\d+)#', $path, $matches)) {
             return '/api/v' . $matches[1];
         }
         
-        // Проверяем старый формат api-v1, api-v2 и т.д.
+        // Перевіряємо старий формат api-v1, api-v2 тощо
         if (preg_match('#^/api-v(\d+)#', $path, $matches)) {
             return '/api/v' . $matches[1];
         }
         
-        // По умолчанию используем v1
+        // За замовчуванням використовуємо v1
         return '/api/v1';
     }
 
     /**
-     * Проверка, является ли путь админским путём
+     * Перевірка, чи є шлях адмінським шляхом
      * 
-     * @param string $path Путь для проверки
+     * @param string $path Шлях для перевірки
      * @return bool
      */
     private function isAdminPath(string $path): bool {
-        // Точное совпадение /admin или путь начинается с /admin/
+        // Точне співпадіння /admin або шлях починається з /admin/
         return $path === '/admin' || strpos($path, '/admin/') === 0;
     }
 
     /**
-     * Инициализация Router с нужными параметрами
+     * Ініціалізація Router з потрібними параметрами
      * 
      * @return void
      * @throws RuntimeException
      */
     private function bootRouter(): void {
         if (!class_exists('Router')) {
-            throw new RuntimeException('Router class not found');
+            throw new RuntimeException('Клас Router не знайдено');
         }
 
-        // Определяем маршрут по умолчанию для админки
+        // Визначаємо маршрут за замовчуванням для адмінки
         $defaultRoute = $this->context === self::CONTEXT_ADMIN ? 'dashboard' : null;
 
         $this->router = new Router($this->basePath, $defaultRoute);
     }
 
     /**
-     * Регистрация основных маршрутов в зависимости от контекста
+     * Реєстрація основних маршрутів залежно від контексту
      * 
      * @return void
      */
@@ -310,7 +310,7 @@ class RouterManager {
     }
 
     /**
-     * Загрузка маршрутов API
+     * Завантаження маршрутів API
      * 
      * @return void
      */
@@ -323,32 +323,32 @@ class RouterManager {
     }
 
     /**
-     * Загрузка маршрутов админки
+     * Завантаження маршрутів адмінки
      * 
      * @return void
      */
     private function loadAdminRoutes(): void {
-        // Загружаем SimpleTemplate если он есть
+        // Завантажуємо SimpleTemplate якщо він є
         $simpleTemplate = __DIR__ . '/../../skins/includes/SimpleTemplate.php';
         if (file_exists($simpleTemplate)) {
             require_once $simpleTemplate;
         }
 
-        // Загружаем маршруты админки
+        // Завантажуємо маршрути адмінки
         $routesFile = __DIR__ . '/../../skins/includes/admin-routes.php';
         if (file_exists($routesFile)) {
             $router = $this->router;
             require $routesFile;
         }
 
-        // Позволяем плагинам добавлять свои маршруты через хук
+        // Дозволяємо плагінам додавати свої маршрути через хук
         if (function_exists('doHook')) {
             doHook('admin_routes', [$this->router, $this]);
         }
     }
 
     /**
-     * Загрузка маршрутов из плагинов
+     * Завантаження маршрутів з плагінів
      * 
      * @return void
      */
@@ -357,17 +357,17 @@ class RouterManager {
             return;
         }
 
-        // Хук для добавления маршрутов плагинами
+        // Хук для додавання маршрутів плагінами
         doHook('register_routes', [$this->router, $this]);
     }
 
     /**
-     * Регистрация публичных маршрутов
+     * Реєстрація публічних маршрутів
      * 
      * @return void
      */
     private function registerPublicRoutes(): void {
-        // Основной маршрут для публичной части
+        // Основний маршрут для публічної частини
         $this->router->add(['GET', 'POST'], '', function () {
             if (function_exists('themeManager')) {
                 $tm = themeManager();
@@ -388,18 +388,18 @@ class RouterManager {
                 }
             }
 
-            // Fallback если тема не найдена
+            // Fallback якщо тема не знайдена
             return renderThemeFallback();
         });
 
-        // Позволяем плагинам добавлять свои публичные маршруты
+        // Дозволяємо плагінам додавати свої публічні маршрути
         if (function_exists('doHook')) {
             doHook('public_routes', [$this->router, $this]);
         }
     }
 
     /**
-     * Очистка кэша маршрутов
+     * Очищення кешу маршрутів
      * 
      * @return void
      */
@@ -409,12 +409,12 @@ class RouterManager {
     }
 
     /**
-     * Получение списка всех зарегистрированных маршрутов (для отладки)
+     * Отримання списку всіх зареєстрованих маршрутів (для відлагодження)
      * 
      * @return array
      */
     public function getRoutes(): array {
-        // Если Router имеет метод для получения маршрутов
+        // Якщо Router має метод для отримання маршрутів
         if (method_exists($this->router, 'getRoutes')) {
             return $this->router->getRoutes();
         }
@@ -422,28 +422,28 @@ class RouterManager {
     }
 
     /**
-     * Блокировка доступа к установщику, если система уже установлена
+     * Блокування доступу до встановлювача, якщо система вже встановлена
      * 
      * @return void
      */
     private function blockInstallerIfInstalled(): void {
         $databaseIniFile = __DIR__ . '/../../data/database.ini';
         
-        // Проверяем, идет ли процесс установки (есть настройки БД в сессии)
-        // Используем Session напрямую, так как sessionManager может быть еще не доступен
+        // Перевіряємо, чи йде процес встановлення (є налаштування БД в сесії)
+        // Використовуємо Session напряму, оскільки sessionManager може бути ще не доступний
         if (function_exists('sessionManager')) {
             $session = sessionManager('installer');
             $isInstallationInProgress = $session->has('db_config') && is_array($session->get('db_config'));
         } else {
-            // Fallback на прямой доступ к сессии для проверки
+            // Fallback на прямий доступ до сесії для перевірки
             $isInstallationInProgress = isset($_SESSION['install_db_config']) && is_array($_SESSION['install_db_config']);
         }
         
-        // Если система установлена И процесс установки не идет, блокируем доступ
+        // Якщо система встановлена І процес встановлення не йде, блокуємо доступ
         if (file_exists($databaseIniFile) && !$isInstallationInProgress) {
-            // Проверяем, это AJAX запрос для тестирования БД (разрешен во время установки)
+            // Перевіряємо, чи це AJAX запит для тестування БД (дозволений під час встановлення)
             $action = $_GET['action'] ?? '';
-            $isAjaxAction = ($action === 'test_db' || $action === 'create_table') && $_SERVER['REQUEST_METHOD'] === 'POST';
+            $isAjaxAction = ($action === 'test_db' || $action === 'create_table') && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
             
             if (!$isAjaxAction) {
                 http_response_code(403);

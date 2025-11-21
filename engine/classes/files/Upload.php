@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для загрузки файлов
- * Безопасная загрузка файлов с валидацией, проверкой типов и размера
+ * Клас для завантаження файлів
+ * Безпечне завантаження файлів з валідацією, перевіркою типів та розміру
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
@@ -12,7 +12,7 @@ declare(strict_types=1);
 class Upload {
     private array $allowedExtensions = [];
     private array $allowedMimeTypes = [];
-    private int $maxFileSize = 10485760; // 10 MB по умолчанию
+    private int $maxFileSize = 10485760; // 10 MB за замовчуванням
     private string $uploadDir = '';
     private bool $createDirectories = true;
     private bool $overwriteExisting = false;
@@ -21,19 +21,19 @@ class Upload {
     /**
      * Конструктор
      * 
-     * @param string|null $uploadDir Директория для загрузки
+     * @param string|null $uploadDir Директорія для завантаження
      */
     public function __construct(?string $uploadDir = null) {
         if ($uploadDir !== null) {
             $this->setUploadDir($uploadDir);
         }
         
-        // Загружаем параметры из настроек, если доступны
+        // Завантажуємо параметри з налаштувань, якщо доступні
         $this->loadConfigParams();
     }
     
     /**
-     * Загрузка параметров конфигурации из настроек
+     * Завантаження параметрів конфігурації з налаштувань
      * 
      * @return void
      */
@@ -42,12 +42,12 @@ class Upload {
             $systemConfig = SystemConfig::getInstance();
             $this->maxFileSize = $systemConfig->getUploadMaxFileSize();
             
-            // Загружаем разрешенные расширения, если они не были установлены вручную
+            // Завантажуємо дозволені розширення, якщо вони не були встановлені вручну
             if (empty($this->allowedExtensions)) {
                 $this->allowedExtensions = $systemConfig->getUploadAllowedExtensions();
             }
             
-            // Загружаем разрешенные MIME типы, если они не были установлены вручную
+            // Завантажуємо дозволені MIME типи, якщо вони не були встановлені вручну
             if (empty($this->allowedMimeTypes)) {
                 $this->allowedMimeTypes = $systemConfig->getUploadAllowedMimeTypes();
             }
@@ -55,9 +55,9 @@ class Upload {
     }
     
     /**
-     * Установка директории для загрузки
+     * Встановлення директорії для завантаження
      * 
-     * @param string $uploadDir Путь к директории
+     * @param string $uploadDir Шлях до директорії
      * @return self
      */
     public function setUploadDir(string $uploadDir): self {
@@ -66,9 +66,9 @@ class Upload {
     }
     
     /**
-     * Установка разрешенных расширений
+     * Встановлення дозволених розширень
      * 
-     * @param array $extensions Массив расширений (например, ['jpg', 'png', 'pdf'])
+     * @param array $extensions Масив розширень (наприклад, ['jpg', 'png', 'pdf'])
      * @return self
      */
     public function setAllowedExtensions(array $extensions): self {
@@ -77,9 +77,9 @@ class Upload {
     }
     
     /**
-     * Установка разрешенных MIME типов
+     * Встановлення дозволених MIME типів
      * 
-     * @param array $mimeTypes Массив MIME типов
+     * @param array $mimeTypes Масив MIME типів
      * @return self
      */
     public function setAllowedMimeTypes(array $mimeTypes): self {
@@ -88,9 +88,9 @@ class Upload {
     }
     
     /**
-     * Установка максимального размера файла
+     * Встановлення максимального розміру файлу
      * 
-     * @param int $size Размер в байтах
+     * @param int $size Розмір у байтах
      * @return self
      */
     public function setMaxFileSize(int $size): self {

@@ -1,9 +1,9 @@
 <?php
 /**
- * Модуль установки системы
- * Проверка установки и создание таблиц БД
+ * Модуль установки системи
+ * Перевірка установки та створення таблиць БД
  * 
- * Поддерживает MySQL 5.7 и MySQL 8.0+ (приоритет на версию 8+)
+ * Підтримує MySQL 5.7 та MySQL 8.0+ (пріоритет на версію 8+)
  * 
  * @package Engine\Modules
  * @version 1.0.0
@@ -29,47 +29,47 @@ class InstallerManager extends BaseModule {
     private static ?bool $isMySQL8Plus = null;
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
-        // Модуль не требует инициализации
+        // Модуль не потребує ініціалізації
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Установщик не регистрирует хуки
+        // Установщик не реєструє хуки
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      */
     public function getInfo(): array {
         return [
             'name' => 'InstallerManager',
-            'title' => 'Установщик системы',
-            'description' => 'Проверка и выполнение установки системы',
+            'title' => 'Установщик системи',
+            'description' => 'Перевірка та виконання установки системи',
             'version' => '1.0.0',
             'author' => 'Flowaxy Team'
         ];
     }
     
     /**
-     * Получение API методов модуля
+     * Отримання API методів модуля
      */
     public function getApiMethods(): array {
         return [
-            'isInstalled' => 'Проверка установки системы',
-            'checkTables' => 'Проверка существования таблиц',
-            'install' => 'Установка системы',
-            'getRequiredTables' => 'Получение списка обязательных таблиц'
+            'isInstalled' => 'Перевірка установки системи',
+            'checkTables' => 'Перевірка існування таблиць',
+            'install' => 'Установка системи',
+            'getRequiredTables' => 'Отримання списку обов\'язкових таблиць'
         ];
     }
     
     /**
-     * Проверка установлена ли система
-     * Проверяет наличие файла database.ini
+     * Перевірка, чи встановлена система
+     * Перевіряє наявність файлу database.ini
      * 
      * @return bool
      */
@@ -77,7 +77,7 @@ class InstallerManager extends BaseModule {
         try {
             $databaseIniFile = dirname(__DIR__) . '/data/database.ini';
             
-            // Если файл database.ini существует, система установлена
+            // Якщо файл database.ini існує, система встановлена
             return file_exists($databaseIniFile);
         } catch (Exception $e) {
             return false;
@@ -85,7 +85,7 @@ class InstallerManager extends BaseModule {
     }
     
     /**
-     * Проверка существования всех обязательных таблиц
+     * Перевірка існування всіх обов'язкових таблиць
      * 
      * @return bool
      */
@@ -109,7 +109,7 @@ class InstallerManager extends BaseModule {
     }
     
     /**
-     * Проверка существования таблицы
+     * Перевірка існування таблиці
      * 
      * @param string $tableName
      * @return bool
@@ -130,8 +130,8 @@ class InstallerManager extends BaseModule {
     }
     
     /**
-     * Установка системы
-     * Создает все необходимые таблицы в БД
+     * Установка системи
+     * Створює всі необхідні таблиці в БД
      * 
      * @return array
      */
@@ -141,7 +141,7 @@ class InstallerManager extends BaseModule {
             if ($db === null) {
                 return [
                     'success' => false,
-                    'message' => 'Не удалось подключиться к базе данных',
+                    'message' => 'Не вдалося підключитися до бази даних',
                     'errors' => []
                 ];
             }
@@ -153,18 +153,18 @@ class InstallerManager extends BaseModule {
                 try {
                     $db->exec($sql);
                 } catch (Exception $e) {
-                    $errors[] = "Ошибка при создании таблицы {$tableName}: " . $e->getMessage();
+                    $errors[] = "Помилка при створенні таблиці {$tableName}: " . $e->getMessage();
                 }
             }
             
-            // После создания таблиц ролей выполняем SQL для создания базовых ролей и разрешений
+            // Після створення таблиць ролей виконуємо SQL для створення базових ролей та дозволів
             if (empty($errors)) {
                 try {
                     $rolesSqlFile = dirname(__DIR__) . '/db/roles_permissions.sql';
                     if (file_exists($rolesSqlFile)) {
                         $rolesSql = file_get_contents($rolesSqlFile);
                         if (!empty($rolesSql)) {
-                            // Выполняем SQL по частям, пропуская CREATE TABLE (они уже созданы)
+                            // Виконуємо SQL частинами, пропускаючи CREATE TABLE (вони вже створені)
                             $statements = array_filter(
                                 array_map('trim', explode(';', $rolesSql)),
                                 fn($stmt) => !empty($stmt) && 
@@ -174,7 +174,7 @@ class InstallerManager extends BaseModule {
                             );
                             
                             foreach ($statements as $statement) {
-                                // Пропускаем комментарии
+                                // Пропускаємо коментарі
                                 $statement = preg_replace('/--.*$/m', '', $statement);
                                 $statement = preg_replace('/\/\*.*?\*\//s', '', $statement);
                                 $statement = trim($statement);
@@ -183,7 +183,7 @@ class InstallerManager extends BaseModule {
                                     try {
                                         $db->exec($statement);
                                     } catch (Exception $e) {
-                                        // Игнорируем ошибки типа "уже существует" (INSERT IGNORE)
+                                        // Ігноруємо помилки типу "вже існує" (INSERT IGNORE)
                                         if (stripos($e->getMessage(), 'Duplicate') === false && 
                                             stripos($e->getMessage(), 'already exists') === false) {
                                             error_log("Roles SQL error: " . $e->getMessage());
@@ -195,32 +195,32 @@ class InstallerManager extends BaseModule {
                     }
                 } catch (Exception $e) {
                     error_log("Error loading roles SQL: " . $e->getMessage());
-                    // Не добавляем в errors, так как это не критично
+                    // Не додаємо в errors, оскільки це не критично
                 }
             }
             
             return [
                 'success' => empty($errors),
-                'message' => empty($errors) ? 'Система успешно установлена' : 'Установка завершена с ошибками',
+                'message' => empty($errors) ? 'Система успішно встановлена' : 'Установка завершена з помилками',
                 'errors' => $errors
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Ошибка при установке: ' . $e->getMessage(),
+                'message' => 'Помилка при установці: ' . $e->getMessage(),
                 'errors' => []
             ];
         } catch (Throwable $e) {
             return [
                 'success' => false,
-                'message' => 'Критическая ошибка: ' . $e->getMessage(),
+                'message' => 'Критична помилка: ' . $e->getMessage(),
                 'errors' => []
             ];
         }
     }
     
     /**
-     * Определение версии MySQL
+     * Визначення версії MySQL
      * 
      * @return string|null
      */
@@ -240,12 +240,12 @@ class InstallerManager extends BaseModule {
             
             if ($result && isset($result['version'])) {
                 self::$mysqlVersion = $result['version'];
-                // Определяем, является ли версия 8.0+
+                // Визначаємо, чи є версія 8.0+
                 $versionParts = explode('.', self::$mysqlVersion);
                 $majorVersion = (int)($versionParts[0] ?? 0);
                 $minorVersion = (int)($versionParts[1] ?? 0);
                 
-                // MySQL 8.0+ определяется как версия >= 8.0 (приоритет на 8+)
+                // MySQL 8.0+ визначається як версія >= 8.0 (пріоритет на 8+)
                 self::$isMySQL8Plus = ($majorVersion > 8) || ($majorVersion === 8);
                 
                 return self::$mysqlVersion;
@@ -258,7 +258,7 @@ class InstallerManager extends BaseModule {
     }
     
     /**
-     * Проверка, является ли MySQL версии 8.0+
+     * Перевірка, чи є MySQL версії 8.0+
      * 
      * @return bool
      */
@@ -272,29 +272,29 @@ class InstallerManager extends BaseModule {
     }
     
     /**
-     * Получение определений таблиц с учетом версии MySQL и кодировки
+     * Отримання визначень таблиць з урахуванням версії MySQL та кодування
      * 
-     * @param string $charset Кодировка (по умолчанию utf8mb4)
-     * @param string $collation Коллация (по умолчанию utf8mb4_unicode_ci)
+     * @param string $charset Кодування (за замовчуванням utf8mb4)
+     * @param string $collation Колація (за замовчуванням utf8mb4_unicode_ci)
      * @return array
      */
     public function getTableDefinitions(string $charset = 'utf8mb4', string $collation = 'utf8mb4_unicode_ci'): array {
         $isMySQL8Plus = $this->isMySQL8Plus();
         
-        // Базовые определения таблиц (совместимы с MySQL 5.7 и 8.0+)
+        // Базові визначення таблиць (сумісні з MySQL 5.7 та 8.0+)
         return $this->getTableDefinitionsForVersion($isMySQL8Plus, $charset, $collation);
     }
     
     /**
-     * Получение определений таблиц для конкретной версии MySQL и кодировки
+     * Отримання визначень таблиць для конкретної версії MySQL та кодування
      * 
-     * @param bool $isMySQL8Plus Использовать оптимизации для MySQL 8.0+
-     * @param string $charset Кодировка
-     * @param string $collation Коллация
+     * @param bool $isMySQL8Plus Використовувати оптимізації для MySQL 8.0+
+     * @param string $charset Кодування
+     * @param string $collation Колація
      * @return array
      */
     private function getTableDefinitionsForVersion(bool $isMySQL8Plus, string $charset = 'utf8mb4', string $collation = 'utf8mb4_unicode_ci'): array {
-        // Базовые определения таблиц (совместимы с MySQL 5.7 и 8.0+)
+        // Базові визначення таблиць (сумісні з MySQL 5.7 та 8.0+)
         $tables = [
             'plugins' => "CREATE TABLE IF NOT EXISTS `plugins` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -441,21 +441,21 @@ class InstallerManager extends BaseModule {
             
         ];
         
-        // Для MySQL 8.0+ можно использовать дополнительные оптимизации
-        // Приоритет на версию 8+, но SQL совместим с MySQL 5.7 и 8.0+
+        // Для MySQL 8.0+ можна використовувати додаткові оптимізації
+        // Пріоритет на версію 8+, але SQL сумісний з MySQL 5.7 та 8.0+
         if ($isMySQL8Plus) {
-            // В MySQL 8.0+ можно использовать:
-            // - Функциональные индексы
-            // - Улучшенную поддержку JSON
-            // - Оптимизированные запросы
-            // Но для совместимости оставляем базовый вариант
+            // В MySQL 8.0+ можна використовувати:
+            // - Функціональні індекси
+            // - Покращену підтримку JSON
+            // - Оптимізовані запити
+            // Але для сумісності залишаємо базовий варіант
         }
         
         return $tables;
     }
     
     /**
-     * Получение списка обязательных таблиц
+     * Отримання списку обов'язкових таблиць
      * 
      * @return array
      */

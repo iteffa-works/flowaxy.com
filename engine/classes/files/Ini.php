@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с INI файлами
- * Чтение, запись и манипуляции с INI конфигурационными файлами
+ * Клас для роботи з INI файлами
+ * Читання, запис та маніпуляції з INI конфігураційними файлами
  * 
  * @package Engine\Classes
  * @version 1.0.0
@@ -17,7 +17,7 @@ class Ini {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к INI файлу
+     * @param string|null $filePath Шлях до INI файлу
      */
     public function __construct(?string $filePath = null) {
         if ($filePath !== null) {
@@ -26,15 +26,15 @@ class Ini {
     }
     
     /**
-     * Установка пути к файлу
+     * Встановлення шляху до файлу
      * 
-     * @param string $filePath Путь к INI файлу
+     * @param string $filePath Шлях до INI файлу
      * @return self
-     * @throws Exception Если файл не существует или недоступен
+     * @throws Exception Якщо файл не існує або недоступний
      */
     public function setFile(string $filePath): self {
         if (!is_readable($filePath) && file_exists($filePath)) {
-            throw new Exception("INI файл существует, но недоступен для чтения: {$filePath}");
+            throw new Exception("INI файл існує, але недоступний для читання: {$filePath}");
         }
         
         $this->filePath = $filePath;
@@ -48,29 +48,29 @@ class Ini {
     }
     
     /**
-     * Загрузка данных из INI файла
+     * Завантаження даних з INI файлу
      * 
-     * @param int $mode Режим парсинга (INIScanner::NORMAL или INIScanner::RAW)
+     * @param int $mode Режим парсингу (INIScanner::NORMAL або INIScanner::RAW)
      * @return self
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
     public function load(int $mode = INI_SCANNER_NORMAL): self {
         if (empty($this->filePath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
         if (!file_exists($this->filePath)) {
-            throw new Exception("INI файл не существует: {$this->filePath}");
+            throw new Exception("INI файл не існує: {$this->filePath}");
         }
         
         if (!is_readable($this->filePath)) {
-            throw new Exception("INI файл недоступен для чтения: {$this->filePath}");
+            throw new Exception("INI файл недоступний для читання: {$this->filePath}");
         }
         
         $data = @parse_ini_file($this->filePath, true, $mode);
         
         if ($data === false) {
-            throw new Exception("Ошибка парсинга INI файла: {$this->filePath}");
+            throw new Exception("Помилка парсингу INI файлу: {$this->filePath}");
         }
         
         $this->data = $data;
@@ -80,26 +80,26 @@ class Ini {
     }
     
     /**
-     * Сохранение данных в INI файл
+     * Збереження даних у INI файл
      * 
-     * @param string|null $filePath Путь к файлу (если null, используется текущий)
-     * @param array|null $data Данные для сохранения (если null, используются текущие)
+     * @param string|null $filePath Шлях до файлу (якщо null, використовується поточний)
+     * @param array|null $data Дані для збереження (якщо null, використовуються поточні)
      * @return bool
-     * @throws Exception Если не удалось сохранить файл
+     * @throws Exception Якщо не вдалося зберегти файл
      */
     public function save(?string $filePath = null, ?array $data = null): bool {
         $targetPath = $filePath ?? $this->filePath;
         $dataToSave = $data ?? $this->data;
         
         if (empty($targetPath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
-        // Создаем директорию, если её нет
+        // Створюємо директорію, якщо її немає
         $dir = dirname($targetPath);
         if (!is_dir($dir)) {
             if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
+                throw new Exception("Не вдалося створити директорію: {$dir}");
             }
         }
         
@@ -108,12 +108,12 @@ class Ini {
         $result = @file_put_contents($targetPath, $content, LOCK_EX);
         
         if ($result === false) {
-            throw new Exception("Не удалось сохранить INI файл: {$targetPath}");
+            throw new Exception("Не вдалося зберегти INI файл: {$targetPath}");
         }
         
         @chmod($targetPath, 0644);
         
-        // Обновляем текущие данные
+        // Оновлюємо поточні дані
         if ($filePath === null) {
             $this->data = $dataToSave;
             $this->hasData = true;
@@ -123,10 +123,10 @@ class Ini {
     }
     
     /**
-     * Получение значения из INI
+     * Отримання значення з INI
      * 
-     * @param string $key Ключ (может быть в формате "section.key" или просто "key")
-     * @param mixed $default Значение по умолчанию
+     * @param string $key Ключ (може бути у форматі "section.key" або просто "key")
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function get(string $key, $default = null) {
@@ -134,7 +134,7 @@ class Ini {
             return $default;
         }
         
-        // Проверяем, есть ли секция в ключе
+        // Перевіряємо, чи є секція в ключі
         if (strpos($key, '.') !== false) {
             [$section, $sectionKey] = explode('.', $key, 2);
             
@@ -143,7 +143,7 @@ class Ini {
             }
         }
         
-        // Если это простая секция
+        // Якщо це проста секція
         if (isset($this->data[$key])) {
             if (is_array($this->data[$key])) {
                 return $this->data[$key];
@@ -151,7 +151,7 @@ class Ini {
             return $this->data[$key];
         }
         
-        // Ищем в корне
+        // Шукаємо в корені
         foreach ($this->data as $sectionKey => $sectionValue) {
             if (is_array($sectionValue) && isset($sectionValue[$key])) {
                 return $sectionValue[$key];
@@ -162,10 +162,10 @@ class Ini {
     }
     
     /**
-     * Установка значения в INI
+     * Встановлення значення в INI
      * 
-     * @param string $key Ключ (может быть в формате "section.key")
-     * @param mixed $value Значение
+     * @param string $key Ключ (може бути у форматі "section.key")
+     * @param mixed $value Значення
      * @return self
      */
     public function set(string $key, $value): self {
@@ -174,7 +174,7 @@ class Ini {
             $this->hasData = true;
         }
         
-        // Проверяем, есть ли секция в ключе
+        // Перевіряємо, чи є секція в ключі
         if (strpos($key, '.') !== false) {
             [$section, $sectionKey] = explode('.', $key, 2);
             
@@ -184,7 +184,7 @@ class Ini {
             
             $this->data[$section][$sectionKey] = $value;
         } else {
-            // Устанавливаем в корень
+            // Встановлюємо в корінь
             $this->data[$key] = $value;
         }
         
@@ -192,7 +192,7 @@ class Ini {
     }
     
     /**
-     * Проверка наличия ключа
+     * Перевірка наявності ключа
      * 
      * @param string $key Ключ
      * @return bool
@@ -214,7 +214,7 @@ class Ini {
     }
     
     /**
-     * Удаление ключа
+     * Видалення ключа
      * 
      * @param string $key Ключ
      * @return self
@@ -230,7 +230,7 @@ class Ini {
             if (isset($this->data[$section]) && is_array($this->data[$section])) {
                 unset($this->data[$section][$sectionKey]);
                 
-                // Удаляем секцию, если она пуста
+                // Видаляємо секцію, якщо вона порожня
                 if (empty($this->data[$section])) {
                     unset($this->data[$section]);
                 }
@@ -243,7 +243,7 @@ class Ini {
     }
     
     /**
-     * Получение всех данных
+     * Отримання всіх даних
      * 
      * @return array
      */
@@ -252,7 +252,7 @@ class Ini {
     }
     
     /**
-     * Очистка всех данных
+     * Очищення всіх даних
      * 
      * @return self
      */
@@ -263,10 +263,10 @@ class Ini {
     }
     
     /**
-     * Получение секции
+     * Отримання секції
      * 
-     * @param string $section Имя секции
-     * @param array $default Значение по умолчанию
+     * @param string $section Ім'я секції
+     * @param array $default Значення за замовчуванням
      * @return array
      */
     public function getSection(string $section, array $default = []): array {
@@ -282,10 +282,10 @@ class Ini {
     }
     
     /**
-     * Установка секции
+     * Встановлення секції
      * 
-     * @param string $section Имя секции
-     * @param array $data Данные секции
+     * @param string $section Ім'я секції
+     * @param array $data Дані секції
      * @return self
      */
     public function setSection(string $section, array $data): self {
@@ -300,9 +300,9 @@ class Ini {
     }
     
     /**
-     * Удаление секции
+     * Видалення секції
      * 
-     * @param string $section Имя секции
+     * @param string $section Ім'я секції
      * @return self
      */
     public function removeSection(string $section): self {
@@ -316,9 +316,9 @@ class Ini {
     }
     
     /**
-     * Проверка существования секции
+     * Перевірка існування секції
      * 
-     * @param string $section Имя секции
+     * @param string $section Ім'я секції
      * @return bool
      */
     public function hasSection(string $section): bool {
@@ -330,7 +330,7 @@ class Ini {
     }
     
     /**
-     * Получение списка всех секций
+     * Отримання списку всіх секцій
      * 
      * @return array
      */
@@ -351,10 +351,10 @@ class Ini {
     }
     
     /**
-     * Преобразование массива в INI формат
+     * Перетворення масиву в INI формат
      * 
-     * @param array $data Данные
-     * @param string $prefix Префикс для ключей (внутреннее использование)
+     * @param array $data Дані
+     * @param string $prefix Префікс для ключів (внутрішнє використання)
      * @return string
      */
     private function arrayToIni(array $data, string $prefix = ''): string {
@@ -364,7 +364,7 @@ class Ini {
             $fullKey = $prefix ? $prefix . '.' . $key : $key;
             
             if (is_array($value)) {
-                // Проверяем, является ли это секцией (все значения - скаляры)
+                // Перевіряємо, чи є це секцією (всі значення - скаляри)
                 $isSection = true;
                 foreach ($value as $v) {
                     if (is_array($v) || is_object($v) || is_resource($v)) {
@@ -374,22 +374,22 @@ class Ini {
                 }
                 
                 if ($isSection) {
-                    // Это секция INI
+                    // Це секція INI
                     $content .= "\n[{$key}]\n";
                     foreach ($value as $k => $v) {
                         $content .= $this->formatIniLine($k, $v);
                     }
                 } else {
-                    // Вложенный массив - рекурсивно обрабатываем
+                    // Вкладений масив - рекурсивно обробляємо
                     $content .= $this->arrayToIni($value, $fullKey);
                 }
             } else {
-                // Скалярное значение
+                // Скалярне значення
                 if ($prefix === '') {
-                    // Это корневое значение
+                    // Це кореневе значення
                     $content .= $this->formatIniLine($key, $value);
                 } else {
-                    // Это вложенное значение - используем точечную нотацию
+                    // Це вкладене значення - використовуємо крапкову нотацію
                     $content .= $this->formatIniLine($fullKey, $value);
                 }
             }
@@ -399,10 +399,10 @@ class Ini {
     }
     
     /**
-     * Форматирование строки INI
+     * Форматування рядка INI
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
+     * @param mixed $value Значення
      * @return string
      */
     private function formatIniLine(string $key, $value): string {
@@ -420,16 +420,16 @@ class Ini {
     }
     
     /**
-     * Экранирование ключа INI
+     * Екранування ключа INI
      * 
      * @param string $key Ключ
      * @return string
      */
     private function escapeKey(string $key): string {
-        // Экранируем специальные символы в ключах
+        // Екрануємо спеціальні символи в ключах
         $key = str_replace(['=', ';', '"'], ['\=', '\;', '\"'], $key);
         
-        // Если ключ содержит пробелы или специальные символы, заключаем в кавычки
+        // Якщо ключ містить пробіли або спеціальні символи, обгортаємо в лапки
         if (preg_match('/[\s\[\]]/', $key)) {
             $key = '"' . str_replace('"', '\"', $key) . '"';
         }
@@ -438,13 +438,13 @@ class Ini {
     }
     
     /**
-     * Экранирование значения INI
+     * Екранування значення INI
      * 
-     * @param string $value Значение
+     * @param string $value Значення
      * @return string
      */
     private function escapeValue(string $value): string {
-        // Если значение содержит специальные символы, кавычки или начинается с пробела, заключаем в кавычки
+        // Якщо значення містить спеціальні символи, лапки або починається з пробілу, обгортаємо в лапки
         if (preg_match('/[;\s"\[\]]/', $value) || $value === '' || (isset($value[0]) && $value[0] === ' ')) {
             $value = '"' . str_replace('"', '\"', $value) . '"';
         }
@@ -453,7 +453,7 @@ class Ini {
     }
     
     /**
-     * Получение пути к файлу
+     * Отримання шляху до файлу
      * 
      * @return string
      */
@@ -462,7 +462,7 @@ class Ini {
     }
     
     /**
-     * Проверка, загружены ли данные
+     * Перевірка, чи завантажені дані
      * 
      * @return bool
      */
@@ -471,41 +471,41 @@ class Ini {
     }
     
     /**
-     * Статический метод: Парсинг INI файла
+     * Статичний метод: Парсинг INI файлу
      * 
-     * @param string $path Путь к INI файлу
-     * @param bool $processSections Обрабатывать ли секции
-     * @param int $mode Режим парсинга
+     * @param string $path Шлях до INI файлу
+     * @param bool $processSections Обробляти чи секції
+     * @param int $mode Режим парсингу
      * @return array
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
     public static function parse(string $path, bool $processSections = true, int $mode = INI_SCANNER_NORMAL): array {
         if (!file_exists($path)) {
-            throw new Exception("INI файл не существует: {$path}");
+            throw new Exception("INI файл не існує: {$path}");
         }
         
         if (!is_readable($path)) {
-            throw new Exception("INI файл недоступен для чтения: {$path}");
+            throw new Exception("INI файл недоступний для читання: {$path}");
         }
         
         $data = @parse_ini_file($path, $processSections, $mode);
         
         if ($data === false) {
-            throw new Exception("Ошибка парсинга INI файла: {$path}");
+            throw new Exception("Помилка парсингу INI файлу: {$path}");
         }
         
         return $data;
     }
     
     /**
-     * Статический метод: Обновление значения в INI файле
+     * Статичний метод: Оновлення значення в INI файлі
      * 
-     * @param string $path Путь к INI файлу
-     * @param string $key Ключ для обновления
-     * @param mixed $value Новое значение
-     * @param bool $processSections Обрабатывать ли секции
+     * @param string $path Шлях до INI файлу
+     * @param string $key Ключ для оновлення
+     * @param mixed $value Нове значення
+     * @param bool $processSections Обробляти чи секції
      * @return bool
-     * @throws Exception Если файл не существует или не удалось обновить
+     * @throws Exception Якщо файл не існує або не вдалося оновити
      */
     public static function upgrade(string $path, string $key, $value, bool $processSections = true): bool {
         try {
@@ -523,33 +523,33 @@ class Ini {
             $ini->set($key, $value);
             return $ini->save();
         } catch (Exception $e) {
-            error_log("Ini::upgrade error: " . $e->getMessage());
+            error_log("Ini::upgrade помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Статический метод: Добавление/установка значения в INI файле
+     * Статичний метод: Додавання/встановлення значення в INI файлі
      * 
-     * @param string $path Путь к INI файлу
+     * @param string $path Шлях до INI файлу
      * @param string $key Ключ
-     * @param mixed $value Значение
-     * @param bool $processSections Обрабатывать ли секции
+     * @param mixed $value Значення
+     * @param bool $processSections Обробляти чи секції
      * @return bool
-     * @throws Exception Если не удалось добавить
+     * @throws Exception Якщо не вдалося додати
      */
     public static function add(string $path, string $key, $value, bool $processSections = true): bool {
         return self::upgrade($path, $key, $value, $processSections);
     }
     
     /**
-     * Статический метод: Удаление ключа из INI файла
+     * Статичний метод: Видалення ключа з INI файлу
      * 
-     * @param string $path Путь к INI файлу
-     * @param string $key Ключ для удаления
-     * @param bool $processSections Обрабатывать ли секции
+     * @param string $path Шлях до INI файлу
+     * @param string $key Ключ для видалення
+     * @param bool $processSections Обробляти чи секції
      * @return bool
-     * @throws Exception Если файл не существует или не удалось удалить
+     * @throws Exception Якщо файл не існує або не вдалося видалити
      */
     public static function delete(string $path, string $key, bool $processSections = true): bool {
         if (!file_exists($path)) {
@@ -571,17 +571,17 @@ class Ini {
             $ini->remove($key);
             return $ini->save();
         } catch (Exception $e) {
-            error_log("Ini::delete error: " . $e->getMessage());
+            error_log("Ini::delete помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Статический метод: Чтение INI файла
+     * Статичний метод: Читання INI файлу
      * 
-     * @param string $path Путь к INI файлу
-     * @param bool $processSections Обрабатывать ли секции
-     * @param int $mode Режим парсинга
+     * @param string $path Шлях до INI файлу
+     * @param bool $processSections Обробляти чи секції
+     * @param int $mode Режим парсингу
      * @return array
      */
     public static function read(string $path, bool $processSections = true, int $mode = INI_SCANNER_NORMAL): array {
@@ -589,28 +589,28 @@ class Ini {
     }
     
     /**
-     * Статический метод: Запись данных в INI файл
+     * Статичний метод: Запис даних у INI файл
      * 
-     * @param string $path Путь к INI файлу
-     * @param array $data Данные для записи
+     * @param string $path Шлях до INI файлу
+     * @param array $data Дані для запису
      * @return bool
      */
     public static function write(string $path, array $data): bool {
         try {
             $ini = new self($path);
-            // Используем методы для установки данных
+            // Використовуємо методи для встановлення даних
             foreach ($data as $key => $value) {
                 if (is_array($value)) {
-                    // Это секция
+                    // Це секція
                     $ini->setSection($key, $value);
                 } else {
-                    // Это простое значение
+                    // Це просте значення
                     $ini->set($key, $value);
                 }
             }
             return $ini->save();
         } catch (Exception $e) {
-            error_log("Ini::write error: " . $e->getMessage());
+            error_log("Ini::write помилка: " . $e->getMessage());
             return false;
         }
     }

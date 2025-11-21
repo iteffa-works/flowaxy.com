@@ -1,6 +1,6 @@
 <?php
 /**
- * Менеджер ролей и прав доступа
+ * Менеджер ролей та прав доступу
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -20,7 +20,7 @@ class RoleManager {
     }
     
     /**
-     * Получение экземпляра (Singleton)
+     * Отримання екземпляра (Singleton)
      */
     public static function getInstance(): self {
         if (self::$instance === null) {
@@ -30,15 +30,15 @@ class RoleManager {
     }
     
     /**
-     * Проверка наличия разрешения у пользователя
+     * Перевірка наявності дозволу у користувача
      */
     public function hasPermission(int $userId, string $permission): bool {
-        // Проверяем кеш
+        // Перевіряємо кеш
         if (isset($this->userPermissionsCache[$userId])) {
             return in_array($permission, $this->userPermissionsCache[$userId]);
         }
         
-        // Загружаем все разрешения пользователя
+        // Завантажуємо всі дозволи користувача
         $permissions = $this->getUserPermissions($userId);
         $this->userPermissionsCache[$userId] = $permissions;
         
@@ -46,7 +46,7 @@ class RoleManager {
     }
     
     /**
-     * Проверка наличия роли у пользователя
+     * Перевірка наявності ролі у користувача
      */
     public function hasRole(int $userId, string $roleSlug): bool {
         $roles = $this->getUserRoles($userId);
@@ -59,11 +59,11 @@ class RoleManager {
     }
     
     /**
-     * Получение всех разрешений пользователя
+     * Отримання всіх дозволів користувача
      */
     public function getUserPermissions(int $userId): array {
         try {
-            // Получаем role_ids из users
+            // Отримуємо role_ids з users
             $stmt = $this->db->prepare("SELECT role_ids FROM users WHERE id = ?");
             $stmt->execute([$userId]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -77,7 +77,7 @@ class RoleManager {
                 return [];
             }
             
-            // Получаем разрешения для всех ролей пользователя
+            // Отримуємо дозволи для всіх ролей користувача
             $placeholders = implode(',', array_fill(0, count($roleIds), '?'));
             $stmt = $this->db->prepare("
                 SELECT DISTINCT p.slug
@@ -95,7 +95,7 @@ class RoleManager {
     }
     
     /**
-     * Получение всех ролей пользователя
+     * Отримання всіх ролей користувача
      */
     public function getUserRoles(int $userId): array {
         // Проверяем кеш

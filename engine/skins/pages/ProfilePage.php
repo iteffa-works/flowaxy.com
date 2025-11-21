@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница профиля пользователя
+ * Сторінка профілю користувача
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -21,22 +21,22 @@ class ProfilePage extends AdminPage {
     }
     
     public function handle() {
-        // Обработка сохранения
+        // Обробка збереження
         if ($_POST && isset($_POST['save_profile'])) {
             $this->saveProfile();
         }
         
-        // Получение данных пользователя
+        // Отримання даних користувача
         $user = $this->getCurrentUser();
         
-        // Рендерим страницу
+        // Рендеримо сторінку
         $this->render([
             'user' => $user
         ]);
     }
     
     /**
-     * Получение текущего пользователя
+     * Отримання поточного користувача
      */
     private function getCurrentUser() {
         // Використовуємо SessionManager
@@ -67,7 +67,7 @@ class ProfilePage extends AdminPage {
     }
     
     /**
-     * Сохранение профиля
+     * Збереження профілю
      */
     private function saveProfile() {
         if (!$this->verifyCsrf()) {
@@ -88,7 +88,7 @@ class ProfilePage extends AdminPage {
         $newPassword = $_POST['new_password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
         
-        // Валидация (используем Validator напрямую из engine/classes)
+        // Валідація (використовуємо Validator безпосередньо з engine/classes)
         if (!Validator::validateString($username, 3, 50)) {
             $this->setMessage('Логін має містити від 3 до 50 символів', 'danger');
             return;

@@ -1,12 +1,12 @@
 <?php
 /**
- * Класс для работы с YAML файлами
- * Чтение, запись и манипуляции с YAML данными
+ * Клас для роботи з YAML файлами
+ * Читання, запис та маніпуляції з YAML даними
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
  * 
- * Примечание: Требуется расширение yaml или symfony/yaml компонент
+ * Примітка: Потрібне розширення yaml або symfony/yaml компонент
  */
 
 declare(strict_types=1);
@@ -15,13 +15,13 @@ class Yaml {
     private string $filePath;
     private $data = null;
     private bool $hasData = false;
-    private int $inline = 2; // Уровень вложенности для инлайн записи
-    private int $indent = 2; // Размер отступа
+    private int $inline = 2; // Рівень вкладеності для інлайн запису
+    private int $indent = 2; // Розмір відступу
     
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к YAML файлу
+     * @param string|null $filePath Шлях до YAML файлу
      */
     public function __construct(?string $filePath = null) {
         $this->checkExtension();
@@ -32,24 +32,24 @@ class Yaml {
     }
     
     /**
-     * Проверка наличия расширения YAML
+     * Перевірка наявності розширення YAML
      * 
      * @return void
-     * @throws Exception Если расширение не установлено
+     * @throws Exception Якщо розширення не встановлено
      */
     private function checkExtension(): void {
         if (!extension_loaded('yaml') && !function_exists('yaml_parse')) {
-            // Пробуем использовать symfony/yaml если доступен через composer
+            // Намагаємося використати symfony/yaml якщо доступний через composer
             if (!class_exists('\Symfony\Component\Yaml\Yaml')) {
-                throw new Exception("YAML расширение не установлено. Установите php-yaml или symfony/yaml через composer");
+                throw new Exception("YAML розширення не встановлено. Встановіть php-yaml або symfony/yaml через composer");
             }
         }
     }
     
     /**
-     * Установка пути к файлу
+     * Встановлення шляху до файлу
      * 
-     * @param string $filePath Путь к YAML файлу
+     * @param string $filePath Шлях до YAML файлу
      * @return self
      */
     public function setFile(string $filePath): self {
@@ -65,31 +65,31 @@ class Yaml {
     }
     
     /**
-     * Загрузка YAML файла
+     * Завантаження YAML файлу
      * 
-     * @param int $pos Позиция начала парсинга (для расширения yaml)
-     * @param int $ndocs Количество документов (для расширения yaml)
-     * @param array $callbacks Callbacks для парсинга (для расширения yaml)
+     * @param int $pos Позиція початку парсингу (для розширення yaml)
+     * @param int $ndocs Кількість документів (для розширення yaml)
+     * @param array $callbacks Callbacks для парсингу (для розширення yaml)
      * @return self
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
     public function load(int $pos = 0, int &$ndocs = 0, array $callbacks = []): self {
         if (empty($this->filePath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
         if (!file_exists($this->filePath)) {
-            throw new Exception("YAML файл не существует: {$this->filePath}");
+            throw new Exception("YAML файл не існує: {$this->filePath}");
         }
         
         if (!is_readable($this->filePath)) {
-            throw new Exception("YAML файл недоступен для чтения: {$this->filePath}");
+            throw new Exception("YAML файл недоступний для читання: {$this->filePath}");
         }
         
         $content = @file_get_contents($this->filePath);
         
         if ($content === false) {
-            throw new Exception("Не удалось прочитать YAML файл: {$this->filePath}");
+            throw new Exception("Не вдалося прочитати YAML файл: {$this->filePath}");
         }
         
         $this->data = $this->parse($content, $pos, $ndocs, $callbacks);
@@ -99,14 +99,14 @@ class Yaml {
     }
     
     /**
-     * Загрузка YAML из строки
+     * Завантаження YAML з рядка
      * 
-     * @param string $yamlString YAML строка
-     * @param int $pos Позиция начала парсинга
-     * @param int $ndocs Количество документов
+     * @param string $yamlString YAML рядок
+     * @param int $pos Позиція початку парсингу
+     * @param int $ndocs Кількість документів
      * @param array $callbacks Callbacks
      * @return self
-     * @throws Exception Если не удалось загрузить
+     * @throws Exception Якщо не вдалося завантажити
      */
     public function loadString(string $yamlString, int $pos = 0, int &$ndocs = 0, array $callbacks = []): self {
         $this->data = $this->parse($yamlString, $pos, $ndocs, $callbacks);
@@ -116,58 +116,58 @@ class Yaml {
     }
     
     /**
-     * Парсинг YAML строки
+     * Парсинг YAML рядка
      * 
-     * @param string $yamlString YAML строка
-     * @param int $pos Позиция начала парсинга
-     * @param int $ndocs Количество документов
+     * @param string $yamlString YAML рядок
+     * @param int $pos Позиція початку парсингу
+     * @param int $ndocs Кількість документів
      * @param array $callbacks Callbacks
      * @return mixed
-     * @throws Exception Если не удалось распарсить
+     * @throws Exception Якщо не вдалося розпарсити
      */
     private function parse(string $yamlString, int $pos = 0, int &$ndocs = 0, array $callbacks = []) {
         if (extension_loaded('yaml') && function_exists('yaml_parse')) {
-            // Используем встроенное расширение
+            // Використовуємо вбудоване розширення
             $data = @yaml_parse($yamlString, $pos, $ndocs, $callbacks);
             
             if ($data === false) {
-                throw new Exception("Ошибка парсинга YAML");
+                throw new Exception("Помилка парсингу YAML");
             }
             
             return $data;
         } elseif (class_exists('\Symfony\Component\Yaml\Yaml')) {
-            // Используем Symfony YAML компонент
+            // Використовуємо Symfony YAML компонент
             try {
                 return \Symfony\Component\Yaml\Yaml::parse($yamlString);
             } catch (Exception $e) {
-                throw new Exception("Ошибка парсинга YAML: " . $e->getMessage());
+                throw new Exception("Помилка парсингу YAML: " . $e->getMessage());
             }
         }
         
-        throw new Exception("YAML расширение не доступно");
+        throw new Exception("YAML розширення не доступне");
     }
     
     /**
-     * Сохранение данных в YAML файл
+     * Збереження даних у YAML файл
      * 
-     * @param string|null $filePath Путь к файлу (если null, используется текущий)
-     * @param mixed $data Данные для сохранения (если null, используются текущие)
+     * @param string|null $filePath Шлях до файлу (якщо null, використовується поточний)
+     * @param mixed $data Дані для збереження (якщо null, використовуються поточні)
      * @return bool
-     * @throws Exception Если не удалось сохранить
+     * @throws Exception Якщо не вдалося зберегти
      */
     public function save(?string $filePath = null, $data = null): bool {
         $targetPath = $filePath ?? $this->filePath;
         $dataToSave = $data ?? $this->data;
         
         if (empty($targetPath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
-        // Создаем директорию, если её нет
+        // Створюємо директорію, якщо її немає
         $dir = dirname($targetPath);
         if (!is_dir($dir)) {
             if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
+                throw new Exception("Не вдалося створити директорію: {$dir}");
             }
         }
         
@@ -176,12 +176,12 @@ class Yaml {
         $result = @file_put_contents($targetPath, $yaml, LOCK_EX);
         
         if ($result === false) {
-            throw new Exception("Не удалось сохранить YAML файл: {$targetPath}");
+            throw new Exception("Не вдалося зберегти YAML файл: {$targetPath}");
         }
         
         @chmod($targetPath, 0644);
         
-        // Обновляем текущие данные
+        // Оновлюємо поточні дані
         if ($filePath === null) {
             $this->data = $dataToSave;
             $this->hasData = true;
@@ -191,38 +191,38 @@ class Yaml {
     }
     
     /**
-     * Преобразование данных в YAML строку
+     * Перетворення даних у YAML рядок
      * 
-     * @param mixed $data Данные
+     * @param mixed $data Дані
      * @return string
-     * @throws Exception Если не удалось преобразовать
+     * @throws Exception Якщо не вдалося перетворити
      */
     private function dump($data): string {
         if (extension_loaded('yaml') && function_exists('yaml_emit')) {
-            // Используем встроенное расширение
+            // Використовуємо вбудоване розширення
             $yaml = @yaml_emit($data, YAML_UTF8_ENCODING);
             
             if ($yaml === false) {
-                throw new Exception("Ошибка преобразования данных в YAML");
+                throw new Exception("Помилка перетворення даних у YAML");
             }
             
             return $yaml;
         } elseif (class_exists('\Symfony\Component\Yaml\Yaml')) {
-            // Используем Symfony YAML компонент
+            // Використовуємо Symfony YAML компонент
             try {
                 return \Symfony\Component\Yaml\Yaml::dump($data, $this->inline, $this->indent);
             } catch (Exception $e) {
-                throw new Exception("Ошибка преобразования данных в YAML: " . $e->getMessage());
+                throw new Exception("Помилка перетворення даних у YAML: " . $e->getMessage());
             }
         }
         
-        throw new Exception("YAML расширение не доступно");
+        throw new Exception("YAML розширення не доступне");
     }
     
     /**
-     * Получение данных
+     * Отримання даних
      * 
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function get($default = null) {
@@ -234,9 +234,9 @@ class Yaml {
     }
     
     /**
-     * Установка данных
+     * Встановлення даних
      * 
-     * @param mixed $data Данные
+     * @param mixed $data Дані
      * @return self
      */
     public function set($data): self {
@@ -246,10 +246,10 @@ class Yaml {
     }
     
     /**
-     * Получение значения по пути (точечная нотация)
+     * Отримання значення за шляхом (крапкова нотація)
      * 
-     * @param string $path Путь к значению
-     * @param mixed $default Значение по умолчанию
+     * @param string $path Шлях до значення
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function getPath(string $path, $default = null) {
@@ -272,7 +272,7 @@ class Yaml {
     }
     
     /**
-     * Очистка данных
+     * Очищення даних
      * 
      * @return self
      */
@@ -283,7 +283,7 @@ class Yaml {
     }
     
     /**
-     * Проверка, загружены ли данные
+     * Перевірка, чи завантажені дані
      * 
      * @return bool
      */
@@ -292,7 +292,7 @@ class Yaml {
     }
     
     /**
-     * Получение пути к файлу
+     * Отримання шляху до файлу
      * 
      * @return string
      */
@@ -301,9 +301,9 @@ class Yaml {
     }
     
     /**
-     * Установка уровня вложенности для инлайн записи
+     * Встановлення рівня вкладеності для інлайн запису
      * 
-     * @param int $inline Уровень вложенности
+     * @param int $inline Рівень вкладеності
      * @return self
      */
     public function setInline(int $inline): self {
@@ -312,9 +312,9 @@ class Yaml {
     }
     
     /**
-     * Установка размера отступа
+     * Встановлення розміру відступу
      * 
-     * @param int $indent Размер отступа
+     * @param int $indent Розмір відступу
      * @return self
      */
     public function setIndent(int $indent): self {
@@ -323,9 +323,9 @@ class Yaml {
     }
     
     /**
-     * Статический метод: Чтение YAML файла
+     * Статичний метод: Читання YAML файлу
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return mixed
      */
     public static function read(string $filePath) {
@@ -335,10 +335,10 @@ class Yaml {
     }
     
     /**
-     * Статический метод: Запись YAML файла
+     * Статичний метод: Запис YAML файлу
      * 
-     * @param string $filePath Путь к файлу
-     * @param mixed $data Данные
+     * @param string $filePath Шлях до файлу
+     * @param mixed $data Дані
      * @return bool
      */
     public static function write(string $filePath, $data): bool {
@@ -348,9 +348,9 @@ class Yaml {
     }
     
     /**
-     * Статический метод: Парсинг YAML строки
+     * Статичний метод: Парсинг YAML рядка
      * 
-     * @param string $yamlString YAML строка
+     * @param string $yamlString YAML рядок
      * @return mixed
      */
     public static function parse(string $yamlString) {
@@ -359,9 +359,9 @@ class Yaml {
     }
     
     /**
-     * Статический метод: Преобразование данных в YAML строку
+     * Статичний метод: Перетворення даних у YAML рядок
      * 
-     * @param mixed $data Данные
+     * @param mixed $data Дані
      * @return string
      */
     public static function dump($data): string {

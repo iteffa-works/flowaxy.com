@@ -1,7 +1,7 @@
 <?php
 /**
- * Менеджер для работы с сессиями
- * Централизованное управление сессиями с расширенными возможностями
+ * Менеджер для роботи з сесіями
+ * Централізоване управління сесіями з розширеними можливостями
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -17,7 +17,7 @@ class SessionManager implements StorageInterface {
     private bool $initialized = false;
     
     private function __construct() {
-        // Убеждаемся, что сессия запущена
+        // Переконуємося, що сесія запущена
         if (!Session::isStarted()) {
             Session::start();
         }
@@ -25,7 +25,7 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Получение экземпляра (Singleton)
+     * Отримання екземпляра (Singleton)
      * 
      * @return self
      */
@@ -37,9 +37,9 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Установка префикса для ключей
+     * Встановлення префіксу для ключів
      * 
-     * @param string $prefix Префикс
+     * @param string $prefix Префікс
      * @return void
      */
     public function setPrefix(string $prefix): void {
@@ -47,7 +47,7 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Получение префикса
+     * Отримання префіксу
      * 
      * @return string
      */
@@ -56,7 +56,7 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Формирование полного ключа с префиксом
+     * Формування повного ключа з префіксом
      * 
      * @param string $key Ключ
      * @return string
@@ -66,10 +66,10 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Получение значения из сессии
+     * Отримання значення з сесії
      * 
      * @param string $key Ключ
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function get(string $key, $default = null) {
@@ -77,10 +77,10 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Установка значения в сессию
+     * Встановлення значення в сесію
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
+     * @param mixed $value Значення
      * @return bool
      */
     public function set(string $key, $value): bool {
@@ -89,7 +89,7 @@ class SessionManager implements StorageInterface {
     }
     
     /**
-     * Проверка наличия ключа в сессии
+     * Перевірка наявності ключа в сесії
      * 
      * @param string $key Ключ
      * @return bool

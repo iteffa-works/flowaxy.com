@@ -21,11 +21,11 @@ function themeSupportsNavigation() {
 }
 
 function getMenuItems() {
-    // Создаем уникальный ключ кеша на основе активных плагинов
+    // Створюємо унікальний ключ кешу на основі активних плагінів
     $pluginsHash = cache_remember('active_plugins_hash', function() {
         $activePlugins = pluginManager()->getActivePlugins();
         return md5(implode(',', array_keys($activePlugins)));
-    }, 3600); // Кешируем хеш плагинов на 1 час
+    }, 3600); // Кешуємо хеш плагінів на 1 годину
     
     $cacheKey = 'admin_menu_items_' . $pluginsHash;
     
@@ -45,14 +45,14 @@ function getMenuItems() {
         // Застосовуємо хук для додавання пунктів меню від плагінів
         $menu = doHook('admin_menu', $menu);
         
-        // Сортуємо по order
+        // Сортуємо за order
         usort($menu, function($a, $b) {
             $orderA = $a['order'] ?? 50;
             $orderB = $b['order'] ?? 50;
             return $orderA - $orderB;
         });
         
-        // Сортуємо подменю для пунктів с подменю
+        // Сортуємо підменю для пунктів з підменю
         foreach ($menu as $key => $item) {
             if (isset($item['submenu']) && is_array($item['submenu'])) {
                 usort($menu[$key]['submenu'], function($a, $b) {
@@ -74,12 +74,12 @@ function getMenuItems() {
             }
         }
         
-        // Удаляем найденные меню
+        // Видаляємо знайдені меню
         foreach ($menuKeysToRemove as $key) {
             unset($menu[$key]);
         }
         
-        // Переиндексируем массив после удаления
+        // Переіндексуємо масив після видалення
         if (!empty($menuKeysToRemove)) {
             $menu = array_values($menu);
         }
@@ -90,19 +90,19 @@ function getMenuItems() {
 }
 
 /**
- * Рендерить пункт меню
+ * Рендерити пункт меню
  */
 function renderMenuItem($item, $currentPage, $isMobile = false) {
     $hasSubmenu = isset($item['submenu']) && !empty($item['submenu']);
     $target = isset($item['target']) ? ' target="' . $item['target'] . '"' : '';
     
-    // Получаем параметр tab из URL один раз
+    // Отримуємо параметр tab з URL один раз
     $request = Request::getInstance();
     $tab = SecurityHelper::sanitizeInput($request->query('tab', ''));
     
     if ($hasSubmenu) {
         // Меню з підменю (однаково для десктопу та мобільних)
-        // Основной пункт меню активен только если активна одна из его подменю
+        // Основний пункт меню активний тільки якщо активна одна з його підменю
         $activeClass = '';
         $hasActiveSubmenu = false;
         
@@ -111,16 +111,16 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
                 if (isset($subItem['page'])) {
                     $subItemPage = $subItem['page'];
                     
-                    // Проверяем точное совпадение с текущей страницей
+                    // Перевіряємо точний збіг з поточною сторінкою
                     if ($currentPage === $subItemPage) {
-                        // Если нет tab, значит это главная страница
+                        // Якщо немає tab, значить це головна сторінка
                         if (empty($tab)) {
                             $hasActiveSubmenu = true;
                             break;
                         }
                     }
                     
-                    // Если есть tab, проверяем совпадение с учетом tab
+                    // Якщо є tab, перевіряємо збіг з урахуванням tab
                     if (!empty($tab)) {
                         $pageWithTab = $currentPage . '-' . $tab;
                         if ($subItemPage === $pageWithTab) {
@@ -132,7 +132,7 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             }
         }
         
-        // Основной пункт меню активен только если активна подменю
+        // Основний пункт меню активний тільки якщо активна підменю
         if ($hasActiveSubmenu) {
             $activeClass = 'active';
         }
@@ -147,15 +147,15 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             echo '</a>';
             echo '<ul class="submenu">';
             foreach ($item['submenu'] as $subItem) {
-                // Определяем активный пункт подменю с учетом tab
+                // Визначаємо активний пункт підменю з урахуванням tab
                 $subActive = false;
                 if (isset($subItem['page'])) {
                     $subItemPage = $subItem['page'];
-                    // Проверяем точное совпадение (для главной страницы без tab)
+                    // Перевіряємо точний збіг (для головної сторінки без tab)
                     if ($currentPage === $subItemPage && empty($tab)) {
                         $subActive = true;
                     }
-                    // Если есть tab, проверяем совпадение с учетом tab
+                    // Якщо є tab, перевіряємо збіг з урахуванням tab
                     if (!empty($tab)) {
                         $pageWithTab = $currentPage . '-' . $tab;
                         if ($subItemPage === $pageWithTab) {
@@ -179,15 +179,15 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
             echo '</a>';
             echo '<ul class="submenu">';
             foreach ($item['submenu'] as $subItem) {
-                // Определяем активный пункт подменю с учетом tab
+                // Визначаємо активний пункт підменю з урахуванням tab
                 $subActive = false;
                 if (isset($subItem['page'])) {
                     $subItemPage = $subItem['page'];
-                    // Проверяем точное совпадение (для главной страницы без tab)
+                    // Перевіряємо точний збіг (для головної сторінки без tab)
                     if ($currentPage === $subItemPage && empty($tab)) {
                         $subActive = true;
                     }
-                    // Если есть tab, проверяем совпадение с учетом tab
+                    // Якщо є tab, перевіряємо збіг з урахуванням tab
                     if (!empty($tab)) {
                         $pageWithTab = $currentPage . '-' . $tab;
                         if ($subItemPage === $pageWithTab) {
@@ -207,14 +207,14 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
         $isActive = false;
         if (isset($item['page'])) {
             $itemPage = $item['page'];
-            // Проверяем точное совпадение
+            // Перевіряємо точний збіг
             if ($currentPage === $itemPage) {
-                // Если нет tab, значит это активная страница
+                // Якщо немає tab, значить це активна сторінка
                 if (empty($tab)) {
                     $isActive = true;
                 }
             }
-            // Если есть tab, проверяем совпадение с учетом tab
+            // Якщо є tab, перевіряємо збіг з урахуванням tab
             if (!empty($tab)) {
                 $pageWithTab = $currentPage . '-' . $tab;
                 if ($itemPage === $pageWithTab) {
@@ -224,7 +224,7 @@ function renderMenuItem($item, $currentPage, $isMobile = false) {
         }
         
         $activeClass = $isActive ? 'active' : '';
-        // Всегда используем <li> для валидности HTML (ul должен содержать только li, script или template)
+        // Завжди використовуємо <li> для валідності HTML (ul повинен містити тільки li, script або template)
         echo '<li class="nav-item">';
         echo '<a class="nav-link ' . $activeClass . '" href="' . $item['href'] . '"' . $target . '>';
         echo '<i class="' . ($item['icon'] ?? '') . '"></i>';

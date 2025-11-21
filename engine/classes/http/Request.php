@@ -100,7 +100,7 @@ class Request {
     
     
     /**
-     * Отримання значення з GET (для использования через instance)
+     * Отримання значення з GET (для використання через instance)
      * 
      * @param string $key Ключ
      * @param mixed $default Значення за замовчуванням
@@ -135,13 +135,13 @@ class Request {
      * @return string
      */
     public function url(): string {
-        // Используем UrlHelper для получения протокола
+        // Використовуємо UrlHelper для отримання протоколу
         if (class_exists('UrlHelper')) {
             $protocol = UrlHelper::getProtocol();
         } elseif (function_exists('detectProtocol')) {
             $protocol = detectProtocol();
         } else {
-            // Фоллбэк если классы не доступны
+            // Fallback якщо класи не доступні
             $isHttps = (
                 (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
                 (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||

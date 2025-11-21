@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления ролями и правами доступа
+ * Сторінка управління ролями та правами доступу
  * 
  * @package Engine\Skins\Pages
  */
@@ -59,7 +59,7 @@ class RolesPage extends AdminPage {
             }
         }
         
-        // Проверяем, нужна ли страница редактирования
+        // Перевіряємо, чи потрібна сторінка редагування
         $editId = (int)$request->query('edit', 0);
         if ($editId > 0) {
             $this->templateName = 'role-edit';

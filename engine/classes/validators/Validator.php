@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для валидации данных
- * Централизованная валидация входных данных
+ * Клас для валідації даних
+ * Централізована валідація вхідних даних
  * 
  * @package Core
  * @version 1.0.0
@@ -9,9 +9,9 @@
 
 class Validator {
     /**
-     * Валидация email
+     * Валідація email
      * 
-     * @param string $email Email адрес
+     * @param string $email Email адреса
      * @return bool
      */
     public static function validateEmail(string $email): bool {
@@ -19,7 +19,7 @@ class Validator {
     }
     
     /**
-     * Валидация URL
+     * Валідація URL
      * 
      * @param string $url URL
      * @return bool
@@ -29,11 +29,11 @@ class Validator {
     }
     
     /**
-     * Валидация целого числа
+     * Валідація цілого числа
      * 
-     * @param mixed $value Значение
-     * @param int|null $min Минимальное значение
-     * @param int|null $max Максимальное значение
+     * @param mixed $value Значення
+     * @param int|null $min Мінімальне значення
+     * @param int|null $max Максимальне значення
      * @return bool
      */
     public static function validateInt($value, ?int $min = null, ?int $max = null): bool {
@@ -55,11 +55,11 @@ class Validator {
     }
     
     /**
-     * Валидация строки
+     * Валідація рядка
      * 
-     * @param mixed $value Значение
-     * @param int|null $minLength Минимальная длина
-     * @param int|null $maxLength Максимальная длина
+     * @param mixed $value Значення
+     * @param int|null $minLength Мінімальна довжина
+     * @param int|null $maxLength Максимальна довжина
      * @return bool
      */
     public static function validateString($value, ?int $minLength = null, ?int $maxLength = null): bool {
@@ -81,7 +81,7 @@ class Validator {
     }
     
     /**
-     * Валидация slug (для URL, имен файлов и т.д.)
+     * Валідація slug (для URL, імен файлів тощо)
      * 
      * @param string $slug Slug
      * @return bool
@@ -91,9 +91,9 @@ class Validator {
     }
     
     /**
-     * Валидация цвета (hex)
+     * Валідація кольору (hex)
      * 
-     * @param string $color Цвет в формате hex
+     * @param string $color Колір в форматі hex
      * @return bool
      */
     public static function validateColor(string $color): bool {

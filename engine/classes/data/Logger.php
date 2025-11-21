@@ -1,7 +1,7 @@
 <?php
 /**
- * Централизованная система логирования
- * Поддержка различных уровней логирования, ротации файлов, фильтрации
+ * Централізована система логування
+ * Підтримка різних рівнів логування, ротації файлів, фільтрації
  * 
  * @package Engine\Classes\Data
  * @version 1.0.0
@@ -11,15 +11,15 @@ declare(strict_types=1);
 
 class Logger {
     private static ?self $instance = null;
-    private static bool $loadingSettings = false; // Флаг для предотвращения рекурсии
-    private bool $settingsLoaded = false; // Флаг загрузки настроек
+    private static bool $loadingSettings = false; // Прапорець для запобігання рекурсії
+    private bool $settingsLoaded = false; // Прапорець завантаження налаштувань
     private string $logDir;
     private string $logFile;
     private int $maxFileSize = 10 * 1024 * 1024; // 10 MB
     private int $maxFiles = 5;
     private array $settings = [];
     
-    // Уровни логирования
+    // Рівні логування
     public const LEVEL_DEBUG = 0;
     public const LEVEL_INFO = 1;
     public const LEVEL_WARNING = 2;
@@ -35,22 +35,22 @@ class Logger {
     ];
     
     /**
-     * Конструктор (приватный для Singleton)
+     * Конструктор (приватний для Singleton)
      */
     private function __construct() {
         $this->logDir = defined('LOGS_DIR') ? LOGS_DIR : dirname(__DIR__, 2) . '/storage/logs/';
         $this->logDir = rtrim($this->logDir, '/') . '/';
         $this->ensureLogDir();
         
-        // Имя файла лога с датой
+        // Ім'я файлу логу з датою
         $this->logFile = $this->logDir . 'app-' . date('Y-m-d') . '.log';
         
-        // НЕ загружаем настройки в конструкторе, чтобы избежать циклических зависимостей
-        // Настройки будут загружены позже при первом логировании или через reloadSettings()
+        // НЕ завантажуємо налаштування в конструкторі, щоб уникнути циклічних залежностей
+        // Налаштування будуть завантажені пізніше при першому логуванні або через reloadSettings()
     }
     
     /**
-     * Получение экземпляра класса (Singleton)
+     * Отримання екземпляра класу (Singleton)
      * 
      * @return self
      */
@@ -62,7 +62,7 @@ class Logger {
     }
     
     /**
-     * Создание директории логов
+     * Створення директорії логів
      * 
      * @return void
      */
@@ -71,7 +71,7 @@ class Logger {
             @mkdir($this->logDir, 0755, true);
         }
         
-        // Создаем .htaccess для защиты
+        // Створюємо .htaccess для захисту
         $htaccessFile = $this->logDir . '.htaccess';
         if (!file_exists($htaccessFile)) {
             @file_put_contents($htaccessFile, "Deny from all\n");
@@ -79,19 +79,19 @@ class Logger {
     }
     
     /**
-     * Загрузка настроек из БД или файла
+     * Завантаження налаштувань з БД або файлу
      * 
      * @return void
      */
     private function loadSettings(): void {
-        // Предотвращаем рекурсию: если настройки уже загружаются, выходим
+        // Запобігаємо рекурсії: якщо налаштування вже завантажуються, виходимо
         if (self::$loadingSettings) {
             return;
         }
         
-        // Избегаем циклических зависимостей: не загружаем настройки, если SettingsManager еще не загружен
+        // Уникаємо циклічних залежностей: не завантажуємо налаштування, якщо SettingsManager ще не завантажено
         if (!class_exists('SettingsManager')) {
-            // Используем значения по умолчанию
+            // Використовуємо значення за замовчуванням
             $this->settings = [
                 'enabled' => true,
                 'min_level' => self::LEVEL_INFO,
@@ -108,10 +108,10 @@ class Logger {
             return;
         }
         
-        // Устанавливаем флаг загрузки настроек
+        // Встановлюємо прапорець завантаження налаштувань
         self::$loadingSettings = true;
         
-        // Настройки по умолчанию
+        // Налаштування за замовчуванням
         $this->settings = [
             'enabled' => true,
             'min_level' => self::LEVEL_INFO,
@@ -126,14 +126,14 @@ class Logger {
             'retention_days' => 30
         ];
         
-        // Загружаем из БД, если доступна
+        // Завантажуємо з БД, якщо доступна
         if (function_exists('settingsManager')) {
             try {
                 $settings = settingsManager();
                 if ($settings !== null) {
-                    // Загружаем настройки напрямую из БД, минуя кеш, чтобы избежать рекурсии
+                    // Завантажуємо налаштування напряму з БД, обходячи кеш, щоб уникнути рекурсії
                     try {
-                        // Используем прямой запрос к БД для получения настроек
+                        // Використовуємо прямий запит до БД для отримання налаштувань
                         $db = DatabaseHelper::getConnection();
                         if ($db !== null) {
                             $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('logging_enabled', 'logging_level', 'logging_max_file_size', 'logging_retention_days')");
@@ -143,11 +143,11 @@ class Logger {
                                     $dbSettings[$row['setting_key']] = $row['setting_value'];
                                 }
                                 
-                                // Применяем настройки из БД
+                                // Застосовуємо налаштування з БД
                                 $loggingEnabled = $dbSettings['logging_enabled'] ?? '1';
                                 $this->settings['enabled'] = $loggingEnabled === '1';
                                 
-                                // Уровень логирования
+                                // Рівень логування
                                 $levelStr = $dbSettings['logging_level'] ?? 'INFO';
                                 $this->settings['min_level'] = match(strtoupper($levelStr)) {
                                     'DEBUG' => self::LEVEL_DEBUG,
@@ -158,7 +158,7 @@ class Logger {
                                     default => self::LEVEL_INFO
                                 };
                                 
-                                // Настройки файлов
+                                // Налаштування файлів
                                 $this->settings['log_to_file'] = $this->settings['enabled'];
                                 $maxFileSize = (int)($dbSettings['logging_max_file_size'] ?? $this->maxFileSize);
                                 if ($maxFileSize > 0) {
@@ -166,7 +166,7 @@ class Logger {
                                     $this->maxFileSize = $maxFileSize;
                                 }
                                 
-                                // Дни хранения логов
+                                // Дні зберігання логів
                                 $retentionDays = (int)($dbSettings['logging_retention_days'] ?? 30);
                                 if ($retentionDays > 0) {
                                     $this->settings['retention_days'] = $retentionDays;
@@ -174,7 +174,7 @@ class Logger {
                                     $this->maxFiles = $this->settings['max_files'];
                                 }
                             } else {
-                                // Если не удалось загрузить из БД, используем settingsManager
+                                // Якщо не вдалося завантажити з БД, використовуємо settingsManager
                                 $loggingEnabled = $settings->get('logging_enabled', '1');
                                 if ($loggingEnabled === '' && !$settings->has('logging_enabled')) {
                                     $loggingEnabled = '1';
@@ -206,13 +206,13 @@ class Logger {
                                 }
                             }
                         } else {
-                            // Если БД недоступна, используем значения по умолчанию
+                            // Якщо БД недоступна, використовуємо значення за замовчуванням
                             $this->settings['enabled'] = true;
                             $this->settings['min_level'] = self::LEVEL_INFO;
                             $this->settings['log_to_file'] = true;
                         }
                         
-                        // Дополнительные настройки (для совместимости)
+                        // Додаткові налаштування (для сумісності)
                         if ($settings !== null) {
                             $this->settings['log_to_error_log'] = $settings->get('logger_log_to_error_log', '0') === '1';
                             $this->settings['log_db_queries'] = $settings->get('logger_log_db_queries', '0') === '1';
@@ -221,25 +221,25 @@ class Logger {
                             $this->settings['slow_query_threshold'] = (float)$settings->get('logger_slow_query_threshold', '1.0');
                         }
                     } catch (Exception $e) {
-                        // В случае ошибки используем значения по умолчанию
-                        error_log("Logger::loadSettings DB error: " . $e->getMessage());
+                        // У разі помилки використовуємо значення за замовчуванням
+                        error_log("Logger::loadSettings помилка БД: " . $e->getMessage());
                     }
                 }
             } catch (Exception $e) {
-                // В случае ошибки используем значения по умолчанию
-                error_log("Logger::loadSettings error: " . $e->getMessage());
+                // У разі помилки використовуємо значення за замовчуванням
+                error_log("Logger::loadSettings помилка: " . $e->getMessage());
             } catch (Error $e) {
-                // В случае фатальной ошибки используем значения по умолчанию
-                error_log("Logger::loadSettings fatal error: " . $e->getMessage());
+                // У разі фатальної помилки використовуємо значення за замовчуванням
+                error_log("Logger::loadSettings фатальна помилка: " . $e->getMessage());
             } finally {
-                // Сбрасываем флаг загрузки настроек
+                // Скидаємо прапорець завантаження налаштувань
                 self::$loadingSettings = false;
             }
         }
     }
     
     /**
-     * Обновление настроек (вызывается после изменения настроек)
+     * Оновлення налаштувань (викликається після зміни налаштувань)
      * 
      * @return void
      */
@@ -249,10 +249,10 @@ class Logger {
     }
     
     /**
-     * Получение настройки
+     * Отримання налаштування
      * 
-     * @param string $key Ключ настройки
-     * @param string $default Значение по умолчанию
+     * @param string $key Ключ налаштування
+     * @param string $default Значення за замовчуванням
      * @return string
      */
     public function getSetting(string $key, string $default = ''): string {
@@ -260,42 +260,42 @@ class Logger {
     }
     
     /**
-     * Установка настройки
+     * Встановлення налаштування
      * 
-     * @param string $key Ключ настройки
-     * @param string $value Значение
+     * @param string $key Ключ налаштування
+     * @param string $value Значення
      * @return void
      */
     public function setSetting(string $key, string $value): void {
         $this->settings[$key] = $value;
         
-        // Сохраняем в БД, если доступна
+        // Зберігаємо в БД, якщо доступна
         if (class_exists('SettingsManager')) {
             settingsManager()->set('logger_' . $key, $value);
         }
     }
     
     /**
-     * Логирование сообщения
+     * Логування повідомлення
      * 
-     * @param int $level Уровень логирования
-     * @param string $message Сообщение
-     * @param array $context Контекст (дополнительные данные)
+     * @param int $level Рівень логування
+     * @param string $message Повідомлення
+     * @param array $context Контекст (додаткові дані)
      * @return void
      */
     public function log(int $level, string $message, array $context = []): void {
-        // Ленивая загрузка настроек при первом использовании
+        // Ліниве завантаження налаштувань при першому використанні
         if (!$this->settingsLoaded) {
             $this->loadSettings();
             $this->settingsLoaded = true;
         }
         
-        // Если логирование отключено, не логируем
+        // Якщо логування вимкнено, не логуємо
         if (!$this->settings['enabled']) {
             return;
         }
         
-        // Проверяем минимальный уровень
+        // Перевіряємо мінімальний рівень
         if ($level < $this->settings['min_level']) {
             return;
         }
@@ -306,13 +306,13 @@ class Logger {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         
-        // Формируем контекстную строку
+        // Формуємо контекстний рядок
         $contextStr = '';
         if (!empty($context)) {
             $contextStr = ' | Context: ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
         
-        // Формируем строку лога
+        // Формуємо рядок логу
         $logLine = sprintf(
             "[%s] %s: %s | IP: %s | %s %s%s\n",
             $timestamp,
@@ -324,35 +324,35 @@ class Logger {
             $contextStr
         );
         
-        // Логируем в файл
+        // Логуємо у файл
         if ($this->settings['log_to_file']) {
             $this->writeToFile($logLine);
         }
         
-        // Логируем в error_log
+        // Логуємо в error_log
         if ($this->settings['log_to_error_log']) {
             error_log(trim($logLine));
         }
     }
     
     /**
-     * Запись в файл с ротацией
+     * Запис у файл з ротацією
      * 
-     * @param string $logLine Строка для записи
+     * @param string $logLine Рядок для запису
      * @return void
      */
     private function writeToFile(string $logLine): void {
-        // Проверяем размер файла и ротируем при необходимости
+        // Перевіряємо розмір файлу та ротуємо при необхідності
         if (file_exists($this->logFile) && filesize($this->logFile) >= $this->settings['max_file_size']) {
             $this->rotateLogs();
         }
         
-        // Записываем в файл
+        // Записуємо у файл
         @file_put_contents($this->logFile, $logLine, FILE_APPEND | LOCK_EX);
     }
     
     /**
-     * Ротация логов
+     * Ротація логів
      * 
      * @return void
      */
@@ -367,7 +367,7 @@ class Logger {
         $retentionDays = $this->settings['retention_days'] ?? 30;
         $cutoffTime = time() - ($retentionDays * 24 * 60 * 60);
         
-        // Удаляем старые файлы по дате создания
+        // Видаляємо старі файли за датою створення
         foreach ($files as $file) {
             $fileTime = @filemtime($file);
             if ($fileTime !== false && $fileTime < $cutoffTime) {
@@ -375,24 +375,24 @@ class Logger {
             }
         }
         
-        // Получаем список файлов заново после удаления
+        // Отримуємо список файлів заново після видалення
         $files = glob($pattern);
         if ($files === false) {
             $files = [];
         }
         
-        // Сортируем по дате изменения (новые первыми)
+        // Сортуємо за датою зміни (нові першими)
         usort($files, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
         
-        // Удаляем старые файлы сверх лимита
+        // Видаляємо старі файли понад ліміт
         $maxFiles = $this->settings['max_files'];
         for ($i = $maxFiles; $i < count($files); $i++) {
             @unlink($files[$i]);
         }
         
-        // Переименовываем текущий файл
+        // Перейменовуємо поточний файл
         if (file_exists($this->logFile)) {
             $newName = $this->logDir . 'app-' . date('Y-m-d') . '-' . time() . '.log';
             @rename($this->logFile, $newName);
@@ -400,9 +400,9 @@ class Logger {
     }
     
     /**
-     * Логирование DEBUG
+     * Логування DEBUG
      * 
-     * @param string $message Сообщение
+     * @param string $message Повідомлення
      * @param array $context Контекст
      * @return void
      */
@@ -411,9 +411,9 @@ class Logger {
     }
     
     /**
-     * Логирование INFO
+     * Логування INFO
      * 
-     * @param string $message Сообщение
+     * @param string $message Повідомлення
      * @param array $context Контекст
      * @return void
      */
@@ -422,9 +422,9 @@ class Logger {
     }
     
     /**
-     * Логирование WARNING
+     * Логування WARNING
      * 
-     * @param string $message Сообщение
+     * @param string $message Повідомлення
      * @param array $context Контекст
      * @return void
      */
@@ -433,9 +433,9 @@ class Logger {
     }
     
     /**
-     * Логирование ERROR
+     * Логування ERROR
      * 
-     * @param string $message Сообщение
+     * @param string $message Повідомлення
      * @param array $context Контекст
      * @return void
      */
@@ -444,9 +444,9 @@ class Logger {
     }
     
     /**
-     * Логирование CRITICAL
+     * Логування CRITICAL
      * 
-     * @param string $message Сообщение
+     * @param string $message Повідомлення
      * @param array $context Контекст
      * @return void
      */
@@ -455,10 +455,10 @@ class Logger {
     }
     
     /**
-     * Логирование исключения
+     * Логування винятку
      * 
-     * @param Throwable $exception Исключение
-     * @param array $context Дополнительный контекст
+     * @param Throwable $exception Виняток
+     * @param array $context Додатковий контекст
      * @return void
      */
     public function logException(\Throwable $exception, array $context = []): void {
@@ -471,13 +471,13 @@ class Logger {
             'trace' => $exception->getTraceAsString()
         ];
         
-        $this->logError('Exception: ' . $exception->getMessage(), $context);
+        $this->logError('Виняток: ' . $exception->getMessage(), $context);
     }
     
     /**
-     * Получение последних записей лога
+     * Отримання останніх записів логу
      * 
-     * @param int $lines Количество строк
+     * @param int $lines Кількість рядків
      * @return array
      */
     public function getRecentLogs(int $lines = 100): array {
@@ -497,7 +497,7 @@ class Logger {
     }
     
     /**
-     * Очистка логов
+     * Очищення логів
      * 
      * @return bool
      */
@@ -520,7 +520,7 @@ class Logger {
     }
     
     /**
-     * Получение статистики логов
+     * Отримання статистики логів
      * 
      * @return array
      */
@@ -564,7 +564,7 @@ class Logger {
         ];
     }
     
-    // Предотвращение клонирования
+    // Запобігання клонуванню
     private function __clone() {}
     
     /**
@@ -572,12 +572,12 @@ class Logger {
      * @throws Exception
      */
     public function __wakeup(): void {
-        throw new Exception("Cannot unserialize singleton");
+        throw new Exception("Неможливо десеріалізувати singleton");
     }
 }
 
 /**
- * Глобальная функция для получения экземпляра Logger
+ * Глобальна функція для отримання екземпляра Logger
  * 
  * @return Logger
  */

@@ -1,16 +1,16 @@
 <?php
 /**
- * Компонент группы формы
+ * Компонент групи форми
  * 
- * @param string $label Метка поля
- * @param string $name Имя поля
+ * @param string $label Мітка поля
+ * @param string $name Ім'я поля
  * @param string $type Тип поля (text, email, password, textarea, select, checkbox, etc.)
- * @param mixed $value Значение поля
+ * @param mixed $value Значення поля
  * @param string $placeholder Placeholder
- * @param string $helpText Подсказка под полем
- * @param array $options Опции для select/radio/checkbox
- * @param array $attributes Дополнительные атрибуты
- * @param string $id ID поля (если не указан, генерируется из name)
+ * @param string $helpText Підказка під полем
+ * @param array $options Опції для select/radio/checkbox
+ * @param array $attributes Додаткові атрибути
+ * @param string $id ID поля (якщо не вказано, генерується з name)
  */
 if (!isset($type)) {
     $type = 'text';
@@ -49,7 +49,7 @@ $fieldLabel = isset($label) ? htmlspecialchars($label) : '';
     <?php endif; ?>
     
     <?php
-    // Формируем базовые атрибуты
+    // Формуємо базові атрибути
     $baseAttributes = [
         'id' => $fieldId,
         'name' => $fieldName,
@@ -60,10 +60,10 @@ $fieldLabel = isset($label) ? htmlspecialchars($label) : '';
         $baseAttributes['placeholder'] = $placeholder;
     }
     
-    // Объединяем с дополнительными атрибутами
+    // Об'єднуємо з додатковими атрибутами
     $allAttributes = array_merge($baseAttributes, $attributes);
     
-    // Формируем строку атрибутов
+    // Формуємо рядок атрибутів
     $attrsString = '';
     foreach ($allAttributes as $key => $val) {
         if ($val !== null && $val !== '') {

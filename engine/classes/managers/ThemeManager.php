@@ -1,7 +1,7 @@
 <?php
 /**
- * Модуль управления темами
- * Управление темами и их настройками
+ * Модуль управління темами
+ * Управління темами та їх налаштуваннями
  * 
  * @package Engine\Modules
  * @version 2.0.0
@@ -14,53 +14,53 @@ class ThemeManager extends BaseModule {
     private array $themeSettings = [];
     
     /**
-     * Инициализация модуля
+     * Ініціалізація модуля
      */
     protected function init(): void {
         $this->loadActiveTheme();
     }
     
     /**
-     * Регистрация хуков модуля
+     * Реєстрація хуків модуля
      */
     public function registerHooks(): void {
-        // Модуль ThemeManager не регистрирует хуки
+        // Модуль ThemeManager не реєструє хуки
     }
     
     /**
-     * Получение информации о модуле
+     * Отримання інформації про модуль
      */
     public function getInfo(): array {
         return [
             'name' => 'ThemeManager',
             'title' => 'Менеджер тем',
-            'description' => 'Управление темами и их настройками',
+            'description' => 'Управління темами та їх налаштуваннями',
             'version' => '2.0.0',
             'author' => 'Flowaxy CMS'
         ];
     }
     
     /**
-     * Получение API методов модуля
+     * Отримання API методів модуля
      */
     public function getApiMethods(): array {
         return [
-            'getActiveTheme' => 'Получение активной темы',
-            'getAllThemes' => 'Получение всех тем',
-            'getTheme' => 'Получение темы по slug',
-            'activateTheme' => 'Активация темы',
-            'getSetting' => 'Получение настройки темы',
-            'setSetting' => 'Сохранение настройки темы',
-            'supportsCustomization' => 'Проверка поддержки кастомизации',
-            'hasScssSupport' => 'Проверка поддержки SCSS',
-            'compileScss' => 'Компиляция SCSS'
+            'getActiveTheme' => 'Отримання активної теми',
+            'getAllThemes' => 'Отримання всіх тем',
+            'getTheme' => 'Отримання теми за slug',
+            'activateTheme' => 'Активація теми',
+            'getSetting' => 'Отримання налаштування теми',
+            'setSetting' => 'Збереження налаштування теми',
+            'supportsCustomization' => 'Перевірка підтримки кастомізації',
+            'hasScssSupport' => 'Перевірка підтримки SCSS',
+            'compileScss' => 'Компіляція SCSS'
         ];
     }
     
     
     /**
-     * Загрузка активной темы с кешированием
-     * Получает активную тему из site_settings, затем загружает данные из файловой системы
+     * Завантаження активної теми з кешуванням
+     * Отримує активну тему з site_settings, потім завантажує дані з файлової системи
      * 
      * @return void
      */
@@ -70,7 +70,7 @@ class ThemeManager extends BaseModule {
             return;
         }
         
-        // Используем кеширование для активной темы
+        // Використовуємо кешування для активної теми
         $cacheKey = 'active_theme_slug';
         $activeSlug = cache_remember($cacheKey, function() use ($db) {
             if ($db === null) {
@@ -83,7 +83,7 @@ class ThemeManager extends BaseModule {
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
                 $slug = $result ? ($result['setting_value'] ?? null) : null;
                 
-                // Валидация slug
+                // Валідація slug
                 if ($slug && !Validator::validateSlug($slug)) {
                     error_log("ThemeManager: Invalid active theme slug from database: {$slug}");
                     return null;
@@ -94,10 +94,10 @@ class ThemeManager extends BaseModule {
                 error_log("ThemeManager loadActiveTheme error: " . $e->getMessage());
                 return null;
             }
-        }, 60); // Кешируем на 1 минуту (меньше время для быстрого обновления)
+        }, 60); // Кешуємо на 1 хвилину (менше час для швидкого оновлення)
         
         if ($activeSlug) {
-            // Загружаем тему из файловой системы
+            // Завантажуємо тему з файлової системи
             $theme = $this->getTheme($activeSlug);
             if ($theme !== null && is_array($theme)) {
                 $this->activeTheme = $theme;

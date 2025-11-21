@@ -3,10 +3,10 @@
  * Компонент системы уведомлений
  */
 ?>
-<!-- Контейнер для уведомлений -->
+<!-- Контейнер для сповіщень -->
 <div id="notifications-container" class="notifications-container"></div>
 
-<!-- Стили для уведомлений -->
+<!-- Стилі для сповіщень -->
 <style>
 .notifications-container {
     position: fixed;
@@ -55,7 +55,7 @@
     width: 100%;
 }
 
-/* Иконки для типов уведомлений */
+/* Іконки для типів сповіщень */
 .notification-icon {
     font-size: 18px;
     flex-shrink: 0;

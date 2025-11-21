@@ -35,7 +35,7 @@ if (themeSupportsCustomization()) {
 
 // Маршрут меню тепер реєструється через плагін menu-plugin
 
-// Инициализируем плагины перед вызовом хука, чтобы они могли зарегистрировать свои маршруты
+// Ініціалізуємо плагіни перед викликом хука, щоб вони могли зареєструвати свої маршрути
 if (function_exists('pluginManager')) {
     $pluginManager = pluginManager();
     if ($pluginManager && method_exists($pluginManager, 'initializePlugins')) {
@@ -59,7 +59,7 @@ foreach ($activePlugins as $slug => $plugin) {
     }
     $className .= 'AdminPage';
     
-    // Сначала пробуем новую структуру (src/admin/pages/), затем старую (admin/)
+    // Спочатку пробуємо нову структуру (src/admin/pages/), потім стару (admin/)
     $adminPageFile = $pluginDir . '/src/admin/pages/' . $className . '.php';
     if (!file_exists($adminPageFile)) {
         $adminPageFile = $pluginDir . '/admin/' . $className . '.php';
@@ -77,7 +77,7 @@ foreach ($activePlugins as $slug => $plugin) {
         $router->add(['GET', 'POST'], $slug, $className);
     }
     
-    // Специальная регистрация маршрута /admin/menus для плагина menu-plugin
+    // Спеціальна реєстрація маршруту /admin/menus для плагіна menu-plugin
     if ($slug === 'menu-plugin') {
         $menusPageFile = $pluginDir . '/admin/MenusPage.php';
         if (file_exists($menusPageFile)) {
@@ -88,7 +88,7 @@ foreach ($activePlugins as $slug => $plugin) {
         }
     }
     
-    // Специальная регистрация маршрута /admin/telegram-history для плагина telegram-plugin
+    // Спеціальна реєстрація маршруту /admin/telegram-history для плагіна telegram-plugin
     if ($slug === 'telegram-plugin') {
         $historyPageFile = $pluginDir . '/src/admin/pages/TelegramHistoryPage.php';
         if (file_exists($historyPageFile)) {

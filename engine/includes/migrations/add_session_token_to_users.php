@@ -1,7 +1,7 @@
 <?php
 /**
- * Миграция: Добавление поля session_token в таблицу users
- * Для защиты от одновременного входа с разных устройств
+ * Міграція: Додавання поля session_token в таблицю users
+ * Для захисту від одночасного входу з різних пристроїв
  * 
  * @package Engine\Includes\Migrations
  */
@@ -9,22 +9,22 @@
 declare(strict_types=1);
 
 /**
- * Выполнение миграции
+ * Виконання міграції
  * 
- * @param PDO $db Подключение к базе данных
- * @return bool Успешность выполнения
+ * @param PDO $db Підключення до бази даних
+ * @return bool Успішність виконання
  */
 function migration_add_session_token_to_users(PDO $db): bool {
     try {
-        // Проверяем, существует ли поле session_token
+        // Перевіряємо, чи існує поле session_token
         $stmt = $db->query("SHOW COLUMNS FROM users LIKE 'session_token'");
         $columnExists = $stmt->fetch() !== false;
         
         if (!$columnExists) {
-            // Добавляем поле session_token
-            $db->exec("ALTER TABLE users ADD COLUMN session_token VARCHAR(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Токен сессии для защиты от одновременного входа' AFTER role_ids");
+            // Додаємо поле session_token
+            $db->exec("ALTER TABLE users ADD COLUMN session_token VARCHAR(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Токен сесії для захисту від одночасного входу' AFTER role_ids");
             
-            // Добавляем индекс для быстрого поиска
+            // Додаємо індекс для швидкого пошуку
             $db->exec("ALTER TABLE users ADD INDEX idx_session_token (session_token)");
             
             error_log("Migration: Added session_token field to users table");

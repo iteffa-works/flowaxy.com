@@ -1,7 +1,7 @@
 <?php
 /**
- * Отправщик Webhooks
- * Асинхронная отправка webhooks внешним сервисам
+ * Відправник Webhooks
+ * Асинхронна відправка webhooks зовнішнім сервісам
  * 
  * @package Engine\Classes\Http
  * @version 1.0.0
@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 class WebhookDispatcher {
     private WebhookManager $webhookManager;
-    private const TIMEOUT = 10; // Таймаут запроса в секундах
+    private const TIMEOUT = 10; // Таймаут запиту в секундах
     
     /**
      * Конструктор
@@ -21,11 +21,11 @@ class WebhookDispatcher {
     }
     
     /**
-     * Отправка webhook для события
+     * Відправка webhook для події
      * 
-     * @param string $event Название события
-     * @param array $payload Данные для отправки
-     * @param bool $async Асинхронная отправка (по умолчанию true)
+     * @param string $event Назва події
+     * @param array $payload Дані для відправки
+     * @param bool $async Асинхронна відправка (за замовчуванням true)
      * @return void
      */
     public function dispatch(string $event, array $payload = [], bool $async = true): void {
@@ -37,42 +37,42 @@ class WebhookDispatcher {
         
         foreach ($webhooks as $webhook) {
             if ($async) {
-                // Асинхронная отправка (не блокирует выполнение)
+                // Асинхронна відправка (не блокує виконання)
                 $this->sendAsync($webhook, $event, $payload);
             } else {
-                // Синхронная отправка
+                // Синхронна відправка
                 $this->send($webhook, $event, $payload);
             }
         }
     }
     
     /**
-     * Отправка webhook конкретному получателю
+     * Відправка webhook конкретному отримувачу
      * 
-     * @param array $webhook Данные webhook
-     * @param string $event Название события
-     * @param array $payload Данные
-     * @return bool Успешная ли отправка
+     * @param array $webhook Дані webhook
+     * @param string $event Назва події
+     * @param array $payload Дані
+     * @return bool Чи успішна відправка
      */
     public function send(array $webhook, string $event, array $payload = []): bool {
         try {
             $url = $webhook['url'];
             $secretHash = $this->getSecretHashForWebhook($webhook['id']);
             
-            // Формируем данные для отправки
+            // Формуємо дані для відправки
             $data = [
                 'event' => $event,
                 'timestamp' => time(),
                 'data' => $payload
             ];
             
-            // Добавляем подпись, если есть секрет
+            // Додаємо підпис, якщо є секрет
             if (!empty($secretHash)) {
                 $signature = $this->generateSignature($data, $secretHash);
                 $data['signature'] = $signature;
             }
             
-            // Отправляем запрос
+            // Відправляємо запит
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_POST => true,
@@ -96,7 +96,7 @@ class WebhookDispatcher {
             
             $success = ($httpCode >= 200 && $httpCode < 300) && empty($error);
             
-            // Обновляем статистику
+            // Оновлюємо статистику
             $this->webhookManager->updateStats($webhook['id'], $success);
             
             // Логируем ошибки

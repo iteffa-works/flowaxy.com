@@ -8,10 +8,10 @@ class LoginPage {
     private $error = '';
     
     public function __construct() {
-        // Убеждаемся, что сессия инициализирована для CSRF токена (используем наши классы)
-        // Session::start() теперь автоматически проверяет настройки протокола из базы данных
+        // Переконуємося, що сесія ініціалізована для CSRF токена (використовуємо наші класи)
+        // Session::start() тепер автоматично перевіряє налаштування протоколу з бази даних
         if (!Session::isStarted()) {
-            // Получаем настройки протокола из базы данных для правильной инициализации сессии
+            // Отримуємо налаштування протоколу з бази даних для правильної ініціалізації сесії
             $isSecure = false;
             if (class_exists('SettingsManager') && file_exists(__DIR__ . '/../../../data/database.ini')) {
                 try {
@@ -23,7 +23,7 @@ class LoginPage {
                         $isSecure = false;
                     }
                 } catch (Exception $e) {
-                    // Игнорируем ошибки
+                    // Ігноруємо помилки
                 }
             }
             
@@ -39,18 +39,18 @@ class LoginPage {
     
     public function handle() {
         // Якщо вже авторизований (не через POST), перенаправляємо
-        // Но только если это не POST запрос (чтобы обработать форму входа)
+        // Але тільки якщо це не POST запит (щоб обробити форму входу)
         if ((Request::getMethod() !== 'POST' && empty($_POST)) && SecurityHelper::isAdminLoggedIn()) {
             Response::redirectStatic(UrlHelper::admin('dashboard'));
             return;
         }
         
-        // Обробка форми входу (используем Request напрямую из engine/classes)
+        // Обробка форми входу (використовуємо Request безпосередньо з engine/classes)
         if (Request::getMethod() === 'POST' || !empty($_POST)) {
             $this->processLogin();
         }
         
-        // Всегда рендерим страницу (с ошибкой, если она есть)
+        // Завжди рендеримо сторінку (з помилкою, якщо вона є)
         $this->render();
     }
     
@@ -58,10 +58,10 @@ class LoginPage {
      * Обробка входу
      */
     private function processLogin() {
-        // Убеждаемся, что сессия инициализирована
-        // НЕ переинициализируем сессию, если она уже запущена - это может сбросить cookies
+        // Переконуємося, що сесія ініціалізована
+        // НЕ переініціалізуємо сесію, якщо вона вже запущена - це може скинути cookies
         if (!Session::isStarted()) {
-            // Получаем настройки протокола из базы данных для правильной инициализации сессии
+            // Отримуємо налаштування протоколу з бази даних для правильної ініціалізації сесії
             $isSecure = false;
             if (class_exists('SettingsManager') && file_exists(__DIR__ . '/../../../data/database.ini')) {
                 try {
@@ -73,7 +73,7 @@ class LoginPage {
                         $isSecure = false;
                     }
                 } catch (Exception $e) {
-                    // Игнорируем ошибки
+                    // Ігноруємо помилки
                 }
             }
             
@@ -87,10 +87,10 @@ class LoginPage {
         $request = Request::getInstance();
         $csrfToken = $request->post('csrf_token', '');
         
-        // Проверка CSRF токена
+        // Перевірка CSRF токена
         if (!SecurityHelper::verifyCsrfToken($csrfToken)) {
             $this->error = 'Помилка безпеки. Спробуйте ще раз.';
-            SecurityHelper::csrfToken(); // Генерируем новый токен для следующей попытки
+            SecurityHelper::csrfToken(); // Генеруємо новий токен для наступної спроби
             return;
         }
         

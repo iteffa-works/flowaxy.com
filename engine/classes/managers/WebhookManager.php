@@ -1,7 +1,7 @@
 <?php
 /**
  * Менеджер Webhooks
- * Управление webhooks для отправки уведомлений внешним сервисам
+ * Управління webhooks для відправки сповіщень зовнішнім сервісам
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -18,11 +18,11 @@ class WebhookManager {
      */
     public function __construct() {
         $this->db = Database::getInstance();
-        // Таблица создается установщиком, создание удалено из ядра
+        // Таблиця створюється установщиком, створення видалено з ядра
     }
     
     /**
-     * Генерация секретного ключа
+     * Генерація секретного ключа
      * 
      * @return string
      */
@@ -31,12 +31,12 @@ class WebhookManager {
     }
     
     /**
-     * Создание нового webhook
+     * Створення нового webhook
      * 
-     * @param string $name Название
-     * @param string $url URL для отправки
-     * @param array $events События для отслеживания
-     * @param string|null $secret Секретный ключ (если null, генерируется автоматически)
+     * @param string $name Назва
+     * @param string $url URL для відправки
+     * @param array $events Події для відстеження
+     * @param string|null $secret Секретний ключ (якщо null, генерується автоматично)
      * @return array
      */
     public function create(string $name, string $url, array $events = [], ?string $secret = null): array {
@@ -67,7 +67,7 @@ class WebhookManager {
                 'id' => $id,
                 'name' => $name,
                 'url' => $url,
-                'secret' => $secret, // Возвращаем только один раз!
+                'secret' => $secret, // Повертаємо тільки один раз!
                 'events' => $events,
                 'is_active' => true,
                 'success_count' => 0,
@@ -76,14 +76,14 @@ class WebhookManager {
             ];
         } catch (Exception $e) {
             error_log("WebhookManager::create() error: " . $e->getMessage());
-            throw new Exception("Не удалось создать webhook: " . $e->getMessage());
+            throw new Exception("Не вдалося створити webhook: " . $e->getMessage());
         }
     }
     
     /**
-     * Получение всех webhooks
+     * Отримання всіх webhooks
      * 
-     * @param bool $activeOnly Только активные
+     * @param bool $activeOnly Тільки активні
      * @return array
      */
     public function getAll(bool $activeOnly = false): array {

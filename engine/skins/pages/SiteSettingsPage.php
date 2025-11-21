@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница настроек сайта
+ * Сторінка налаштувань сайту
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -45,7 +45,7 @@ class SiteSettingsPage extends AdminPage {
         
         $settings = $this->post('settings') ?? [];
         
-        // Обработка checkbox полей (если не отмечены, они не приходят в POST)
+        // Обробка checkbox полів (якщо не відмічені, вони не приходять в POST)
         $checkboxFields = ['cache_enabled', 'cache_auto_cleanup', 'logging_enabled'];
         foreach ($checkboxFields as $field) {
             if (!isset($settings[$field])) {
@@ -53,18 +53,18 @@ class SiteSettingsPage extends AdminPage {
             }
         }
         
-        // Санитизация значений
+        // Санітизація значень
         $sanitizedSettings = [];
         foreach ($settings as $key => $value) {
             $sanitizedSettings[$key] = SecurityHelper::sanitizeInput($value);
         }
         
         try {
-            // Используем SettingsManager для сохранения настроек
+            // Використовуємо SettingsManager для збереження налаштувань
             if (class_exists('SettingsManager')) {
                 $settingsManager = settingsManager();
                 
-                // Очищаем кеш настроек перед сохранением, чтобы гарантировать свежие данные
+                // Очищаємо кеш налаштувань перед збереженням, щоб гарантувати свіжі дані
                 if (method_exists($settingsManager, 'clearCache')) {
                     $settingsManager->clearCache();
                 }
@@ -72,17 +72,17 @@ class SiteSettingsPage extends AdminPage {
                 $result = $settingsManager->setMultiple($sanitizedSettings);
                 
                 if ($result) {
-                    // Очищаем кеш настроек после сохранения
+                    // Очищаємо кеш налаштувань після збереження
                     if (method_exists($settingsManager, 'clearCache')) {
                         $settingsManager->clearCache();
                     }
                     
-                    // Перезагружаем настройки в SettingsManager
+                    // Перезавантажуємо налаштування в SettingsManager
                     if (method_exists($settingsManager, 'reloadSettings')) {
                         $settingsManager->reloadSettings();
                     }
                     
-                    // Обновляем настройки в Cache и Logger
+                    // Оновлюємо налаштування в Cache та Logger
                     if (class_exists('Cache')) {
                         $cacheInstance = cache();
                         if ($cacheInstance && method_exists($cacheInstance, 'reloadSettings')) {
@@ -96,7 +96,7 @@ class SiteSettingsPage extends AdminPage {
                         }
                     }
                     
-                    // Применяем timezone, если он был изменен
+                    // Застосовуємо timezone, якщо він був змінено
                     if (isset($sanitizedSettings['timezone'])) {
                         $timezone = $sanitizedSettings['timezone'];
                         if (!empty($timezone) && in_array($timezone, timezone_identifiers_list())) {

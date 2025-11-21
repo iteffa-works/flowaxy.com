@@ -1,7 +1,7 @@
 <?php
 /**
- * Фабрика для создания менеджеров хранилища
- * Унифицированный доступ к различным типам хранилища
+ * Фабрика для створення менеджерів сховища
+ * Уніфікований доступ до різних типів сховища
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -16,10 +16,10 @@ class StorageFactory {
     public const TYPE_SESSION_STORAGE = 'sessionStorage';
     
     /**
-     * Получение менеджера хранилища по типу
+     * Отримання менеджера сховища за типом
      * 
-     * @param string $type Тип хранилища (cookie, session, localStorage, sessionStorage)
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $type Тип сховища (cookie, session, localStorage, sessionStorage)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return StorageInterface|null
      */
     public static function get(string $type, string $prefix = ''): ?StorageInterface {
@@ -60,9 +60,9 @@ class StorageFactory {
     }
     
     /**
-     * Получение менеджера cookies
+     * Отримання менеджера cookies
      * 
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return CookieManager
      */
     public static function cookie(string $prefix = ''): CookieManager {
@@ -70,9 +70,9 @@ class StorageFactory {
     }
     
     /**
-     * Получение менеджера сессий
+     * Отримання менеджера сесій
      * 
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return SessionManager
      */
     public static function session(string $prefix = ''): SessionManager {
@@ -84,9 +84,9 @@ class StorageFactory {
     }
     
     /**
-     * Получение менеджера localStorage
+     * Отримання менеджера localStorage
      * 
-     * @param string $prefix Префикс для ключей (опционально)
+     * @param string $prefix Префікс для ключів (опціонально)
      * @return StorageManager
      */
     public static function localStorage(string $prefix = ''): StorageManager {

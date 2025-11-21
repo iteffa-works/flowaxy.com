@@ -1,7 +1,7 @@
 <?php
 /**
- * Интерфейс для всех типов хранилища
- * Единый API для работы с cookies, sessions, localStorage, sessionStorage
+ * Інтерфейс для всіх типів сховища
+ * Єдиний API для роботи з cookies, sessions, localStorage, sessionStorage
  * 
  * @package Engine\Classes\Storage
  * @version 1.0.0
@@ -11,25 +11,25 @@ declare(strict_types=1);
 
 interface StorageInterface {
     /**
-     * Получение значения из хранилища
+     * Отримання значення з сховища
      * 
      * @param string $key Ключ
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function get(string $key, $default = null);
     
     /**
-     * Установка значения в хранилище
+     * Встановлення значення в сховище
      * 
      * @param string $key Ключ
-     * @param mixed $value Значение
+     * @param mixed $value Значення
      * @return bool
      */
     public function set(string $key, $value): bool;
     
     /**
-     * Проверка наличия ключа в хранилище
+     * Перевірка наявності ключа в сховищі
      * 
      * @param string $key Ключ
      * @return bool
@@ -37,7 +37,7 @@ interface StorageInterface {
     public function has(string $key): bool;
     
     /**
-     * Удаление значения из хранилища
+     * Видалення значення з сховища
      * 
      * @param string $key Ключ
      * @return bool
@@ -45,39 +45,39 @@ interface StorageInterface {
     public function remove(string $key): bool;
     
     /**
-     * Получение всех данных из хранилища
+     * Отримання всіх даних з сховища
      * 
      * @return array
      */
     public function all(): array;
     
     /**
-     * Очистка всех данных из хранилища
+     * Очищення всіх даних з сховища
      * 
      * @return bool
      */
     public function clear(): bool;
     
     /**
-     * Получение нескольких значений по ключам
+     * Отримання кількох значень за ключами
      * 
-     * @param array $keys Массив ключей
+     * @param array $keys Масив ключів
      * @return array
      */
     public function getMultiple(array $keys): array;
     
     /**
-     * Установка нескольких значений
+     * Встановлення кількох значень
      * 
-     * @param array $values Массив ключ => значение
+     * @param array $values Масив ключ => значення
      * @return bool
      */
     public function setMultiple(array $values): bool;
     
     /**
-     * Удаление нескольких значений
+     * Видалення кількох значень
      * 
-     * @param array $keys Массив ключей
+     * @param array $keys Масив ключів
      * @return bool
      */
     public function removeMultiple(array $keys): bool;

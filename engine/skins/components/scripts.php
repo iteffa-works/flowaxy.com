@@ -3,17 +3,17 @@
  * Компонент JavaScript скриптов
  */
 ?>
-<!-- Bootstrap Bundle JS (включает Popper) -->
+<!-- Bootstrap Bundle JS (включає Popper) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Ajax Helper (глобальний хелпер для AJAX запитів) -->
 <script src="<?= UrlHelper::admin('assets/scripts/ajax-helper.js') ?>?v=<?= time() ?>"></script>
 
-<!-- Storage Manager (управление клиентским хранилищем) -->
+<!-- Storage Manager (управління клієнтським сховищем) -->
 <script src="/engine/skins/assets/js/storage.js?v=<?= time() ?>"></script>
 
 <?php
-// Подключаем центральный обработчик модальных окон
+// Підключаємо центральний обробник модальних вікон
 if (class_exists('ModalHandler')) {
     $modalHandler = ModalHandler::getInstance();
     $modalHandler->setContext('admin');
@@ -22,14 +22,14 @@ if (class_exists('ModalHandler')) {
 ?>
 
 <script>
-// WordPress-подобная функциональность sidebar
+// WordPress-подібна функціональність sidebar
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebarMenu');
     const main = document.querySelector('main.col-md-9.ms-sm-auto.col-lg-10');
     
     sidebar.classList.toggle('collapsed');
     
-    // Обновляем отступ основного контента
+    // Оновлюємо відступ основного контенту
     if (sidebar.classList.contains('collapsed')) {
         main.style.marginLeft = '36px';
         main.style.marginTop = '40px';
@@ -40,7 +40,7 @@ function toggleSidebar() {
 }
 
 function toggleSubmenu(element, event) {
-    // Предотвращаем всплытие события и переход по ссылке
+    // Запобігаємо сплиттю події та переходу за посиланням
     if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -50,25 +50,25 @@ function toggleSubmenu(element, event) {
     const submenu = parentItem.querySelector('.submenu');
     const arrow = element.querySelector('.submenu-arrow');
     
-    // Определяем контекст (десктоп или мобильный)
+    // Визначаємо контекст (десктоп або мобільний)
     const isMobile = element.closest('.mobile-sidebar') !== null;
     const context = isMobile ? '.mobile-sidebar' : '.sidebar';
     
-    // Закрываем все другие субменю в том же контексте
+    // Закриваємо всі інші підменю в тому ж контексті
     document.querySelectorAll(context + ' .has-submenu.open').forEach(item => {
         if (item !== parentItem) {
             item.classList.remove('open');
         }
     });
     
-    // Переключаем текущее субменю
+    // Перемикаємо поточне підменю
     parentItem.classList.toggle('open');
     
-    // Предотвращаем переход по ссылке
+    // Запобігаємо переходу за посиланням
     return false;
 }
 
-// Функция для мобильного меню
+// Функція для мобільного меню
 function toggleMobileSidebar() {
     const mobileSidebar = document.querySelector('.mobile-sidebar');
     const overlay = document.querySelector('.mobile-sidebar-overlay');
@@ -77,7 +77,7 @@ function toggleMobileSidebar() {
         mobileSidebar.classList.toggle('show');
         overlay.classList.toggle('show');
         
-        // Блокируем прокрутку body когда меню открыто
+        // Блокуємо прокрутку body коли меню відкрите
         if (mobileSidebar.classList.contains('show')) {
             document.body.style.overflow = 'hidden';
         } else {
@@ -86,9 +86,9 @@ function toggleMobileSidebar() {
     }
 }
 
-// Закрытие мобильного меню при клике на ссылку
+// Закриття мобільного меню при кліку на посилання
 document.addEventListener('DOMContentLoaded', function() {
-    // Закрываем меню только при клике на обычные ссылки
+    // Закриваємо меню тільки при кліку на звичайні посилання
     const mobileLinks = document.querySelectorAll('.mobile-sidebar .nav-link:not(.submenu-toggle), .mobile-sidebar .submenu-link');
     mobileLinks.forEach(link => {
         link.addEventListener('click', function(e) {

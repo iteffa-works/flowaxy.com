@@ -1,7 +1,7 @@
 <?php
 /**
- * Хелпер для работы с безопасностью
- * Обертка над Security классом
+ * Хелпер для роботи з безпекою
+ * Обгортка над Security класом
  * 
  * @package Engine\Classes\Helpers
  * @version 1.0.0
@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 class SecurityHelper {
     /**
-     * Генерация CSRF токена
+     * Генерація CSRF токена
      * 
      * @return string
      */
@@ -19,7 +19,7 @@ class SecurityHelper {
         if (!class_exists('Security')) {
             return '';
         }
-        // Убеждаемся, что Session инициализирован
+        // Переконуємося, що Session ініціалізовано
         if (session_status() !== PHP_SESSION_ACTIVE && class_exists('Session')) {
             Session::start();
         }
@@ -27,16 +27,16 @@ class SecurityHelper {
     }
     
     /**
-     * Проверка CSRF токена
+     * Перевірка CSRF токена
      * 
-     * @param string|null $token Токен для проверки
+     * @param string|null $token Токен для перевірки
      * @return bool
      */
     public static function verifyCsrfToken(?string $token = null): bool {
         if (!class_exists('Security')) {
             return false;
         }
-        // Убеждаемся, что Session инициализирован
+        // Переконуємося, що Session ініціалізовано
         if (session_status() !== PHP_SESSION_ACTIVE && class_exists('Session')) {
             Session::start();
         }
@@ -44,7 +44,7 @@ class SecurityHelper {
     }
     
     /**
-     * Генерация CSRF поля для формы
+     * Генерація CSRF поля для форми
      * 
      * @return string
      */
@@ -52,7 +52,7 @@ class SecurityHelper {
         if (!class_exists('Security')) {
             return '';
         }
-        // Убеждаемся, что Session инициализирован
+        // Переконуємося, що Session ініціалізовано
         if (session_status() !== PHP_SESSION_ACTIVE && class_exists('Session')) {
             Session::start();
         }
@@ -60,14 +60,14 @@ class SecurityHelper {
     }
     
     /**
-     * Проверка, залогинен ли админ
-     * Проверка только через базу данных (без проверки сессии)
+     * Перевірка, чи залогінений адмін
+     * Перевірка тільки через базу даних (без перевірки сесії)
      * 
      * @return bool
      */
     public static function isAdminLoggedIn(): bool {
-        // Проверяем авторизацию только через базу данных
-        // Сессия нужна только для получения ID пользователя
+        // Перевіряємо авторизацію тільки через базу даних
+        // Сесія потрібна тільки для отримання ID користувача
         if (!class_exists('Session') || !Session::isStarted()) {
             return false;
         }
@@ -79,18 +79,18 @@ class SecurityHelper {
             return false;
         }
         
-        // Проверяем авторизацию только через базу данных
+        // Перевіряємо авторизацію тільки через базу даних
         try {
             $db = DatabaseHelper::getConnection();
             if ($db) {
-                // Получаем время жизни сессии из настроек
-                $sessionLifetime = 7200; // По умолчанию 2 часа
+                // Отримуємо час життя сесії з налаштувань
+                $sessionLifetime = 7200; // За замовчуванням 2 години
                 if (class_exists('SystemConfig')) {
                     $systemConfig = SystemConfig::getInstance();
                     $sessionLifetime = $systemConfig->getSessionLifetime();
                 }
                 
-                // Проверяем пользователя в БД: активен ли он и не истекла ли сессия
+                // Перевіряємо користувача в БД: чи активний він і чи не закінчилася сесія
                 $stmt = $db->prepare("
                     SELECT id, session_token, last_activity, is_active 
                     FROM users 
@@ -101,41 +101,41 @@ class SecurityHelper {
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if (!$user) {
-                    // Пользователь не найден
+                    // Користувача не знайдено
                     self::logout();
                     return false;
                 }
                 
-                // Проверяем, активен ли пользователь
+                // Перевіряємо, чи активний користувач
                 if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
-                    // Пользователь неактивен
+                    // Користувач неактивний
                     self::logout();
                     return false;
                 }
                 
-                // Проверяем наличие токена сессии
+                // Перевіряємо наявність токена сесії
                 if (empty($user['session_token'])) {
-                    // Токен отсутствует - пользователь не авторизован
+                    // Токен відсутній - користувач не авторизований
                     self::logout();
                     return false;
                 }
                 
-                // Проверяем валидность сессии по времени последней активности
+                // Перевіряємо валідність сесії за часом останньої активності
                 if (!empty($user['last_activity'])) {
                     $lastActivity = strtotime($user['last_activity']);
                     $currentTime = time();
                     $timeDiff = $currentTime - $lastActivity;
                     
-                    // Если прошло больше времени жизни сессии - сессия истекла
+                    // Якщо пройшло більше часу життя сесії - сесія закінчилася
                     if ($timeDiff > $sessionLifetime) {
-                        // Сессия истекла - помечаем пользователя как неактивного
+                        // Сесія закінчилася - позначаємо користувача як неактивного
                         $stmt = $db->prepare("UPDATE users SET is_active = 0, session_token = NULL, last_activity = NULL WHERE id = ?");
                         $stmt->execute([$userId]);
                         self::logout();
                         return false;
                     }
-                } else if (!empty($user['session_token'])) {
-                    // Если last_activity отсутствует, но есть токен - устанавливаем время активности
+                } elseif (!empty($user['session_token'])) {
+                    // Якщо last_activity відсутня, але є токен - встановлюємо час активності
                     $now = date('Y-m-d H:i:s');
                     $stmt = $db->prepare("UPDATE users SET last_activity = ? WHERE id = ?");
                     $stmt->execute([$now, $userId]);
@@ -145,9 +145,9 @@ class SecurityHelper {
             }
         } catch (Exception $e) {
             if (class_exists('Logger')) {
-                Logger::getInstance()->logError('Error checking admin login', ['error' => $e->getMessage()]);
+                Logger::getInstance()->logError('Помилка перевірки авторизації адміна', ['error' => $e->getMessage()]);
             }
-            // В случае ошибки БД разрешаем доступ (чтобы не блокировать пользователя)
+            // У разі помилки БД дозволяємо доступ (щоб не блокувати користувача)
             return true;
         }
         
@@ -155,7 +155,7 @@ class SecurityHelper {
     }
     
     /**
-     * Выход из системы (очистка сессии и пометка пользователя как неактивного)
+     * Вихід з системи (очищення сесії та позначка користувача як неактивного)
      * 
      * @return void
      */
@@ -163,7 +163,7 @@ class SecurityHelper {
         $session = sessionManager();
         $userId = (int)$session->get('admin_user_id');
         
-        // Помечаем пользователя как неактивного и очищаем токен в базе данных
+        // Позначаємо користувача як неактивного та очищаємо токен у базі даних
         if ($userId > 0) {
             try {
                 $db = DatabaseHelper::getConnection();
@@ -173,27 +173,27 @@ class SecurityHelper {
                 }
             } catch (Exception $e) {
                 if (class_exists('Logger')) {
-                    Logger::getInstance()->logError('Error clearing session', ['error' => $e->getMessage()]);
+                    Logger::getInstance()->logError('Помилка очищення сесії', ['error' => $e->getMessage()]);
                 }
             }
         }
         
-        // Очищаем сессию
+        // Очищаємо сесію
         $session->remove(ADMIN_SESSION_NAME);
         $session->remove('admin_user_id');
         $session->remove('admin_username');
     }
     
     /**
-     * Требует авторизации админа
+     * Вимагає авторизації адміна
      * 
      * @return void
      */
     public static function requireAdmin(): void {
         if (!self::isAdminLoggedIn()) {
-            // Для AJAX запросов возвращаем JSON ошибку
+            // Для AJAX запитів повертаємо JSON помилку
             if (class_exists('AjaxHandler') && AjaxHandler::isAjax()) {
-                // Очищаем буфер вывода
+                // Очищаємо буфер виводу
                 while (ob_get_level() > 0) {
                     ob_end_clean();
                 }
@@ -216,7 +216,7 @@ class SecurityHelper {
                 }
             }
             
-            // Для обычных запросов делаем редирект
+            // Для звичайних запитів робимо редірект
             if (class_exists('Response')) {
                 $adminLoginUrl = class_exists('UrlHelper') ? UrlHelper::admin('login') : (defined('ADMIN_URL') ? ADMIN_URL . '/login' : '/admin/login');
                 Response::redirectStatic($adminLoginUrl);
@@ -229,10 +229,10 @@ class SecurityHelper {
     }
     
     /**
-     * Безопасный вывод HTML
+     * Безпечний вивід HTML
      * 
-     * @param mixed $value Значение для вывода
-     * @param string $default Значение по умолчанию
+     * @param mixed $value Значення для виводу
+     * @param string $default Значення за замовчуванням
      * @return string
      */
     public static function safeHtml($value, string $default = ''): string {
@@ -243,9 +243,9 @@ class SecurityHelper {
     }
     
     /**
-     * Санитизация входных данных
+     * Санітизація вхідних даних
      * 
-     * @param mixed $input Входные данные
+     * @param mixed $input Вхідні дані
      * @return string
      */
     public static function sanitizeInput($input): string {
@@ -260,10 +260,10 @@ class SecurityHelper {
         if (is_array($input)) {
             try {
                 return Json::stringify($input);
-                } catch (Exception $e) {
-                    if (class_exists('Logger')) {
-                        Logger::getInstance()->logError('JSON encoding error', ['error' => $e->getMessage()]);
-                    }
+            } catch (Exception $e) {
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('Помилка кодування JSON', ['error' => $e->getMessage()]);
+                }
                 return '';
             }
         }

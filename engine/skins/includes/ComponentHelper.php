@@ -1,14 +1,14 @@
 <?php
 /**
- * Хелпер для работы с компонентами и шаблонами
- * Упрощает включение компонентов в шаблоны
+ * Хелпер для роботи з компонентами та шаблонами
+ * Спрощує включення компонентів у шаблони
  */
 
 /**
- * Включить компонент
+ * Включити компонент
  * 
- * @param string $componentName Имя компонента (без расширения .php)
- * @param array $data Данные для передачи в компонент (будут извлечены как переменные)
+ * @param string $componentName Ім'я компонента (без розширення .php)
+ * @param array $data Дані для передачі в компонент (будуть витягнуті як змінні)
  * @return void
  */
 function includeComponent(string $componentName, array $data = []): void {
@@ -19,19 +19,19 @@ function includeComponent(string $componentName, array $data = []): void {
         return;
     }
     
-    // Извлекаем переменные из данных
+    // Витягуємо змінні з даних
     extract($data);
     
-    // Включаем компонент
+    // Включаємо компонент
     include $componentPath;
 }
 
 /**
- * Получить содержимое компонента в строку
+ * Отримати вміст компонента в рядок
  * 
- * @param string $componentName Имя компонента
- * @param array $data Данные для передачи в компонент
- * @return string Содержимое компонента
+ * @param string $componentName Ім'я компонента
+ * @param array $data Дані для передачі в компонент
+ * @return string Вміст компонента
  */
 function getComponent(string $componentName, array $data = []): string {
     ob_start();
@@ -40,10 +40,10 @@ function getComponent(string $componentName, array $data = []): string {
 }
 
 /**
- * Включить шаблон
+ * Включити шаблон
  * 
- * @param string $templateName Имя шаблона (без расширения .php)
- * @param array $data Данные для передачи в шаблон
+ * @param string $templateName Ім'я шаблону (без розширення .php)
+ * @param array $data Дані для передачі в шаблон
  * @return void
  */
 function includeTemplate(string $templateName, array $data = []): void {
@@ -54,19 +54,19 @@ function includeTemplate(string $templateName, array $data = []): void {
         return;
     }
     
-    // Извлекаем переменные из данных
+    // Витягуємо змінні з даних
     extract($data);
     
-    // Включаем шаблон
+    // Включаємо шаблон
     include $templatePath;
 }
 
 /**
- * Получить содержимое шаблона в строку
+ * Отримати вміст шаблону в рядок
  * 
- * @param string $templateName Имя шаблона
- * @param array $data Данные для передачи в шаблон
- * @return string Содержимое шаблона
+ * @param string $templateName Ім'я шаблону
+ * @param array $data Дані для передачі в шаблон
+ * @return string Вміст шаблону
  */
 function getTemplate(string $templateName, array $data = []): string {
     ob_start();
@@ -75,10 +75,10 @@ function getTemplate(string $templateName, array $data = []): string {
 }
 
 /**
- * Получить путь к ассету
+ * Отримати шлях до ассету
  * 
- * @param string $assetPath Путь к ассету (относительно assets/)
- * @return string Полный URL к ассету
+ * @param string $assetPath Шлях до ассету (відносно assets/)
+ * @return string Повний URL до ассету
  */
 function asset(string $assetPath): string {
     return UrlHelper::admin('assets/' . ltrim($assetPath, '/'));

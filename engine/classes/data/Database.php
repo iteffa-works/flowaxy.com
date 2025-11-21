@@ -1,7 +1,7 @@
 <?php
 /**
- * Улучшенный класс для работы с базой данных
- * Интегрирован с модулем Logger для отслеживания медленных запросов и ошибок
+ * Покращений клас для роботи з базою даних
+ * Інтегрований з модулем Logger для відстеження повільних запитів та помилок
  * 
  * @package Engine\Classes
  * @version 2.0.0
@@ -18,31 +18,31 @@ class Database {
     private int $connectionTimeout = 3;
     private int $hostCheckTimeout = 1;
     
-    // Статистика запросов
+    // Статистика запитів
     private array $queryList = [];
     private array $queryErrors = [];
     private int $queryCount = 0;
     private float $totalQueryTime = 0.0;
     private float $slowQueryThreshold = 1.0;
     
-    // Logger instance
+    // Екземпляр Logger
     private $logger = null;
     
     /**
-     * Конструктор (приватный для Singleton)
-     * Важно: НЕ инициализируем Logger в конструкторе, чтобы избежать циклических зависимостей
+     * Конструктор (приватний для Singleton)
+     * Важливо: НЕ ініціалізуємо Logger в конструкторі, щоб уникнути циклічних залежностей
      */
     private function __construct() {
-        // НЕ инициализируем logger здесь, чтобы избежать рекурсии:
+        // НЕ ініціалізуємо logger тут, щоб уникнути рекурсії:
         // Database::__construct() -> initLogger() -> logger() -> Logger::getInstance() -> BaseModule::__construct() -> getDB() -> Database::getInstance()
-        // Logger будет загружен лениво через getLogger() метод
+        // Logger буде завантажено ліниво через getLogger() метод
         
-        // Загружаем параметры из настроек, если доступны
+        // Завантажуємо параметри з налаштувань, якщо доступні
         $this->loadConfigParams();
     }
     
     /**
-     * Загрузка параметров конфигурации из настроек
+     * Завантаження параметрів конфігурації з налаштувань
      * 
      * @return void
      */
@@ -57,36 +57,36 @@ class Database {
     }
     
     /**
-     * Ленивое получение Logger
-     * Вызывается только когда нужно логировать, после того как Database уже создан
+     * Ліниве отримання Logger
+     * Викликається тільки коли потрібно логувати, після того як Database вже створено
      * 
      * @return Logger|null
      */
     private function getLogger() {
         if ($this->logger === null) {
             try {
-                // Пытаемся получить Logger через функцию
+                // Намагаємося отримати Logger через функцію
                 if (function_exists('logger')) {
                     $this->logger = logger();
                 } elseif (class_exists('Logger') && method_exists('Logger', 'getInstance')) {
                     $this->logger = Logger::getInstance();
                 }
                 
-                // Порог медленных запросов уже загружен из SystemConfig в конструкторе
-                // Если SystemConfig недоступен, используем Logger как fallback
+                // Поріг повільних запитів вже завантажено з SystemConfig в конструкторі
+                // Якщо SystemConfig недоступний, використовуємо Logger як fallback
                 if ($this->slowQueryThreshold === 1.0 && $this->logger && method_exists($this->logger, 'getSetting')) {
                     $threshold = (float)$this->logger->getSetting('slow_query_threshold', '1.0');
                     $this->slowQueryThreshold = $threshold;
                 }
             } catch (Exception $e) {
-                // Logger недоступен, продолжаем без него
+                // Logger недоступний, продовжуємо без нього
             }
         }
         return $this->logger;
     }
     
     /**
-     * Получение экземпляра класса (Singleton)
+     * Отримання екземпляра класу (Singleton)
      * 
      * @return self
      */
@@ -98,7 +98,7 @@ class Database {
     }
     
     /**
-     * Получение подключения к базе данных
+     * Отримання підключення до бази даних
      * 
      * @return PDO
      * @throws Exception
@@ -111,24 +111,22 @@ class Database {
     }
     
     /**
-     * Быстрая проверка доступности хоста
+     * Швидка перевірка доступності хоста
      * 
      * @param string $host Хост
-     * @param int $port Порт (по умолчанию 3306 для MySQL)
+     * @param int $port Порт (за замовчуванням 3306 для MySQL)
      * @return bool
      */
     private function checkHostAvailability(string $host, int $port = 3306): bool {
-        // Разбираем хост:port если указано
+        // Розбираємо хост:port якщо вказано
         if (strpos($host, ':') !== false) {
             [$host, $port] = explode(':', $host, 2);
             $port = (int)$port;
         }
         
-        // Пытаемся быстро проверить доступность хоста
-        $timeStart = $this->getRealTime();
-        
+        // Намагаємося швидко перевірити доступність хоста
         try {
-            // Используем stream_socket_client с коротким таймаутом
+            // Використовуємо stream_socket_client з коротким таймаутом
             $context = stream_context_create([
                 'socket' => [
                     'connect_timeout' => $this->hostCheckTimeout
@@ -156,24 +154,24 @@ class Database {
     }
     
     /**
-     * Подключение к базе данных
+     * Підключення до бази даних
      * 
      * @return void
      * @throws Exception
      */
     private function connect(): void {
-        // Упрощенная логика: приоритет GLOBALS над константами
-        // Если GLOBALS установлены (инсталлер), используем их
-        // Иначе используем константы
+        // Спрощена логіка: пріоритет GLOBALS над константами
+        // Якщо GLOBALS встановлені (інсталлер), використовуємо їх
+        // Інакше використовуємо константи
         if (isset($GLOBALS['_INSTALLER_DB_HOST']) && !empty($GLOBALS['_INSTALLER_DB_HOST'])) {
-            // Инсталлер: используем GLOBALS
+            // Інсталлер: використовуємо GLOBALS
             $dbHost = $GLOBALS['_INSTALLER_DB_HOST'];
             $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
             $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
             $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
             $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
         } else {
-            // Обычная работа: используем константы
+            // Звичайна робота: використовуємо константи
             $dbHost = defined('DB_HOST') ? DB_HOST : '';
             $dbName = defined('DB_NAME') ? DB_NAME : '';
             $dbUser = defined('DB_USER') ? DB_USER : 'root';
@@ -181,39 +179,36 @@ class Database {
             $dbCharset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
         }
         
-        // Логируем для диагностики (без пароля)
-        // error_log('Database::connect() - Host: ' . $dbHost . ', Name: ' . $dbName . ', User: ' . $dbUser . ', Pass: ' . (strlen($dbPass) > 0 ? '***' : 'empty') . ', Charset: ' . $dbCharset . ', Source: ' . (isset($GLOBALS['_INSTALLER_DB_HOST']) ? 'GLOBALS' : 'constants'));
-        
-        // Проверяем, что конфигурация БД доступна
+        // Перевіряємо, що конфігурація БД доступна
         if (empty($dbHost) || empty($dbName)) {
             $this->isConnected = false;
             $this->connection = null;
-            throw new Exception('Database configuration is not set');
+            throw new Exception('Конфігурація бази даних не встановлена');
         }
         
         if ($this->connectionAttempts >= $this->maxConnectionAttempts) {
-            $error = 'Превышено максимальное количество попыток подключения к базе данных';
-            $this->logError('Database connection failed', ['error' => $error, 'attempts' => $this->connectionAttempts]);
+            $error = 'Перевищено максимальну кількість спроб підключення до бази даних';
+            $this->logError('Помилка підключення до бази даних', ['error' => $error, 'attempts' => $this->connectionAttempts]);
             throw new Exception($error);
         }
         
         $this->connectionAttempts++;
         $timeStart = $this->getRealTime();
         
-        // Быстрая проверка доступности хоста перед подключением PDO
+        // Швидка перевірка доступності хоста перед підключенням PDO
         $host = $dbHost;
         $port = 3306;
         
-        // Разбираем хост:port если указано
+        // Розбираємо хост:port якщо вказано
         if (strpos($host, ':') !== false) {
             [$host, $port] = explode(':', $host, 2);
             $port = (int)$port;
         }
         
-        // Проверяем доступность хоста
+        // Перевіряємо доступність хоста
         if (!$this->checkHostAvailability($host, $port)) {
             $connectionTime = $this->getRealTime() - $timeStart;
-            $error = "Сервер бази даних недоступен (хост: {$host}, порт: {$port})";
+            $error = "Сервер бази даних недоступний (хост: {$host}, порт: {$port})";
             
             $errorContext = [
                 'error' => $error,
@@ -223,12 +218,12 @@ class Database {
                 'connection_time' => round($connectionTime, 4)
             ];
             
-            $this->logError('Database host unavailable', $errorContext);
+            $this->logError('Хост бази даних недоступний', $errorContext);
             throw new Exception($error);
         }
         
         try {
-            // Используем переменные вместо констант (для поддержки установщика)
+            // Використовуємо змінні замість констант (для підтримки встановлювача)
             $dsn = sprintf(
                 "mysql:host=%s;port=%d;dbname=%s;charset=%s",
                 $host,
@@ -248,14 +243,14 @@ class Database {
                 PDO::ATTR_STRINGIFY_FETCHES => false,
             ];
             
-            // Устанавливаем короткий таймаут через ini_set для socket
+            // Встановлюємо короткий таймаут через ini_set для socket
             $oldTimeout = ini_get('default_socket_timeout');
             ini_set('default_socket_timeout', (string)$this->connectionTimeout);
             
             try {
                 $this->connection = new PDO($dsn, $dbUser, $dbPass, $options);
             } finally {
-                // Восстанавливаем предыдущий таймаут
+                // Відновлюємо попередній таймаут
                 ini_set('default_socket_timeout', $oldTimeout);
             }
             $this->isConnected = true;
@@ -263,20 +258,20 @@ class Database {
             
             $connectionTime = $this->getRealTime() - $timeStart;
             
-            // Оптимизация MySQL настроек
+            // Оптимізація MySQL налаштувань
             $this->connection->exec("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
             $this->connection->exec("SET SESSION time_zone = '+00:00'");
             $this->connection->exec("SET SESSION sql_auto_is_null = 0");
             
-            // Логируем подключение
-            $this->logQuery('Connection with MySQL Server', [], $connectionTime, false);
+            // Логуємо підключення
+            $this->logQuery('Підключення до MySQL сервера', [], $connectionTime, false);
             
-            // Получаем версию MySQL
+            // Отримуємо версію MySQL
             $version = $this->connection->query("SELECT VERSION() AS version")->fetch(PDO::FETCH_ASSOC);
             if ($version && isset($version['version'])) {
-                $this->logInfo('Database connected', [
-                    'host' => DB_HOST,
-                    'database' => DB_NAME,
+                $this->logInfo('База даних підключена', [
+                    'host' => $dbHost,
+                    'database' => $dbName,
                     'mysql_version' => $version['version'],
                     'connection_time' => round($connectionTime, 4)
                 ]);
@@ -287,11 +282,11 @@ class Database {
             $this->connection = null;
             $connectionTime = $this->getRealTime() - $timeStart;
             
-            // Определяем причину ошибки
+            // Визначаємо причину помилки
             $errorMessage = $e->getMessage();
             $errorCode = $e->getCode();
             
-            // Если таймаут или хост недоступен, не повторяем попытки
+            // Якщо таймаут або хост недоступний, не повторюємо спроби
             $isTimeout = strpos($errorMessage, 'timeout') !== false 
                       || strpos($errorMessage, 'timed out') !== false
                       || strpos($errorMessage, 'Connection refused') !== false
@@ -305,33 +300,33 @@ class Database {
                 'connection_time' => round($connectionTime, 4),
                 'host' => $host,
                 'port' => $port,
-                'database' => DB_NAME
+                'database' => $dbName
             ];
             
-            $this->logError('Database connection error', $errorContext);
+            $this->logError('Помилка підключення до бази даних', $errorContext);
             
-            // Если таймаут или хост недоступен, или превышено количество попыток - выбрасываем исключение сразу
+            // Якщо таймаут або хост недоступний, або перевищено кількість спроб - викидаємо виняток одразу
             if ($isTimeout || $this->connectionAttempts >= $this->maxConnectionAttempts) {
                 $finalError = $isTimeout 
-                    ? "Сервер бази даних недоступен (таймаут подключения: {$host}:{$port})"
-                    : "Ошибка подключения к базе данных после " . $this->maxConnectionAttempts . " попыток: " . $errorMessage;
+                    ? "Сервер бази даних недоступний (таймаут підключення: {$host}:{$port})"
+                    : "Помилка підключення до бази даних після " . $this->maxConnectionAttempts . " спроб: " . $errorMessage;
                 
                 throw new Exception($finalError);
             }
             
-            // Повторная попытка подключения только если не таймаут
-            // Уменьшаем задержку для быстрого ответа
-            usleep(100000); // 0.1 секунды вместо 1 секунды
+            // Повторна спроба підключення тільки якщо не таймаут
+            // Зменшуємо затримку для швидкої відповіді
+            usleep(100000); // 0.1 секунди замість 1 секунди
             $this->connect();
         }
     }
     
     /**
-     * Выполнение подготовленного запроса
+     * Виконання підготовленого запиту
      * 
-     * @param string $query SQL запрос
-     * @param array $params Параметры для подготовленного запроса
-     * @param bool $logQuery Логировать запрос
+     * @param string $query SQL запит
+     * @param array $params Параметри для підготовленого запиту
+     * @param bool $logQuery Логувати запит
      * @return PDOStatement
      * @throws PDOException
      */
@@ -353,7 +348,7 @@ class Database {
             if ($logQuery) {
                 $this->logQuery($query, $params, $executionTime);
                 
-                // Проверка на медленный запрос
+                // Перевірка на повільний запит
                 if ($executionTime >= $this->slowQueryThreshold) {
                     $this->logSlowQuery($query, $params, $executionTime);
                 }
@@ -372,12 +367,12 @@ class Database {
                 'execution_time' => round($executionTime, 4)
             ];
             
-            // Вызываем хук для логирования ошибок БД
+            // Викликаємо хук для логування помилок БД
             if (function_exists('doHook') && $this->getSetting('log_db_errors', '1') === '1') {
                 doHook('db_error', $errorContext);
             }
             
-            $this->logError('Database query error', $errorContext);
+            $this->logError('Помилка запиту до бази даних', $errorContext);
             $this->queryErrors[] = $errorContext;
             
             throw $e;
@@ -385,10 +380,10 @@ class Database {
     }
     
     /**
-     * Получение одной строки
+     * Отримання одного рядка
      * 
-     * @param string $query SQL запрос
-     * @param array $params Параметры
+     * @param string $query SQL запит
+     * @param array $params Параметри
      * @return array|false
      */
     public function getRow(string $query, array $params = []): array|false {
@@ -397,10 +392,10 @@ class Database {
     }
     
     /**
-     * Получение всех строк
+     * Отримання всіх рядків
      * 
-     * @param string $query SQL запрос
-     * @param array $params Параметры
+     * @param string $query SQL запит
+     * @param array $params Параметри
      * @return array
      */
     public function getAll(string $query, array $params = []): array {
@@ -409,10 +404,10 @@ class Database {
     }
     
     /**
-     * Получение одного значения (первого столбца первой строки)
+     * Отримання одного значення (першого стовпця першого рядка)
      * 
-     * @param string $query SQL запрос
-     * @param array $params Параметры
+     * @param string $query SQL запит
+     * @param array $params Параметри
      * @return mixed
      */
     public function getValue(string $query, array $params = []): mixed {
@@ -421,11 +416,11 @@ class Database {
     }
     
     /**
-     * Вставка записи и получение ID
+     * Вставка запису та отримання ID
      * 
-     * @param string $query SQL запрос INSERT
-     * @param array $params Параметры
-     * @return int|false ID вставленной записи или false при ошибке
+     * @param string $query SQL запит INSERT
+     * @param array $params Параметри
+     * @return int|false ID вставленого запису або false при помилці
      */
     public function insert(string $query, array $params = []): int|false {
         try {
@@ -437,11 +432,11 @@ class Database {
     }
     
     /**
-     * Обновление/удаление записей
+     * Оновлення/видалення записів
      * 
-     * @param string $query SQL запрос UPDATE/DELETE
-     * @param array $params Параметры
-     * @return int Количество затронутых строк
+     * @param string $query SQL запит UPDATE/DELETE
+     * @param array $params Параметри
+     * @return int Кількість залучених рядків
      */
     public function execute(string $query, array $params = []): int {
         $stmt = $this->query($query, $params);
@@ -449,15 +444,15 @@ class Database {
     }
     
     /**
-     * Выполнение транзакции
+     * Виконання транзакції
      * 
-     * @param callable $callback Функция для выполнения в транзакции
+     * @param callable $callback Функція для виконання в транзакції
      * @return mixed
      * @throws Exception
      */
     public function transaction(callable $callback) {
         if ($this->connection === null) {
-            throw new Exception("Нет подключения к базе данных");
+            throw new Exception("Немає підключення до бази даних");
         }
         
         $timeStart = $this->getRealTime();
@@ -468,7 +463,7 @@ class Database {
             $this->connection->commit();
             
             $executionTime = $this->getRealTime() - $timeStart;
-            $this->logInfo('Transaction committed', ['execution_time' => round($executionTime, 4)]);
+            $this->logInfo('Транзакцію зафіксовано', ['execution_time' => round($executionTime, 4)]);
             
             return $result;
         } catch (Exception $e) {
@@ -477,7 +472,7 @@ class Database {
             }
             
             $executionTime = $this->getRealTime() - $timeStart;
-            $this->logError('Transaction rolled back', [
+            $this->logError('Транзакцію відкочено', [
                 'error' => $e->getMessage(),
                 'execution_time' => round($executionTime, 4)
             ]);
@@ -487,7 +482,7 @@ class Database {
     }
     
     /**
-     * Безопасное экранирование строки
+     * Безпечне екранування рядка
      * 
      * @param string $string
      * @return string
@@ -500,10 +495,16 @@ class Database {
     }
     
     /**
-     * Логирование запроса
+     * Логування запиту
+     * 
+     * @param string $query SQL запит
+     * @param array $params Параметри
+     * @param float $executionTime Час виконання
+     * @param bool $isUserQuery Чи це користувацький запит
+     * @return void
      */
     private function logQuery(string $query, array $params, float $executionTime, bool $isUserQuery = true): void {
-        // Логируем системные запросы только если включено
+        // Логуємо системні запити тільки якщо увімкнено
         if (!$isUserQuery && $this->getSetting('log_db_queries', '0') !== '1') {
             return;
         }
@@ -517,23 +518,28 @@ class Database {
         
         $this->queryList[] = $queryInfo;
         
-        // Ограничиваем размер списка запросов
+        // Обмежуємо розмір списку запитів (оптимізація пам'яті)
         if (count($this->queryList) > 100) {
             array_shift($this->queryList);
         }
         
-        // Логируем через Logger, если включена опция логирования запросов
+        // Логуємо через Logger, якщо увімкнено опцію логування запитів
         if ($this->getSetting('log_db_queries', '0') === '1') {
-            // Вызываем хук для логирования
+            // Викликаємо хук для логування
             if (function_exists('doHook')) {
                 doHook('db_query', $queryInfo);
             }
-            $this->logDebug('Database query', $queryInfo);
+            $this->logDebug('Запит до бази даних', $queryInfo);
         }
     }
     
     /**
-     * Логирование медленного запроса
+     * Логування повільного запиту
+     * 
+     * @param string $query SQL запит
+     * @param array $params Параметри
+     * @param float $executionTime Час виконання
+     * @return void
      */
     private function logSlowQuery(string $query, array $params, float $executionTime): void {
         $slowQueryInfo = [
@@ -543,23 +549,28 @@ class Database {
             'threshold' => $this->slowQueryThreshold
         ];
         
-        // Вызываем хук для логирования медленных запросов
+        // Викликаємо хук для логування повільних запитів
         if (function_exists('doHook') && $this->getSetting('log_slow_queries', '1') === '1') {
             doHook('db_slow_query', $slowQueryInfo);
         }
         
-        $this->logWarning('Slow database query detected', $slowQueryInfo);
+        $this->logWarning('Виявлено повільний запит до бази даних', $slowQueryInfo);
     }
     
     /**
-     * Нормализация SQL запроса (удаление лишних пробелов)
+     * Нормалізація SQL запиту (видалення зайвих пробілів)
+     * 
+     * @param string $query SQL запит
+     * @return string
      */
     private function normalizeQuery(string $query): string {
         return preg_replace('/\s+/', ' ', trim($query));
     }
     
     /**
-     * Получение реального времени (микросекунды)
+     * Отримання реального часу (мікросекунди)
+     * 
+     * @return float
      */
     private function getRealTime(): float {
         [$seconds, $microSeconds] = explode(' ', microtime());
@@ -567,10 +578,14 @@ class Database {
     }
     
     /**
-     * Получение настройки
+     * Отримання налаштування
+     * 
+     * @param string $key Ключ налаштування
+     * @param string $default Значення за замовчуванням
+     * @return string
      */
     private function getSetting(string $key, string $default = ''): string {
-        // Используем настройки Logger, если доступны
+        // Використовуємо налаштування Logger, якщо доступні
         $logger = $this->getLogger();
         if ($logger && method_exists($logger, 'getSetting')) {
             $loggerKey = strpos($key, 'logger_') === 0 ? substr($key, 7) : $key;
@@ -619,12 +634,12 @@ class Database {
     }
     
     /**
-     * Проверка доступности БД
+     * Перевірка доступності БД
      * 
      * @return bool
      */
     public function isAvailable(): bool {
-        // Проверяем, что константы БД определены и не пустые
+        // Перевіряємо, що константи БД визначені та не порожні
         if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
             return false;
         }
@@ -634,7 +649,7 @@ class Database {
                 $this->connect();
             }
             
-            // Проверяем подключение простым запросом
+            // Перевіряємо підключення простим запитом
             if ($this->connection === null) {
                 return false;
             }
@@ -644,31 +659,31 @@ class Database {
         } catch (Exception $e) {
             $this->isConnected = false;
             $this->connection = null;
-            // Не логируем ошибку, если конфигурация не установлена (это нормально для установщика)
+            // Не логуємо помилку, якщо конфігурація не встановлена (це нормально для встановлювача)
             if (defined('DB_HOST') && !empty(DB_HOST)) {
-                $this->logError('Database availability check failed', ['error' => $e->getMessage()]);
+                $this->logError('Перевірка доступності бази даних не вдалася', ['error' => $e->getMessage()]);
             }
             return false;
         }
     }
     
     /**
-     * Проверка существования базы данных
+     * Перевірка існування бази даних
      * 
      * @return bool
      */
     public function databaseExists(): bool {
         try {
-            // Упрощенная логика: приоритет GLOBALS над константами
+            // Спрощена логіка: пріоритет GLOBALS над константами
             if (isset($GLOBALS['_INSTALLER_DB_HOST']) && !empty($GLOBALS['_INSTALLER_DB_HOST'])) {
-                // Инсталлер: используем GLOBALS
+                // Інсталлер: використовуємо GLOBALS
                 $dbHost = $GLOBALS['_INSTALLER_DB_HOST'];
                 $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
                 $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
                 $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
                 $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
             } else {
-                // Обычная работа: используем константы
+                // Звичайна робота: використовуємо константи
                 $dbHost = defined('DB_HOST') ? DB_HOST : '';
                 $dbName = defined('DB_NAME') ? DB_NAME : '';
                 $dbUser = defined('DB_USER') ? DB_USER : 'root';
@@ -680,7 +695,7 @@ class Database {
                 return false;
             }
             
-            // Подключаемся без указания базы данных
+            // Підключаємося без вказання бази даних
             $host = $dbHost;
             $port = 3306;
             
@@ -708,7 +723,7 @@ class Database {
     }
     
     /**
-     * Проверка активного соединения
+     * Перевірка активного з'єднання
      * 
      * @return bool
      */
@@ -728,7 +743,7 @@ class Database {
     }
     
     /**
-     * Закрытие соединения
+     * Закриття з'єднання
      * 
      * @return void
      */
@@ -739,7 +754,7 @@ class Database {
     }
     
     /**
-     * Получение статистики
+     * Отримання статистики
      * 
      * @return array
      */
@@ -754,7 +769,7 @@ class Database {
             'query_list_size' => count($this->queryList)
         ];
         
-        // Подсчет медленных запросов
+        // Підрахунок повільних запитів
         foreach ($this->queryList as $query) {
             if (isset($query['time']) && $query['time'] >= $this->slowQueryThreshold) {
                 $stats['slow_queries']++;
@@ -770,7 +785,7 @@ class Database {
                     $stats['mysql_' . $key] = (int)($row['Value'] ?? 0);
                 }
             } catch (PDOException $e) {
-                // Игнорируем ошибки получения статистики
+                // Ігноруємо помилки отримання статистики
             }
         }
         
@@ -778,7 +793,7 @@ class Database {
     }
     
     /**
-     * Получение списка запросов
+     * Отримання списку запитів
      * 
      * @return array
      */
@@ -787,7 +802,7 @@ class Database {
     }
     
     /**
-     * Получение списка ошибок
+     * Отримання списку помилок
      * 
      * @return array
      */
@@ -796,15 +811,15 @@ class Database {
     }
     
     /**
-     * Установка порога медленных запросов
+     * Встановлення порогу повільних запитів
      * 
-     * @param float $seconds
+     * @param float $seconds Секунди
      * @return void
      */
     public function setSlowQueryThreshold(float $seconds): void {
         $this->slowQueryThreshold = $seconds;
         
-        // Сохраняем в настройки Logger, если доступен
+        // Зберігаємо в налаштування Logger, якщо доступний
         $logger = $this->getLogger();
         if ($logger && method_exists($logger, 'setSetting')) {
             $logger->setSetting('slow_query_threshold', (string)$seconds);
@@ -812,7 +827,7 @@ class Database {
     }
     
     /**
-     * Очистка статистики
+     * Очищення статистики
      * 
      * @return void
      */
@@ -823,12 +838,12 @@ class Database {
         $this->totalQueryTime = 0.0;
     }
     
-    // Предотвращение клонирования
+    // Запобігання клонуванню
     private function __clone() {}
     
-    // Предотвращение десериализации
+    // Запобігання десеріалізації
     public function __wakeup(): void {
-        throw new Exception("Cannot unserialize singleton");
+        throw new Exception("Неможливо десеріалізувати singleton");
     }
 }
 

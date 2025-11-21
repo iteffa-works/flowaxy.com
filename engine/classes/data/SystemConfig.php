@@ -1,7 +1,7 @@
 <?php
 /**
- * Централизованная система конфигурации параметров системы
- * Управление всеми параметрами через SettingsManager
+ * Централізована система конфігурації параметрів системи
+ * Управління всіма параметрами через SettingsManager
  * 
  * @package Engine\Classes\Data
  * @version 1.0.0
@@ -14,13 +14,13 @@ class SystemConfig {
     private array $cache = [];
     
     /**
-     * Конструктор (приватный для Singleton)
+     * Конструктор (приватний для Singleton)
      */
     private function __construct() {
     }
     
     /**
-     * Получение экземпляра класса (Singleton)
+     * Отримання екземпляра класу (Singleton)
      * 
      * @return self
      */
@@ -32,10 +32,10 @@ class SystemConfig {
     }
     
     /**
-     * Получение параметра с кешированием
+     * Отримання параметра з кешуванням
      * 
      * @param string $key Ключ параметра
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     private function getParam(string $key, $default = null) {
@@ -47,7 +47,7 @@ class SystemConfig {
             $settings = settingsManager();
             if ($settings !== null) {
                 $value = $settings->get($key, (string)$default);
-                // Преобразуем строку в нужный тип
+                // Перетворюємо рядок на потрібний тип
                 $this->cache[$key] = $this->convertValue($value, $default);
                 return $this->cache[$key];
             }
@@ -58,10 +58,10 @@ class SystemConfig {
     }
     
     /**
-     * Преобразование значения в нужный тип
+     * Перетворення значення на потрібний тип
      * 
-     * @param mixed $value Значение
-     * @param mixed $default Значение по умолчанию (для определения типа)
+     * @param mixed $value Значення
+     * @param mixed $default Значення за замовчуванням (для визначення типу)
      * @return mixed
      */
     private function convertValue($value, $default) {
@@ -69,7 +69,7 @@ class SystemConfig {
             return $default;
         }
         
-        // Определяем тип по умолчанию
+        // Визначаємо тип за замовчуванням
         if (is_int($default)) {
             return (int)$value;
         } elseif (is_float($default)) {
@@ -82,7 +82,7 @@ class SystemConfig {
     }
     
     /**
-     * Очистка кеша
+     * Очищення кешу
      * 
      * @return void
      */
@@ -90,19 +90,19 @@ class SystemConfig {
         $this->cache = [];
     }
     
-    // ========== Параметры сессий ==========
+    // ========== Параметри сесій ==========
     
     /**
-     * Время жизни сессии (в секундах)
+     * Час життя сесії (в секундах)
      * 
      * @return int
      */
     public function getSessionLifetime(): int {
-        return $this->getParam('session_lifetime', 7200); // 2 часа по умолчанию
+        return $this->getParam('session_lifetime', 7200); // 2 години за замовчуванням
     }
     
     /**
-     * Имя сессии
+     * Ім'я сесії
      * 
      * @return string
      */
@@ -110,10 +110,10 @@ class SystemConfig {
         return $this->getParam('session_name', 'PHPSESSID');
     }
     
-    // ========== Параметры базы данных ==========
+    // ========== Параметри бази даних ==========
     
     /**
-     * Таймаут подключения к БД (в секундах)
+     * Таймаут підключення до БД (в секундах)
      * 
      * @return int
      */
@@ -122,7 +122,7 @@ class SystemConfig {
     }
     
     /**
-     * Максимальное количество попыток подключения к БД
+     * Максимальна кількість спроб підключення до БД
      * 
      * @return int
      */
@@ -131,7 +131,7 @@ class SystemConfig {
     }
     
     /**
-     * Таймаут проверки хоста БД (в секундах)
+     * Таймаут перевірки хоста БД (в секундах)
      * 
      * @return int
      */
@@ -140,7 +140,7 @@ class SystemConfig {
     }
     
     /**
-     * Порог медленных запросов (в секундах)
+     * Поріг повільних запитів (в секундах)
      * 
      * @return float
      */
@@ -148,10 +148,10 @@ class SystemConfig {
         return (float)$this->getParam('db_slow_query_threshold', 1.0);
     }
     
-    // ========== Параметры кеша ==========
+    // ========== Параметри кешу ==========
     
     /**
-     * Включен ли кеш
+     * Увімкнено кеш
      * 
      * @return bool
      */
@@ -160,16 +160,16 @@ class SystemConfig {
     }
     
     /**
-     * Время жизни кеша по умолчанию (в секундах)
+     * Час життя кешу за замовчуванням (в секундах)
      * 
      * @return int
      */
     public function getCacheDefaultTtl(): int {
-        return $this->getParam('cache_default_ttl', 3600); // 1 час
+        return $this->getParam('cache_default_ttl', 3600); // 1 година
     }
     
     /**
-     * Автоматическая очистка кеша
+     * Автоматичне очищення кешу
      * 
      * @return bool
      */
@@ -177,10 +177,10 @@ class SystemConfig {
         return $this->getParam('cache_auto_cleanup', true);
     }
     
-    // ========== Параметры логирования ==========
+    // ========== Параметри логування ==========
     
     /**
-     * Включено ли логирование
+     * Увімкнено логування
      * 
      * @return bool
      */
@@ -189,7 +189,7 @@ class SystemConfig {
     }
     
     /**
-     * Минимальный уровень логирования
+     * Мінімальний рівень логування
      * 
      * @return string
      */
@@ -198,7 +198,7 @@ class SystemConfig {
     }
     
     /**
-     * Максимальный размер файла лога (в байтах)
+     * Максимальний розмір файлу логу (в байтах)
      * 
      * @return int
      */
@@ -207,7 +207,7 @@ class SystemConfig {
     }
     
     /**
-     * Количество дней хранения логов
+     * Кількість днів зберігання логів
      * 
      * @return int
      */
@@ -215,10 +215,10 @@ class SystemConfig {
         return $this->getParam('logging_retention_days', 30);
     }
     
-    // ========== Параметры загрузки файлов ==========
+    // ========== Параметри завантаження файлів ==========
     
     /**
-     * Максимальный размер загружаемого файла (в байтах)
+     * Максимальний розмір завантажуваного файлу (в байтах)
      * 
      * @return int
      */
@@ -227,7 +227,7 @@ class SystemConfig {
     }
     
     /**
-     * Разрешенные расширения файлов
+     * Дозволені розширення файлів
      * 
      * @return array
      */
@@ -240,7 +240,7 @@ class SystemConfig {
     }
     
     /**
-     * Разрешенные MIME типы
+     * Дозволені MIME типи
      * 
      * @return array
      */
@@ -252,10 +252,10 @@ class SystemConfig {
         return is_array($mimeTypes) ? $mimeTypes : [];
     }
     
-    // ========== Параметры безопасности ==========
+    // ========== Параметри безпеки ==========
     
     /**
-     * Минимальная длина пароля
+     * Мінімальна довжина пароля
      * 
      * @return int
      */
@@ -264,18 +264,18 @@ class SystemConfig {
     }
     
     /**
-     * Время жизни CSRF токена (в секундах)
+     * Час життя CSRF токена (в секундах)
      * 
      * @return int
      */
     public function getCsrfTokenLifetime(): int {
-        return $this->getParam('csrf_token_lifetime', 3600); // 1 час
+        return $this->getParam('csrf_token_lifetime', 3600); // 1 година
     }
     
-    // ========== Параметры производительности ==========
+    // ========== Параметри продуктивності ==========
     
     /**
-     * Включена ли оптимизация запросов
+     * Увімкнено оптимізацію запитів
      * 
      * @return bool
      */
@@ -284,7 +284,7 @@ class SystemConfig {
     }
     
     /**
-     * Максимальное количество запросов в секунду
+     * Максимальна кількість запитів в секунду
      * 
      * @return int
      */
@@ -305,7 +305,7 @@ class SystemConfig {
 }
 
 /**
- * Глобальная функция для получения экземпляра SystemConfig
+ * Глобальна функція для отримання екземпляра SystemConfig
  * 
  * @return SystemConfig
  */

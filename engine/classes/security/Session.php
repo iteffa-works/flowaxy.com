@@ -33,7 +33,7 @@ class Session {
             return;
         }
         
-        // Загружаем параметры из настроек, если доступны
+        // Завантажуємо параметри з налаштувань, якщо доступні
         if (class_exists('SystemConfig')) {
             $systemConfig = SystemConfig::getInstance();
             $defaultConfig = [
@@ -45,10 +45,10 @@ class Session {
         
         self::$config = array_merge(self::$config, $config);
         
-        // Определяем secure на основе настроек из базы данных (если доступны)
+        // Визначаємо secure на основі налаштувань з бази даних (якщо доступні)
         $isSecure = self::$config['secure'];
         
-        // Проверяем настройки протокола из базы данных
+        // Перевіряємо налаштування протоколу з бази даних
         $protocolFromSettings = null;
         if (class_exists('SettingsManager') && file_exists(__DIR__ . '/../../data/database.ini')) {
             try {
@@ -60,19 +60,19 @@ class Session {
                     $protocolFromSettings = 'http://';
                 }
             } catch (Exception $e) {
-                // Игнорируем ошибки при загрузке настроек
+                // Ігноруємо помилки при завантаженні налаштувань
             }
         }
         
-        // Если в настройках явно указан протокол, используем его
+        // Якщо в налаштуваннях явно вказано протокол, використовуємо його
         if ($protocolFromSettings === 'https://') {
             $isSecure = true;
         } elseif ($protocolFromSettings === 'http://') {
             $isSecure = false;
         } else {
-            // Если настройки 'auto' или недоступны, проверяем реальное соединение
+            // Якщо налаштування 'auto' або недоступні, перевіряємо реальне з'єднання
             if ($isSecure) {
-                // Дополнительная проверка реального протокола
+                // Додаткова перевірка реального протоколу
                 $realHttps = (
                     (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
                     (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
@@ -80,52 +80,45 @@ class Session {
                     (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
                 );
                 
-                // Если реальное соединение HTTP, но secure=true, отключаем secure для совместимости
+                // Якщо реальне з'єднання HTTP, але secure=true, вимикаємо secure для сумісності
                 if (!$realHttps) {
                     $isSecure = false;
-                    error_log("Session: secure=true but connection is HTTP, disabling secure flag for compatibility");
+                    error_log("Session: secure=true але з'єднання HTTP, вимикаємо прапорець secure для сумісності");
                 }
             }
         }
         
-        // SameSite настройка (важно для Edge)
+        // SameSite налаштування (важливо для Edge)
         $samesite = self::$config['samesite'] ?? 'Lax';
-        // Если SameSite=None, но secure=false, Edge блокирует - меняем на Lax
+        // Якщо SameSite=None, але secure=false, Edge блокує - змінюємо на Lax
         if ($samesite === 'None' && !$isSecure) {
             $samesite = 'Lax';
-            error_log("Session: SameSite=None requires Secure flag, changing to Lax for compatibility");
+            error_log("Session: SameSite=None потребує прапорець Secure, змінюємо на Lax для сумісності");
         }
         
         session_name(self::$config['name']);
         
-        // Определяем domain правильно для Edge
-        // Edge очень строгий к domain - лучше использовать пустой domain для точного совпадения
+        // Визначаємо domain правильно для Edge
+        // Edge дуже суворий до domain - краще використовувати порожній domain для точного співпадіння
         $cookieDomain = self::$config['domain'];
         if (empty($cookieDomain)) {
-            // Для Edge лучше использовать пустой domain - браузер сам определит домен
-            // Это гарантирует, что cookie будет работать для точного домена
+            // Для Edge краще використовувати порожній domain - браузер сам визначить домен
+            // Це гарантує, що cookie працюватиме для точного домену
             $cookieDomain = '';
-            
-            // Альтернатива: можно использовать текущий домен, но без точки в начале
-            // $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            // $host = preg_replace('/:\d+$/', '', $host);
-            // if ($host !== 'localhost' && !filter_var($host, FILTER_VALIDATE_IP)) {
-            //     $cookieDomain = $host; // Без точки в начале!
-            // }
         }
         
-        // ВАЖНО: session_set_cookie_params() должен вызываться ДО session_start()
-        // Это критично для Edge и других браузеров
+        // ВАЖЛИВО: session_set_cookie_params() має викликатися ДО session_start()
+        // Це критично для Edge та інших браузерів
         session_set_cookie_params([
             'lifetime' => self::$config['lifetime'],
             'path' => self::$config['path'],
-            'domain' => $cookieDomain, // Используем правильно определенный domain
+            'domain' => $cookieDomain, // Використовуємо правильно визначений domain
             'secure' => $isSecure,
             'httponly' => self::$config['httponly'],
             'samesite' => $samesite
         ]);
         
-        // Налаштування параметрів сесії через ini_set (для совместимости)
+        // Налаштування параметрів сесії через ini_set (для сумісності)
         ini_set('session.cookie_lifetime', self::$config['lifetime']);
         ini_set('session.cookie_path', self::$config['path']);
         ini_set('session.cookie_domain', $cookieDomain); // Используем правильно определенный domain

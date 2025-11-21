@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница настроек (главная страница со списком ссылок)
+ * Сторінка налаштувань (головна сторінка зі списком посилань)
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -21,7 +21,7 @@ class SettingsPage extends AdminPage {
     }
     
     public function handle() {
-        // Получаем список настроек через хук
+        // Отримуємо список налаштувань через хук
         $settingsCategories = applyFilter('settings_categories', $this->getDefaultSettingsCategories());
         
         // Рендеримо сторінку
@@ -31,12 +31,12 @@ class SettingsPage extends AdminPage {
     }
     
     /**
-     * Получение категорий настроек по умолчанию
+     * Отримання категорій налаштувань за замовчуванням
      */
     private function getDefaultSettingsCategories(): array {
         $categories = [];
         
-        // Основные настройки
+        // Основні налаштування
         $categories['general'] = [
             'title' => 'Основні налаштування',
             'icon' => 'fas fa-cog',
@@ -51,14 +51,14 @@ class SettingsPage extends AdminPage {
             ]
         ];
         
-        // Пользователи и права
+        // Користувачі та права
         $categories['users'] = [
             'title' => 'Користувачі та права',
             'icon' => 'fas fa-users',
             'items' => []
         ];
         
-        // Роли и права
+        // Ролі та права
         if (function_exists('current_user_can')) {
             $session = sessionManager();
             $userId = $session->get('admin_user_id');
@@ -75,7 +75,7 @@ class SettingsPage extends AdminPage {
             }
         }
         
-        // Пользователи (если есть страница)
+        // Користувачі (якщо є сторінка)
         if (class_exists('UsersPage') || file_exists(__DIR__ . '/UsersPage.php')) {
             $session = sessionManager();
             $userId = $session->get('admin_user_id');
@@ -92,7 +92,7 @@ class SettingsPage extends AdminPage {
             }
         }
         
-        // Профиль
+        // Профіль
         $categories['users']['items'][] = [
             'title' => 'Мій профіль',
             'description' => 'Особисті налаштування та дані',

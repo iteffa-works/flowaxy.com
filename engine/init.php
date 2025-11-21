@@ -1,6 +1,6 @@
 <?php
 /**
- * Flowaxy CMS - Initialization
+ * Flowaxy CMS - Ініціалізація системи
  * 
  * @package Engine
  * @version 7.0.0
@@ -13,7 +13,7 @@ $isInstaller = strpos($requestUri, '/install') === 0;
 $databaseIniFile = __DIR__ . '/data/database.ini';
 $defaultTimezone = 'Europe/Kyiv';
 
-// Установка часового пояса
+// Встановлення часового поясу
 $timezone = $defaultTimezone;
 if (!$isInstaller && file_exists($databaseIniFile)) {
     ModuleLoader::init();
@@ -22,35 +22,36 @@ if (!$isInstaller && file_exists($databaseIniFile)) {
         try {
             $tz = settingsManager()->get('timezone', $defaultTimezone);
             
-            // Автоматическое обновление старого часового пояса на новый
+            // Автоматичне оновлення старого часового поясу на новий
             if ($tz === 'Europe/Kiev') {
                 $tz = 'Europe/Kyiv';
-                // Обновляем в настройках
+                // Оновлюємо в налаштуваннях
                 try {
                     settingsManager()->set('timezone', 'Europe/Kyiv');
                 } catch (Exception $e) {
                     if (class_exists('Logger')) {
-                        Logger::getInstance()->logWarning('Failed to update timezone setting', ['error' => $e->getMessage()]);
+                        Logger::getInstance()->logWarning('Не вдалося оновити налаштування часового поясу', ['error' => $e->getMessage()]);
                     }
                 }
             }
             
-            if (!empty($tz) && in_array($tz, timezone_identifiers_list())) {
+            if (!empty($tz) && in_array($tz, timezone_identifiers_list(), true)) {
                 $timezone = $tz;
             } else {
-                // Если часовой пояс невалидный, используем значение по умолчанию
+                // Якщо часовий пояс невалідний, використовуємо значення за замовчуванням
                 $timezone = $defaultTimezone;
             }
         } catch (Exception $e) {
-            // Используем значение по умолчанию
+            // Використовуємо значення за замовчуванням
             if (class_exists('Logger')) {
-                Logger::getInstance()->logWarning('Error loading timezone', ['error' => $e->getMessage()]);
+                Logger::getInstance()->logWarning('Помилка завантаження часового поясу', ['error' => $e->getMessage()]);
             }
         }
     }
 }
 date_default_timezone_set($timezone);
 
+// Налаштування обробників помилок та винятків
 if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
         Logger::getInstance()->log(match($errno) {
@@ -64,9 +65,9 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     set_exception_handler(function(\Throwable $e): void {
         Logger::getInstance()->logException($e);
         if (defined('DEBUG_MODE') && constant('DEBUG_MODE')) {
-            echo '<pre>' . htmlspecialchars($e->getMessage()) . "\n" . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+            echo '<pre>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . "\n" . htmlspecialchars($e->getTraceAsString(), ENT_QUOTES, 'UTF-8') . '</pre>';
         } else {
-            // Устанавливаем код ответа только если заголовки еще не отправлены
+            // Встановлюємо код відповіді тільки якщо заголовки ще не відправлені
             if (!headers_sent() && class_exists('Response')) {
                 Response::setHeader('Status', '500 Internal Server Error');
             } elseif (!headers_sent()) {
@@ -78,17 +79,17 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     
     register_shutdown_function(function(): void {
         $error = error_get_last();
-        if ($error && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
-            Logger::getInstance()->logCritical('Fatal error: ' . $error['message'], ['file' => $error['file'], 'line' => $error['line']]);
+        if ($error && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE], true)) {
+            Logger::getInstance()->logCritical('Критична помилка: ' . $error['message'], ['file' => $error['file'], 'line' => $error['line']]);
         }
     });
 }
 
-// Определяем secure на основе протокола из настроек
-// Приоритет: настройки из базы данных > реальное соединение
+// Визначаємо secure на основі протоколу з налаштувань
+// Пріоритет: налаштування з бази даних > реальне з'єднання
 $isSecure = false;
 
-// Проверяем настройки протокола из базы данных (если доступны)
+// Перевіряємо налаштування протоколу з бази даних (якщо доступні)
 $protocolFromSettings = null;
 if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini')) {
     try {
@@ -100,17 +101,17 @@ if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini
             $protocolFromSettings = 'http://';
         }
     } catch (Exception $e) {
-        // Игнорируем ошибки при загрузке настроек на этапе инициализации
+        // Ігноруємо помилки при завантаженні налаштувань на етапі ініціалізації
     }
 }
 
-// Если в настройках явно указан протокол, используем его
+// Якщо в налаштуваннях явно вказано протокол, використовуємо його
 if ($protocolFromSettings === 'https://') {
     $isSecure = true;
 } elseif ($protocolFromSettings === 'http://') {
     $isSecure = false;
 } else {
-    // Если настройки 'auto' или недоступны, определяем автоматически
+    // Якщо налаштування 'auto' або недоступні, визначаємо автоматично
     $realHttps = (
         (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
         (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
@@ -128,15 +129,15 @@ if ($protocolFromSettings === 'https://') {
     }
 }
 
-// Session::start() теперь сам проверяет настройки из базы данных
-// Передаем начальное значение, но оно может быть переопределено внутри Session::start()
-// Параметры сессии будут загружены из настроек в Session::start()
+// Session::start() тепер сам перевіряє налаштування з бази даних
+// Передаємо початкове значення, але воно може бути перевизначено всередині Session::start()
+// Параметри сесії будуть завантажені з налаштувань в Session::start()
 Session::start([
     'domain' => '',
     'path' => '/',
     'secure' => $isSecure,
     'httponly' => true,
-    'samesite' => 'Lax' // Lax работает лучше в Edge, чем None
+    'samesite' => 'Lax' // Lax працює краще в Edge, ніж None
 ]);
 
 if ($isInstaller) {
@@ -144,16 +145,16 @@ if ($isInstaller) {
     exit;
 }
 
-// Установка security headers для защиты от атак
+// Встановлення security headers для захисту від атак
 if (!headers_sent() && class_exists('Response')) {
     Response::setSecurityHeaders();
 }
 
 initializeSystem();
 
-// Обновление протокола на основе настройки из базы данных (если доступна)
-// detectProtocol() уже проверяет настройку из базы, но здесь мы обновляем глобальную переменную
-// для обеспечения консистентности
+// Оновлення протоколу на основі налаштування з бази даних (якщо доступна)
+// detectProtocol() вже перевіряє налаштування з бази, але тут ми оновлюємо глобальну змінну
+// для забезпечення консистентності
 if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini')) {
     try {
         $settingsManager = settingsManager();
@@ -161,22 +162,22 @@ if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini
         
         if ($protocolSetting !== 'auto') {
             $newProtocol = $protocolSetting === 'https' ? 'https://' : 'http://';
-            // Обновляем глобальную переменную для использования в detectProtocol()
+            // Оновлюємо глобальну змінну для використання в detectProtocol()
             $GLOBALS['_SITE_PROTOCOL'] = $newProtocol;
         }
     } catch (Exception $e) {
         if (class_exists('Logger')) {
-            Logger::getInstance()->logWarning('Could not update protocol from settings', ['error' => $e->getMessage()]);
+            Logger::getInstance()->logWarning('Не вдалося оновити протокол з налаштувань', ['error' => $e->getMessage()]);
         }
     }
 }
 
-// Выполнение миграций
+// Виконання міграцій
 if (file_exists(__DIR__ . '/data/database.ini')) {
     try {
         $db = DatabaseHelper::getConnection();
         if ($db) {
-            // Миграция для добавления session_token
+            // Міграція для додавання session_token
             if (file_exists(__DIR__ . '/includes/migrations/add_session_token_to_users.php')) {
                 require_once __DIR__ . '/includes/migrations/add_session_token_to_users.php';
                 if (function_exists('migration_add_session_token_to_users')) {
@@ -184,7 +185,7 @@ if (file_exists(__DIR__ . '/data/database.ini')) {
                 }
             }
             
-            // Миграция для добавления полей активности сессии
+            // Міграція для додавання полів активності сесії
             if (file_exists(__DIR__ . '/includes/migrations/add_session_activity_to_users.php')) {
                 require_once __DIR__ . '/includes/migrations/add_session_activity_to_users.php';
                 if (function_exists('migration_add_session_activity_to_users')) {
@@ -194,12 +195,12 @@ if (file_exists(__DIR__ . '/data/database.ini')) {
         }
     } catch (Exception $e) {
         if (class_exists('Logger')) {
-            Logger::getInstance()->logError('Could not run migrations', ['error' => $e->getMessage()]);
+            Logger::getInstance()->logError('Не вдалося виконати міграції', ['error' => $e->getMessage()]);
         }
     }
 }
 
-// Инициализация системы ролей (проверка и создание таблиц при необходимости)
+// Ініціалізація системи ролей (перевірка та створення таблиць при необхідності)
 if (file_exists(__DIR__ . '/includes/roles-init.php')) {
     require_once __DIR__ . '/includes/roles-init.php';
     if (function_exists('initializeRolesSystem')) {
@@ -207,10 +208,10 @@ if (file_exists(__DIR__ . '/includes/roles-init.php')) {
     }
 }
 
-// ВРЕМЕННО: Регистрация всех страниц в боковую панель на время разработки
+// ТИМЧАСОВО: Реєстрація всіх сторінок у бічну панель на час розробки
 if (function_exists('addHook')) {
     addHook('admin_menu', function($menu) {
-        // Для временной разработки - добавляем все страницы
+        // Для тимчасової розробки - додаємо всі сторінки
         $devMenuItems = [
             [
                 'text' => 'Панель управління',
@@ -305,7 +306,7 @@ if (function_exists('addHook')) {
             ]
         ];
         
-        // Добавляем кастомізатор если поддерживается
+        // Додаємо кастомізатор якщо підтримується
         if (function_exists('themeSupportsCustomization') && themeSupportsCustomization()) {
             $devMenuItems[] = [
                 'text' => 'Кастомізатор',
@@ -316,15 +317,15 @@ if (function_exists('addHook')) {
             ];
         }
         
-        // Добавляем все пункты меню
+        // Додаємо всі пункти меню
         foreach ($devMenuItems as $item) {
             $menu[] = $item;
         }
         
         return $menu;
-    }, 1); // Высокий приоритет чтобы добавить первым
+    }, 1); // Високий пріоритет щоб додати першим
     
-    // ВРЕМЕННО ОТКЛЮЧЕНО: Старые хуки для roles и users (теперь все в одном месте выше)
+    // ТИМЧАСОВО ВИМКНЕНО: Старі хуки для roles та users (тепер все в одному місці вище)
     /*
     // Регистрация системного пункта меню для управления ролями
     addHook('admin_menu', function($menu) {

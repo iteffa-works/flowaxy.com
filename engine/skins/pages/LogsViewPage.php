@@ -19,7 +19,7 @@ class LogsViewPage extends AdminPage {
             'fas fa-file-alt'
         );
         
-        // Подключаем внешние CSS и JS файлы
+        // Підключаємо зовнішні CSS та JS файли
         $this->additionalCSS[] = UrlHelper::admin('assets/styles/logs-view.css') . '?v=' . time();
         $this->additionalJS[] = UrlHelper::admin('assets/scripts/logs-view.js') . '?v=' . time();
     }
@@ -29,8 +29,8 @@ class LogsViewPage extends AdminPage {
         if ($_POST && isset($_POST['clear_logs'])) {
             $fileToDelete = $this->post('file', '');
             $this->clearLogs();
-            // После удаления конкретного файла происходит редирект с exit, дальше не выполняем
-            // Если удаление всех файлов - продолжаем выполнение для отображения сообщения
+            // Після видалення конкретного файла відбувається редирект з exit, далі не виконуємо
+            // Якщо видалення всіх файлів - продовжуємо виконання для відображення повідомлення
             if ($fileToDelete !== 'all') {
                 return;
             }
@@ -40,7 +40,7 @@ class LogsViewPage extends AdminPage {
         $logFiles = $this->getLogFiles();
         $logContent = $this->getLogContent();
         
-        // Кнопка очистки всех логов в заголовке (добавляем после получения логов)
+        // Кнопка очистки всіх логів у заголовку (додаємо після отримання логів)
         $headerButtons = '';
         if (!empty($logFiles)) {
             $headerButtons = $this->createButton('Очистити всі логи', 'danger', [
@@ -54,7 +54,7 @@ class LogsViewPage extends AdminPage {
             ]);
         }
         
-        // Обновляем заголовок с кнопкой
+        // Оновлюємо заголовок з кнопкою
         $this->setPageHeader(
             'Перегляд логів',
             'Системні логи та події',

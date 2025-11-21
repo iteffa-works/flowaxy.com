@@ -1,16 +1,16 @@
 <?php
 /**
- * Компонент модального окна
+ * Компонент модального вікна
  * 
- * @param string $id ID модального окна (обязательно)
- * @param string $title Заголовок модального окна
- * @param string $content Содержимое модального окна (HTML)
- * @param string $footer Футер модального окна (HTML кнопок)
- * @param string $size Размер модального окна (sm, lg, xl, или пусто для обычного)
- * @param bool $centered Вертикальное центрирование
+ * @param string $id ID модального вікна (обов'язково)
+ * @param string $title Заголовок модального вікна
+ * @param string $content Вміст модального вікна (HTML)
+ * @param string $footer Футер модального вікна (HTML кнопок)
+ * @param string $size Розмір модального вікна (sm, lg, xl, або порожньо для звичайного)
+ * @param bool $centered Вертикальне центрування
  */
 if (!isset($id) || empty($id)) {
-    return; // ID обязателен
+    return; // ID обов'язковий
 }
 if (!isset($title)) {
     $title = '';

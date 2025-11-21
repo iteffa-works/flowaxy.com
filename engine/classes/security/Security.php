@@ -62,7 +62,7 @@ class Security {
      * @return bool
      */
     public static function verifyCsrfToken(?string $token = null): bool {
-        // Убеждаемся, что сессия запущена
+        // Переконуємося, що сесія запущена
         if (!Session::isStarted()) {
             Session::start();
         }

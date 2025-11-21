@@ -1,6 +1,6 @@
 <?php
 /**
- * Страница управления API ключами
+ * Сторінка управління API ключами
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -11,13 +11,13 @@ class ApiKeysPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'API Ключи - Flowaxy CMS';
+        $this->pageTitle = 'API Ключі - Flowaxy CMS';
         $this->templateName = 'api-keys';
         $this->apiManager = new ApiManager();
         
-        // Регистрируем модальное окно создания API ключа
+        // Реєструємо модальне вікно створення API ключа
         $this->registerModal('createApiKeyModal', [
-            'title' => 'Создать API ключ',
+            'title' => 'Створити API ключ',
             'type' => 'form',
             'action' => 'create_api_key',
             'method' => 'POST',
@@ -25,32 +25,32 @@ class ApiKeysPage extends AdminPage {
                 [
                     'type' => 'text',
                     'name' => 'name',
-                    'label' => 'Название',
-                    'placeholder' => 'Например: Мобильное приложение',
+                    'label' => 'Назва',
+                    'placeholder' => 'Наприклад: Мобільний додаток',
                     'required' => true
                 ],
                 [
                     'type' => 'textarea',
                     'name' => 'permissions',
-                    'label' => 'Разрешения (по одному на строку)',
+                    'label' => 'Дозволи (по одному на рядок)',
                     'placeholder' => 'system.read\ncontent.write\n*',
-                    'help' => 'Оставьте пустым для полного доступа. Доступные разрешения: system.read, system.write, content.read, content.write, content.delete, users.read, users.write, plugins.read, plugins.write, themes.read, themes.write, *'
+                    'help' => 'Залиште порожнім для повного доступу. Доступні дозволи: system.read, system.write, content.read, content.write, content.delete, users.read, users.write, plugins.read, plugins.write, themes.read, themes.write, *'
                 ],
                 [
                     'type' => 'datetime-local',
                     'name' => 'expires_at',
-                    'label' => 'Срок действия (опционально)',
-                    'help' => 'Оставьте пустым для бессрочного ключа'
+                    'label' => 'Термін дії (опціонально)',
+                    'help' => 'Залиште порожнім для безстрокового ключа'
                 ]
             ],
             'buttons' => [
                 [
-                    'text' => 'Отменить',
+                    'text' => 'Скасувати',
                     'type' => 'secondary',
                     'action' => 'close'
                 ],
                 [
-                    'text' => 'Создать',
+                    'text' => 'Створити',
                     'type' => 'primary',
                     'icon' => 'plus',
                     'action' => 'submit'
@@ -58,13 +58,13 @@ class ApiKeysPage extends AdminPage {
             ]
         ]);
         
-        // Регистрируем обработчик создания API ключа
+        // Реєструємо обробник створення API ключа
         $this->registerModalHandler('createApiKeyModal', 'create_api_key', [$this, 'handleCreateApiKey']);
         
-        // Кнопка создания API ключа
+        // Кнопка створення API ключа
         $headerButtons = $this->createButtonGroup([
             [
-                'text' => 'Создать API ключ',
+                'text' => 'Створити API ключ',
                 'type' => 'primary',
                 'options' => [
                     'icon' => 'plus',
@@ -78,26 +78,26 @@ class ApiKeysPage extends AdminPage {
         ]);
         
         $this->setPageHeader(
-            'API Ключи',
-            'Управление API ключами для внешних приложений',
+            'API Ключі',
+            'Управління API ключами для зовнішніх додатків',
             'fas fa-key',
             $headerButtons
         );
     }
     
     public function handle() {
-        // Обработка AJAX запросов
+        // Обробка AJAX запитів
         if ($this->isAjaxRequest()) {
             $this->handleAjax();
             return;
         }
         
-        // Обработка действий
+        // Обробка дій
         if ($_POST) {
             $this->handleAction();
         }
         
-        // Рендерим страницу с модальным окном
+        // Рендеримо сторінку з модальним вікном
         $this->render([
             'createModalHtml' => $this->renderModal('createApiKeyModal')
         ]);

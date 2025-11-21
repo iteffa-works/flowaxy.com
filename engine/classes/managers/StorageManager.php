@@ -1,7 +1,7 @@
 <?php
 /**
- * Менеджер для работы с клиентским хранилищем (LocalStorage/SessionStorage)
- * Управление данными через JavaScript API на клиенте
+ * Менеджер для роботи з клієнтським сховищем (LocalStorage/SessionStorage)
+ * Управління даними через JavaScript API на клієнті
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -13,18 +13,18 @@ require_once __DIR__ . '/../storage/StorageInterface.php';
 
 class StorageManager implements StorageInterface {
     private static ?self $instance = null;
-    private string $type = 'localStorage'; // localStorage или sessionStorage
+    private string $type = 'localStorage'; // localStorage або sessionStorage
     private string $prefix = '';
     
-    // Хранилище для серверной части (fallback, если JS не доступен)
+    // Сховище для серверної частини (fallback, якщо JS не доступний)
     private array $serverStorage = [];
     
     private function __construct() {
-        // По умолчанию используем localStorage
+        // За замовчуванням використовуємо localStorage
     }
     
     /**
-     * Получение экземпляра (Singleton)
+     * Отримання екземпляра (Singleton)
      * 
      * @return self
      */
@@ -36,9 +36,9 @@ class StorageManager implements StorageInterface {
     }
     
     /**
-     * Установка типа хранилища (localStorage или sessionStorage)
+     * Встановлення типу сховища (localStorage або sessionStorage)
      * 
-     * @param string $type Тип (localStorage или sessionStorage)
+     * @param string $type Тип (localStorage або sessionStorage)
      * @return void
      */
     public function setType(string $type): void {
@@ -48,7 +48,7 @@ class StorageManager implements StorageInterface {
     }
     
     /**
-     * Получение типа хранилища
+     * Отримання типу сховища
      * 
      * @return string
      */
@@ -57,9 +57,9 @@ class StorageManager implements StorageInterface {
     }
     
     /**
-     * Установка префикса для ключей
+     * Встановлення префіксу для ключів
      * 
-     * @param string $prefix Префикс
+     * @param string $prefix Префікс
      * @return void
      */
     public function setPrefix(string $prefix): void {
@@ -67,7 +67,7 @@ class StorageManager implements StorageInterface {
     }
     
     /**
-     * Получение префикса
+     * Отримання префіксу
      * 
      * @return string
      */
@@ -76,7 +76,7 @@ class StorageManager implements StorageInterface {
     }
     
     /**
-     * Формирование полного ключа с префиксом
+     * Формування повного ключа з префіксом
      * 
      * @param string $key Ключ
      * @return string
@@ -86,11 +86,11 @@ class StorageManager implements StorageInterface {
     }
     
     /**
-     * Получение значения из хранилища (только для серверной части)
-     * На клиенте значения читаются через JavaScript API
+     * Отримання значення з сховища (тільки для серверної частини)
+     * На клієнті значення читаються через JavaScript API
      * 
      * @param string $key Ключ
-     * @param mixed $default Значение по умолчанию
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function get(string $key, $default = null) {

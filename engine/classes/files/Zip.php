@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с ZIP архивами
- * Создание, извлечение и манипуляции с ZIP файлами
+ * Клас для роботи з ZIP архівами
+ * Створення, витягування та маніпуляції з ZIP файлами
  * 
  * @package Engine\Classes
  * @version 1.0.0
@@ -17,12 +17,12 @@ class Zip {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к ZIP файлу
-     * @param int $flags Флаги для открытия архива
+     * @param string|null $filePath Шлях до ZIP файлу
+     * @param int $flags Прапорці для відкриття архіву
      */
     public function __construct(?string $filePath = null, int $flags = ZipArchive::CREATE) {
         if (!extension_loaded('zip')) {
-            throw new Exception('Расширение ZIP не установлено');
+            throw new Exception('Розширення ZIP не встановлено');
         }
         
         if ($filePath !== null) {
@@ -31,19 +31,19 @@ class Zip {
     }
     
     /**
-     * Деструктор - закрытие архива при уничтожении объекта
+     * Деструктор - закриття архіву при знищенні об'єкта
      */
     public function __destruct() {
         $this->close();
     }
     
     /**
-     * Открытие ZIP архива
+     * Відкриття ZIP архіву
      * 
-     * @param string $filePath Путь к ZIP файлу
-     * @param int $flags Флаги для открытия (ZipArchive::CREATE, ZipArchive::OVERWRITE и т.д.)
+     * @param string $filePath Шлях до ZIP файлу
+     * @param int $flags Прапорці для відкриття (ZipArchive::CREATE, ZipArchive::OVERWRITE тощо)
      * @return self
-     * @throws Exception Если не удалось открыть архив
+     * @throws Exception Якщо не вдалося відкрити архів
      */
     public function open(string $filePath, int $flags = ZipArchive::CREATE): self {
         $this->close();
@@ -51,11 +51,11 @@ class Zip {
         $this->zip = new ZipArchive();
         $this->filePath = $filePath;
         
-        // Создаем директорию, если её нет
+        // Створюємо директорію, якщо її немає
         $dir = dirname($filePath);
         if (!is_dir($dir)) {
             if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
+                throw new Exception("Не вдалося створити директорію: {$dir}");
             }
         }
         
@@ -63,7 +63,7 @@ class Zip {
         
         if ($result !== true) {
             $error = $this->getZipError($result);
-            throw new Exception("Не удалось открыть ZIP архив '{$filePath}': {$error}");
+            throw new Exception("Не вдалося відкрити ZIP архів '{$filePath}': {$error}");
         }
         
         $this->isOpen = true;
@@ -72,7 +72,7 @@ class Zip {
     }
     
     /**
-     * Закрытие ZIP архива
+     * Закриття ZIP архіву
      * 
      * @return bool
      */
@@ -92,65 +92,65 @@ class Zip {
     }
     
     /**
-     * Добавление файла в архив
+     * Додавання файлу в архів
      * 
-     * @param string $filePath Путь к файлу для добавления
-     * @param string|null $localName Имя файла в архиве (если null, используется имя файла)
+     * @param string $filePath Шлях до файлу для додавання
+     * @param string|null $localName Ім'я файлу в архіві (якщо null, використовується ім'я файлу)
      * @return self
-     * @throws Exception Если файл не существует или не удалось добавить
+     * @throws Exception Якщо файл не існує або не вдалося додати
      */
     public function addFile(string $filePath, ?string $localName = null): self {
         $this->ensureOpen();
         
         if (!file_exists($filePath)) {
-            throw new Exception("Файл не существует: {$filePath}");
+            throw new Exception("Файл не існує: {$filePath}");
         }
         
         if (!is_readable($filePath)) {
-            throw new Exception("Файл недоступен для чтения: {$filePath}");
+            throw new Exception("Файл недоступний для читання: {$filePath}");
         }
         
         $name = $localName ?? basename($filePath);
         
         if (!$this->zip->addFile($filePath, $name)) {
-            throw new Exception("Не удалось добавить файл '{$filePath}' в архив");
+            throw new Exception("Не вдалося додати файл '{$filePath}' в архів");
         }
         
         return $this;
     }
     
     /**
-     * Добавление содержимого строки в архив
+     * Додавання вмісту рядка в архів
      * 
-     * @param string $localName Имя файла в архиве
-     * @param string $contents Содержимое файла
+     * @param string $localName Ім'я файлу в архіві
+     * @param string $contents Вміст файлу
      * @return self
-     * @throws Exception Если не удалось добавить содержимое
+     * @throws Exception Якщо не вдалося додати вміст
      */
     public function addFromString(string $localName, string $contents): self {
         $this->ensureOpen();
         
         if (!$this->zip->addFromString($localName, $contents)) {
-            throw new Exception("Не удалось добавить содержимое в архив с именем '{$localName}'");
+            throw new Exception("Не вдалося додати вміст в архів з ім'ям '{$localName}'");
         }
         
         return $this;
     }
     
     /**
-     * Добавление директории в архив
+     * Додавання директорії в архів
      * 
-     * @param string $dirPath Путь к директории
-     * @param string $localPath Путь в архиве
-     * @param array $exclude Паттерны файлов для исключения
+     * @param string $dirPath Шлях до директорії
+     * @param string $localPath Шлях в архіві
+     * @param array $exclude Паттерни файлів для виключення
      * @return self
-     * @throws Exception Если директория не существует
+     * @throws Exception Якщо директорія не існує
      */
     public function addDirectory(string $dirPath, string $localPath = '', array $exclude = []): self {
         $this->ensureOpen();
         
         if (!is_dir($dirPath)) {
-            throw new Exception("Директория не существует: {$dirPath}");
+            throw new Exception("Директорія не існує: {$dirPath}");
         }
         
         $dirPath = rtrim($dirPath, '/\\') . DIRECTORY_SEPARATOR;
@@ -174,7 +174,7 @@ class Zip {
             $relativePath = str_replace($dirPath, '', $filePath);
             $relativePath = str_replace('\\', '/', $relativePath);
             
-            // Проверка на исключения
+            // Перевірка на виключення
             $shouldExclude = false;
             foreach ($exclude as $pattern) {
                 if (fnmatch($pattern, $relativePath) || fnmatch($pattern, basename($relativePath))) {
@@ -190,7 +190,7 @@ class Zip {
             $archivePath = $localPath . $relativePath;
             
             if (!$this->zip->addFile($filePath, $archivePath)) {
-                throw new Exception("Не удалось добавить файл '{$filePath}' в архив");
+                throw new Exception("Не вдалося додати файл '{$filePath}' в архів");
             }
         }
         
@@ -198,64 +198,64 @@ class Zip {
     }
     
     /**
-     * Извлечение всех файлов из архива
+     * Витягування всіх файлів з архіву
      * 
-     * @param string $destinationPath Путь назначения
-     * @param array|null $entries Список файлов для извлечения (null = все)
+     * @param string $destinationPath Шлях призначення
+     * @param array|null $entries Список файлів для витягування (null = всі)
      * @return bool
-     * @throws Exception Если не удалось извлечь
+     * @throws Exception Якщо не вдалося витягти
      */
     public function extractTo(string $destinationPath, ?array $entries = null): bool {
         $this->ensureOpen();
         
         if (!is_dir($destinationPath)) {
             if (!@mkdir($destinationPath, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$destinationPath}");
+                throw new Exception("Не вдалося створити директорію: {$destinationPath}");
             }
         }
         
         $result = $this->zip->extractTo($destinationPath, $entries);
         
         if (!$result) {
-            throw new Exception("Не удалось извлечь файлы из архива в '{$destinationPath}'");
+            throw new Exception("Не вдалося витягти файли з архіву в '{$destinationPath}'");
         }
         
         return true;
     }
     
     /**
-     * Извлечение конкретного файла из архива
+     * Витягування конкретного файлу з архіву
      * 
-     * @param string $entryName Имя файла в архиве
-     * @param string $destinationPath Путь назначения
+     * @param string $entryName Ім'я файлу в архіві
+     * @param string $destinationPath Шлях призначення
      * @return bool
-     * @throws Exception Если файл не найден или не удалось извлечь
+     * @throws Exception Якщо файл не знайдено або не вдалося витягти
      */
     public function extractFile(string $entryName, string $destinationPath): bool {
         $this->ensureOpen();
         
         if (!$this->hasEntry($entryName)) {
-            throw new Exception("Файл '{$entryName}' не найден в архиве");
+            throw new Exception("Файл '{$entryName}' не знайдено в архіві");
         }
         
-        // Создаем директорию, если её нет
+        // Створюємо директорію, якщо її немає
         $dir = dirname($destinationPath);
         if (!is_dir($dir)) {
             if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
+                throw new Exception("Не вдалося створити директорію: {$dir}");
             }
         }
         
         $contents = $this->getEntryContents($entryName);
         
         if ($contents === false) {
-            throw new Exception("Не удалось прочитать содержимое файла '{$entryName}' из архива");
+            throw new Exception("Не вдалося прочитати вміст файлу '{$entryName}' з архіву");
         }
         
         $result = @file_put_contents($destinationPath, $contents, LOCK_EX);
         
         if ($result === false) {
-            throw new Exception("Не удалось записать файл: {$destinationPath}");
+            throw new Exception("Не вдалося записати файл: {$destinationPath}");
         }
         
         @chmod($destinationPath, 0644);
@@ -264,9 +264,9 @@ class Zip {
     }
     
     /**
-     * Получение содержимого файла из архива
+     * Отримання вмісту файлу з архіву
      * 
-     * @param string $entryName Имя файла в архиве
+     * @param string $entryName Ім'я файлу в архіві
      * @return string|false
      */
     public function getEntryContents(string $entryName) {
@@ -276,42 +276,42 @@ class Zip {
     }
     
     /**
-     * Удаление файла из архива
+     * Видалення файлу з архіву
      * 
-     * @param string $entryName Имя файла в архиве
+     * @param string $entryName Ім'я файлу в архіві
      * @return self
-     * @throws Exception Если не удалось удалить
+     * @throws Exception Якщо не вдалося видалити
      */
     public function deleteEntry(string $entryName): self {
         $this->ensureOpen();
         
         if (!$this->zip->deleteName($entryName)) {
-            throw new Exception("Не удалось удалить файл '{$entryName}' из архива");
+            throw new Exception("Не вдалося видалити файл '{$entryName}' з архіву");
         }
         
         return $this;
     }
     
     /**
-     * Переименование файла в архиве
+     * Перейменування файлу в архіві
      * 
-     * @param string $oldName Старое имя
-     * @param string $newName Новое имя
+     * @param string $oldName Старе ім'я
+     * @param string $newName Нове ім'я
      * @return self
-     * @throws Exception Если не удалось переименовать
+     * @throws Exception Якщо не вдалося перейменувати
      */
     public function renameEntry(string $oldName, string $newName): self {
         $this->ensureOpen();
         
         if (!$this->zip->renameName($oldName, $newName)) {
-            throw new Exception("Не удалось переименовать файл '{$oldName}' в '{$newName}'");
+            throw new Exception("Не вдалося перейменувати файл '{$oldName}' в '{$newName}'");
         }
         
         return $this;
     }
     
     /**
-     * Получение списка всех файлов в архиве
+     * Отримання списку всіх файлів в архіві
      * 
      * @return array
      */
@@ -331,9 +331,9 @@ class Zip {
     }
     
     /**
-     * Получение информации о файле в архиве
+     * Отримання інформації про файл в архіві
      * 
-     * @param string $entryName Имя файла в архиве
+     * @param string $entryName Ім'я файлу в архіві
      * @return array|false
      */
     public function getEntryInfo(string $entryName) {
@@ -357,9 +357,9 @@ class Zip {
     }
     
     /**
-     * Проверка наличия файла в архиве
+     * Перевірка наявності файлу в архіві
      * 
-     * @param string $entryName Имя файла в архиве
+     * @param string $entryName Ім'я файлу в архіві
      * @return bool
      */
     public function hasEntry(string $entryName): bool {
@@ -369,7 +369,7 @@ class Zip {
     }
     
     /**
-     * Получение количества файлов в архиве
+     * Отримання кількості файлів в архіві
      * 
      * @return int
      */
@@ -380,7 +380,7 @@ class Zip {
     }
     
     /**
-     * Получение комментария архива
+     * Отримання коментаря архіву
      * 
      * @return string|false
      */
@@ -391,24 +391,24 @@ class Zip {
     }
     
     /**
-     * Установка комментария архива
+     * Встановлення коментаря архіву
      * 
-     * @param string $comment Комментарий
+     * @param string $comment Коментар
      * @return self
-     * @throws Exception Если не удалось установить комментарий
+     * @throws Exception Якщо не вдалося встановити коментар
      */
     public function setComment(string $comment): self {
         $this->ensureOpen();
         
         if (!$this->zip->setArchiveComment($comment)) {
-            throw new Exception("Не удалось установить комментарий архива");
+            throw new Exception("Не вдалося встановити коментар архіву");
         }
         
         return $this;
     }
     
     /**
-     * Проверка, открыт ли архив
+     * Перевірка, чи відкрито архів
      * 
      * @return bool
      */
@@ -417,7 +417,7 @@ class Zip {
     }
     
     /**
-     * Получение пути к файлу архива
+     * Отримання шляху до файлу архіву
      * 
      * @return string
      */
@@ -426,11 +426,11 @@ class Zip {
     }
     
     /**
-     * Создание ZIP архива из директории
+     * Створення ZIP архіву з директорії
      * 
-     * @param string $sourceDir Исходная директория
-     * @param string $zipPath Путь к создаваемому архиву
-     * @param array $exclude Паттерны файлов для исключения
+     * @param string $sourceDir Вихідна директорія
+     * @param string $zipPath Шлях до створюваного архіву
+     * @param array $exclude Паттерни файлів для виключення
      * @return self
      */
     public static function createFromDirectory(string $sourceDir, string $zipPath, array $exclude = []): self {
@@ -440,21 +440,21 @@ class Zip {
     }
     
     /**
-     * Проверка, открыт ли архив (внутренний метод)
+     * Перевірка, чи відкрито архів (внутрішній метод)
      * 
      * @return void
-     * @throws Exception Если архив не открыт
+     * @throws Exception Якщо архів не відкрито
      */
     private function ensureOpen(): void {
         if (!$this->isOpen || $this->zip === null) {
-            throw new Exception("ZIP архив не открыт");
+            throw new Exception("ZIP архів не відкрито");
         }
     }
     
     /**
-     * Получение текстового описания ошибки ZIP
+     * Отримання текстового опису помилки ZIP
      * 
-     * @param int $code Код ошибки
+     * @param int $code Код помилки
      * @return string
      */
     private function getZipError(int $code): string {
@@ -489,21 +489,21 @@ class Zip {
     }
     
     /**
-     * Статический метод: Распаковка ZIP архива
+     * Статичний метод: Розпакування ZIP архіву
      * 
-     * @param string $zipPath Путь к ZIP архиву
-     * @param string $destinationPath Путь для распаковки
-     * @param array|null $entries Список файлов для извлечения (null = все)
-     * @return bool Возвращает true при успехе, false при ошибке
+     * @param string $zipPath Шлях до ZIP архіву
+     * @param string $destinationPath Шлях для розпакування
+     * @param array|null $entries Список файлів для витягування (null = всі)
+     * @return bool Повертає true при успіху, false при помилці
      */
     public static function unpack(string $zipPath, string $destinationPath, ?array $entries = null): bool {
         if (!extension_loaded('zip')) {
-            error_log("Zip::unpack error: ZIP расширение не установлено");
+            error_log("Zip::unpack error: ZIP розширення не встановлено");
             return false;
         }
         
         if (!file_exists($zipPath)) {
-            error_log("Zip::unpack error: ZIP файл не существует: {$zipPath}");
+            error_log("Zip::unpack error: ZIP файл не існує: {$zipPath}");
             return false;
         }
         
@@ -519,21 +519,21 @@ class Zip {
     }
     
     /**
-     * Статический метод: Переименование файла в ZIP архиве
+     * Статичний метод: Перейменування файлу в ZIP архіві
      * 
-     * @param string $zipPath Путь к ZIP архиву
-     * @param string $oldName Старое имя файла в архиве
-     * @param string $newName Новое имя файла в архиве
-     * @return bool Возвращает true при успехе, false при ошибке
+     * @param string $zipPath Шлях до ZIP архіву
+     * @param string $oldName Старе ім'я файлу в архіві
+     * @param string $newName Нове ім'я файлу в архіві
+     * @return bool Повертає true при успіху, false при помилці
      */
     public static function rename_file(string $zipPath, string $oldName, string $newName): bool {
         if (!extension_loaded('zip')) {
-            error_log("Zip::rename_file error: ZIP расширение не установлено");
+            error_log("Zip::rename_file error: ZIP розширення не встановлено");
             return false;
         }
         
         if (!file_exists($zipPath)) {
-            error_log("Zip::rename_file error: ZIP файл не существует: {$zipPath}");
+            error_log("Zip::rename_file error: ZIP файл не існує: {$zipPath}");
             return false;
         }
         
@@ -549,21 +549,21 @@ class Zip {
     }
     
     /**
-     * Статический метод: Упаковка директории в ZIP архив
+     * Статичний метод: Упаковка директорії в ZIP архів
      * 
-     * @param string $sourceDir Исходная директория
-     * @param string $zipPath Путь к создаваемому архиву
-     * @param array $exclude Паттерны файлов для исключения
-     * @return bool Возвращает true при успехе, false при ошибке
+     * @param string $sourceDir Вихідна директорія
+     * @param string $zipPath Шлях до створюваного архіву
+     * @param array $exclude Паттерни файлів для виключення
+     * @return bool Повертає true при успіху, false при помилці
      */
     public static function pack(string $sourceDir, string $zipPath, array $exclude = []): bool {
         if (!extension_loaded('zip')) {
-            error_log("Zip::pack error: ZIP расширение не установлено");
+            error_log("Zip::pack error: ZIP розширення не встановлено");
             return false;
         }
         
         if (!is_dir($sourceDir)) {
-            error_log("Zip::pack error: Директория не существует: {$sourceDir}");
+            error_log("Zip::pack error: Директорія не існує: {$sourceDir}");
             return false;
         }
         
@@ -578,19 +578,19 @@ class Zip {
     }
     
     /**
-     * Статический метод: Получение списка файлов в ZIP архиве
+     * Статичний метод: Отримання списку файлів в ZIP архіві
      * 
-     * @param string $zipPath Путь к ZIP архиву
-     * @return array|false Массив имен файлов или false при ошибке
+     * @param string $zipPath Шлях до ZIP архіву
+     * @return array|false Масив імен файлів або false при помилці
      */
     public static function listFiles(string $zipPath) {
         if (!extension_loaded('zip')) {
-            error_log("Zip::listFiles error: ZIP расширение не установлено");
+            error_log("Zip::listFiles error: ZIP розширення не встановлено");
             return false;
         }
         
         if (!file_exists($zipPath)) {
-            error_log("Zip::listFiles error: ZIP файл не существует: {$zipPath}");
+            error_log("Zip::listFiles error: ZIP файл не існує: {$zipPath}");
             return false;
         }
         

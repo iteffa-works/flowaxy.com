@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с XML файлами
- * Парсинг, создание и манипуляции с XML документами
+ * Клас для роботи з XML файлами
+ * Парсинг, створення та маніпуляції з XML документами
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
@@ -17,9 +17,9 @@ class Xml {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к XML файлу
-     * @param string $version Версия XML (по умолчанию "1.0")
-     * @param string $encoding Кодировка (по умолчанию "UTF-8")
+     * @param string|null $filePath Шлях до XML файлу
+     * @param string $version Версія XML (за замовчуванням "1.0")
+     * @param string $encoding Кодування (за замовчуванням "UTF-8")
      */
     public function __construct(?string $filePath = null, string $version = '1.0', string $encoding = 'UTF-8') {
         $this->document = new DOMDocument($version, $encoding);
@@ -32,9 +32,9 @@ class Xml {
     }
     
     /**
-     * Установка пути к файлу
+     * Встановлення шляху до файлу
      * 
-     * @param string $filePath Путь к XML файлу
+     * @param string $filePath Шлях до XML файлу
      * @return self
      */
     public function setFile(string $filePath): self {
@@ -49,36 +49,36 @@ class Xml {
     }
     
     /**
-     * Загрузка XML файла
+     * Завантаження XML файлу
      * 
-     * @param int $options Флаги для загрузки
+     * @param int $options Прапорці для завантаження
      * @return self
-     * @throws Exception Если файл не существует или не может быть прочитан
+     * @throws Exception Якщо файл не існує або не може бути прочитаний
      */
     public function load(int $options = 0): self {
         if (empty($this->filePath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
         if (!file_exists($this->filePath)) {
-            throw new Exception("XML файл не существует: {$this->filePath}");
+            throw new Exception("XML файл не існує: {$this->filePath}");
         }
         
         if (!is_readable($this->filePath)) {
-            throw new Exception("XML файл недоступен для чтения: {$this->filePath}");
+            throw new Exception("XML файл недоступний для читання: {$this->filePath}");
         }
         
         $content = @file_get_contents($this->filePath);
         
         if ($content === false) {
-            throw new Exception("Не удалось прочитать XML файл: {$this->filePath}");
+            throw new Exception("Не вдалося прочитати XML файл: {$this->filePath}");
         }
         
         if (!@$this->document->loadXML($content, $options)) {
             $errors = libxml_get_errors();
-            $errorMsg = !empty($errors) ? $errors[0]->message : "Неизвестная ошибка парсинга XML";
+            $errorMsg = !empty($errors) ? $errors[0]->message : "Невідома помилка парсингу XML";
             libxml_clear_errors();
-            throw new Exception("Ошибка парсинга XML файла '{$this->filePath}': {$errorMsg}");
+            throw new Exception("Помилка парсингу XML файлу '{$this->filePath}': {$errorMsg}");
         }
         
         $this->hasData = true;
@@ -87,19 +87,19 @@ class Xml {
     }
     
     /**
-     * Загрузка XML из строки
+     * Завантаження XML з рядка
      * 
-     * @param string $xmlString XML строка
-     * @param int $options Флаги для загрузки
+     * @param string $xmlString XML рядок
+     * @param int $options Прапорці для завантаження
      * @return self
-     * @throws Exception Если не удалось загрузить
+     * @throws Exception Якщо не вдалося завантажити
      */
     public function loadString(string $xmlString, int $options = 0): self {
         if (!@$this->document->loadXML($xmlString, $options)) {
             $errors = libxml_get_errors();
-            $errorMsg = !empty($errors) ? $errors[0]->message : "Неизвестная ошибка парсинга XML";
+            $errorMsg = !empty($errors) ? $errors[0]->message : "Невідома помилка парсингу XML";
             libxml_clear_errors();
-            throw new Exception("Ошибка парсинга XML строки: {$errorMsg}");
+            throw new Exception("Помилка парсингу XML рядка: {$errorMsg}");
         }
         
         $this->hasData = true;
@@ -108,37 +108,37 @@ class Xml {
     }
     
     /**
-     * Сохранение XML в файл
+     * Збереження XML у файл
      * 
-     * @param string|null $filePath Путь к файлу (если null, используется текущий)
+     * @param string|null $filePath Шлях до файлу (якщо null, використовується поточний)
      * @return bool
-     * @throws Exception Если не удалось сохранить
+     * @throws Exception Якщо не вдалося зберегти
      */
     public function save(?string $filePath = null): bool {
         $targetPath = $filePath ?? $this->filePath;
         
         if (empty($targetPath)) {
-            throw new Exception("Путь к файлу не установлен");
+            throw new Exception("Шлях до файлу не встановлено");
         }
         
-        // Создаем директорию, если её нет
+        // Створюємо директорію, якщо її немає
         $dir = dirname($targetPath);
         if (!is_dir($dir)) {
             if (!@mkdir($dir, 0755, true)) {
-                throw new Exception("Не удалось создать директорию: {$dir}");
+                throw new Exception("Не вдалося створити директорію: {$dir}");
             }
         }
         
         $xml = $this->document->saveXML();
         
         if ($xml === false) {
-            throw new Exception("Не удалось сформировать XML");
+            throw new Exception("Не вдалося сформувати XML");
         }
         
         $result = @file_put_contents($targetPath, $xml, LOCK_EX);
         
         if ($result === false) {
-            throw new Exception("Не удалось сохранить XML файл: {$targetPath}");
+            throw new Exception("Не вдалося зберегти XML файл: {$targetPath}");
         }
         
         @chmod($targetPath, 0644);
@@ -151,7 +151,7 @@ class Xml {
     }
     
     /**
-     * Получение XML в виде строки
+     * Отримання XML у вигляді рядка
      * 
      * @return string
      */
@@ -161,7 +161,7 @@ class Xml {
     }
     
     /**
-     * Получение DOMDocument
+     * Отримання DOMDocument
      * 
      * @return DOMDocument
      */
@@ -170,7 +170,7 @@ class Xml {
     }
     
     /**
-     * Получение корневого элемента
+     * Отримання кореневого елемента
      * 
      * @return DOMElement|null
      */
@@ -179,10 +179,10 @@ class Xml {
     }
     
     /**
-     * Получение значения элемента по XPath
+     * Отримання значення елемента за XPath
      * 
-     * @param string $xpath XPath выражение
-     * @param mixed $default Значение по умолчанию
+     * @param string $xpath XPath вираз
+     * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
     public function getValue(string $xpath, $default = null) {
@@ -207,12 +207,12 @@ class Xml {
     }
     
     /**
-     * Установка значения элемента по XPath
+     * Встановлення значення елемента за XPath
      * 
-     * @param string $xpath XPath выражение
-     * @param string $value Значение
+     * @param string $xpath XPath вираз
+     * @param string $value Значення
      * @return self
-     * @throws Exception Если элемент не найден
+     * @throws Exception Якщо елемент не знайдено
      */
     public function setValue(string $xpath, string $value): self {
         if (!$this->hasData) {
@@ -224,7 +224,7 @@ class Xml {
         $nodes = $xpathObj->query($xpath);
         
         if ($nodes === false || $nodes->length === 0) {
-            throw new Exception("Элемент не найден по XPath: {$xpath}");
+            throw new Exception("Елемент не знайдено за XPath: {$xpath}");
         }
         
         $nodes->item(0)->nodeValue = $value;
@@ -233,11 +233,11 @@ class Xml {
     }
     
     /**
-     * Добавление элемента
+     * Додавання елемента
      * 
-     * @param string $tagName Имя тега
-     * @param string $content Содержимое
-     * @param string|null $parentXPath XPath родительского элемента (null = корень)
+     * @param string $tagName Ім'я тега
+     * @param string $content Вміст
+     * @param string|null $parentXPath XPath батьківського елемента (null = корінь)
      * @return DOMElement
      */
     public function addElement(string $tagName, string $content = '', ?string $parentXPath = null): DOMElement {
@@ -256,7 +256,7 @@ class Xml {
             $nodes = $xpathObj->query($parentXPath);
             
             if ($nodes === false || $nodes->length === 0) {
-                throw new Exception("Родительский элемент не найден по XPath: {$parentXPath}");
+                throw new Exception("Батьківський елемент не знайдено за XPath: {$parentXPath}");
             }
             
             $nodes->item(0)->appendChild($element);
@@ -266,9 +266,9 @@ class Xml {
     }
     
     /**
-     * Удаление элемента по XPath
+     * Видалення елемента за XPath
      * 
-     * @param string $xpath XPath выражение
+     * @param string $xpath XPath вираз
      * @return bool
      */
     public function removeElement(string $xpath): bool {
@@ -295,7 +295,7 @@ class Xml {
     }
     
     /**
-     * Проверка, загружены ли данные
+     * Перевірка, чи завантажені дані
      * 
      * @return bool
      */
@@ -304,7 +304,7 @@ class Xml {
     }
     
     /**
-     * Получение пути к файлу
+     * Отримання шляху до файлу
      * 
      * @return string
      */
@@ -313,9 +313,9 @@ class Xml {
     }
     
     /**
-     * Валидация XML по схеме
+     * Валідація XML за схемою
      * 
-     * @param string $schemaPath Путь к XSD схеме
+     * @param string $schemaPath Шлях до XSD схеми
      * @return bool
      */
     public function validate(string $schemaPath): bool {
@@ -324,17 +324,17 @@ class Xml {
         }
         
         if (!file_exists($schemaPath)) {
-            throw new Exception("Схема не существует: {$schemaPath}");
+            throw new Exception("Схема не існує: {$schemaPath}");
         }
         
         return @$this->document->schemaValidate($schemaPath);
     }
     
     /**
-     * Статический метод: Чтение XML файла
+     * Статичний метод: Читання XML файлу
      * 
-     * @param string $filePath Путь к файлу
-     * @param int $options Флаги для загрузки
+     * @param string $filePath Шлях до файлу
+     * @param int $options Прапорці для завантаження
      * @return Xml
      */
     public static function read(string $filePath, int $options = 0): Xml {
@@ -344,10 +344,10 @@ class Xml {
     }
     
     /**
-     * Статический метод: Парсинг XML строки
+     * Статичний метод: Парсинг XML рядка
      * 
-     * @param string $xmlString XML строка
-     * @param int $options Флаги для загрузки
+     * @param string $xmlString XML рядок
+     * @param int $options Прапорці для завантаження
      * @return Xml
      */
     public static function parse(string $xmlString, int $options = 0): Xml {
@@ -357,10 +357,10 @@ class Xml {
     }
     
     /**
-     * Статический метод: Создание XML из массива
+     * Статичний метод: Створення XML з масиву
      * 
-     * @param array $data Данные
-     * @param string $rootElement Имя корневого элемента
+     * @param array $data Дані
+     * @param string $rootElement Ім'я кореневого елемента
      * @return Xml
      */
     public static function fromArray(array $data, string $rootElement = 'root'): Xml {
@@ -371,10 +371,10 @@ class Xml {
     }
     
     /**
-     * Преобразование массива в XML элементы
+     * Перетворення масиву в XML елементи
      * 
-     * @param array $data Данные
-     * @param string $rootName Имя корневого элемента
+     * @param array $data Дані
+     * @param string $rootName Ім'я кореневого елемента
      * @return DOMElement
      */
     private function arrayToXml(array $data, string $rootName): DOMElement {

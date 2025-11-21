@@ -84,7 +84,7 @@ class ThemeEditorPage extends AdminPage {
             }
         }
         
-        // Сортируем файлы: сначала основные, затем по имени
+        // Сортуємо файли: спочатку основні, потім за ім'ям
         usort($files, function($a, $b) {
             $priority = ['index.php', 'style.css', 'script.js', 'theme.json', 'customizer.php'];
             $aPriority = array_search($a['name'], $priority, true);

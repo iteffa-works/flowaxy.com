@@ -1,7 +1,7 @@
 <?php
 /**
- * Хелпер для работы с базой данных
- * Обертка над Database классом
+ * Хелпер для роботи з базою даних
+ * Обгортка над Database класом
  * 
  * @package Engine\Classes\Helpers
  * @version 1.0.0
@@ -11,22 +11,22 @@ declare(strict_types=1);
 
 class DatabaseHelper {
     /**
-     * Получение подключения к БД
+     * Отримання підключення до БД
      * 
-     * @param bool $showError Показывать страницу ошибки
+     * @param bool $showError Показувати сторінку помилки
      * @return PDO|null
      */
     public static function getConnection(bool $showError = true): ?PDO {
-        // Упрощенная логика: приоритет GLOBALS над константами
+        // Спрощена логіка: пріоритет GLOBALS над константами
         if (isset($GLOBALS['_INSTALLER_DB_HOST']) && !empty($GLOBALS['_INSTALLER_DB_HOST'])) {
-            // Инсталлер: используем GLOBALS
+            // Інсталлер: використовуємо GLOBALS
             $dbHost = $GLOBALS['_INSTALLER_DB_HOST'];
             $dbName = $GLOBALS['_INSTALLER_DB_NAME'] ?? '';
             $dbUser = $GLOBALS['_INSTALLER_DB_USER'] ?? 'root';
             $dbPass = $GLOBALS['_INSTALLER_DB_PASS'] ?? '';
             $dbCharset = $GLOBALS['_INSTALLER_DB_CHARSET'] ?? 'utf8mb4';
         } else {
-            // Обычная работа: используем константы
+            // Звичайна робота: використовуємо константи
             $dbHost = defined('DB_HOST') ? DB_HOST : '';
             $dbName = defined('DB_NAME') ? DB_NAME : '';
             $dbUser = defined('DB_USER') ? DB_USER : 'root';
@@ -34,16 +34,16 @@ class DatabaseHelper {
             $dbCharset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
         }
         
-        // Проверяем, что конфигурация БД доступна
+        // Перевіряємо, що конфігурація БД доступна
         if (empty($dbHost) || empty($dbName)) {
             if ($showError && php_sapi_name() !== 'cli') {
-                // Не показываем ошибку БД, если конфигурация не установлена (это нормально для установщика)
-                // Просто возвращаем null
+                // Не показуємо помилку БД, якщо конфігурація не встановлена (це нормально для встановлювача)
+                // Просто повертаємо null
             }
             return null;
         }
         
-        // Устанавливаем GLOBALS для Database класса (если еще не установлены)
+        // Встановлюємо GLOBALS для Database класу (якщо ще не встановлені)
         if (!isset($GLOBALS['_INSTALLER_DB_HOST'])) {
             $GLOBALS['_INSTALLER_DB_HOST'] = $dbHost;
             $GLOBALS['_INSTALLER_DB_NAME'] = $dbName;
@@ -54,7 +54,7 @@ class DatabaseHelper {
         
         try {
             if (!class_exists('Database')) {
-                // Если Database еще не загружен, пытаемся загрузить
+                // Якщо Database ще не завантажено, намагаємося завантажити
                 $dbFile = __DIR__ . '/../data/Database.php';
                 if (file_exists($dbFile)) {
                     require_once $dbFile;
@@ -63,13 +63,13 @@ class DatabaseHelper {
             return Database::getInstance()->getConnection();
         } catch (Exception $e) {
             if (class_exists('Logger')) {
-                Logger::getInstance()->logError('Database connection failed', ['error' => $e->getMessage()]);
+                Logger::getInstance()->logError('Помилка підключення до бази даних', ['error' => $e->getMessage()]);
             }
             
             if ($showError && php_sapi_name() !== 'cli') {
                 $errorDetails = [
-                    'host' => DB_HOST,
-                    'database' => DB_NAME,
+                    'host' => $dbHost,
+                    'database' => $dbName,
                     'error' => $e->getMessage(),
                     'code' => $e->getCode()
                 ];
@@ -85,20 +85,20 @@ class DatabaseHelper {
     }
     
     /**
-     * Проверка доступности БД
+     * Перевірка доступності БД
      * 
-     * @param bool $showError Показывать страницу ошибки при недоступности
+     * @param bool $showError Показувати сторінку помилки при недоступності
      * @return bool
      */
     public static function isAvailable(bool $showError = false): bool {
-        // Проверяем, что константы БД определены и не пустые
+        // Перевіряємо, що константи БД визначені та не порожні
         if (!defined('DB_HOST') || empty(DB_HOST) || !defined('DB_NAME') || empty(DB_NAME)) {
             return false;
         }
         
         try {
             if (!class_exists('Database')) {
-                // Если Database еще не загружен, пытаемся загрузить
+                // Якщо Database ще не завантажено, намагаємося завантажити
                 $dbFile = __DIR__ . '/../data/Database.php';
                 if (file_exists($dbFile)) {
                     require_once $dbFile;
@@ -120,9 +120,9 @@ class DatabaseHelper {
             return $isAvailable;
         } catch (Exception $e) {
             if (class_exists('Logger')) {
-                Logger::getInstance()->logError('Database availability check failed', ['error' => $e->getMessage()]);
+                Logger::getInstance()->logError('Перевірка доступності бази даних не вдалася', ['error' => $e->getMessage()]);
             } else {
-                error_log("isDatabaseAvailable error: " . $e->getMessage());
+                error_log("isDatabaseAvailable помилка: " . $e->getMessage());
             }
             
             if ($showError && php_sapi_name() !== 'cli') {
@@ -142,7 +142,7 @@ class DatabaseHelper {
     }
     
     /**
-     * Получение экземпляра Database
+     * Отримання екземпляра Database
      * 
      * @return Database
      */
@@ -151,9 +151,9 @@ class DatabaseHelper {
     }
     
     /**
-     * Проверка существования таблицы в базе данных
+     * Перевірка існування таблиці в базі даних
      * 
-     * @param string $tableName Имя таблицы
+     * @param string $tableName Ім'я таблиці
      * @return bool
      */
     public static function tableExists(string $tableName): bool {
@@ -180,7 +180,7 @@ class DatabaseHelper {
             return isset($result['count']) && (int)$result['count'] > 0;
         } catch (Exception $e) {
             if (class_exists('Logger')) {
-                Logger::getInstance()->logError('Table existence check failed', [
+                Logger::getInstance()->logError('Перевірка існування таблиці не вдалася', [
                     'table' => $tableName,
                     'error' => $e->getMessage()
                 ]);
@@ -190,10 +190,10 @@ class DatabaseHelper {
     }
     
     /**
-     * Проверка существования всех указанных таблиц
+     * Перевірка існування всіх вказаних таблиць
      * 
-     * @param array $tables Массив имен таблиц
-     * @return array Массив с результатами проверки ['exists' => array, 'missing' => array]
+     * @param array $tables Масив імен таблиць
+     * @return array Масив з результатами перевірки ['exists' => array, 'missing' => array]
      */
     public static function checkTables(array $tables): array {
         $exists = [];

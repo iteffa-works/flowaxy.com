@@ -39,7 +39,7 @@ class Cookie {
         
         $domain = $domain ?? $_SERVER['HTTP_HOST'] ?? '';
         
-        // Проверяем реальное HTTPS соединение
+        // Перевіряємо реальне HTTPS з'єднання
         $realHttps = (
             (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
             (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
@@ -47,12 +47,12 @@ class Cookie {
             (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
         );
         
-        // Если secure=true, но реальное соединение HTTP - отключаем secure для совместимости с Edge
+        // Якщо secure=true, але реальне з'єднання HTTP - вимикаємо secure для сумісності з Edge
         if ($secure && !$realHttps) {
             $secure = false;
         }
         
-        // Если SameSite=None, но secure=false - меняем на Lax (Edge требует Secure для None)
+        // Якщо SameSite=None, але secure=false - змінюємо на Lax (Edge вимагає Secure для None)
         if ($samesite === 'None' && !$secure) {
             $samesite = 'Lax';
         }

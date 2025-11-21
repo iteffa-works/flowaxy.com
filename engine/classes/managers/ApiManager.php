@@ -1,7 +1,7 @@
 <?php
 /**
- * Менеджер API ключей
- * Управление API ключами для внешних приложений
+ * Менеджер API ключів
+ * Управління API ключами для зовнішніх додатків
  * 
  * @package Engine\Classes\Managers
  * @version 1.0.0
@@ -18,11 +18,11 @@ class ApiManager {
      */
     public function __construct() {
         $this->db = Database::getInstance();
-        // Таблица создается установщиком, создание удалено из ядра
+        // Таблиця створюється установщиком, створення видалено з ядра
     }
     
     /**
-     * Генерация нового API ключа
+     * Генерація нового API ключа
      * 
      * @return string
      */
@@ -31,12 +31,12 @@ class ApiManager {
     }
     
     /**
-     * Создание нового API ключа
+     * Створення нового API ключа
      * 
-     * @param string $name Название ключа
-     * @param array $permissions Разрешения
-     * @param string|null $expiresAt Дата истечения (формат: Y-m-d H:i:s)
-     * @return array Массив с данными ключа (включая сам ключ)
+     * @param string $name Назва ключа
+     * @param array $permissions Дозволи
+     * @param string|null $expiresAt Дата закінчення (формат: Y-m-d H:i:s)
+     * @return array Масив з даними ключа (включаючи сам ключ)
      */
     public function createKey(string $name, array $permissions = [], ?string $expiresAt = null): array {
         $key = $this->generateKey();
@@ -66,7 +66,7 @@ class ApiManager {
             return [
                 'id' => $id,
                 'name' => $name,
-                'key' => $key, // Возвращаем только один раз!
+                'key' => $key, // Повертаємо тільки один раз!
                 'key_preview' => $keyPreview,
                 'permissions' => $permissions,
                 'expires_at' => $expiresAt,
@@ -75,21 +75,21 @@ class ApiManager {
             ];
         } catch (Exception $e) {
             error_log("ApiManager::createKey() error: " . $e->getMessage());
-            throw new Exception("Не удалось создать API ключ: " . $e->getMessage());
+            throw new Exception("Не вдалося створити API ключ: " . $e->getMessage());
         }
     }
     
     /**
-     * Проверка API ключа
+     * Перевірка API ключа
      * 
      * @param string $key API ключ
-     * @return array|null Данные ключа или null, если невалидный
+     * @return array|null Дані ключа або null, якщо невалідний
      */
     public function validateKey(string $key): ?array {
         try {
             $conn = $this->db->getConnection();
             
-            // Получаем все активные ключи для проверки
+            // Отримуємо всі активні ключі для перевірки
             $stmt = $conn->prepare("
                 SELECT id, name, key_hash, key_preview, permissions, expires_at, is_active
                 FROM `" . self::TABLE_NAME . "`

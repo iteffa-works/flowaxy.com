@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для работы с изображениями
- * Ресайз, кроп, конвертация форматов и другие операции с изображениями
+ * Клас для роботи з зображеннями
+ * Зміна розміру, обрізання, конвертація форматів та інші операції з зображеннями
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
@@ -20,11 +20,11 @@ class Image {
     /**
      * Конструктор
      * 
-     * @param string|null $filePath Путь к изображению
+     * @param string|null $filePath Шлях до зображення
      */
     public function __construct(?string $filePath = null) {
         if (!extension_loaded('gd')) {
-            throw new Exception("GD расширение не установлено");
+            throw new Exception("Розширення GD не встановлено");
         }
         
         if ($filePath !== null) {
@@ -33,25 +33,25 @@ class Image {
     }
     
     /**
-     * Загрузка изображения
+     * Завантаження зображення
      * 
-     * @param string $filePath Путь к изображению
+     * @param string $filePath Шлях до зображення
      * @return self
-     * @throws Exception Если не удалось загрузить
+     * @throws Exception Якщо не вдалося завантажити
      */
     public function load(string $filePath): self {
         if (!file_exists($filePath)) {
-            throw new Exception("Изображение не существует: {$filePath}");
+            throw new Exception("Зображення не існує: {$filePath}");
         }
         
         if (!is_readable($filePath)) {
-            throw new Exception("Изображение недоступно для чтения: {$filePath}");
+            throw new Exception("Зображення недоступне для читання: {$filePath}");
         }
         
         $imageInfo = @getimagesize($filePath);
         
         if ($imageInfo === false) {
-            throw new Exception("Не удалось определить размеры изображения: {$filePath}");
+            throw new Exception("Не вдалося визначити розміри зображення: {$filePath}");
         }
         
         $this->filePath = $filePath;
@@ -60,7 +60,7 @@ class Image {
         $this->type = $imageInfo[2];
         $this->mimeType = $imageInfo['mime'];
         
-        // Создаем ресурс изображения
+        // Створюємо ресурс зображення
         switch ($this->type) {
             case IMAGETYPE_JPEG:
                 $this->resource = @imagecreatefromjpeg($filePath);
@@ -75,7 +75,7 @@ class Image {
                 $this->resource = @imagecreatefromwebp($filePath);
                 break;
             default:
-                throw new Exception("Неподдерживаемый тип изображения: {$this->mimeType}");
+                throw new Exception("Непідтримуваний тип зображення: {$this->mimeType}");
         }
         
         if ($this->resource === false) {

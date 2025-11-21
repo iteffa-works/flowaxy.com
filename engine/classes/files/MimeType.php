@@ -1,7 +1,7 @@
 <?php
 /**
- * Класс для определения MIME типов файлов
- * Определение типов файлов по расширению и содержимому
+ * Клас для визначення MIME типів файлів
+ * Визначення типів файлів за розширенням та вмістом
  * 
  * @package Engine\Classes\Files
  * @version 1.0.0
@@ -11,12 +11,12 @@ declare(strict_types=1);
 
 class MimeType {
     /**
-     * Карта расширений файлов к MIME типам
+     * Карта розширень файлів до MIME типів
      * 
      * @var array
      */
     private static array $extensionMap = [
-        // Изображения
+        // Зображення
         'jpg' => 'image/jpeg',
         'jpeg' => 'image/jpeg',
         'png' => 'image/png',
@@ -27,14 +27,14 @@ class MimeType {
         'bmp' => 'image/bmp',
         'tiff' => 'image/tiff',
         
-        // Аудио
+        // Аудіо
         'mp3' => 'audio/mpeg',
         'wav' => 'audio/wav',
         'ogg' => 'audio/ogg',
         'm4a' => 'audio/mp4',
         'flac' => 'audio/flac',
         
-        // Видео
+        // Відео
         'mp4' => 'video/mp4',
         'avi' => 'video/x-msvideo',
         'mov' => 'video/quicktime',
@@ -43,7 +43,7 @@ class MimeType {
         'webm' => 'video/webm',
         'mkv' => 'video/x-matroska',
         
-        // Документы
+        // Документи
         'pdf' => 'application/pdf',
         'doc' => 'application/msword',
         'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -54,7 +54,7 @@ class MimeType {
         'odt' => 'application/vnd.oasis.opendocument.text',
         'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
         
-        // Текстовые файлы
+        // Текстові файли
         'txt' => 'text/plain',
         'html' => 'text/html',
         'htm' => 'text/html',
@@ -64,37 +64,37 @@ class MimeType {
         'xml' => 'application/xml',
         'csv' => 'text/csv',
         
-        // Архивы
+        // Архіви
         'zip' => ['application/zip', 'application/x-zip-compressed', 'application/x-zip'],
         'rar' => ['application/x-rar-compressed', 'application/x-rar'],
         '7z' => 'application/x-7z-compressed',
         'tar' => 'application/x-tar',
         'gz' => ['application/gzip', 'application/x-gzip'],
         
-        // Другое
+        // Інше
         'php' => 'application/x-httpd-php',
         'exe' => 'application/x-msdownload',
         'msi' => 'application/x-msdownload',
     ];
     
     /**
-     * Определение MIME типа по расширению файла
+     * Визначення MIME типу за розширенням файлу
      * 
-     * @param string $filePath Путь к файлу или расширение
-     * @return string|false MIME тип или false
+     * @param string $filePath Шлях до файлу або розширення
+     * @return string|false MIME тип або false
      */
     public static function fromExtension(string $filePath) {
-        // Если передан путь к файлу, извлекаем расширение
+        // Якщо передано шлях до файлу, витягуємо розширення
         if (strpos($filePath, '.') !== false && file_exists($filePath)) {
             $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         } else {
-            // Предполагаем, что это расширение
+            // Припускаємо, що це розширення
             $extension = strtolower(ltrim($filePath, '.'));
         }
         
         $mimeType = self::$extensionMap[$extension] ?? false;
         
-        // Если это массив (несколько вариантов MIME типу), повертаємо перший
+        // Якщо це масив (кілька варіантів MIME типу), повертаємо перший
         if (is_array($mimeType)) {
             return $mimeType[0];
         }
@@ -109,17 +109,17 @@ class MimeType {
      * @return array Масив MIME типів
      */
     public static function getAllMimeTypes(string $filePath): array {
-        // Если передан путь к файлу, извлекаем расширение
+        // Якщо передано шлях до файлу, витягуємо розширення
         if (strpos($filePath, '.') !== false && file_exists($filePath)) {
             $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         } else {
-            // Предполагаем, что это расширение
+            // Припускаємо, що це розширення
             $extension = strtolower(ltrim($filePath, '.'));
         }
         
         $mimeType = self::$extensionMap[$extension] ?? false;
         
-        // Если это массив, повертаємо всі варіанти
+        // Якщо це масив, повертаємо всі варіанти
         if (is_array($mimeType)) {
             return $mimeType;
         }
@@ -129,10 +129,10 @@ class MimeType {
     }
     
     /**
-     * Определение MIME типа по содержимому файла
+     * Визначення MIME типу за вмістом файлу
      * 
-     * @param string $filePath Путь к файлу
-     * @return string|false MIME тип или false
+     * @param string $filePath Шлях до файлу
+     * @return string|false MIME тип або false
      */
     public static function fromContent(string $filePath) {
         if (!file_exists($filePath)) {
@@ -143,7 +143,7 @@ class MimeType {
             return false;
         }
         
-        // Используем mime_content_type если доступно
+        // Використовуємо mime_content_type якщо доступно
         if (function_exists('mime_content_type')) {
             $mimeType = @mime_content_type($filePath);
             if ($mimeType !== false) {
@@ -151,7 +151,7 @@ class MimeType {
             }
         }
         
-        // Используем finfo если доступно
+        // Використовуємо finfo якщо доступно
         if (function_exists('finfo_file')) {
             $finfo = @finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo !== false) {
@@ -167,21 +167,21 @@ class MimeType {
     }
     
     /**
-     * Определение MIME типа файла (комбинированный метод)
-     * Сначала пытается определить по содержимому, затем по расширению
+     * Визначення MIME типу файлу (комбінований метод)
+     * Спочатку намагається визначити за вмістом, потім за розширенням
      * 
-     * @param string $filePath Путь к файлу
-     * @return string MIME тип или 'application/octet-stream' по умолчанию
+     * @param string $filePath Шлях до файлу
+     * @return string MIME тип або 'application/octet-stream' за замовчуванням
      */
     public static function get(string $filePath): string {
-        // Пробуем определить по содержимому
+        // Намагаємося визначити за вмістом
         $mimeType = self::fromContent($filePath);
         
         if ($mimeType !== false) {
             return $mimeType;
         }
         
-        // Пробуем определить по расширению
+        // Намагаємося визначити за розширенням
         $mimeType = self::fromExtension($filePath);
         
         if ($mimeType !== false) {
@@ -192,9 +192,9 @@ class MimeType {
     }
     
     /**
-     * Проверка, является ли файл изображением
+     * Перевірка, чи є файл зображенням
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return bool
      */
     public static function isImage(string $filePath): bool {
@@ -203,9 +203,9 @@ class MimeType {
     }
     
     /**
-     * Проверка, является ли файл видео
+     * Перевірка, чи є файл відео
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return bool
      */
     public static function isVideo(string $filePath): bool {
@@ -214,9 +214,9 @@ class MimeType {
     }
     
     /**
-     * Проверка, является ли файл аудио
+     * Перевірка, чи є файл аудіо
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return bool
      */
     public static function isAudio(string $filePath): bool {
@@ -225,9 +225,9 @@ class MimeType {
     }
     
     /**
-     * Проверка, является ли файл документом
+     * Перевірка, чи є файл документом
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return bool
      */
     public static function isDocument(string $filePath): bool {
@@ -254,9 +254,9 @@ class MimeType {
     }
     
     /**
-     * Проверка, является ли файл архивом
+     * Перевірка, чи є файл архівом
      * 
-     * @param string $filePath Путь к файлу
+     * @param string $filePath Шлях до файлу
      * @return bool
      */
     public static function isArchive(string $filePath): bool {
@@ -277,10 +277,10 @@ class MimeType {
     }
     
     /**
-     * Получение расширения файла по MIME типу
+     * Отримання розширення файлу за MIME типом
      * 
      * @param string $mimeType MIME тип
-     * @return string|false Расширение или false
+     * @return string|false Розширення або false
      */
     public static function getExtension(string $mimeType) {
         $reverseMap = array_flip(self::$extensionMap);
@@ -288,9 +288,9 @@ class MimeType {
     }
     
     /**
-     * Добавление пользовательского сопоставления расширения и MIME типа
+     * Додавання користувацького співставлення розширення та MIME типу
      * 
-     * @param string $extension Расширение
+     * @param string $extension Розширення
      * @param string $mimeType MIME тип
      * @return void
      */
@@ -299,10 +299,10 @@ class MimeType {
     }
     
     /**
-     * Получение всех доступных расширений для MIME типа
+     * Отримання всіх доступних розширень для MIME типу
      * 
      * @param string $mimeType MIME тип
-     * @return array Массив расширений
+     * @return array Масив розширень
      */
     public static function getExtensions(string $mimeType): array {
         $extensions = [];
@@ -317,10 +317,10 @@ class MimeType {
     }
     
     /**
-     * Валидация MIME типа файла
+     * Валідація MIME типу файлу
      * 
-     * @param string $filePath Путь к файлу
-     * @param array $allowedMimeTypes Разрешенные MIME типы
+     * @param string $filePath Шлях до файлу
+     * @param array $allowedMimeTypes Дозволені MIME типи
      * @return bool
      */
     public static function validate(string $filePath, array $allowedMimeTypes): bool {

@@ -1,10 +1,10 @@
 <?php
 /**
- * Менеджер хуков и событий системы
+ * Менеджер хуків та подій системи
  * 
- * Управляет фильтрами (filters) и событиями (actions)
- * Фильтры - модифицируют данные и возвращают результат
- * События - выполняют действия без возврата данных
+ * Управляє фільтрами (filters) та подіями (actions)
+ * Фільтри - модифікують дані та повертають результат
+ * Події - виконують дії без повернення даних
  * 
  * @package Engine\System
  * @version 1.0.0
@@ -16,24 +16,26 @@ class HookManager {
     private static ?HookManager $instance = null;
     
     /**
-     * Хранилище хуков
+     * Сховище хуків
      * Структура: ['hook_name' => [['callback' => callable, 'priority' => int, 'condition' => callable|null, 'type' => 'filter'|'action']]]
      */
     private array $hooks = [];
     
     /**
-     * Счетчик вызовов хуков (для отладки)
+     * Лічильник викликів хуків (для відлагодження)
      */
     private array $hookCalls = [];
     
     /**
-     * Приватный конструктор (Singleton)
+     * Приватний конструктор (Singleton)
      */
     private function __construct() {
     }
     
     /**
-     * Получить экземпляр HookManager
+     * Отримати екземпляр HookManager
+     * 
+     * @return HookManager
      */
     public static function getInstance(): HookManager {
         if (self::$instance === null) {
@@ -43,13 +45,13 @@ class HookManager {
     }
     
     /**
-     * Добавить фильтр (filter)
-     * Фильтры модифицируют данные и возвращают результат
+     * Додати фільтр (filter)
+     * Фільтри модифікують дані та повертають результат
      * 
-     * @param string $hookName Имя хука
-     * @param callable $callback Функция обратного вызова
-     * @param int $priority Приоритет (меньше = раньше выполняется, по умолчанию 10)
-     * @param callable|null $condition Условие выполнения (опционально)
+     * @param string $hookName Ім'я хука
+     * @param callable $callback Функція зворотного виклику
+     * @param int $priority Пріоритет (менше = раніше виконується, за замовчуванням 10)
+     * @param callable|null $condition Умова виконання (опціонально)
      * @return void
      */
     public function addFilter(string $hookName, callable $callback, int $priority = 10, ?callable $condition = null): void {
@@ -57,13 +59,13 @@ class HookManager {
     }
     
     /**
-     * Добавить событие (action)
-     * События выполняют действия без возврата данных
+     * Додати подію (action)
+     * Події виконують дії без повернення даних
      * 
-     * @param string $hookName Имя хука
-     * @param callable $callback Функция обратного вызова
-     * @param int $priority Приоритет (меньше = раньше выполняется, по умолчанию 10)
-     * @param callable|null $condition Условие выполнения (опционально)
+     * @param string $hookName Ім'я хука
+     * @param callable $callback Функція зворотного виклику
+     * @param int $priority Пріоритет (менше = раніше виконується, за замовчуванням 10)
+     * @param callable|null $condition Умова виконання (опціонально)
      * @return void
      */
     public function addAction(string $hookName, callable $callback, int $priority = 10, ?callable $condition = null): void {
@@ -71,13 +73,13 @@ class HookManager {
     }
     
     /**
-     * Универсальный метод добавления хука
+     * Універсальний метод додавання хука
      * 
-     * @param string $hookName Имя хука
-     * @param callable $callback Функция обратного вызова
-     * @param int $priority Приоритет
-     * @param callable|null $condition Условие выполнения
-     * @param string $type Тип хука ('filter' или 'action')
+     * @param string $hookName Ім'я хука
+     * @param callable $callback Функція зворотного виклику
+     * @param int $priority Пріоритет
+     * @param callable|null $condition Умова виконання
+     * @param string $type Тип хука ('filter' або 'action')
      * @return void
      */
     public function addHook(string $hookName, callable $callback, int $priority = 10, ?callable $condition = null, string $type = 'filter'): void {
@@ -96,18 +98,20 @@ class HookManager {
             'type' => $type
         ];
         
-        // Сортируем по приоритету
-        usort($this->hooks[$hookName], fn($a, $b) => $a['priority'] <=> $b['priority']);
+        // Сортуємо за пріоритетом (оптимізовано - сортуємо тільки якщо потрібно)
+        if (count($this->hooks[$hookName]) > 1) {
+            usort($this->hooks[$hookName], fn($a, $b) => $a['priority'] <=> $b['priority']);
+        }
     }
     
     /**
-     * Применить фильтр (filter)
-     * Проходит через все зарегистрированные фильтры и модифицирует данные
+     * Застосувати фільтр (filter)
+     * Проходить через всі зареєстровані фільтри та модифікує дані
      * 
-     * @param string $hookName Имя хука
-     * @param mixed $data Данные для фильтрации
-     * @param mixed ...$args Дополнительные аргументы
-     * @return mixed Отфильтрованные данные
+     * @param string $hookName Ім'я хука
+     * @param mixed $data Дані для фільтрації
+     * @param mixed ...$args Додаткові аргументи
+     * @return mixed Відфільтровані дані
      */
     public function applyFilter(string $hookName, $data = null, ...$args) {
         if (empty($hookName) || !isset($this->hooks[$hookName])) {
@@ -117,14 +121,14 @@ class HookManager {
         $this->incrementHookCall($hookName);
         
         foreach ($this->hooks[$hookName] as $hook) {
-            // Проверяем условие выполнения
+            // Перевіряємо умову виконання
             if ($hook['condition'] !== null && !$this->checkCondition($hook['condition'], $data, ...$args)) {
                 continue;
             }
             
-            // Фильтры должны возвращать данные
+            // Фільтри повинні повертати дані
             if ($hook['type'] === 'action') {
-                // Если это событие, просто вызываем без возврата данных
+                // Якщо це подія, просто викликаємо без повернення даних
                 try {
                     call_user_func($hook['callback'], $data, ...$args);
                 } catch (Exception $e) {
@@ -133,7 +137,7 @@ class HookManager {
                 continue;
             }
             
-            // Выполняем фильтр
+            // Виконуємо фільтр
             if (!is_callable($hook['callback'])) {
                 continue;
             }
@@ -141,7 +145,7 @@ class HookManager {
             try {
                 $result = call_user_func($hook['callback'], $data, ...$args);
                 
-                // Если результат не null, используем его как новые данные
+                // Якщо результат не null, використовуємо його як нові дані
                 if ($result !== null) {
                     $data = $result;
                 }
@@ -156,11 +160,11 @@ class HookManager {
     }
     
     /**
-     * Выполнить событие (action)
-     * Вызывает все зарегистрированные обработчики события
+     * Виконати подію (action)
+     * Викликає всі зареєстровані обробники події
      * 
-     * @param string $hookName Имя хука
-     * @param mixed ...$args Аргументы для передачи в обработчики
+     * @param string $hookName Ім'я хука
+     * @param mixed ...$args Аргументи для передачі в обробники
      * @return void
      */
     public function doAction(string $hookName, ...$args): void {
@@ -171,7 +175,7 @@ class HookManager {
         $this->incrementHookCall($hookName);
         
         foreach ($this->hooks[$hookName] as $hook) {
-            // Проверяем условие выполнения
+            // Перевіряємо умову виконання
             if ($hook['condition'] !== null && !$this->checkCondition($hook['condition'], ...$args)) {
                 continue;
             }
@@ -191,19 +195,19 @@ class HookManager {
     }
     
     /**
-     * Универсальный метод выполнения хука (для обратной совместимости)
-     * Автоматически определяет тип хука
+     * Універсальний метод виконання хука (для зворотної сумісності)
+     * Автоматично визначає тип хука
      * 
-     * @param string $hookName Имя хука
-     * @param mixed $data Данные (для фильтров) или аргументы (для событий)
-     * @return mixed Результат для фильтров, null для событий
+     * @param string $hookName Ім'я хука
+     * @param mixed $data Дані (для фільтрів) або аргументи (для подій)
+     * @return mixed Результат для фільтрів, null для подій
      */
     public function doHook(string $hookName, $data = null) {
         if (empty($hookName) || !isset($this->hooks[$hookName])) {
             return $data;
         }
         
-        // Определяем тип хука по первому зарегистрированному
+        // Визначаємо тип хука за першим зареєстрованим
         $firstHook = $this->hooks[$hookName][0] ?? null;
         $isAction = $firstHook && $firstHook['type'] === 'action';
         
@@ -216,9 +220,9 @@ class HookManager {
     }
     
     /**
-     * Проверить существование хука
+     * Перевірити існування хука
      * 
-     * @param string $hookName Имя хука
+     * @param string $hookName Ім'я хука
      * @return bool
      */
     public function hasHook(string $hookName): bool {
@@ -226,11 +230,11 @@ class HookManager {
     }
     
     /**
-     * Удалить хук
+     * Видалити хук
      * 
-     * @param string $hookName Имя хука
-     * @param callable|null $callback Конкретный callback для удаления (если null - удаляет все)
-     * @return bool Успешно ли удалено
+     * @param string $hookName Ім'я хука
+     * @param callable|null $callback Конкретний callback для видалення (якщо null - видаляє всі)
+     * @return bool Чи успішно видалено
      */
     public function removeHook(string $hookName, ?callable $callback = null): bool {
         if (empty($hookName) || !isset($this->hooks[$hookName])) {
@@ -238,12 +242,12 @@ class HookManager {
         }
         
         if ($callback === null) {
-            // Удаляем все хуки с этим именем
+            // Видаляємо всі хуки з цим ім'ям
             unset($this->hooks[$hookName]);
             return true;
         }
         
-        // Удаляем конкретный callback
+        // Видаляємо конкретний callback
         $removed = false;
         foreach ($this->hooks[$hookName] as $key => $hook) {
             if ($this->callbacksEqual($hook['callback'], $callback)) {
@@ -253,10 +257,10 @@ class HookManager {
         }
         
         if ($removed) {
-            // Переиндексируем массив
+            // Переіндексуємо масив
             $this->hooks[$hookName] = array_values($this->hooks[$hookName]);
             
-            // Если хуков не осталось, удаляем ключ
+            // Якщо хуків не залишилося, видаляємо ключ
             if (empty($this->hooks[$hookName])) {
                 unset($this->hooks[$hookName]);
             }
@@ -266,7 +270,7 @@ class HookManager {
     }
     
     /**
-     * Получить все зарегистрированные хуки
+     * Отримати всі зареєстровані хуки
      * 
      * @return array
      */
@@ -275,9 +279,9 @@ class HookManager {
     }
     
     /**
-     * Получить хуки по имени
+     * Отримати хуки за ім'ям
      * 
-     * @param string $hookName Имя хука
+     * @param string $hookName Ім'я хука
      * @return array
      */
     public function getHooks(string $hookName): array {
@@ -285,28 +289,30 @@ class HookManager {
     }
     
     /**
-     * Очистить все хуки
+     * Очистити всі хуки
      * 
      * @return void
      */
     public function clearHooks(): void {
         $this->hooks = [];
+        $this->hookCalls = [];
     }
     
     /**
-     * Очистить хуки по имени
+     * Очистити хуки за ім'ям
      * 
-     * @param string $hookName Имя хука
+     * @param string $hookName Ім'я хука
      * @return void
      */
     public function clearHook(string $hookName): void {
         if (isset($this->hooks[$hookName])) {
             unset($this->hooks[$hookName]);
+            unset($this->hookCalls[$hookName]);
         }
     }
     
     /**
-     * Получить статистику вызовов хуков (для отладки)
+     * Отримати статистику викликів хуків (для відлагодження)
      * 
      * @return array
      */
@@ -319,10 +325,10 @@ class HookManager {
     }
     
     /**
-     * Проверить условие выполнения хука
+     * Перевірити умову виконання хука
      * 
-     * @param callable $condition Условие
-     * @param mixed ...$args Аргументы
+     * @param callable $condition Умова
+     * @param mixed ...$args Аргументи
      * @return bool
      */
     private function checkCondition(callable $condition, ...$args): bool {
@@ -335,7 +341,7 @@ class HookManager {
     }
     
     /**
-     * Сравнить два callback на равенство
+     * Порівняти два callback на рівність
      * 
      * @param callable $callback1
      * @param callable $callback2
@@ -350,7 +356,7 @@ class HookManager {
             return $callback1 === $callback2;
         }
         
-        // Для объектов сравниваем по ссылке
+        // Для об'єктів порівнюємо за посиланням
         if (is_object($callback1) && is_object($callback2)) {
             return $callback1 === $callback2;
         }
@@ -359,27 +365,24 @@ class HookManager {
     }
     
     /**
-     * Увеличить счетчик вызовов хука
+     * Збільшити лічильник викликів хука
      * 
      * @param string $hookName
      * @return void
      */
     private function incrementHookCall(string $hookName): void {
-        if (!isset($this->hookCalls[$hookName])) {
-            $this->hookCalls[$hookName] = 0;
-        }
-        $this->hookCalls[$hookName]++;
+        $this->hookCalls[$hookName] = ($this->hookCalls[$hookName] ?? 0) + 1;
     }
     
     /**
-     * Логировать ошибку хука
+     * Логувати помилку хука
      * 
      * @param string $hookName
      * @param Throwable $e
      * @return void
      */
     private function logHookError(string $hookName, Throwable $e): void {
-        $message = "Hook execution error for '{$hookName}': " . $e->getMessage();
+        $message = "Помилка виконання хука '{$hookName}': " . $e->getMessage();
         
         if (function_exists('logger')) {
             try {
