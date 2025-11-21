@@ -157,6 +157,9 @@ class SiteSettingsPage extends AdminPage {
             'logging_level' => 'INFO',
             'logging_max_file_size' => '10485760', // 10 MB
             'logging_retention_days' => '30',
+            'logging_rotation_type' => 'size', // size, time, both
+            'logging_rotation_time' => '24', // часов для ротации по времени
+            'logging_rotation_time_unit' => 'hours', // hours, days
             // Настройки сессий
             'session_lifetime' => '7200', // 2 часа
             'session_name' => 'PHPSESSID',

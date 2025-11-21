@@ -79,6 +79,71 @@ ob_start();
                 </select>
             </div>
 
+            <!-- Фільтри та експорт -->
+            <?php if (!empty($logContent['file'])): ?>
+                <div class="card border-0 mb-3">
+                    <div class="card-body p-3">
+                        <form method="GET" action="" class="row g-3" id="logFiltersForm">
+                            <input type="hidden" name="file" value="<?= htmlspecialchars($selectedFile ?? '') ?>">
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-medium small">Рівень</label>
+                                <select class="form-select form-select-sm" name="level">
+                                    <option value="">Всі рівні</option>
+                                    <option value="DEBUG" <?= ($filters['level'] ?? '') === 'DEBUG' ? 'selected' : '' ?>>DEBUG</option>
+                                    <option value="INFO" <?= ($filters['level'] ?? '') === 'INFO' ? 'selected' : '' ?>>INFO</option>
+                                    <option value="WARNING" <?= ($filters['level'] ?? '') === 'WARNING' ? 'selected' : '' ?>>WARNING</option>
+                                    <option value="ERROR" <?= ($filters['level'] ?? '') === 'ERROR' ? 'selected' : '' ?>>ERROR</option>
+                                    <option value="CRITICAL" <?= ($filters['level'] ?? '') === 'CRITICAL' ? 'selected' : '' ?>>CRITICAL</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-medium small">Дата від</label>
+                                <input type="date" class="form-control form-control-sm" name="date_from" value="<?= htmlspecialchars($filters['date_from'] ?? '') ?>">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-medium small">Дата до</label>
+                                <input type="date" class="form-control form-control-sm" name="date_to" value="<?= htmlspecialchars($filters['date_to'] ?? '') ?>">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-medium small">Пошук</label>
+                                <input type="text" class="form-control form-control-sm" name="search" value="<?= htmlspecialchars($filters['search'] ?? '') ?>" placeholder="Текст для пошуку">
+                            </div>
+                            
+                            <div class="col-12 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-filter me-1"></i>Застосувати фільтри
+                                </button>
+                                <a href="?file=<?= urlencode($selectedFile ?? '') ?>" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-times me-1"></i>Скинути
+                                </a>
+                                <div class="ms-auto">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                            <i class="fas fa-download me-1"></i>Експорт
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="?file=<?= urlencode($selectedFile ?? '') ?>&export=1&format=txt<?= !empty($filters) ? '&' . http_build_query($filters) : '' ?>">
+                                                <i class="fas fa-file-alt me-2"></i>TXT
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="?file=<?= urlencode($selectedFile ?? '') ?>&export=1&format=csv<?= !empty($filters) ? '&' . http_build_query($filters) : '' ?>">
+                                                <i class="fas fa-file-csv me-2"></i>CSV
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="?file=<?= urlencode($selectedFile ?? '') ?>&export=1&format=json<?= !empty($filters) ? '&' . http_build_query($filters) : '' ?>">
+                                                <i class="fas fa-file-code me-2"></i>JSON
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
             <!-- Содержимое лога -->
             <?php if (empty($logContent['file'])): ?>
                 <?php

@@ -18,6 +18,7 @@ class Logger {
     private int $maxFileSize = 10 * 1024 * 1024; // 10 MB
     private int $maxFiles = 5;
     private array $settings = [];
+    private ?int $lastRotationTime = null;
     
     // Рівні логування
     public const LEVEL_DEBUG = 0;
@@ -123,7 +124,10 @@ class Logger {
             'slow_query_threshold' => 1.0,
             'max_file_size' => $this->maxFileSize,
             'max_files' => $this->maxFiles,
-            'retention_days' => 30
+            'retention_days' => 30,
+            'rotation_type' => 'size',
+            'rotation_time' => 24,
+            'rotation_time_unit' => 'hours'
         ];
         
         // Завантажуємо з БД, якщо доступна
@@ -136,7 +140,7 @@ class Logger {
                         // Використовуємо прямий запит до БД для отримання налаштувань
                         $db = DatabaseHelper::getConnection();
                         if ($db !== null) {
-                            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('logging_enabled', 'logging_level', 'logging_max_file_size', 'logging_retention_days')");
+                            $stmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('logging_enabled', 'logging_level', 'logging_max_file_size', 'logging_retention_days', 'logging_rotation_type', 'logging_rotation_time', 'logging_rotation_time_unit')");
                             if ($stmt !== false) {
                                 $dbSettings = [];
                                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -173,6 +177,11 @@ class Logger {
                                     $this->settings['max_files'] = max(5, $retentionDays + 1);
                                     $this->maxFiles = $this->settings['max_files'];
                                 }
+                                
+                                // Тип ротації
+                                $this->settings['rotation_type'] = $dbSettings['logging_rotation_type'] ?? 'size';
+                                $this->settings['rotation_time'] = (int)($dbSettings['logging_rotation_time'] ?? 24);
+                                $this->settings['rotation_time_unit'] = $dbSettings['logging_rotation_time_unit'] ?? 'hours';
                             } else {
                                 // Якщо не вдалося завантажити з БД, використовуємо settingsManager
                                 $loggingEnabled = $settings->get('logging_enabled', '1');
@@ -204,6 +213,11 @@ class Logger {
                                     $this->settings['max_files'] = max(5, $retentionDays + 1);
                                     $this->maxFiles = $this->settings['max_files'];
                                 }
+                                
+                                // Тип ротації
+                                $this->settings['rotation_type'] = $settings->get('logging_rotation_type', 'size');
+                                $this->settings['rotation_time'] = (int)$settings->get('logging_rotation_time', '24');
+                                $this->settings['rotation_time_unit'] = $settings->get('logging_rotation_time_unit', 'hours');
                             }
                         } else {
                             // Якщо БД недоступна, використовуємо значення за замовчуванням
@@ -342,9 +356,48 @@ class Logger {
      * @return void
      */
     private function writeToFile(string $logLine): void {
-        // Перевіряємо розмір файлу та ротуємо при необхідності
-        if (file_exists($this->logFile) && filesize($this->logFile) >= $this->settings['max_file_size']) {
+        $rotationType = $this->settings['rotation_type'] ?? 'size';
+        $shouldRotate = false;
+        
+        // Перевіряємо ротацію по розміру
+        if ($rotationType === 'size' || $rotationType === 'both') {
+            if (file_exists($this->logFile) && filesize($this->logFile) >= $this->settings['max_file_size']) {
+                $shouldRotate = true;
+            }
+        }
+        
+        // Перевіряємо ротацію по часу
+        if ($rotationType === 'time' || $rotationType === 'both') {
+            $rotationTime = (int)($this->settings['rotation_time'] ?? 24);
+            $rotationTimeUnit = $this->settings['rotation_time_unit'] ?? 'hours';
+            
+            // Конвертуємо в секунди
+            $rotationSeconds = $rotationTimeUnit === 'days' 
+                ? $rotationTime * 24 * 60 * 60 
+                : $rotationTime * 60 * 60;
+            
+            $currentTime = time();
+            
+            // Якщо файл існує, перевіряємо час останньої ротації
+            if (file_exists($this->logFile)) {
+                if ($this->lastRotationTime === null) {
+                    // Встановлюємо час створення файлу як час останньої ротації
+                    $this->lastRotationTime = filemtime($this->logFile);
+                }
+                
+                if (($currentTime - $this->lastRotationTime) >= $rotationSeconds) {
+                    $shouldRotate = true;
+                }
+            } else {
+                // Новий файл - встановлюємо час ротації
+                $this->lastRotationTime = $currentTime;
+            }
+        }
+        
+        // Виконуємо ротацію якщо потрібно
+        if ($shouldRotate) {
             $this->rotateLogs();
+            $this->lastRotationTime = time();
         }
         
         // Записуємо у файл

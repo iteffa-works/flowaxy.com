@@ -27,6 +27,12 @@ class LogsViewPage extends AdminPage {
     }
     
     public function handle() {
+        // Обробка експорту логів
+        if ($_GET && isset($_GET['export'])) {
+            $this->exportLogs();
+            return;
+        }
+        
         // Обробка очистки логів
         if ($_POST && isset($_POST['clear_logs'])) {
             $fileToDelete = $this->post('file', '');
@@ -64,11 +70,26 @@ class LogsViewPage extends AdminPage {
             $headerButtons
         );
         
+        // Фільтри
+        $filters = [
+            'level' => $_GET['level'] ?? '',
+            'date_from' => $_GET['date_from'] ?? '',
+            'date_to' => $_GET['date_to'] ?? '',
+            'module' => $_GET['module'] ?? '',
+            'search' => $_GET['search'] ?? ''
+        ];
+        
+        // Застосовуємо фільтри до контенту
+        if (!empty($logContent['lines']) && !empty(array_filter($filters))) {
+            $logContent['lines'] = $this->applyFilters($logContent['lines'], $filters);
+        }
+        
         // Рендеримо сторінку
         $this->render([
             'logFiles' => $logFiles,
             'logContent' => $logContent,
-            'selectedFile' => $_GET['file'] ?? null
+            'selectedFile' => $_GET['file'] ?? null,
+            'filters' => $filters
         ]);
     }
     

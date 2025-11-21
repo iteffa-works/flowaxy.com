@@ -178,10 +178,53 @@ if (!empty($message)) {
                                    placeholder="30">
                             <div class="form-text small">Кількість днів зберігання логів (за замовчуванням: 30 днів)</div>
                         </div>
+                        <div class="col-md-6">
+                            <label for="loggingRotationType" class="form-label fw-medium small">Тип ротації</label>
+                            <select class="form-select" id="loggingRotationType" name="settings[logging_rotation_type]">
+                                <option value="size" <?= ($settings['logging_rotation_type'] ?? 'size') === 'size' ? 'selected' : '' ?>>По розміру</option>
+                                <option value="time" <?= ($settings['logging_rotation_type'] ?? 'size') === 'time' ? 'selected' : '' ?>>По часу</option>
+                                <option value="both" <?= ($settings['logging_rotation_type'] ?? 'size') === 'both' ? 'selected' : '' ?>>По розміру та часу</option>
+                            </select>
+                            <div class="form-text small">Коли виконувати ротацію логів</div>
+                        </div>
+                        <div class="col-md-6" id="rotationTimeGroup" style="display: <?= in_array($settings['logging_rotation_type'] ?? 'size', ['time', 'both']) ? 'block' : 'none' ?>;">
+                            <label for="loggingRotationTime" class="form-label fw-medium small">Ротація по часу</label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="loggingRotationTime" 
+                                       name="settings[logging_rotation_time]" 
+                                       value="<?= htmlspecialchars($settings['logging_rotation_time'] ?? '24') ?>"
+                                       min="1"
+                                       placeholder="24">
+                                <select class="form-select" id="loggingRotationTimeUnit" name="settings[logging_rotation_time_unit]" style="max-width: 120px;">
+                                    <option value="hours" <?= ($settings['logging_rotation_time_unit'] ?? 'hours') === 'hours' ? 'selected' : '' ?>>Годин</option>
+                                    <option value="days" <?= ($settings['logging_rotation_time_unit'] ?? 'hours') === 'days' ? 'selected' : '' ?>>Днів</option>
+                                </select>
+                            </div>
+                            <div class="form-text small">Період ротації логів по часу</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rotationType = document.getElementById('loggingRotationType');
+            const rotationTimeGroup = document.getElementById('rotationTimeGroup');
+            
+            if (rotationType && rotationTimeGroup) {
+                rotationType.addEventListener('change', function() {
+                    if (this.value === 'time' || this.value === 'both') {
+                        rotationTimeGroup.style.display = 'block';
+                    } else {
+                        rotationTimeGroup.style.display = 'none';
+                    }
+                });
+            }
+        });
+        </script>
         
         <!-- Кнопки действий -->
         <div class="col-12">
