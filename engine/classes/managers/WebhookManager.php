@@ -57,7 +57,7 @@ class WebhookManager {
             $stmt->execute([
                 $name,
                 $url,
-                Hash::hash($secret),
+                Hash::sha256($secret),
                 $eventsJson
             ]);
             
@@ -226,7 +226,7 @@ class WebhookManager {
             return false;
         }
         
-        return Hash::equals($secretHash, Hash::hash($secret));
+        return Hash::equals($secretHash, Hash::sha256($secret));
     }
     
     /**
