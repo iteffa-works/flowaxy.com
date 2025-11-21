@@ -112,12 +112,14 @@ class ScssCompiler {
             }
         }
         
-        if (!class_exists('ScssPhp\ScssPhp\Compiler')) {
+        $compilerClass = 'ScssPhp\ScssPhp\Compiler';
+        if (!class_exists($compilerClass)) {
             return false;
         }
         
         try {
-            $compiler = new \ScssPhp\ScssPhp\Compiler();
+            // Створюємо екземпляр через змінну для уникнення помилок статичного аналізу
+            $compiler = new $compilerClass();
             $compiler->setImportPaths([$this->scssDir]);
             
             $scssContent = file_get_contents($inputFile);
