@@ -182,7 +182,13 @@ abstract class BasePlugin {
      */
     public function getPluginUrl(): string {
         $pluginDir = basename(dirname((new ReflectionClass($this))->getFileName()));
-        return SITE_URL . '/plugins/' . $pluginDir . '/';
+        // Используем UrlHelper для получения актуального URL с правильным протоколом
+        if (class_exists('UrlHelper')) {
+            return UrlHelper::site('/plugins/' . $pluginDir . '/');
+        }
+        // Fallback на константу, если UrlHelper не доступен
+        $siteUrl = defined('SITE_URL') ? SITE_URL : '';
+        return $siteUrl . '/plugins/' . $pluginDir . '/';
     }
     
     /**

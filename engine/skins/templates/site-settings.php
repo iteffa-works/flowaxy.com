@@ -39,6 +39,15 @@ if (!empty($message)) {
                             <div class="form-text small">Email адреса для системних повідомлень</div>
                         </div>
                         <div class="col-md-6">
+                            <label for="siteProtocol" class="form-label fw-medium small">Протокол сайту</label>
+                            <select class="form-select" id="siteProtocol" name="settings[site_protocol]">
+                                <option value="auto" <?= ($settings['site_protocol'] ?? 'auto') === 'auto' ? 'selected' : '' ?>>Автоматично (визначається автоматично)</option>
+                                <option value="https" <?= ($settings['site_protocol'] ?? '') === 'https' ? 'selected' : '' ?>>HTTPS (захищений)</option>
+                                <option value="http" <?= ($settings['site_protocol'] ?? '') === 'http' ? 'selected' : '' ?>>HTTP (незахищений)</option>
+                            </select>
+                            <div class="form-text small">Протокол для URL сайту. "Автоматично" визначає протокол на основі запиту</div>
+                        </div>
+                        <div class="col-md-6">
                             <label for="timezone" class="form-label fw-medium small">Часовий пояс</label>
                             <select class="form-select" id="timezone" name="settings[timezone]">
                                 <option value="Europe/Kyiv" <?= ($settings['timezone'] ?? 'Europe/Kyiv') === 'Europe/Kyiv' || ($settings['timezone'] ?? '') === 'Europe/Kiev' ? 'selected' : '' ?>>Київ (UTC+2)</option>

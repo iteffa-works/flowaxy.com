@@ -107,9 +107,11 @@ class SecurityHelper {
             
             // Для обычных запросов делаем редирект
             if (class_exists('Response')) {
-                Response::redirectStatic(ADMIN_URL . '/login');
+                $adminLoginUrl = class_exists('UrlHelper') ? UrlHelper::admin('login') : (defined('ADMIN_URL') ? ADMIN_URL . '/login' : '/admin/login');
+                Response::redirectStatic($adminLoginUrl);
             } else {
-                header('Location: ' . ADMIN_URL . '/login');
+                $adminLoginUrl = class_exists('UrlHelper') ? UrlHelper::admin('login') : (defined('ADMIN_URL') ? ADMIN_URL . '/login' : '/admin/login');
+                header('Location: ' . $adminLoginUrl);
                 exit;
             }
         }

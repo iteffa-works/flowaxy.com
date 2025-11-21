@@ -104,6 +104,19 @@ class SiteSettingsPage extends AdminPage {
                         }
                     }
                     
+                    // Обновляем протокол в глобальной переменной, если он был изменен
+                    if (isset($sanitizedSettings['site_protocol'])) {
+                        $protocolSetting = $sanitizedSettings['site_protocol'];
+                        if ($protocolSetting === 'https') {
+                            $GLOBALS['_SITE_PROTOCOL'] = 'https://';
+                        } elseif ($protocolSetting === 'http') {
+                            $GLOBALS['_SITE_PROTOCOL'] = 'http://';
+                        } else {
+                            // Если 'auto', очищаем глобальную переменную для автоматического определения
+                            unset($GLOBALS['_SITE_PROTOCOL']);
+                        }
+                    }
+                    
                     $this->setMessage('Налаштування успішно збережено', 'success');
                     // Редирект после сохранения для предотвращения повторного выполнения
                     $this->redirect('site-settings');
@@ -131,6 +144,7 @@ class SiteSettingsPage extends AdminPage {
         // Значення за замовчуванням (используются только если настройка отсутствует в БД)
         $defaultSettings = [
             'admin_email' => 'admin@example.com',
+            'site_protocol' => 'auto', // Автоматическое определение протокола
             'timezone' => 'Europe/Kyiv',
             // Настройки кеша
             'cache_enabled' => '1',

@@ -59,7 +59,7 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     
     set_exception_handler(function(\Throwable $e): void {
         Logger::getInstance()->logException($e);
-        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        if (defined('DEBUG_MODE') && constant('DEBUG_MODE')) {
             echo '<pre>' . htmlspecialchars($e->getMessage()) . "\n" . htmlspecialchars($e->getTraceAsString()) . '</pre>';
         } else {
             http_response_code(500);
@@ -75,12 +75,25 @@ if (!$isInstaller && file_exists($databaseIniFile) && class_exists('Logger')) {
     });
 }
 
+// Определяем secure на основе протокола из настроек
+// Используем UrlHelper, если доступен, иначе detectProtocol()
+$isSecure = false;
+if (class_exists('UrlHelper')) {
+    $isSecure = UrlHelper::isHttps();
+} elseif (function_exists('detectProtocol')) {
+    $protocol = detectProtocol();
+    $isSecure = ($protocol === 'https://');
+} else {
+    // Fallback на автоматическое определение
+    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+}
+
 Session::start([
     'name' => 'PHPSESSID',
     'lifetime' => 7200,
     'domain' => '',
     'path' => '/',
-    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+    'secure' => $isSecure,
     'httponly' => true,
     'samesite' => 'Lax'
 ]);
@@ -96,6 +109,24 @@ if (!headers_sent() && class_exists('Response')) {
 }
 
 initializeSystem();
+
+// Обновление протокола на основе настройки из базы данных (если доступна)
+// detectProtocol() уже проверяет настройку из базы, но здесь мы обновляем глобальную переменную
+// для обеспечения консистентности
+if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini')) {
+    try {
+        $settingsManager = settingsManager();
+        $protocolSetting = $settingsManager->get('site_protocol', 'auto');
+        
+        if ($protocolSetting !== 'auto') {
+            $newProtocol = $protocolSetting === 'https' ? 'https://' : 'http://';
+            // Обновляем глобальную переменную для использования в detectProtocol()
+            $GLOBALS['_SITE_PROTOCOL'] = $newProtocol;
+        }
+    } catch (Exception $e) {
+        error_log('init.php: Could not update protocol from settings: ' . $e->getMessage());
+    }
+}
 
 // Инициализация системы ролей (проверка и создание таблиц при необходимости)
 if (file_exists(__DIR__ . '/includes/roles-init.php')) {

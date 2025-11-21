@@ -43,9 +43,10 @@ class CustomizerPage extends AdminPage {
         $themeName = $activeTheme ? $activeTheme['name'] : 'теми';
         
         // Формуємо кнопки для заголовка
+        $siteUrl = class_exists('UrlHelper') ? UrlHelper::site() : (defined('SITE_URL') ? SITE_URL : '/');
         $buttons = '<button type="button" class="btn btn-outline-secondary btn-sm" id="resetSettingsBtn">' .
                    '<i class="fas fa-undo me-2"></i>Скинути до значень за замовчуванням</button>' .
-                   '<a href="' . SITE_URL . '" class="btn btn-outline-primary btn-sm ms-2" target="_blank">' .
+                   '<a href="' . htmlspecialchars($siteUrl) . '" class="btn btn-outline-primary btn-sm ms-2" target="_blank">' .
                    '<i class="fas fa-external-link-alt me-2"></i>Переглянути сайт</a>';
         
         $this->setPageHeader(

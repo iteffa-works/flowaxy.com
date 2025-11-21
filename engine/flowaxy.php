@@ -9,13 +9,50 @@
 declare(strict_types=1);
 
 if (!function_exists('detectProtocol')) {
+    /**
+     * Определение протокола (HTTP/HTTPS)
+     * Проверяет настройку из базы данных, если доступна, иначе определяет автоматически
+     * 
+     * @return string Протокол (http:// или https://)
+     */
     function detectProtocol(): string {
+        // Сначала проверяем глобальную переменную (установленную в init.php)
+        if (isset($GLOBALS['_SITE_PROTOCOL']) && !empty($GLOBALS['_SITE_PROTOCOL'])) {
+            return $GLOBALS['_SITE_PROTOCOL'];
+        }
+        
+        // Затем проверяем настройку из базы данных (если доступна)
+        if (class_exists('SettingsManager') && file_exists(__DIR__ . '/data/database.ini')) {
+            try {
+                $settingsManager = settingsManager();
+                $protocolSetting = $settingsManager->get('site_protocol', 'auto');
+                
+                // Если настройка установлена явно, используем её
+                if ($protocolSetting === 'https') {
+                    $GLOBALS['_SITE_PROTOCOL'] = 'https://';
+                    return 'https://';
+                } elseif ($protocolSetting === 'http') {
+                    $GLOBALS['_SITE_PROTOCOL'] = 'http://';
+                    return 'http://';
+                }
+                // Если 'auto', продолжаем автоматическое определение
+            } catch (Exception $e) {
+                // Если не удалось загрузить настройки, продолжаем автоматическое определение
+                error_log('detectProtocol: Could not load settings: ' . $e->getMessage());
+            }
+        }
+        
+        // Автоматическое определение протокола
         if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-            return 'https://';
+            $protocol = 'https://';
+            $GLOBALS['_SITE_PROTOCOL'] = $protocol;
+            return $protocol;
         }
         
         if (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
-            return 'https://';
+            $protocol = 'https://';
+            $GLOBALS['_SITE_PROTOCOL'] = $protocol;
+            return $protocol;
         }
         
         $isHttps = (
@@ -24,7 +61,9 @@ if (!function_exists('detectProtocol')) {
             (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
         );
         
-        return $isHttps ? 'https://' : 'http://';
+        $protocol = $isHttps ? 'https://' : 'http://';
+        $GLOBALS['_SITE_PROTOCOL'] = $protocol;
+        return $protocol;
     }
 }
 
@@ -51,6 +90,9 @@ if (!$isInstaller && !file_exists($databaseIniFile) && php_sapi_name() !== 'cli'
 
 $protocol = detectProtocol();
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+// Сохраняем протокол в глобальной переменной для возможного обновления после загрузки настроек
+$GLOBALS['_SITE_PROTOCOL'] = $protocol;
 
 if (!defined('SITE_URL')) define('SITE_URL', $protocol . $host);
 if (!defined('ADMIN_URL')) define('ADMIN_URL', SITE_URL . '/admin');

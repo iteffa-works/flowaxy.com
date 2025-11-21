@@ -71,7 +71,7 @@
             </div>
             
             <!-- Просмотр сайта -->
-            <a href="<?= defined('SITE_URL') ? SITE_URL : '/' ?>" 
+            <a href="<?= class_exists('UrlHelper') ? UrlHelper::site() : '/' ?>" 
                class="header-view-site-btn" 
                target="_blank" 
                title="Сайт"

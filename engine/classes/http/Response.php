@@ -245,8 +245,16 @@ class Response {
         }
         
         // Strict-Transport-Security (HSTS) - только для HTTPS
-        if (!empty($options['strict_transport_security']) && 
-            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) {
+        $isHttps = false;
+        if (class_exists('UrlHelper')) {
+            $isHttps = UrlHelper::isHttps();
+        } elseif (function_exists('detectProtocol')) {
+            $isHttps = (detectProtocol() === 'https://');
+        } else {
+            $isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        }
+        
+        if (!empty($options['strict_transport_security']) && $isHttps) {
             $this->header('Strict-Transport-Security', $options['strict_transport_security']);
         }
         

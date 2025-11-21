@@ -23,8 +23,16 @@ class CookieManager implements StorageInterface {
     ];
     
     private function __construct() {
-        // Определяем secure автоматически на основе HTTPS
-        $this->defaultOptions['secure'] = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        // Определяем secure автоматически на основе протокола из настроек
+        if (class_exists('UrlHelper')) {
+            $this->defaultOptions['secure'] = UrlHelper::isHttps();
+        } elseif (function_exists('detectProtocol')) {
+            $protocol = detectProtocol();
+            $this->defaultOptions['secure'] = ($protocol === 'https://');
+        } else {
+            // Fallback на автоматическое определение
+            $this->defaultOptions['secure'] = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        }
         $this->defaultOptions['domain'] = $_SERVER['HTTP_HOST'] ?? null;
     }
     

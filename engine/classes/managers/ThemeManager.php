@@ -277,7 +277,13 @@ class ThemeManager extends BaseModule {
         $screenshotPath = $themesDir . $themeSlug . '/screenshot.png';
         
         if (file_exists($screenshotPath)) {
-            return SITE_URL . 'themes/' . $themeSlug . '/screenshot.png';
+            // Используем UrlHelper для получения актуального URL с правильным протоколом
+            if (class_exists('UrlHelper')) {
+                return UrlHelper::site('/themes/' . $themeSlug . '/screenshot.png');
+            }
+            // Fallback на константу, если UrlHelper не доступен
+            $siteUrl = defined('SITE_URL') ? SITE_URL : '';
+            return $siteUrl . '/themes/' . $themeSlug . '/screenshot.png';
         }
         
         return null;
@@ -610,19 +616,26 @@ class ThemeManager extends BaseModule {
     public function getThemeUrl(?string $themeSlug = null): string {
         $theme = $themeSlug ? $this->getTheme($themeSlug) : $this->activeTheme;
         
-        $protocol = 'http://';
-        if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
-            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
-            (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)) {
-            $protocol = 'https://';
+        // Используем UrlHelper для получения актуального протокола из настроек
+        if (class_exists('UrlHelper')) {
+            $protocol = UrlHelper::getProtocol();
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = $protocol . $host;
+        } elseif (function_exists('detectProtocol')) {
+            $protocol = detectProtocol();
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = $protocol . $host;
+        } else {
+            // Fallback на автоматическое определение
+            $protocol = 'http://';
+            if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
+                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)) {
+                $protocol = 'https://';
+            }
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = $protocol . $host;
         }
-        
-        $host = parse_url(SITE_URL, PHP_URL_HOST);
-        if (empty($host) && isset($_SERVER['HTTP_HOST'])) {
-            $host = $_SERVER['HTTP_HOST'];
-        }
-        
-        $baseUrl = $protocol . $host;
         
         if ($theme === null || !isset($theme['slug'])) {
             return $baseUrl . '/themes/default/';

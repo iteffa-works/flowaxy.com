@@ -10,6 +10,44 @@ declare(strict_types=1);
 
 class UrlHelper {
     /**
+     * Получение протокола из настроек системы
+     * Использует detectProtocol() для получения актуального протокола
+     * 
+     * @return string Протокол (http:// или https://)
+     */
+    public static function getProtocol(): string {
+        if (function_exists('detectProtocol')) {
+            return detectProtocol();
+        }
+        
+        // Fallback на автоматическое определение, если функция не доступна
+        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            return 'https://';
+        }
+        
+        if (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+            return 'https://';
+        }
+        
+        $isHttps = (
+            (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+            (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+        );
+        
+        return $isHttps ? 'https://' : 'http://';
+    }
+    
+    /**
+     * Проверка, используется ли HTTPS протокол
+     * 
+     * @return bool
+     */
+    public static function isHttps(): bool {
+        return self::getProtocol() === 'https://';
+    }
+    
+    /**
      * Получение протокол-относительного URL (для избежания Mixed Content)
      * 
      * @param string $path Путь
@@ -70,8 +108,9 @@ class UrlHelper {
      * @return string
      */
     public static function admin(string $path = ''): string {
-        $adminUrl = defined('ADMIN_URL') ? ADMIN_URL : '/admin';
-        return $adminUrl . ($path ? '/' . ltrim($path, '/') : '');
+        $protocol = self::getProtocol();
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return $protocol . $host . '/admin' . ($path ? '/' . ltrim($path, '/') : '');
     }
     
     /**
@@ -81,8 +120,9 @@ class UrlHelper {
      * @return string
      */
     public static function site(string $path = ''): string {
-        $siteUrl = defined('SITE_URL') ? SITE_URL : '';
-        return $siteUrl . ($path ? '/' . ltrim($path, '/') : '');
+        $protocol = self::getProtocol();
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return $protocol . $host . ($path ? '/' . ltrim($path, '/') : '');
     }
     
     /**
@@ -92,18 +132,7 @@ class UrlHelper {
      * @return string
      */
     public static function current(bool $withQuery = true): string {
-        if (!function_exists('detectProtocol')) {
-            // Фоллбэк если функция еще не загружена
-            $isHttps = (
-                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
-                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
-                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-            );
-            $protocol = $isHttps ? 'https://' : 'http://';
-        } else {
-            $protocol = detectProtocol();
-        }
+        $protocol = self::getProtocol();
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         
@@ -121,18 +150,7 @@ class UrlHelper {
      * @return string
      */
     public static function base(string $path = ''): string {
-        if (!function_exists('detectProtocol')) {
-            // Фоллбэк если функция еще не загружена
-            $isHttps = (
-                (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-                (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
-                (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
-                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-            );
-            $protocol = $isHttps ? 'https://' : 'http://';
-        } else {
-            $protocol = detectProtocol();
-        }
+        $protocol = self::getProtocol();
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         
         $baseUrl = $protocol . $host;

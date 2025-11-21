@@ -292,7 +292,13 @@ class ScssCompiler {
         }
         
         $themeSlug = basename($this->themePath);
-        return SITE_URL . '/themes/' . $themeSlug . '/' . $this->outputCssFile;
+        // Используем UrlHelper для получения актуального URL с правильным протоколом
+        if (class_exists('UrlHelper')) {
+            return UrlHelper::site('/themes/' . $themeSlug . '/' . $this->outputCssFile);
+        }
+        // Fallback на константу, если UrlHelper не доступен
+        $siteUrl = defined('SITE_URL') ? SITE_URL : '';
+        return $siteUrl . '/themes/' . $themeSlug . '/' . $this->outputCssFile;
     }
     
     /**

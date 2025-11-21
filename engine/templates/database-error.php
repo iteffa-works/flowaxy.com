@@ -400,7 +400,7 @@
             
             <div class="error-actions">
                 <button class="btn btn-primary" onclick="location.reload()" data-i18n="button.reload">Оновити сторінку</button>
-                <a href="<?= defined('ADMIN_URL') ? ADMIN_URL : '/admin' ?>" class="btn btn-secondary" data-i18n="button.admin">Адмін-панель</a>
+                <a href="<?= class_exists('UrlHelper') ? UrlHelper::admin() : '/admin' ?>" class="btn btn-secondary" data-i18n="button.admin">Адмін-панель</a>
             </div>
         </div>
     </div>
