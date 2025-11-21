@@ -22,6 +22,7 @@ class AdminPage {
     protected $templateName = '';
     protected $additionalCSS = [];
     protected $additionalJS = [];
+    protected $additionalInlineCSS = '';
     
     public function __construct() {
         // Для AJAX запросов очищаем буфер вывода сразу
@@ -115,7 +116,8 @@ class AdminPage {
             'pageHeaderButtons' => $this->pageHeaderButtons,
             'templateName' => $this->templateName,
             'additionalCSS' => $this->additionalCSS,
-            'additionalJS' => $this->additionalJS
+            'additionalJS' => $this->additionalJS,
+            'additionalInlineCSS' => $this->additionalInlineCSS
         ];
     }
     

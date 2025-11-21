@@ -839,12 +839,25 @@ class PluginManager extends BaseModule {
         
         try {
             $sql = $file->read();
+            // Удаляем комментарии
+            $sql = preg_replace('/--.*$/m', '', $sql);
+            $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
+            
             $queries = explode(';', $sql);
             
             foreach ($queries as $query) {
                 $query = trim($query);
                 if (!empty($query)) {
-                    $db->exec($query);
+                    try {
+                        $db->exec($query);
+                    } catch (PDOException $e) {
+                        // Игнорируем ошибки "Duplicate column" и "Duplicate key"
+                        if (strpos($e->getMessage(), 'Duplicate column') === false && 
+                            strpos($e->getMessage(), 'Duplicate key') === false &&
+                            strpos($e->getMessage(), 'already exists') === false) {
+                            throw $e;
+                        }
+                    }
                 }
             }
             

@@ -18,6 +18,10 @@ class LogsViewPage extends AdminPage {
             'Системні логи та події',
             'fas fa-file-alt'
         );
+        
+        // Подключаем внешние CSS и JS файлы
+        $this->additionalCSS[] = UrlHelper::admin('assets/styles/logs-view.css') . '?v=' . time();
+        $this->additionalJS[] = UrlHelper::admin('assets/scripts/logs-view.js') . '?v=' . time();
     }
     
     public function handle() {
@@ -141,7 +145,13 @@ class LogsViewPage extends AdminPage {
             ];
         }
         
-        // Читаємо останні 500 рядків
+        // Получаем лимит из GET параметра
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+        if ($limit <= 0) {
+            $limit = PHP_INT_MAX; // Все записи
+        }
+        
+        // Читаємо рядки
         $lines = [];
         $file = fopen($filePath, 'r');
         
@@ -155,18 +165,46 @@ class LogsViewPage extends AdminPage {
             }
             rewind($file);
             
-            // Читаємо останні 500 рядків
-            $startLine = max(0, $totalLines - 500);
-            $currentLine = 0;
+            // Читаємо все файл для парсинга записей (не строк)
+            // Если лимит небольшой, можно оптимизировать, но для простоты читаем весь файл
+            $currentLogEntry = '';
+            $allEntries = [];
             
+            // Читаем все записи из файла
             while (($line = fgets($file)) !== false) {
-                if ($currentLine >= $startLine) {
-                    $lines[] = [
-                        'number' => $currentLine + 1,
-                        'content' => rtrim($line)
-                    ];
+                $trimmedLine = rtrim($line);
+                
+                // Проверяем, начинается ли строка с timestamp [YYYY-MM-DD HH:MM:SS]
+                if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/', $trimmedLine)) {
+                    // Если есть незавершенная запись, сохраняем её
+                    if (!empty($currentLogEntry)) {
+                        $parsedLog = $this->parseLogEntry(trim($currentLogEntry));
+                        if ($parsedLog) {
+                            $allEntries[] = $parsedLog;
+                        }
+                    }
+                    // Начинаем новую запись
+                    $currentLogEntry = $trimmedLine;
+                } else {
+                    // Продолжение предыдущей записи (многострочный контекст)
+                    $currentLogEntry .= "\n" . $trimmedLine;
                 }
-                $currentLine++;
+            }
+            
+            // Сохраняем последнюю запись
+            if (!empty($currentLogEntry)) {
+                $parsedLog = $this->parseLogEntry(trim($currentLogEntry));
+                if ($parsedLog) {
+                    $allEntries[] = $parsedLog;
+                }
+            }
+            
+            // Берем последние N записей и переворачиваем порядок (новые сначала)
+            if ($limit === PHP_INT_MAX) {
+                $lines = array_reverse($allEntries);
+            } else {
+                $lastEntries = array_slice($allEntries, -$limit);
+                $lines = array_reverse($lastEntries); // Новые записи сначала
             }
             
             fclose($file);
@@ -253,6 +291,84 @@ class LogsViewPage extends AdminPage {
                 }
             }
         }
+    }
+    
+    /**
+     * Парсинг лог-записи
+     */
+    private function parseLogEntry(string $logLine): ?array {
+        // Формат: [timestamp] LEVEL: message | IP: ... | Context: {...}
+        $pattern = '/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+(ERROR|WARNING|INFO|DEBUG|NOTICE):\s+(.+?)(?:\s+\|\s+IP:\s+([^\|]+))?(?:\s+\|\s+GET\s+([^\|]+))?(?:\s+\|\s+Context:\s+(.+))?$/s';
+        
+        if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+(ERROR|WARNING|INFO|DEBUG|NOTICE):\s+(.+)$/s', $logLine, $matches)) {
+            $timestamp = $matches[1] ?? '';
+            $level = $matches[2] ?? 'INFO';
+            $messageAndContext = $matches[3] ?? '';
+            
+            // Парсим дополнительные данные
+            $ip = null;
+            $url = null;
+            $context = null;
+            
+            if (preg_match('/\|\s+IP:\s+([^\|]+)/', $logLine, $ipMatch)) {
+                $ip = trim($ipMatch[1]);
+            }
+            
+            if (preg_match('/\|\s+GET\s+([^\|]+)/', $logLine, $urlMatch)) {
+                $url = trim($urlMatch[1]);
+            }
+            
+            if (preg_match('/\|\s+Context:\s+(.+)$/s', $logLine, $contextMatch)) {
+                $contextJson = trim($contextMatch[1]);
+                // Пробуем распарсить JSON
+                $decoded = json_decode($contextJson, true);
+                $context = $decoded !== null ? $decoded : $contextJson;
+            }
+            
+            // Убираем из сообщения уже распарсенные части
+            $message = $messageAndContext;
+            
+            // Сначала убираем Context (самое длинное, может содержать пробелы)
+            if ($context) {
+                $message = preg_replace('/\s*\|\s+Context:\s+.+$/s', '', $message);
+            }
+            
+            // Убираем IP и URL
+            if ($ip) {
+                $message = preg_replace('/\s*\|\s+IP:\s+[^\|]+/', '', $message);
+            }
+            if ($url) {
+                $message = preg_replace('/\s*\|\s+GET\s+[^\|]+/', '', $message);
+            }
+            
+            // Тщательная очистка от всех лишних пробелов
+            $message = trim($message); // Убираем пробелы в начале и конце
+            $message = preg_replace('/\s+/u', ' ', $message); // Заменяем множественные пробелы, табы, переносы на один пробел
+            $message = str_replace(["\r\n", "\r", "\n", "\t"], ' ', $message); // Заменяем все переносы и табы на пробелы
+            $message = preg_replace('/\s+/u', ' ', $message); // Еще раз заменяем множественные пробелы на один
+            $message = trim($message); // Финальная очистка
+            
+            return [
+                'timestamp' => $timestamp,
+                'level' => $level,
+                'message' => $message,
+                'ip' => $ip,
+                'url' => $url,
+                'context' => $context,
+                'raw' => $logLine
+            ];
+        }
+        
+        // Если не удалось распарсить, возвращаем как есть
+        return [
+            'timestamp' => '',
+            'level' => 'INFO',
+            'message' => $logLine,
+            'ip' => null,
+            'url' => null,
+            'context' => null,
+            'raw' => $logLine
+        ];
     }
     
     /**

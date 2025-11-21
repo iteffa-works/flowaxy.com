@@ -35,6 +35,11 @@
             <link href="<?= $css ?>" rel="stylesheet">
         <?php endforeach; ?>
     <?php endif; ?>
+    
+    <?php if (!empty($additionalInlineCSS)): ?>
+        <!-- Инлайн стили для страницы -->
+        <style><?= $additionalInlineCSS ?></style>
+    <?php endif; ?>
 </head>
 <body>
     <?php include __DIR__ . '/../components/header.php'; ?>

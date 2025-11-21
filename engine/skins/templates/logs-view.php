@@ -108,47 +108,165 @@ ob_start();
                 ?>
             <?php else: ?>
                 <div class="log-content-wrapper">
-                    <div class="log-content-header mb-2 d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="text-muted small">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Показано останні <?= count($logContent['lines']) ?> з <?= $logContent['total_lines'] ?> рядків
-                            </span>
-                        </div>
+                    <div class="log-content-header">
+                        <?php
+                        // Подсчитываем количество записей каждого типа
+                        $levelCounts = [];
+                        foreach ($logContent['lines'] as $logEntry) {
+                            $level = strtoupper($logEntry['level'] ?? 'INFO');
+                            $levelCounts[$level] = ($levelCounts[$level] ?? 0) + 1;
+                        }
+                        ?>
+                        <?php if (!empty($levelCounts)): ?>
+                            <div class="log-filters">
+                                <div class="log-filter-buttons">
+                                    <i class="fas fa-filter log-filter-icon"></i>
+                                    <button type="button" class="log-filter-btn active" data-level="all">Всі (<?= count($logContent['lines']) ?>)</button>
+                                    <?php
+                                    $levelLabels = [
+                                        'ERROR' => ['label' => 'Помилки', 'color' => '#dc3545'],
+                                        'WARNING' => ['label' => 'Попередження', 'color' => '#ffc107'],
+                                        'INFO' => ['label' => 'Інформація', 'color' => '#0dcaf0'],
+                                        'DEBUG' => ['label' => 'Відлагодження', 'color' => '#6c757d'],
+                                        'NOTICE' => ['label' => 'Повідомлення', 'color' => '#0d6efd']
+                                    ];
+                                    foreach ($levelLabels as $level => $info):
+                                        if (isset($levelCounts[$level])):
+                                    ?>
+                                        <button type="button" class="log-filter-btn" data-level="<?= strtolower($level) ?>" style="--filter-color: <?= $info['color'] ?>">
+                                            <?= htmlspecialchars($info['label']) ?> (<?= $levelCounts[$level] ?>)
+                                        </button>
+                                    <?php
+                                        endif;
+                                    endforeach;
+                                    ?>
+                                </div>
+                                <div class="log-header-actions">
+                                    <select class="log-limit-select" id="logLimitSelect">
+                                        <option value="50" <?= (($_GET['limit'] ?? 50) == 50) ? 'selected' : '' ?>>50</option>
+                                        <option value="100" <?= (($_GET['limit'] ?? 50) == 100) ? 'selected' : '' ?>>100</option>
+                                        <option value="200" <?= (($_GET['limit'] ?? 50) == 200) ? 'selected' : '' ?>>200</option>
+                                        <option value="500" <?= (($_GET['limit'] ?? 50) == 500) ? 'selected' : '' ?>>500</option>
+                                        <option value="0" <?= (($_GET['limit'] ?? 50) == 0) ? 'selected' : '' ?>>Всі</option>
+                                    </select>
+                                    <?php if (!empty($selectedFile)): ?>
+                                        <form method="POST" class="log-delete-form">
+                                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+                                            <input type="hidden" name="clear_logs" value="1">
+                                            <input type="hidden" name="file" value="<?= htmlspecialchars($selectedFile) ?>">
+                                            <button type="submit" class="log-delete-btn" onclick="return confirm('Видалити файл?')" title="Видалити файл">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    <div class="log-content">
-                        <pre class="mb-0 p-3 bg-dark text-light small"><?php
-                            foreach ($logContent['lines'] as $line) {
-                                echo htmlspecialchars($line['content']) . "\n";
-                            }
-                        ?></pre>
+                    <div class="log-entries" id="logEntries">
+                        <?php foreach ($logContent['lines'] as $index => $logEntry): ?>
+                            <?php
+                            $level = $logEntry['level'] ?? 'INFO';
+                            $timestamp = $logEntry['timestamp'] ?? '';
+                            $message = $logEntry['message'] ?? '';
+                            $ip = $logEntry['ip'] ?? null;
+                            $url = $logEntry['url'] ?? null;
+                            $context = $logEntry['context'] ?? null;
+                            
+                            // Определяем цвет и иконку для уровня
+                            $levelClasses = [
+                                'ERROR' => 'danger',
+                                'WARNING' => 'warning',
+                                'INFO' => 'info',
+                                'DEBUG' => 'secondary',
+                                'NOTICE' => 'primary'
+                            ];
+                            
+                            $levelIcons = [
+                                'ERROR' => 'exclamation-circle',
+                                'WARNING' => 'exclamation-triangle',
+                                'INFO' => 'info-circle',
+                                'DEBUG' => 'bug',
+                                'NOTICE' => 'bell'
+                            ];
+                            
+                            $levelClass = $levelClasses[$level] ?? 'secondary';
+                            $levelIcon = $levelIcons[$level] ?? 'info-circle';
+                            ?>
+                            <div class="log-entry log-entry-<?= strtolower($level) ?>" data-level="<?= strtolower($level) ?>">
+                                <div class="log-entry-row">
+                                    <div class="log-level-indicator"></div>
+                                    <div class="log-content-cell">
+                                        <div class="log-row-main">
+                                            <span class="log-level-badge"><?= htmlspecialchars($level) ?></span>
+                                            <?php if ($timestamp): ?>
+                                                <span class="log-separator">•</span>
+                                                <span class="log-timestamp"><?= htmlspecialchars($timestamp) ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($ip): ?>
+                                                <span class="log-separator">•</span>
+                                                <span class="log-ip"><?= htmlspecialchars($ip) ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($url): ?>
+                                                <span class="log-separator">•</span>
+                                                <span class="log-url"><?= htmlspecialchars($url) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="log-message">
+                                            <?= htmlspecialchars($message) ?>
+                                        </div>
+                                        <?php if ($context): ?>
+                                            <details class="log-context">
+                                                <summary class="log-context-toggle">
+                                                    <i class="fas fa-chevron-right"></i>Контекст
+                                                </summary>
+                                                <div class="log-context-content">
+                                                    <?php
+                                                    // Если контекст - массив, кодируем в JSON, иначе используем как есть
+                                                    if (is_array($context)) {
+                                                        $contextJson = json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                                        // Исправляем пути - заменяем обратные слеши на прямые
+                                                        $contextJson = str_replace('\\', '/', $contextJson);
+                                                        
+                                                        // Добавляем подсветку синтаксиса
+                                                        $highlighted = preg_replace(
+                                                            '/(?:")([^"]+)(?:"\s*:)/', 
+                                                            '<span class="json-key">"$1"</span>:', 
+                                                            htmlspecialchars($contextJson, ENT_QUOTES, 'UTF-8')
+                                                        );
+                                                        
+                                                        $highlighted = preg_replace(
+                                                            '/:\s*"([^"]*)"([,\]\}])/', 
+                                                            ': <span class="json-string">"$1"</span>$2', 
+                                                            $highlighted
+                                                        );
+                                                        
+                                                        $highlighted = preg_replace(
+                                                            '/:\s*(-?\d+\.?\d*)([,\]\}])/', 
+                                                            ': <span class="json-number">$1</span>$2', 
+                                                            $highlighted
+                                                        );
+                                                        
+                                                        $highlighted = preg_replace(
+                                                            '/:\s*(true|false|null)([,\]\}])/', 
+                                                            ': <span class="json-literal">$1</span>$2', 
+                                                            $highlighted
+                                                        );
+                                                        
+                                                        echo '<pre>' . $highlighted . '</pre>';
+                                                    } else {
+                                                        echo '<pre>' . htmlspecialchars($context, ENT_QUOTES, 'UTF-8') . '</pre>';
+                                                    }
+                                                    ?>
+                                                </div>
+                                            </details>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
-                
-                <!-- Кнопка удаления текущего файла -->
-                <?php if (!empty($selectedFile)): ?>
-                    <div class="mt-3 pt-3 border-top">
-                        <form method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
-                            <input type="hidden" name="clear_logs" value="1">
-                            <input type="hidden" name="file" value="<?= htmlspecialchars($selectedFile) ?>">
-                            <?php
-                            ob_start();
-                            $text = 'Видалити поточний файл';
-                            $type = 'danger';
-                            $icon = 'trash';
-                            $attributes = [
-                                'type' => 'submit',
-                                'class' => 'btn-sm',
-                                'onclick' => "return confirm('Ви впевнені, що хочете видалити файл " . htmlspecialchars($selectedFile, ENT_QUOTES) . "? Цю дію неможливо скасувати.')"
-                            ];
-                            unset($url);
-                            include __DIR__ . '/../components/button.php';
-                            echo ob_get_clean();
-                            ?>
-                        </form>
-                    </div>
-                <?php endif; ?>
             <?php endif; ?>
         </div>
     <?php endif; ?>
@@ -162,62 +280,3 @@ $content = $sectionContent;
 $classes = ['logs-page'];
 include __DIR__ . '/../components/content-section.php';
 ?>
-
-<style>
-.logs-view-content {
-    min-height: 400px;
-}
-
-.logs-content-empty {
-    min-height: 300px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.log-content-wrapper {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.log-content-header {
-    padding: 12px 16px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.log-content pre {
-    max-height: 600px;
-    overflow-y: auto;
-    font-family: 'Courier New', monospace;
-    line-height: 1.5;
-    margin: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-.content-section-body:has(.logs-empty-state) {
-    border: 2px dashed #dee2e6;
-    border-radius: 16px;
-    background: #f8f9fa;
-    padding: 60px 24px !important;
-    min-height: calc(100vh - 300px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.content-section-body:has(.logs-empty-state .empty-state) {
-    border: 2px dashed #dee2e6;
-    border-radius: 16px;
-    background: #f8f9fa;
-    padding: 60px 24px !important;
-    min-height: calc(100vh - 300px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-</style>
-
-
