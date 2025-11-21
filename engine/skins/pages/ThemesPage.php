@@ -191,6 +191,7 @@ class ThemesPage extends AdminPage {
             
             $this->setMessage('Тему успішно активовано', 'success');
             $this->redirect('themes');
+            exit;
         } else {
             $this->setMessage('Помилка при активації теми. Перевірте логи системи.', 'danger');
         }
@@ -968,6 +969,7 @@ class ThemesPage extends AdminPage {
             
             $this->setMessage('Тему успішно видалено', 'success');
             $this->redirect('themes');
+            exit;
         } catch (Exception $e) {
             error_log("Theme delete error: " . $e->getMessage());
             $this->setMessage('Помилка при видаленні теми: ' . $e->getMessage(), 'danger');

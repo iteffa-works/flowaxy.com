@@ -171,8 +171,9 @@ class ProfilePage extends AdminPage {
             $this->db->commit();
             $this->setMessage('Профіль успішно оновлено', 'success');
             
-            // Перезагружаем данные пользователя
-            $user = $this->getCurrentUser();
+            // Редирект после сохранения для предотвращения повторного выполнения
+            $this->redirect('profile');
+            exit;
         } catch (Exception $e) {
             $this->db->rollBack();
             error_log("Error saving profile: " . $e->getMessage());

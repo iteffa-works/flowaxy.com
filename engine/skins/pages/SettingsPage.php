@@ -128,6 +128,9 @@ class SettingsPage extends AdminPage {
                     }
                     
                     $this->setMessage('Налаштування успішно збережено', 'success');
+                    // Редирект после сохранения для предотвращения повторного выполнения
+                    $this->redirect('settings');
+                    exit;
                 } else {
                     $this->setMessage('Помилка при збереженні налаштувань', 'danger');
                 }

@@ -129,10 +129,24 @@ class WebhooksPage extends AdminPage {
      * Обработка действий
      */
     private function handleAction(): void {
+        // Если это AJAX запрос, обрабатываем через handleAjax
+        if ($this->isAjaxRequest()) {
+            $this->handleAjax();
+            return;
+        }
+        
         $action = $this->post('action', '');
         
         if ($action === 'delete' && $this->post('id')) {
-            $this->handleDeleteWebhook();
+            $id = (int)$this->post('id', 0);
+            if ($id > 0 && $this->webhookManager->delete($id)) {
+                $this->setMessage('Webhook успішно видалено', 'success');
+            } else {
+                $this->setMessage('Помилка видалення webhook', 'danger');
+            }
+            // Редирект после удаления для предотвращения повторного выполнения
+            $this->redirect('webhooks');
+            exit;
         }
     }
     

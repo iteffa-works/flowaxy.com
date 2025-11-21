@@ -24,6 +24,12 @@ class AdminPage {
     protected $additionalJS = [];
     protected $additionalInlineCSS = '';
     
+    // Флаги для автоматического редиректа после POST
+    private $postProcessed = false;
+    private $autoRedirectEnabled = true;
+    private $redirectPerformed = false;
+    private $currentPage = '';
+    
     public function __construct() {
         // Для AJAX запросов очищаем буфер вывода сразу
         if (AjaxHandler::isAjax()) {
@@ -70,14 +76,69 @@ class AdminPage {
             }
             exit;
         }
+        
+        // Загружаем flash сообщения из сессии (если есть)
+        $flashMessage = Session::flash('admin_message');
+        $flashMessageType = Session::flash('admin_message_type');
+        if ($flashMessage) {
+            $this->message = $flashMessage;
+            $this->messageType = $flashMessageType ?: 'info';
+        }
+        
+        // Определяем текущую страницу для редиректа
+        $request = Request::getInstance();
+        // Пытаемся определить из query параметра 'page'
+        $this->currentPage = $request->query('page', '');
+        if (empty($this->currentPage)) {
+            // Пытаемся определить из URL (последняя часть пути после /admin/)
+            $path = $request->path();
+            $path = trim($path, '/');
+            $parts = explode('/', $path);
+            // Ищем часть после 'admin'
+            $adminIndex = array_search('admin', $parts);
+            if ($adminIndex !== false && isset($parts[$adminIndex + 1])) {
+                $this->currentPage = $parts[$adminIndex + 1];
+            } elseif (!empty($parts)) {
+                // Если 'admin' не найден, берем последнюю часть
+                $this->currentPage = end($parts);
+            }
+        }
+        
+        // Если все еще пусто, используем 'dashboard' по умолчанию
+        if (empty($this->currentPage)) {
+            $this->currentPage = 'dashboard';
+        }
     }
     
     /**
      * Встановлення повідомлення
+     * При POST-запросе автоматически сохраняет в flash для передачи через редирект
      */
     protected function setMessage($message, $type = 'info') {
         $this->message = $message;
         $this->messageType = $type;
+        
+        // Если это POST-запрос, сохраняем сообщение в flash для передачи через редирект
+        if (Request::getMethod() === 'POST' && !AjaxHandler::isAjax()) {
+            Session::setFlash('admin_message', $message);
+            Session::setFlash('admin_message_type', $type);
+            $this->postProcessed = true;
+        }
+    }
+    
+    /**
+     * Отключить автоматический редирект после POST
+     * Используйте этот метод, если нужно обработать POST без редиректа
+     */
+    protected function preventAutoRedirect(): void {
+        $this->autoRedirectEnabled = false;
+    }
+    
+    /**
+     * Отметить, что редирект был выполнен вручную
+     */
+    protected function markRedirectPerformed(): void {
+        $this->redirectPerformed = true;
     }
     
     /**
@@ -340,15 +401,66 @@ class AdminPage {
     /**
      * Редирект на страницу
      * 
-     * @param string $page Страница для редиректа
+     * @param string $page Страница для редиректа (если пусто, используется текущая)
      * @param array $params Параметры GET
      */
-    protected function redirect(string $page, array $params = []): void {
+    protected function redirect(string $page = '', array $params = []): void {
+        if (empty($page)) {
+            $page = $this->currentPage;
+        }
+        
         $url = UrlHelper::admin($page);
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
+        
+        $this->markRedirectPerformed();
         Response::redirectStatic($url);
+        exit;
+    }
+    
+    /**
+     * Проверка необходимости автоматического редиректа
+     */
+    private function shouldAutoRedirect(): bool {
+        // Не редиректим, если:
+        // 1. Это не POST-запрос
+        // 2. Это AJAX-запрос
+        // 3. Автоматический редирект отключен
+        // 4. Редирект уже был выполнен
+        // 5. POST не был обработан (нет сообщений)
+        
+        if (Request::getMethod() !== 'POST') {
+            return false;
+        }
+        
+        if (AjaxHandler::isAjax()) {
+            return false;
+        }
+        
+        if (!$this->autoRedirectEnabled) {
+            return false;
+        }
+        
+        if ($this->redirectPerformed) {
+            return false;
+        }
+        
+        if (!$this->postProcessed && empty($this->message)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Деструктор для автоматического редиректа после POST
+     */
+    public function __destruct() {
+        // Автоматический редирект после POST-запроса
+        if ($this->shouldAutoRedirect()) {
+            $this->redirect();
+        }
     }
     
     /**

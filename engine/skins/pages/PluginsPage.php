@@ -179,6 +179,10 @@ class PluginsPage extends AdminPage {
             $this->setMessage('Помилка: ' . $e->getMessage(), 'danger');
             error_log("Plugin action error: " . $e->getMessage());
         }
+        
+        // Редирект после обработки действия для предотвращения повторного выполнения
+        $this->redirect('plugins');
+        exit;
     }
     
     /**

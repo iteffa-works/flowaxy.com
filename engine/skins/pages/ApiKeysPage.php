@@ -125,10 +125,24 @@ class ApiKeysPage extends AdminPage {
      * Обработка действий
      */
     private function handleAction(): void {
+        // Если это AJAX запрос, обрабатываем через handleAjax
+        if ($this->isAjaxRequest()) {
+            $this->handleAjax();
+            return;
+        }
+        
         $action = $this->post('action', '');
         
         if ($action === 'delete' && $this->post('id')) {
-            $this->handleDeleteApiKey();
+            $id = (int)$this->post('id', 0);
+            if ($id > 0 && $this->apiManager->deleteKey($id)) {
+                $this->setMessage('API ключ успішно видалено', 'success');
+            } else {
+                $this->setMessage('Помилка видалення API ключа', 'danger');
+            }
+            // Редирект после удаления для предотвращения повторного выполнения
+            $this->redirect('api-keys');
+            exit;
         }
     }
     

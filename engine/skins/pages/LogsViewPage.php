@@ -252,6 +252,9 @@ class LogsViewPage extends AdminPage {
             }
             
             $this->setMessage("Видалено {$deleted} файлів логів", 'success');
+            // Редирект после удаления всех логов для предотвращения повторного выполнения
+            Response::redirectStatic(UrlHelper::admin('logs-view'));
+            exit;
         } elseif (!empty($file)) {
             // Удаляем конкретный файл
             $filePath = $logsDir . basename($file);
