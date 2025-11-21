@@ -33,6 +33,12 @@ $step = $_GET['step'] ?? 'welcome';
 $action = $_GET['action'] ?? '';
 $databaseIniFile = __DIR__ . '/../data/database.ini';
 
+// Ініціалізуємо змінні для шаблону
+$systemChecks = [];
+$systemErrors = [];
+$systemWarnings = [];
+$error = null;
+
 // Блокування доступу до установщика, якщо система вже встановлена
 // Виняток: AJAX запити для тестування БД (action=test_db, create_table)
 // Це потрібно для перевірки підключення до БД під час установки
@@ -1664,20 +1670,21 @@ if ($step === 'system-check') {
         }
         
         $tables = $installer->getTableDefinitions($charset, $collation);
-                $tablesCount = count($tables);
+                $tablesCount = is_array($tables) ? count($tables) : 0;
                 if ($tablesCount > 0) {
                     $systemChecks['TableDefinitions'] = [
                         'status' => 'ok', 
-                        'count' => $tablesCount, 
+                        'count' => (int)$tablesCount, 
                         'info' => "Доступно таблиць: {$tablesCount}",
-                        'description' => $componentDescriptions['TableDefinitions'] ?? ''
+                        'description' => $componentDescriptions['TableDefinitions'] ?? 'Визначення таблиць бази даних'
                     ];
                 } else {
                     $systemErrors[] = 'Не удалось получить определения таблиц';
                     $systemChecks['TableDefinitions'] = [
                         'status' => 'error', 
+                        'count' => 0,
                         'error' => 'Не удалось получить определения таблиц',
-                        'description' => $componentDescriptions['TableDefinitions'] ?? ''
+                        'description' => $componentDescriptions['TableDefinitions'] ?? 'Визначення таблиць бази даних'
                     ];
                 }
             } else {
@@ -1809,18 +1816,101 @@ function ensureRolesAndPermissions(PDO $db): void {
         $permissionsCount = (int)$stmt->fetchColumn();
         
         if ($permissionsCount === 0) {
-            // Создаем базовые разрешения
+            // Создаем все разрешения для админ-панели
+            // Формат: [name, slug, description, category]
             $permissions = [
-                // Админка
+                // 1. КАТЕГОРИЯ: admin (Основные функции CMS)
                 ['Доступ к админ-панели', 'admin.access', 'Доступ к административной панели', 'admin'],
+                
+                // Управление плагинами
                 ['Управление плагинами', 'admin.plugins', 'Установка, активация и удаление плагинов', 'admin'],
+                ['Просмотр плагинов', 'admin.plugins.view', 'Просмотр списка плагинов', 'admin'],
+                ['Установка плагинов', 'admin.plugins.install', 'Установка новых плагинов', 'admin'],
+                ['Активация плагинов', 'admin.plugins.activate', 'Активация плагинов', 'admin'],
+                ['Деактивация плагинов', 'admin.plugins.deactivate', 'Деактивация плагинов', 'admin'],
+                ['Удаление плагинов', 'admin.plugins.delete', 'Удаление плагинов', 'admin'],
+                ['Настройка плагинов', 'admin.plugins.settings', 'Изменение настроек плагинов', 'admin'],
+                
+                // Управление темами
                 ['Управление темами', 'admin.themes', 'Установка и активация тем', 'admin'],
-                ['Управление настройками', 'admin.settings', 'Изменение системных настроек', 'admin'],
+                ['Просмотр тем', 'admin.themes.view', 'Просмотр списка тем', 'admin'],
+                ['Установка тем', 'admin.themes.install', 'Установка новых тем', 'admin'],
+                ['Активация тем', 'admin.themes.activate', 'Активация тем', 'admin'],
+                ['Удаление тем', 'admin.themes.delete', 'Удаление тем', 'admin'],
+                ['Редактирование тем', 'admin.themes.edit', 'Редактирование файлов тем', 'admin'],
+                ['Кастомизация тем', 'admin.themes.customize', 'Кастомизация внешнего вида тем', 'admin'],
+                
+                // Просмотр логов
                 ['Просмотр логов', 'admin.logs.view', 'Просмотр системных логов', 'admin'],
-                ['Управление пользователями', 'admin.users', 'Создание, редактирование и удаление пользователей', 'admin'],
-                ['Управление ролями', 'admin.roles', 'Управление ролями и правами доступа', 'admin'],
+                ['Экспорт логов', 'admin.logs.export', 'Экспорт логов в файлы', 'admin'],
+                ['Удаление логов', 'admin.logs.delete', 'Удаление логов', 'admin'],
+                
+                // API ключи
+                ['Управление API ключами', 'admin.api.keys', 'Управление API ключами', 'admin'],
+                ['Просмотр API ключей', 'admin.api.keys.view', 'Просмотр списка API ключей', 'admin'],
+                ['Создание API ключей', 'admin.api.keys.create', 'Создание новых API ключей', 'admin'],
+                ['Редактирование API ключей', 'admin.api.keys.edit', 'Редактирование API ключей', 'admin'],
+                ['Удаление API ключей', 'admin.api.keys.delete', 'Удаление API ключей', 'admin'],
+                
+                // Webhooks
+                ['Управление Webhooks', 'admin.webhooks', 'Управление webhooks для интеграций', 'admin'],
+                ['Просмотр Webhooks', 'admin.webhooks.view', 'Просмотр списка webhooks', 'admin'],
+                ['Создание Webhooks', 'admin.webhooks.create', 'Создание новых webhooks', 'admin'],
+                ['Редактирование Webhooks', 'admin.webhooks.edit', 'Редактирование webhooks', 'admin'],
+                ['Удаление Webhooks', 'admin.webhooks.delete', 'Удаление webhooks', 'admin'],
+                ['Тестирование Webhooks', 'admin.webhooks.test', 'Тестирование webhooks', 'admin'],
+                
+                // Профиль
+                ['Управление профилем', 'admin.profile', 'Управление собственным профилем', 'admin'],
+                ['Просмотр профиля', 'admin.profile.view', 'Просмотр собственного профиля', 'admin'],
+                ['Редактирование профиля', 'admin.profile.edit', 'Редактирование собственного профиля', 'admin'],
+                ['Изменение пароля', 'admin.profile.password', 'Изменение собственного пароля', 'admin'],
+                
+                // Дашборд
+                ['Просмотр дашборда', 'admin.dashboard', 'Просмотр главной страницы админ-панели', 'admin'],
+                ['Просмотр статистики', 'admin.dashboard.stats', 'Просмотр статистики на дашборде', 'admin'],
+                ['Управление виджетами', 'admin.dashboard.widgets', 'Управление виджетами на дашборде', 'admin'],
+                
+                // 2. КАТЕГОРИЯ: system (Пользователи и роли)
+                // Управление пользователями
+                ['Управление пользователями', 'admin.users', 'Создание, редактирование и удаление пользователей', 'system'],
+                ['Просмотр пользователей', 'admin.users.view', 'Просмотр списка пользователей', 'system'],
+                ['Создание пользователей', 'admin.users.create', 'Создание новых пользователей', 'system'],
+                ['Редактирование пользователей', 'admin.users.edit', 'Редактирование данных пользователей', 'system'],
+                ['Удаление пользователей', 'admin.users.delete', 'Удаление пользователей', 'system'],
+                ['Изменение паролей', 'admin.users.password', 'Изменение паролей пользователей', 'system'],
+                ['Управление ролями пользователей', 'admin.users.roles', 'Назначение ролей пользователям', 'system'],
+                
+                // Управление ролями
+                ['Управление ролями', 'admin.roles', 'Управление ролями и правами доступа', 'system'],
+                ['Просмотр ролей', 'admin.roles.view', 'Просмотр списка ролей', 'system'],
+                ['Создание ролей', 'admin.roles.create', 'Создание новых ролей', 'system'],
+                ['Редактирование ролей', 'admin.roles.edit', 'Редактирование ролей', 'system'],
+                ['Удаление ролей', 'admin.roles.delete', 'Удаление ролей', 'system'],
+                ['Управление разрешениями', 'admin.roles.permissions', 'Назначение разрешений ролям', 'system'],
+                
+                // 3. КАТЕГОРИЯ: tools (Инструменты)
+                // Управление кешем
+                ['Управление кешем', 'admin.cache', 'Управление системным кешем', 'tools'],
+                ['Просмотр кеша', 'admin.cache.view', 'Просмотр содержимого кеша', 'tools'],
+                ['Очистка кеша', 'admin.cache.clear', 'Очистка кеша', 'tools'],
+                ['Удаление кеша', 'admin.cache.delete', 'Удаление записей кеша', 'tools'],
+                
+                // Управление хранилищем
+                ['Управление хранилищем', 'admin.storage', 'Управление файловым хранилищем', 'tools'],
+                ['Просмотр хранилища', 'admin.storage.view', 'Просмотр содержимого хранилища', 'tools'],
+                ['Загрузка файлов', 'admin.storage.upload', 'Загрузка файлов в хранилище', 'tools'],
+                ['Удаление файлов', 'admin.storage.delete', 'Удаление файлов из хранилища', 'tools'],
+                ['Редактирование файлов', 'admin.storage.edit', 'Редактирование файлов в хранилище', 'tools'],
+                
+                // 4. КАТЕГОРИЯ: settings (Настройки)
+                ['Управление настройками', 'admin.settings', 'Изменение системных настроек', 'settings'],
+                ['Просмотр настроек', 'admin.settings.view', 'Просмотр системных настроек', 'settings'],
+                ['Изменение настроек сайта', 'admin.settings.site', 'Изменение настроек сайта', 'settings'],
+                ['Изменение настроек системы', 'admin.settings.system', 'Изменение системных настроек', 'settings'],
             ];
             
+            // Создаем все разрешения
             foreach ($permissions as $permission) {
                 $stmt = $db->prepare("INSERT IGNORE INTO permissions (name, slug, description, category) VALUES (?, ?, ?, ?)");
                 $stmt->execute($permission);
@@ -1889,8 +1979,9 @@ if ($step === 'tables' || $step === 'user') {
 }
 
 // Передаем результаты проверок системы в шаблон
-$systemChecks = $systemChecks ?? [];
-$systemErrors = $systemErrors ?? [];
+$systemChecks = is_array($systemChecks) ? $systemChecks : [];
+$systemErrors = is_array($systemErrors) ? $systemErrors : [];
+$systemWarnings = is_array($systemWarnings) ? $systemWarnings : [];
 
 // Подключаем единый шаблон установщика
 $template = __DIR__ . '/../templates/installer.php';
