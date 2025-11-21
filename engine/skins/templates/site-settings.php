@@ -41,7 +41,7 @@ if (!empty($message)) {
                         <div class="col-md-6">
                             <label for="timezone" class="form-label fw-medium small">Часовий пояс</label>
                             <select class="form-select" id="timezone" name="settings[timezone]">
-                                <option value="Europe/Kiev" <?= ($settings['timezone'] ?? '') === 'Europe/Kiev' ? 'selected' : '' ?>>Київ (UTC+2)</option>
+                                <option value="Europe/Kyiv" <?= ($settings['timezone'] ?? 'Europe/Kyiv') === 'Europe/Kyiv' || ($settings['timezone'] ?? '') === 'Europe/Kiev' ? 'selected' : '' ?>>Київ (UTC+2)</option>
                                 <option value="Europe/Moscow" <?= ($settings['timezone'] ?? '') === 'Europe/Moscow' ? 'selected' : '' ?>>Москва (UTC+3)</option>
                                 <option value="UTC" <?= ($settings['timezone'] ?? '') === 'UTC' ? 'selected' : '' ?>>UTC</option>
                                 <option value="Europe/London" <?= ($settings['timezone'] ?? '') === 'Europe/London' ? 'selected' : '' ?>>Лондон (UTC+0)</option>
