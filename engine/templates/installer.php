@@ -185,18 +185,19 @@ $error = $error ?? null;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
         }
         
         .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+            background: #5568d3;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
         }
         
         .btn-primary:active {
-            transform: translateY(0);
+            background: #4c5bc4;
+            box-shadow: 0 1px 2px rgba(102, 126, 234, 0.2);
         }
         
         .btn-secondary {
@@ -798,8 +799,8 @@ $error = $error ?? null;
                                         <?php if (isset($check['version'])): ?>
                                             <div class="check-details">Версія: <?= htmlspecialchars($check['version']) ?></div>
                                         <?php endif; ?>
-                                        <?php if (isset($check['count'])): ?>
-                                            <div class="check-details">Кількість: <?= htmlspecialchars($check['count']) ?></div>
+                                        <?php if (isset($check['count']) && $check['count'] !== null && $check['count'] !== ''): ?>
+                                            <div class="check-details"><strong>Кількість:</strong> <?= htmlspecialchars((string)$check['count']) ?></div>
                                         <?php endif; ?>
                                         <?php if (isset($check['info'])): ?>
                                             <div class="check-details"><?= htmlspecialchars($check['info']) ?></div>
@@ -848,12 +849,18 @@ $error = $error ?? null;
                         </div>
                     <?php endif; ?>
                     
-                    <div class="installer-actions">
-                        <a href="/install?step=welcome" class="btn btn-secondary">Назад</a>
-                        <?php if (empty($systemErrors)): ?>
-                            <a href="/install?step=database" class="btn btn-primary">Продовжити</a>
+                    <div class="installer-actions" style="margin-top: 24px; display: flex !important; gap: 10px; visibility: visible !important; opacity: 1 !important;">
+                        <a href="/install?step=welcome" class="btn btn-secondary" style="flex: 1 1 0; min-width: 0; display: inline-block !important; visibility: visible !important; opacity: 1 !important;">Назад</a>
+                        <?php 
+                        // Инициализируем переменную, если не определена
+                        $systemErrors = $systemErrors ?? [];
+                        // Проверяем наличие ошибок
+                        $hasErrors = is_array($systemErrors) && count($systemErrors) > 0;
+                        // Всегда показываем кнопку "Продолжить", если нет ошибок
+                        if (!$hasErrors): ?>
+                            <a href="/install?step=database" class="btn btn-primary" data-i18n="button.continue" style="flex: 1 1 0; min-width: 0; display: inline-block !important; visibility: visible !important; opacity: 1 !important;">Продовжити</a>
                         <?php else: ?>
-                            <a href="/install?step=system-check" class="btn btn-primary" data-i18n="button.retry_check" onclick="window.location.reload(); return false;">Повторити перевірку</a>
+                            <a href="/install?step=system-check" class="btn btn-primary" data-i18n="button.retry_check" onclick="window.location.reload(); return false;" style="flex: 1 1 0; min-width: 0; display: inline-block !important; visibility: visible !important; opacity: 1 !important;">Повторити перевірку</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -864,12 +871,12 @@ $error = $error ?? null;
                 <form id="databaseForm" method="POST" action="/install?step=database">
                     <div class="form-group">
                         <label data-i18n="label.host">Host</label>
-                        <input type="text" name="db_host" value="<?= htmlspecialchars($_POST['db_host'] ?? '127.0.0.1') ?>" required>
+                        <input type="text" name="db_host" value="<?= htmlspecialchars($_POST['db_host'] ?? '') ?>" required>
                     </div>
                     
                     <div class="form-group">
                         <label data-i18n="label.port">Port</label>
-                        <input type="number" name="db_port" value="<?= htmlspecialchars($_POST['db_port'] ?? '3306') ?>" required>
+                        <input type="number" name="db_port" value="<?= htmlspecialchars($_POST['db_port'] ?? '') ?>" required>
                     </div>
                     
                     <div class="form-group">
@@ -879,7 +886,7 @@ $error = $error ?? null;
                     
                     <div class="form-group">
                         <label data-i18n="label.username">Username</label>
-                        <input type="text" name="db_user" value="<?= htmlspecialchars($_POST['db_user'] ?? 'root') ?>" required>
+                        <input type="text" name="db_user" value="<?= htmlspecialchars($_POST['db_user'] ?? '') ?>" required>
                     </div>
                     
                     <div class="form-group">
