@@ -83,7 +83,7 @@ spl_autoload_register(function (string $className): void {
         'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
         'ModuleLoader' => 'system', 'HookManager' => 'system',
         'LoginPage' => 'skins/pages', 'LogoutPage' => 'skins/pages', 'DashboardPage' => 'skins/pages',
-        'SettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
+        'SettingsPage' => 'skins/pages', 'SiteSettingsPage' => 'skins/pages', 'ProfilePage' => 'skins/pages', 'PluginsPage' => 'skins/pages',
         'ThemesPage' => 'skins/pages', 'CustomizerPage' => 'skins/pages',
         'ThemeEditorPage' => 'skins/pages', 'CacheViewPage' => 'skins/pages', 'LogsViewPage' => 'skins/pages',
     ];

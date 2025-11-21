@@ -1,6 +1,6 @@
 <?php
 /**
- * Сторінка налаштувань
+ * Страница настроек (главная страница со списком ссылок)
  */
 
 require_once __DIR__ . '/../includes/AdminPage.php';
@@ -10,198 +10,180 @@ class SettingsPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        $this->pageTitle = 'Налаштування сайту - Flowaxy CMS';
+        $this->pageTitle = 'Налаштування - Flowaxy CMS';
         $this->templateName = 'settings';
         
-        // Используем вспомогательные методы для создания кнопок
-        $headerButtons = $this->createButtonGroup([
-            [
-                'text' => 'Переглянути кеш',
-                'type' => 'outline-secondary',
-                'options' => [
-                    'url' => UrlHelper::admin('cache-view'),
-                    'icon' => 'database',
-                    'attributes' => ['class' => 'btn-sm']
-                ]
-            ],
-            [
-                'text' => 'Переглянути логи',
-                'type' => 'outline-secondary',
-                'options' => [
-                    'url' => UrlHelper::admin('logs-view'),
-                    'icon' => 'file-alt',
-                    'attributes' => ['class' => 'btn-sm']
-                ]
-            ]
-        ]);
-        
         $this->setPageHeader(
-            'Налаштування сайту',
-            'Основні налаштування та конфігурація',
-            'fas fa-cog',
-            $headerButtons
+            'Налаштування',
+            'Управління системою та конфігурацією',
+            'fas fa-cog'
         );
     }
     
     public function handle() {
-        // Обробка збереження
-        if ($_POST && isset($_POST['save_settings'])) {
-            $this->saveSettings();
-        }
-        
-        // Отримання налаштувань
-        $settings = $this->getSettings();
+        // Получаем список настроек через хук
+        $settingsCategories = applyFilter('settings_categories', $this->getDefaultSettingsCategories());
         
         // Рендеримо сторінку
         $this->render([
-            'settings' => $settings
+            'settingsCategories' => $settingsCategories
         ]);
     }
     
     /**
-     * Збереження налаштувань
+     * Получение категорий настроек по умолчанию
      */
-    private function saveSettings() {
-        if (!$this->verifyCsrf()) {
-            return;
-        }
+    private function getDefaultSettingsCategories(): array {
+        $categories = [];
         
-        $settings = $this->post('settings') ?? [];
-        
-        // Обработка checkbox полей (если не отмечены, они не приходят в POST)
-        $checkboxFields = ['cache_enabled', 'cache_auto_cleanup', 'logging_enabled'];
-        foreach ($checkboxFields as $field) {
-            if (!isset($settings[$field])) {
-                $settings[$field] = '0';
-            }
-        }
-        
-        // Санитизация значений
-        $sanitizedSettings = [];
-        foreach ($settings as $key => $value) {
-            $sanitizedSettings[$key] = SecurityHelper::sanitizeInput($value);
-        }
-        
-        try {
-            // Используем SettingsManager для сохранения настроек
-            if (class_exists('SettingsManager')) {
-                $settingsManager = settingsManager();
-                
-                // Очищаем кеш настроек перед сохранением, чтобы гарантировать свежие данные
-                if (method_exists($settingsManager, 'clearCache')) {
-                    $settingsManager->clearCache();
-                }
-                
-                $result = $settingsManager->setMultiple($sanitizedSettings);
-                
-                if ($result) {
-                    // Очищаем кеш настроек после сохранения
-                    if (method_exists($settingsManager, 'clearCache')) {
-                        $settingsManager->clearCache();
-                    }
-                    
-                    // Перезагружаем настройки в SettingsManager
-                    if (method_exists($settingsManager, 'reloadSettings')) {
-                        $settingsManager->reloadSettings();
-                    }
-                    
-                    // Обновляем настройки в Cache и Logger
-                    if (class_exists('Cache')) {
-                        $cacheInstance = cache();
-                        if ($cacheInstance && method_exists($cacheInstance, 'reloadSettings')) {
-                            $cacheInstance->reloadSettings();
-                        }
-                    }
-                    if (class_exists('Logger')) {
-                        $loggerInstance = logger();
-                        if ($loggerInstance && method_exists($loggerInstance, 'reloadSettings')) {
-                            $loggerInstance->reloadSettings();
-                        }
-                    }
-                    
-                    // Применяем timezone, если он был изменен
-                    if (isset($sanitizedSettings['timezone'])) {
-                        $timezone = $sanitizedSettings['timezone'];
-                        if (!empty($timezone) && in_array($timezone, timezone_identifiers_list())) {
-                            date_default_timezone_set($timezone);
-                        }
-                    }
-                    
-                    $this->setMessage('Налаштування успішно збережено', 'success');
-                    // Редирект после сохранения для предотвращения повторного выполнения
-                    $this->redirect('settings');
-                    exit;
-                } else {
-                    $this->setMessage('Помилка при збереженні налаштувань', 'danger');
-                }
-            } else {
-                throw new Exception('SettingsManager не доступний');
-            }
-        } catch (Exception $e) {
-            $this->setMessage('Помилка при збереженні налаштувань: ' . $e->getMessage(), 'danger');
-            if (function_exists('logger')) {
-                logger()->logError('Settings save error: ' . $e->getMessage());
-            } else {
-                error_log("Settings save error: " . $e->getMessage());
-            }
-        }
-    }
-    
-    /**
-     * Отримання налаштувань
-     */
-    private function getSettings() {
-        // Значення за замовчуванням (используются только если настройка отсутствует в БД)
-        $defaultSettings = [
-            'admin_email' => 'admin@example.com',
-            'timezone' => 'Europe/Kiev',
-            // Настройки кеша
-            'cache_enabled' => '1',
-            'cache_default_ttl' => '3600',
-            'cache_auto_cleanup' => '1',
-            // Настройки логирования
-            'logging_enabled' => '1',
-            'logging_level' => 'INFO',
-            'logging_max_file_size' => '10485760', // 10 MB
-            'logging_retention_days' => '30'
+        // Основные настройки
+        $categories['general'] = [
+            'title' => 'Основні налаштування',
+            'icon' => 'fas fa-cog',
+            'items' => [
+                [
+                    'title' => 'Налаштування сайту',
+                    'description' => 'Email, часовий пояс, кеш, логування',
+                    'url' => UrlHelper::admin('site-settings'),
+                    'icon' => 'fas fa-globe',
+                    'permission' => 'admin.settings'
+                ]
+            ]
         ];
         
-        // Используем SettingsManager для получения настроек
-        if (class_exists('SettingsManager')) {
-            try {
-                $settingsManager = settingsManager();
-                
-                // Очищаем кеш Cache перед загрузкой настроек, чтобы избежать использования устаревших данных
-                if (function_exists('cache_forget')) {
-                    cache_forget('site_settings');
-                }
-                
-                // Очищаем кеш SettingsManager перед загрузкой
-                if (method_exists($settingsManager, 'clearCache')) {
-                    $settingsManager->clearCache();
-                }
-                
-                // Загружаем настройки из БД напрямую (с force=true), минуя кеш
-                if (method_exists($settingsManager, 'load')) {
-                    $settingsManager->load(true); // force = true для принудительной перезагрузки
-                } else if (method_exists($settingsManager, 'reloadSettings')) {
-                    $settingsManager->reloadSettings();
-                }
-                
-                // Получаем все настройки из БД
-                $settings = $settingsManager->all();
-                
-                // Объединяем настройки: сначала дефолтные, затем из БД (БД имеет приоритет)
-                // Это гарантирует, что если настройка есть в БД (даже со значением '0'), она будет использована
-                $result = array_merge($defaultSettings, $settings);
-                
-                return $result;
-            } catch (Exception $e) {
-                error_log("Settings load error: " . $e->getMessage());
-                return $defaultSettings;
+        // Пользователи и права
+        $categories['users'] = [
+            'title' => 'Користувачі та права',
+            'icon' => 'fas fa-users',
+            'items' => []
+        ];
+        
+        // Роли и права
+        if (function_exists('current_user_can')) {
+            $userId = Session::get('admin_user_id');
+            $hasRolesAccess = ($userId == 1) || current_user_can('admin.roles');
+            
+            if ($hasRolesAccess) {
+                $categories['users']['items'][] = [
+                    'title' => 'Ролі та права',
+                    'description' => 'Управління ролями та правами доступу',
+                    'url' => UrlHelper::admin('roles'),
+                    'icon' => 'fas fa-user-shield',
+                    'permission' => 'admin.roles'
+                ];
             }
         }
         
-        return $defaultSettings;
+        // Пользователи (если есть страница)
+        if (class_exists('UsersPage') || file_exists(__DIR__ . '/UsersPage.php')) {
+            $categories['users']['items'][] = [
+                'title' => 'Користувачі',
+                'description' => 'Управління користувачами системи',
+                'url' => UrlHelper::admin('users'),
+                'icon' => 'fas fa-user-friends',
+                'permission' => 'admin.users'
+            ];
+        }
+        
+        // Профиль
+        $categories['users']['items'][] = [
+            'title' => 'Мій профіль',
+            'description' => 'Особисті налаштування та дані',
+            'url' => UrlHelper::admin('profile'),
+            'icon' => 'fas fa-user',
+            'permission' => null // Доступен всем авторизованным
+        ];
+        
+        // Расширения
+        $categories['extensions'] = [
+            'title' => 'Розширення',
+            'icon' => 'fas fa-puzzle-piece',
+            'items' => [
+                [
+                    'title' => 'Плагіни',
+                    'description' => 'Управління плагінами',
+                    'url' => UrlHelper::admin('plugins'),
+                    'icon' => 'fas fa-plug',
+                    'permission' => 'admin.plugins'
+                ],
+                [
+                    'title' => 'Теми',
+                    'description' => 'Управління темами',
+                    'url' => UrlHelper::admin('themes'),
+                    'icon' => 'fas fa-paint-brush',
+                    'permission' => 'admin.themes'
+                ]
+            ]
+        ];
+        
+        // API и интеграции
+        $categories['api'] = [
+            'title' => 'API та інтеграції',
+            'icon' => 'fas fa-code',
+            'items' => [
+                [
+                    'title' => 'API ключі',
+                    'description' => 'Управління API ключами',
+                    'url' => UrlHelper::admin('api-keys'),
+                    'icon' => 'fas fa-key',
+                    'permission' => 'admin.settings'
+                ],
+                [
+                    'title' => 'Webhooks',
+                    'description' => 'Управління webhooks',
+                    'url' => UrlHelper::admin('webhooks'),
+                    'icon' => 'fas fa-webhook',
+                    'permission' => 'admin.settings'
+                ]
+            ]
+        ];
+        
+        // Система
+        $categories['system'] = [
+            'title' => 'Система',
+            'icon' => 'fas fa-server',
+            'items' => [
+                [
+                    'title' => 'Логи',
+                    'description' => 'Перегляд системних логів',
+                    'url' => UrlHelper::admin('logs-view'),
+                    'icon' => 'fas fa-file-alt',
+                    'permission' => 'admin.logs.view'
+                ],
+                [
+                    'title' => 'Кеш',
+                    'description' => 'Управління кешем',
+                    'url' => UrlHelper::admin('cache-view'),
+                    'icon' => 'fas fa-database',
+                    'permission' => 'admin.settings'
+                ]
+            ]
+        ];
+        
+        // Фильтруем элементы по правам доступа
+        foreach ($categories as $key => $category) {
+            $categories[$key]['items'] = array_filter($category['items'], function($item) {
+                if (isset($item['permission']) && $item['permission'] !== null) {
+                    if (function_exists('current_user_can')) {
+                        $userId = Session::get('admin_user_id');
+                        // Для первого пользователя всегда разрешаем доступ
+                        if ($userId == 1) {
+                            return true;
+                        }
+                        return current_user_can($item['permission']);
+                    }
+                    return false;
+                }
+                return true; // Если permission не указан, доступен всем
+            });
+        }
+        
+        // Удаляем пустые категории
+        $categories = array_filter($categories, function($category) {
+            return !empty($category['items']);
+        });
+        
+        return $categories;
     }
 }
+
