@@ -17,10 +17,27 @@ class UsersPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         $this->pageTitle = 'Користувачі - Flowaxy CMS';
+        
+        // Кнопка створення користувача
+        $headerButtons = $this->createButtonGroup([
+            [
+                'text' => 'Створити користувача',
+                'type' => 'outline-secondary',
+                'options' => [
+                    'attributes' => [
+                        'class' => 'btn-sm',
+                        'data-bs-toggle' => 'modal',
+                        'data-bs-target' => '#createUserModal'
+                    ]
+                ]
+            ]
+        ]);
+        
         $this->setPageHeader(
             'Користувачі',
             'Управління користувачами системи',
-            'fas fa-users'
+            'fas fa-users',
+            $headerButtons
         );
         
         if (class_exists('RoleManager')) {

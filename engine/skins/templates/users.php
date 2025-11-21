@@ -10,12 +10,6 @@
 <div class="row">
     <div class="col-md-12">
         <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Користувачі</h5>
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                    <i class="fas fa-plus"></i> Створити користувача
-                </button>
-            </div>
             <div class="card-body">
                 <?php if (empty($users)): ?>
                     <p class="text-muted">Користувачі не знайдені</p>
