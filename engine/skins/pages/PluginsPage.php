@@ -687,19 +687,19 @@ class PluginsPage extends AdminPage {
                 }
             };
             
-            // Створюємо директорію в storage/temp/
+            // Проверяем существование директории storage/temp/ (должна быть создана установщиком)
             $storageParent = $projectRoot . '/storage';
             $storageDir = $storageParent . '/temp/';
-            if (!$createTempDir($storageDir, $storageParent)) {
-                $errorMsg = 'Не вдалося створити тимчасову директорію. ';
-                $errorMsg .= 'Спробовано: ' . implode(', ', array_unique($errors));
-                $errorMsg .= '. Перевірте права доступу до директорії storage/temp/';
-                throw new Exception($errorMsg);
+            
+            if (!is_dir($storageDir)) {
+                throw new Exception('Директорія storage/temp/ не існує. Вона повинна бути створена під час установки системи. Будь ласка, запустіть установщик або створіть директорію вручну.');
             }
             
-            if (!$tempDir) {
-                throw new Exception('Не вдалося визначити тимчасову директорію для завантаження');
+            if (!is_writable($storageDir)) {
+                throw new Exception('Немає прав на запис у директорію storage/temp/. Перевірте права доступу.');
             }
+            
+            $tempDir = $storageDir;
             
             $upload->setUploadDir($tempDir);
             
