@@ -59,25 +59,61 @@
             
             // Виконуємо запит
             return fetch(url, config)
-                .then(response => {
+                .then(async response => {
                     // Перевіряємо статус відповіді
                     if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || 'Помилка запиту');
-                        });
+                        // Пробуємо получить JSON, но если не получается, возвращаем текст
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            try {
+                                const data = await response.json();
+                                throw new Error(data.error || 'Помилка запиту');
+                            } catch (e) {
+                                if (e instanceof SyntaxError) {
+                                    const text = await response.text();
+                                    throw new Error('Сервер повернув некоректну відповідь: ' + text.substring(0, 100));
+                                }
+                                throw e;
+                            }
+                        } else {
+                            const text = await response.text();
+                            throw new Error('HTTP помилка ' + response.status + ': ' + text.substring(0, 100));
+                        }
                     }
-                    return response.json();
+                    
+                    // Перевіряємо тип контенту
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        throw new Error('Сервер повернув не JSON відповідь: ' + text.substring(0, 200));
+                    }
+                    
+                    // Парсимо JSON
+                    try {
+                        return await response.json();
+                    } catch (e) {
+                        if (e instanceof SyntaxError) {
+                            const text = await response.text();
+                            throw new Error('Помилка парсингу JSON: ' + e.message + '. Відповідь: ' + text.substring(0, 200));
+                        }
+                        throw e;
+                    }
                 })
                 .then(data => {
                     // Перевіряємо успішність операції
-                    if (data.success === false) {
+                    if (data && typeof data === 'object' && data.success === false) {
                         throw new Error(data.error || 'Помилка обробки запиту');
                     }
                     return data;
                 })
                 .catch(error => {
                     console.error('AjaxHelper error:', error);
-                    throw error;
+                    // Если это уже Error, просто пробрасываем
+                    if (error instanceof Error) {
+                        throw error;
+                    }
+                    // Иначе создаем новый Error
+                    throw new Error(error.message || 'Невідома помилка AJAX запиту');
                 });
         },
         
