@@ -924,12 +924,6 @@ if ($action === 'create_table' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     }
-    
-    // Восстанавливаем настройки
-    error_reporting($oldErrorReporting);
-    ini_set('display_errors', $oldDisplayErrors);
-    
-    exit;
 }
 
 /**
