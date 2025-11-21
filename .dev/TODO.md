@@ -365,7 +365,7 @@
 **Цель:** Гибкая система логирования с поддержкой разных драйверов
 
 #### Задачи:
-- [ ] Создать интерфейс `LoggerInterface` (если еще нет)
+- [x] Создать интерфейс `LoggerInterface` (если еще нет)
 - [ ] Реализовать драйверы: file, database, syslog, external (Sentry, etc.)
 - [ ] Добавить контекстное логирование
 - [ ] Реализовать структурированное логирование (JSON)
@@ -374,7 +374,7 @@
 - [ ] Добавить графики статистики логов
 
 #### Файлы для создания:
-- `engine/interfaces/LoggerInterface.php`
+- [x] `engine/interfaces/LoggerInterface.php` ✅ Создан
 - `engine/classes/data/Loggers/FileLogger.php`
 - `engine/classes/data/Loggers/DatabaseLogger.php`
 - `engine/classes/data/Loggers/ExternalLogger.php`

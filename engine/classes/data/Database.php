@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../interfaces/LoggerInterface.php';
+
 class Database {
     private static ?self $instance = null;
     private ?PDO $connection = null;
@@ -26,7 +28,7 @@ class Database {
     private float $slowQueryThreshold = 1.0;
     
     // Екземпляр Logger
-    private ?Logger $logger = null;
+    private ?LoggerInterface $logger = null;
     
     /**
      * Конструктор (приватний для Singleton)
@@ -60,9 +62,9 @@ class Database {
      * Ліниве отримання Logger
      * Викликається тільки коли потрібно логувати, після того як Database вже створено
      * 
-     * @return Logger|null
+     * @return LoggerInterface|null
      */
-    private function getLogger() {
+    private function getLogger(): ?LoggerInterface {
         if ($this->logger === null) {
             try {
                 // Намагаємося отримати Logger через функцію

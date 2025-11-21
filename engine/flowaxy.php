@@ -138,7 +138,6 @@ spl_autoload_register(function (string $className): void {
             'ScssCompiler' => 'compilers', 'Validator' => 'validators',
             'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
             'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
-            'StorageInterface' => 'storage',
             'RouterManager' => 'managers', 'CookieManager' => 'managers', 'SessionManager' => 'managers', 
             'StorageManager' => 'managers', 'StorageFactory' => 'managers',
             'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',

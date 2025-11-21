@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../storage/StorageInterface.php';
+require_once __DIR__ . '/../../interfaces/StorageInterface.php';
 
 class SessionManager implements StorageInterface {
     private static ?self $instance = null;

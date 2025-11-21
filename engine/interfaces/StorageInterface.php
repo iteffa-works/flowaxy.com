@@ -3,7 +3,7 @@
  * Інтерфейс для всіх типів сховища
  * Єдиний API для роботи з cookies, sessions, localStorage, sessionStorage
  * 
- * @package Engine\Classes\Storage
+ * @package Engine\Interfaces
  * @version 1.0.0
  */
 

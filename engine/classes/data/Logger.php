@@ -9,7 +9,9 @@
 
 declare(strict_types=1);
 
-class Logger {
+require_once __DIR__ . '/../../interfaces/LoggerInterface.php';
+
+class Logger implements LoggerInterface {
     private static ?self $instance = null;
     private static bool $loadingSettings = false; // Прапорець для запобігання рекурсії
     private bool $settingsLoaded = false; // Прапорець завантаження налаштувань
@@ -652,9 +654,9 @@ class Logger {
 /**
  * Глобальна функція для отримання екземпляра Logger
  * 
- * @return Logger
+ * @return LoggerInterface
  */
-function logger(): Logger {
+function logger(): LoggerInterface {
     return Logger::getInstance();
 }
 

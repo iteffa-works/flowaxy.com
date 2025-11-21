@@ -289,8 +289,17 @@ class Cache {
         $result = @file_put_contents($filename, $serialized, LOCK_EX);
         
         if ($result !== false) {
-            // Встановлюємо права доступу
-            @chmod($filename, 0644);
+            // Встановлюємо права доступу (якщо можливо)
+            // В WSL/Windows на NTFS файловій системі chmod може не працювати,
+            // тому використовуємо безпечний спосіб без генерації warning
+            if (file_exists($filename)) {
+                // Тиха спроба встановити права доступу
+                // В деяких середовищах (WSL/Windows) chmod може не працювати,
+                // але це не критично для роботи кешу
+                $errorLevel = error_reporting(E_ALL & ~E_WARNING);
+                @chmod($filename, 0644);
+                error_reporting($errorLevel);
+            }
             
             // Зберігаємо в кеш пам'яті
             $this->memoryCache[$key] = $data;

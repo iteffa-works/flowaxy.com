@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../interfaces/StorageInterface.php';
+
 class StorageFactory {
     public const TYPE_COOKIE = 'cookie';
     public const TYPE_SESSION = 'session';
