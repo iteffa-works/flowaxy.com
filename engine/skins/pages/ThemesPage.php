@@ -349,11 +349,13 @@ class ThemesPage extends AdminPage {
             $storageParent = $projectRoot . '/storage';
             $storageDir = $storageParent . '/temp/';
             
-            // Создаем временную директорию
+            // Проверяем существование директории (должна быть создана установщиком)
             if (!is_dir($storageDir)) {
-                if (!@mkdir($storageDir, 0755, true)) {
-                    return ['success' => false, 'error' => 'Не вдалося створити тимчасову директорію', 'reload' => false];
-                }
+                return ['success' => false, 'error' => 'Директорія storage/temp/ не існує. Вона повинна бути створена під час установки системи.', 'reload' => false];
+            }
+            
+            if (!is_writable($storageDir)) {
+                return ['success' => false, 'error' => 'Немає прав на запис у директорію storage/temp/.', 'reload' => false];
             }
             
             $upload->setUploadDir($storageDir);
@@ -572,26 +574,13 @@ class ThemesPage extends AdminPage {
                    ->setNamingStrategy('random') // Використовуємо випадкове ім'я для уникнення конфліктів
                    ->setOverwrite(true); // Дозволяємо перезаписувати файли
             
-            // Створюємо тимчасову директорію для завантаження
-            // Використовуємо директорію всередині проекту для сумісності з різними хостингами
+            // Проверяем существование директории storage/temp/ (должна быть создана установщиком)
             $projectRoot = dirname(__DIR__, 3);
-            
-            // Создаем временную директорию
             $storageParent = $projectRoot . '/storage';
             $storageDir = $storageParent . '/temp/';
             
-            // Создаем родительскую директорию если нужно
-            if (!is_dir($storageParent)) {
-                if (!@mkdir($storageParent, 0755, true)) {
-                    throw new Exception('Не вдалося створити батьківську директорію: ' . $storageParent);
-                }
-            }
-            
-            // Создаем временную директорию
             if (!is_dir($storageDir)) {
-                if (!@mkdir($storageDir, 0755, true)) {
-                    throw new Exception('Не вдалося створити тимчасову директорію: ' . $storageDir);
-                }
+                throw new Exception('Директорія storage/temp/ не існує. Вона повинна бути створена під час установки системи. Будь ласка, запустіть установщик або створіть директорію вручну.');
             }
             
             // Проверяем права на запись
