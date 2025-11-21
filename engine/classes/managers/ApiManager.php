@@ -40,7 +40,7 @@ class ApiManager {
      */
     public function createKey(string $name, array $permissions = [], ?string $expiresAt = null): array {
         $key = $this->generateKey();
-        $keyHash = Hash::hash($key);
+        $keyHash = Hash::sha256($key);
         $keyPreview = substr($key, 0, 4) . '...' . substr($key, -4);
         
         try {
@@ -99,7 +99,7 @@ class ApiManager {
             $keys = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($keys as $keyData) {
-                if (Hash::equals($keyData['key_hash'], Hash::hash($key))) {
+                if (Hash::equals($keyData['key_hash'], Hash::sha256($key))) {
                     // Проверка срока действия
                     if ($keyData['expires_at'] !== null) {
                         $expiresAt = strtotime($keyData['expires_at']);
