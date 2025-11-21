@@ -17,10 +17,30 @@ class RolesPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         $this->pageTitle = 'Ролі та права доступу - Flowaxy CMS';
+        
+        // Підключаємо зовнішні CSS та JS файли
+        $this->additionalCSS[] = UrlHelper::admin('assets/styles/roles.css') . '?v=' . time();
+        $this->additionalJS[] = UrlHelper::admin('assets/scripts/roles.js') . '?v=' . time();
+        
+        // Кнопка створення ролі
+        $headerButtons = $this->createButtonGroup([
+            [
+                'text' => 'Створити роль',
+                'type' => 'outline-secondary',
+                'options' => [
+                    'url' => UrlHelper::admin('roles?action=create'),
+                    'attributes' => [
+                        'class' => 'btn-sm'
+                    ]
+                ]
+            ]
+        ]);
+        
         $this->setPageHeader(
             'Ролі та права доступу',
             'Управління ролями та правами доступу користувачів',
-            'fas fa-user-shield'
+            'fas fa-user-shield',
+            $headerButtons
         );
         
         if (class_exists('RoleManager')) {
@@ -56,13 +76,28 @@ class RolesPage extends AdminPage {
                 case 'remove_user_role':
                     $this->handleRemoveUserRole();
                     break;
+                case 'bulk_delete_roles':
+                    $this->handleBulkDeleteRoles();
+                    break;
             }
         }
         
-        // Перевіряємо, чи потрібна сторінка редагування
+        // Перевіряємо, чи потрібна сторінка редагування або створення
         $editId = (int)$request->query('edit', 0);
-        if ($editId > 0) {
+        $action = $request->query('action', '');
+        
+        if ($editId > 0 || $action === 'create') {
             $this->templateName = 'role-edit';
+            
+            // Обновляем заголовок страницы в зависимости от режима
+            if ($action === 'create') {
+                $this->setPageHeader(
+                    'Створити роль',
+                    'Додавання нової ролі до системи',
+                    'fas fa-user-shield',
+                    $this->pageHeaderButtons
+                );
+            }
         }
         
         $this->render();
@@ -92,6 +127,15 @@ class RolesPage extends AdminPage {
         
         if ($roleId) {
             $this->setMessage('Роль успішно створена', 'success');
+            
+            // Если указан save_and_exit, перенаправляем на список ролей
+            $saveAndExit = $request->post('save_and_exit', 0);
+            if ($saveAndExit) {
+                Response::redirectStatic(UrlHelper::admin('roles'));
+            } else {
+                // Иначе перенаправляем на редактирование созданной роли
+                Response::redirectStatic(UrlHelper::admin('roles?edit=' . $roleId));
+            }
         } else {
             $this->setMessage('Помилка при створенні ролі', 'danger');
         }
@@ -296,12 +340,68 @@ class RolesPage extends AdminPage {
         }
     }
     
+    private function handleBulkDeleteRoles(): void {
+        if (!$this->verifyCsrf()) {
+            return;
+        }
+        
+        if (!$this->roleManager) {
+            $this->setMessage('Помилка: RoleManager не доступний', 'danger');
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $roleIds = $request->post('role_ids', []);
+        
+        if (empty($roleIds) || !is_array($roleIds)) {
+            $this->setMessage('Не вибрано ролей для видалення', 'danger');
+            return;
+        }
+        
+        $deletedCount = 0;
+        $errorCount = 0;
+        
+        foreach ($roleIds as $roleId) {
+            $roleId = (int)$roleId;
+            if ($roleId <= 0) {
+                continue;
+            }
+            
+            // Перевіряємо, чи це не системна роль
+            try {
+                $stmt = $this->db->prepare("SELECT is_system, slug FROM roles WHERE id = ?");
+                $stmt->execute([$roleId]);
+                $role = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($role && (empty($role['is_system']) && $role['slug'] !== 'developer')) {
+                    $result = $this->roleManager->deleteRole($roleId);
+                    if ($result) {
+                        $deletedCount++;
+                    } else {
+                        $errorCount++;
+                    }
+                } else {
+                    $errorCount++;
+                }
+            } catch (Exception $e) {
+                $errorCount++;
+            }
+        }
+        
+        if ($deletedCount > 0) {
+            $this->setMessage("Успішно видалено {$deletedCount} ролей" . ($errorCount > 0 ? ". Помилок: {$errorCount}" : ''), 'success');
+        } else {
+            $this->setMessage('Не вдалося видалити ролі. Можливо, це системні ролі', 'danger');
+        }
+    }
+    
     protected function getTemplateData(): array {
         $data = parent::getTemplateData();
         
-        // Проверяем, нужна ли страница редактирования
+        // Проверяем, нужна ли страница редактирования или создания
         $request = Request::getInstance();
         $editId = (int)$request->query('edit', 0);
+        $action = $request->query('action', '');
         
         if ($this->roleManager) {
             if ($editId > 0) {
@@ -315,6 +415,14 @@ class RolesPage extends AdminPage {
                         $this->setMessage('Роль не знайдена', 'danger');
                         Response::redirectStatic(UrlHelper::admin('roles'));
                     }
+                    
+                    // Обновляем заголовок страницы для редактирования
+                    $this->setPageHeader(
+                        'Редагувати роль: ' . htmlspecialchars($data['role']['name']),
+                        'Зміна параметрів ролі та прав доступу',
+                        'fas fa-user-shield',
+                        $this->pageHeaderButtons
+                    );
                     
                     // Получаем создателя роли, если поле created_by существует
                     if (!empty($data['role']['created_by'])) {
@@ -343,6 +451,21 @@ class RolesPage extends AdminPage {
                     error_log("RolesPage getTemplateData error: " . $e->getMessage());
                     $data['role'] = null;
                 }
+            } elseif ($action === 'create') {
+                // Страница создания новой роли
+                $data['role'] = [
+                    'id' => null,
+                    'name' => '',
+                    'slug' => '',
+                    'description' => '',
+                    'is_system' => 0,
+                    'is_default' => 0,
+                    'permission_ids' => []
+                ];
+                
+                // Получаем все разрешения сгруппированные по категориям
+                $data['permissions'] = $this->roleManager->getAllPermissions();
+                $data['permissionsByCategory'] = $this->groupPermissionsByCategory($data['permissions']);
             } else {
                 // Список ролей
                 $data['roles'] = $this->roleManager->getAllRoles();

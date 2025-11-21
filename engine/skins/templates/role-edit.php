@@ -195,6 +195,8 @@
 
 .publish-actions .btn {
     width: 100%;
+    display: flex;
+    align-items: center;
     justify-content: center;
     padding: 10px;
 }
@@ -210,48 +212,79 @@
     height: 18px;
     cursor: pointer;
 }
+
+/* Респонсивность для мобильных устройств */
+@media (max-width: 768px) {
+    .role-edit-wrapper {
+        flex-direction: column;
+    }
+    
+    .role-edit-sidebar {
+        width: 100%;
+        order: -1; /* Sidebar буде зверху на мобільних */
+    }
+    
+    .permission-flags-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .permission-flags-controls {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    
+    .role-edit-main,
+    .role-edit-sidebar {
+        padding: 15px;
+    }
+}
 </style>
 
+<?php
+$isCreateMode = empty($role['id']);
+?>
 <form method="POST" action="<?= UrlHelper::admin('roles') ?>">
     <?= SecurityHelper::csrfField() ?>
-    <input type="hidden" name="action" value="update_role">
+    <input type="hidden" name="action" value="<?= $isCreateMode ? 'create_role' : 'update_role' ?>">
+    <?php if (!$isCreateMode): ?>
     <input type="hidden" name="role_id" value="<?= $role['id'] ?>">
+    <?php endif; ?>
     
     <div class="role-edit-wrapper">
         <div class="role-edit-main">
-            <!-- Role Details -->
+            <!-- Деталі ролі -->
             <div class="role-form-group">
-                <label for="role_name">Name *</label>
-                <input type="text" id="role_name" name="name" value="<?= htmlspecialchars($role['name']) ?>" required>
+                <label for="role_name">Назва *</label>
+                <input type="text" id="role_name" name="name" value="<?= htmlspecialchars($role['name'] ?? '') ?>" required>
             </div>
             
+            <?php if ($isCreateMode): ?>
             <div class="role-form-group">
-                <label for="role_description">Description</label>
+                <label for="role_slug">Ідентифікатор *</label>
+                <input type="text" id="role_slug" name="slug" value="<?= htmlspecialchars($role['slug'] ?? '') ?>" required pattern="[a-z0-9_-]+" title="Тільки малі літери, цифри, дефіс та підкреслення">
+                <small class="text-muted">Тільки малі літери, цифри, дефіс та підкреслення</small>
+            </div>
+            <?php endif; ?>
+            
+            <div class="role-form-group">
+                <label for="role_description">Опис</label>
                 <textarea id="role_description" name="description" rows="4"><?= htmlspecialchars($role['description'] ?? '') ?></textarea>
             </div>
             
-            <div class="role-form-group">
-                <label>
-                    <span style="margin-right: 10px;">Is default?</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" name="is_default" value="1" <?= !empty($role['is_system']) ? 'checked' : '' ?>>
-                        <span class="toggle-slider"></span>
-                    </label>
-                </label>
-            </div>
-            
-            <!-- Permission Flags -->
+            <!-- Права доступу -->
             <div class="permission-flags-header">
-                <h3>Permission Flags</h3>
+                <h3>Права доступу</h3>
                 <div class="permission-flags-controls">
                     <label class="all-permissions-checkbox">
                         <input type="checkbox" id="allPermissions">
-                        <span>All Permissions</span>
+                        <span>Всі дозволи</span>
                     </label>
                     <span>|</span>
-                    <a href="#" id="collapseAll" style="text-decoration: none; color: #3b82f6;">Collapse all</a>
+                    <a href="#" id="collapseAll" style="text-decoration: none; color: #3b82f6;">Згорнути все</a>
                     <span>|</span>
-                    <a href="#" id="expandAll" style="text-decoration: none; color: #3b82f6;">Expand all</a>
+                    <a href="#" id="expandAll" style="text-decoration: none; color: #3b82f6;">Розгорнути все</a>
                 </div>
             </div>
             
@@ -260,12 +293,16 @@
             $categoryMapping = [
                 'admin' => 'CMS',
                 'cabinet' => 'FOB Comments',
-                'system' => 'System',
-                'settings' => 'Settings',
-                'tools' => 'Tools'
+                'system' => 'Система',
+                'settings' => 'Налаштування',
+                'tools' => 'Інструменти',
+                'Users' => 'Користувачі',
+                'API' => 'API',
+                'Profile' => 'Профіль',
+                'Dashboard' => 'Дашборд'
             ];
             
-            // Группируем разрешения по категориям
+            // Групуємо дозволи за категоріями
             $categoryPermissions = [];
             foreach ($permissionsByCategory as $category => $perms) {
                 $displayCategory = $categoryMapping[$category] ?? ucfirst($category);
@@ -275,7 +312,7 @@
                 $categoryPermissions[$displayCategory] = array_merge($categoryPermissions[$displayCategory], $perms);
             }
             
-            // Если категорий нет, используем исходные
+            // Якщо категорій немає, використовуємо початкові
             if (empty($categoryPermissions)) {
                 foreach ($permissionsByCategory as $category => $perms) {
                     $categoryPermissions[ucfirst($category)] = $perms;
@@ -312,17 +349,16 @@
         
         <div class="role-edit-sidebar">
             <div class="publish-section">
-                <h3>Publish</h3>
+                <h3>Публікація</h3>
                 <div class="publish-actions">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save
+                        <?= $isCreateMode ? 'Створити' : 'Зберегти' ?>
                     </button>
+                    <?php if (!$isCreateMode): ?>
                     <button type="submit" name="save_and_exit" value="1" class="btn btn-outline-primary">
-                        <i class="fas fa-door-open"></i> Save & Exit
+                        Зберегти та вийти
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="duplicateRole()">
-                        <i class="fas fa-copy"></i> Duplicate
-                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -330,7 +366,7 @@
 </form>
 
 <script>
-// Toggle category
+// Перемикання категорії
 function toggleCategory(header) {
     const body = header.nextElementSibling;
     const icon = header.querySelector('i');
@@ -346,20 +382,20 @@ function toggleCategory(header) {
     }
 }
 
-// All Permissions checkbox
+// Чекбокс "Всі дозволи"
 document.getElementById('allPermissions')?.addEventListener('change', function() {
     const checkboxes = document.querySelectorAll('.permission-checkbox');
     checkboxes.forEach(cb => {
         cb.checked = this.checked;
     });
     
-    // Обновляем категории
+    // Оновлюємо категорії
     document.querySelectorAll('.category-checkbox').forEach(cb => {
         cb.checked = this.checked;
     });
 });
 
-// Category checkbox
+// Чекбокс категорії
 document.querySelectorAll('.category-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const category = this.dataset.category;
@@ -370,7 +406,7 @@ document.querySelectorAll('.category-checkbox').forEach(checkbox => {
     });
 });
 
-// Permission checkbox - обновляем категорию
+// Чекбокс дозволу - оновлюємо категорію
 document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const category = this.dataset.category;
@@ -382,7 +418,7 @@ document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
             categoryCheckbox.checked = categoryPermissions.length === checkedPermissions.length;
         }
         
-        // Обновляем "All Permissions"
+        // Оновлюємо "Всі дозволи"
         const allPermissions = document.querySelectorAll('.permission-checkbox');
         const allCheckedPermissions = document.querySelectorAll('.permission-checkbox:checked');
         const allPermissionsCheckbox = document.getElementById('allPermissions');
@@ -393,7 +429,7 @@ document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
     });
 });
 
-// Collapse all
+// Згорнути все
 document.getElementById('collapseAll')?.addEventListener('click', function(e) {
     e.preventDefault();
     document.querySelectorAll('.permission-category-body').forEach(body => {
@@ -405,7 +441,7 @@ document.getElementById('collapseAll')?.addEventListener('click', function(e) {
     });
 });
 
-// Expand all
+// Розгорнути все
 document.getElementById('expandAll')?.addEventListener('click', function(e) {
     e.preventDefault();
     document.querySelectorAll('.permission-category-body').forEach(body => {
@@ -417,15 +453,7 @@ document.getElementById('expandAll')?.addEventListener('click', function(e) {
     });
 });
 
-// Duplicate role
-function duplicateRole() {
-    if (confirm('Дублювати цю роль?')) {
-        // TODO: Реализовать дублирование роли
-        alert('Дублювання ролі буде реалізовано в наступній версії');
-    }
-}
-
-// Инициализация - открываем все категории по умолчанию
+// Ініціалізація - відкриваємо всі категорії за замовчуванням
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.permission-category-body').forEach(body => {
         body.classList.add('active');
