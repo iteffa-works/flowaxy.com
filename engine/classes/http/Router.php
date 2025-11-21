@@ -11,11 +11,12 @@ declare(strict_types=1);
 
 class Router {
     private array $routes = [];
+    private array $routesByMethod = [];
     private array $middlewares = [];
-    private array $groups = [];
     private ?string $basePath = null;
     private ?string $defaultRoute = null;
     private bool $autoLoadEnabled = true;
+    private bool $routesLoaded = false;
     
     /**
      * Конструктор
@@ -74,6 +75,9 @@ class Router {
         ];
         
         $this->routes[] = $route;
+        foreach ($methods as $method) {
+            $this->routesByMethod[$method][] = $route;
+        }
         
         return $this;
     }
@@ -145,7 +149,7 @@ class Router {
      * Автоматична завантаження маршрутів з модулів, плагінів та теми
      */
     public function autoLoad(): void {
-        if (!$this->autoLoadEnabled) {
+        if (!$this->autoLoadEnabled || $this->routesLoaded) {
             return;
         }
         
@@ -157,30 +161,37 @@ class Router {
         
         // Завантаження маршрутів з плагінів через хук (останнім, щоб плагіни могли перезаписати маршрути теми)
         doHook('register_routes', $this);
+        $this->routesLoaded = true;
+    }
+
+    /**
+     * Вимкнути автоматичне завантаження (наприклад, при тестуванні)
+     */
+    public function disableAutoLoad(): self {
+        $this->autoLoadEnabled = false;
+        return $this;
+    }
+
+    /**
+     * Примусово позначити, що маршрути вже завантажені
+     */
+    public function markRoutesLoaded(): self {
+        $this->routesLoaded = true;
+        return $this;
     }
     
     /**
      * Завантаження маршрутів з модулів
+     * Модулі реєструють свої маршрути через хуки (doHook('register_routes'))
      */
     private function loadModuleRoutes(): void {
-        // Модулі реєструють свої маршрути через хук admin_register_routes
-        // Цей метод викликається, але маршрути реєструються через хуки
-        // для зворотної сумісності з існуючим кодом
+        // Модулі реєструють свої маршрути через хук register_routes
     }
     
     /**
      * Завантаження маршрутів з теми
      */
     private function loadThemeRoutes(): void {
-        // Завантажуємо Cache перед використанням функції cache_remember()
-        // Router знаходиться в engine/classes/http/, а Cache в engine/classes/data/
-        if (!class_exists('Cache') && !function_exists('cache_remember')) {
-            $cacheFile = __DIR__ . '/../data/Cache.php';
-            if (file_exists($cacheFile)) {
-                require_once $cacheFile;
-            }
-        }
-        
         if (!function_exists('themeManager')) {
             return;
         }
@@ -188,23 +199,62 @@ class Router {
         $themeManager = themeManager();
         $activeTheme = $themeManager->getActiveTheme();
         
-        if ($activeTheme === null || !isset($activeTheme['slug'])) {
+        if (empty($activeTheme['slug'] ?? null)) {
             return;
         }
         
-        // Передаємо slug теми, а не весь масив
         $themePath = $themeManager->getThemePath($activeTheme['slug']);
         if (empty($themePath)) {
             return;
         }
         
         $routesFile = $themePath . 'routes.php';
-        $file = new File($routesFile);
-        
-        if ($file->exists() && $file->isReadable()) {
+        if (file_exists($routesFile) && is_readable($routesFile)) {
             $router = $this;
             require_once $routesFile;
         }
+    }
+    
+    /**
+     * Нормалізація URI (видалення query string, базового шляху, index.php тощо)
+     */
+    private static function normalizeUriStatic(string $uri, ?string $basePath = null): string {
+        // Видаляємо query string
+        if (($pos = strpos($uri, '?')) !== false) {
+            $uri = substr($uri, 0, $pos);
+        }
+        
+        // Видаляємо базовий шлях, якщо встановлено
+        if ($basePath !== null && $basePath !== '/') {
+            $basePathTrimmed = rtrim($basePath, '/');
+            if (strpos($uri, $basePathTrimmed) === 0) {
+                $uri = substr($uri, strlen($basePathTrimmed));
+                $uri = '/' . ltrim($uri, '/');
+                if ($uri === '/') {
+                    $uri = '';
+                }
+            }
+        } elseif ($basePath === '/') {
+            $uri = ltrim($uri, '/');
+        }
+        
+        // Видаляємо index.php
+        $uri = preg_replace('#^/?index\.php(/.*)?$#', '$1', $uri);
+        $uri = ltrim($uri, '/');
+        
+        // Видаляємо розширення .php
+        if (preg_match('/^(.+)\.php$/', $uri, $matches)) {
+            $uri = $matches[1];
+        }
+        
+        return trim($uri, '/');
+    }
+    
+    /**
+     * Нормалізація URI (використовує поточний basePath)
+     */
+    private function normalizeUri(string $uri, ?string $basePath = null): string {
+        return self::normalizeUriStatic($uri, $basePath ?? $this->basePath);
     }
     
     /**
@@ -212,42 +262,7 @@ class Router {
      */
     private function getCurrentUri(): string {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        
-        // Видаляємо query string
-        if (($pos = strpos($uri, '?')) !== false) {
-            $uri = substr($uri, 0, $pos);
-        }
-        
-        // Видаляємо базовий шлях, якщо встановлено
-        if ($this->basePath !== null && $this->basePath !== '/') {
-            $basePath = rtrim($this->basePath, '/');
-            if (strpos($uri, $basePath) === 0) {
-                $uri = substr($uri, strlen($basePath));
-                // Нормалізуємо URI: прибираємо зайві слеші
-                $uri = '/' . ltrim($uri, '/');
-                // Якщо залишився тільки слеш, повертаємо порожній рядок
-                if ($uri === '/') {
-                    $uri = '';
-                }
-            }
-        } else if ($this->basePath === '/') {
-            // Для фронтенду базовий шлях '/', просто нормалізуємо URI
-            // Прибираємо початковий слеш, якщо він є
-            $uri = ltrim($uri, '/');
-        }
-        
-        // Видаляємо index.php (включаючи випадки з шляхами типу /index.php/path)
-        $uri = preg_replace('#^/?index\.php(/.*)?$#', '$1', $uri);
-        $uri = ltrim($uri, '/');
-        
-        // Видаляємо розширення .php якщо є
-        if (preg_match('/^(.+)\.php$/', $uri, $matches)) {
-            $uri = $matches[1];
-        }
-        
-        // Повертаємо шлях без початкових і кінцевих слешів для точного порівняння
-        // Для порожнього шляху повертаємо порожній рядок, для інших - шлях без слешів
-        return trim($uri, '/');
+        return $this->normalizeUri($uri);
     }
     
     /**
@@ -292,86 +307,76 @@ class Router {
     }
     
     /**
-     * Обробка запиту
+     * Перевірка, чи існує маршрут для порожнього шляху
      */
-    public function dispatch(): bool {
-        // Автоматична завантаження маршрутів
-        $this->autoLoad();
-        
-        $uri = $this->getCurrentUri();
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        
-        // Спочатку перевіряємо, чи є маршрут для порожнього шляху
-        $hasEmptyRoute = false;
-        foreach ($this->routes as $route) {
-            if (($route['path'] === '' || empty($route['path'])) && in_array($method, $route['methods'])) {
-                $hasEmptyRoute = true;
-                break;
+    private function hasEmptyRoute(array $routes): bool {
+        foreach ($routes as $route) {
+            if (empty($route['path'])) {
+                return true;
             }
         }
-        
-        // Якщо шлях порожній і немає маршруту для порожнього шляху, використовуємо маршрут за замовчуванням
-        if (empty($uri) && !$hasEmptyRoute && $this->defaultRoute !== null) {
-            $uri = $this->defaultRoute;
-        }
-        
-        // Пошук відповідного маршруту
-        foreach ($this->routes as $route) {
-            // Перевірка HTTP методу
-            if (!in_array($method, $route['methods'])) {
-                continue;
-            }
-            
-            // Перевірка шляху
+        return false;
+    }
+    
+    /**
+     * Пошук відповідного маршруту
+     */
+    private function findRoute(string $uri, array $routes): ?array {
+        foreach ($routes as $route) {
             $params = [];
-            // Для порожнього URI використовуємо '/', для інших - '/path'
             $uriPath = empty($uri) ? '/' : '/' . $uri;
             
-            // Спочатку перевіряємо точне співпадіння шляху (швидше ніж regex)
-            // route['path'] тепер зберігається без слешів, так само як і $uri
+            // Точне співпадіння (найшвидше)
             if ($route['path'] === $uri) {
-                // Виконання middleware
-                if (!$this->runMiddlewares($route['middleware'], $params)) {
-                    return false;
-                }
-                
-                // Виконання обробника
-                return $this->executeHandler($route['handler'], $params);
+                return ['route' => $route, 'params' => $params];
             }
             
-            // Додатково перевіряємо, чи порожній URI відповідає порожньому маршруту
-            if (empty($uri) && empty($route['path'])) {
-                // Виконання middleware
-                if (!$this->runMiddlewares($route['middleware'], $params)) {
-                    return false;
-                }
-                
-                // Виконання обробника
-                return $this->executeHandler($route['handler'], $params);
-            }
-            
-            // Використовуємо regex pattern для маршрутів з параметрами
-            if (preg_match($route['pattern'], $uriPath, $matches)) {
-                // Витягування параметрів
+            // Regex pattern для маршрутів з параметрами
+            if (!empty($route['params']) && preg_match($route['pattern'], $uriPath, $matches)) {
                 foreach ($route['params'] as $param) {
                     if (isset($matches[$param])) {
                         $params[$param] = $matches[$param];
                     }
                 }
-                
-                // Виконання middleware
-                if (!$this->runMiddlewares($route['middleware'], $params)) {
-                    return false;
-                }
-                
-                // Виконання обробника
-                return $this->executeHandler($route['handler'], $params);
+                return ['route' => $route, 'params' => $params];
             }
         }
         
+        return null;
+    }
+    
+    /**
+     * Виконання знайденого маршруту
+     */
+    private function executeRoute(array $route, array $params): bool {
+        if (!$this->runMiddlewares($route['middleware'], $params)) {
+            return false;
+        }
+        return $this->executeHandler($route['handler'], $params);
+    }
+    
+    /**
+     * Обробка запиту
+     */
+    public function dispatch(): bool {
+        $this->autoLoad();
+        
+        $uri = $this->getCurrentUri();
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $methodRoutes = $this->routesByMethod[$method] ?? [];
+        
+        // Якщо шлях порожній і немає маршруту для порожнього шляху, використовуємо маршрут за замовчуванням
+        if (empty($uri) && !$this->hasEmptyRoute($methodRoutes) && $this->defaultRoute !== null) {
+            $uri = $this->defaultRoute;
+        }
+        
+        // Пошук відповідного маршруту
+        $found = $this->findRoute($uri, $methodRoutes);
+        if ($found !== null) {
+            return $this->executeRoute($found['route'], $found['params']);
+        }
+        
         // Маршрут не знайдено
-        // Для відлагодження (можна прибрати після тестування)
-        // error_log("Router::dispatch() - Route not found. URI: {$uri}, Method: {$method}, BasePath: {$this->basePath}, Routes count: " . count($this->routes));
         $this->show404();
         return false;
     }
@@ -416,37 +421,18 @@ class Router {
     
     /**
      * Отримання поточного маршруту (статичний метод для зворотної сумісності)
+     * Використовується в header.php та sidebar.php
      */
     public static function getCurrentPage(): string {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        $normalized = self::normalizeUriStatic($uri, '/admin');
         
-        // Видаляємо query string
-        if (($pos = strpos($uri, '?')) !== false) {
-            $uri = substr($uri, 0, $pos);
-        }
-        
-        // Видаляємо базовий шлях адмінки
-        $adminPath = '/admin';
-        if (strpos($uri, $adminPath) === 0) {
-            $uri = substr($uri, strlen($adminPath));
-        }
-        
-        // Видаляємо index.php
-        $uri = str_replace('index.php', '', $uri);
-        
-        // Видаляємо розширення .php якщо є
-        if (preg_match('/^(.+)\.php$/', $uri, $matches)) {
-            $uri = $matches[1];
-        }
-        
-        $uri = trim($uri, '/');
-        
-        // Якщо шлях порожній, повертаємо 'dashboard' для адмінки
-        if (empty($uri) && (strpos($_SERVER['REQUEST_URI'] ?? '/', '/admin') === 0)) {
+        // Для адмінки порожній шлях = dashboard
+        if (empty($normalized) && strpos($uri, '/admin') === 0) {
             return 'dashboard';
         }
         
-        return $uri;
+        return $normalized;
     }
     
     /**
@@ -476,16 +462,23 @@ class Router {
         if (function_exists('themeManager')) {
             $themeManager = themeManager();
             $themePath = $themeManager->getThemePath();
-            $error404File = $themePath . '404.php';
-            $file = new File($error404File);
-            
-            if ($file->exists()) {
-                include $error404File;
-                return;
+            if (!empty($themePath)) {
+                $error404File = $themePath . '404.php';
+                if (file_exists($error404File) && is_readable($error404File)) {
+                    include $error404File;
+                    return;
+                }
             }
         }
         
         // Стандартна сторінка 404
+        $this->renderDefault404();
+    }
+    
+    /**
+     * Рендеринг стандартної сторінки 404
+     */
+    private function renderDefault404(): void {
         echo '<!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -560,6 +553,4 @@ class Router {
     }
 }
 
-// Функція adminUrl видалена - використовуйте UrlHelper::admin()
-
-
+// Примітка: Функція adminUrl видалена - використовуйте UrlHelper::admin()
