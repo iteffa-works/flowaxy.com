@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 class Image {
     private string $filePath;
-    private $resource = null;
+    private ?\GdImage $resource = null;
     private int $width = 0;
     private int $height = 0;
     private int $type = IMAGETYPE_UNKNOWN;
@@ -168,7 +168,8 @@ class Image {
                 $newWidth, $newHeight
             );
             
-            imagedestroy($this->resource);
+            // В PHP 8.0+ GdImage об'єкти автоматично звільняють пам'ять
+            $this->resource = null;
             $this->resource = $newResource;
         } else {
             // Пропорциональное изменение размера
@@ -187,7 +188,8 @@ class Image {
                 $this->width, $this->height
             );
             
-            imagedestroy($this->resource);
+            // В PHP 8.0+ GdImage об'єкти автоматично звільняють пам'ять
+            $this->resource = null;
             $this->resource = $newResource;
         }
         
@@ -222,7 +224,8 @@ class Image {
             $width, $height
         );
         
-        imagedestroy($this->resource);
+        // В PHP 8.0+ GdImage об'єкти автоматично звільняють пам'ять
+        $this->resource = null;
         $this->resource = $newResource;
         $this->width = $width;
         $this->height = $height;
@@ -329,21 +332,21 @@ class Image {
     }
     
     /**
-     * Получение ресурса изображения
+     * Отримання ресурсу зображення
      * 
-     * @return resource|null
+     * @return \GdImage|null
      */
-    public function getResource() {
+    public function getResource(): ?\GdImage {
         return $this->resource;
     }
     
     /**
-     * Освобождение памяти
+     * Звільнення пам'яті
      */
     public function __destruct() {
-        if ($this->resource !== null && is_resource($this->resource)) {
-            imagedestroy($this->resource);
-        }
+        // В PHP 8.0+ GdImage об'єкти автоматично звільняють пам'ять через garbage collector
+        // Встановлення null достатньо для явного звільнення
+        $this->resource = null;
     }
     
     /**
