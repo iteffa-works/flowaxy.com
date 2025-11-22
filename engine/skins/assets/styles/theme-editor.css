@@ -710,20 +710,6 @@
     align-items: center;
 }
 
-#editor-status::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #28a745;
-    margin-right: 8px;
-    display: inline-block;
-}
-
-#editor-status.text-warning::before {
-    background: #ffc107;
-}
-
 /* Кнопки действий */
 .theme-editor-header .btn {
     font-size: 0.8125rem;
@@ -769,6 +755,16 @@
 
 .theme-editor-main .card-footer .d-flex {
     height: 100%;
+}
+
+/* Точка статуса */
+.editor-status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex-shrink: 0;
 }
 
 /* Модальные окна */

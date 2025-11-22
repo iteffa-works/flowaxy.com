@@ -129,29 +129,18 @@ function getCodeMirrorMode(extension) {
 function updateEditorStatus() {
     const statusEl = document.getElementById('editor-status');
     const cancelBtn = document.getElementById('cancel-btn');
+    const statusIcon = document.getElementById('editor-status-icon');
     
     if (!statusEl) {
         return;
     }
     
-    // Находим родительский элемент со статусом и иконкой
-    const statusContainer = statusEl.parentElement;
-    // Иконка находится перед статусом в том же контейнере
-    let statusIcon = statusContainer?.querySelector('i.fa-circle, i.fa-exclamation-circle');
-    
     if (isModified) {
         statusEl.textContent = 'Є незбережені зміни';
         statusEl.className = 'text-warning small';
-        // Меняем иконку на предупреждение
+        // Меняем точку на предупреждение (желтая)
         if (statusIcon) {
-            statusIcon.className = 'fas fa-exclamation-circle text-warning me-2';
-            statusIcon.style.fontSize = '0.625rem';
-        } else if (statusContainer) {
-            // Создаем иконку, если её нет
-            statusIcon = document.createElement('i');
-            statusIcon.className = 'fas fa-exclamation-circle text-warning me-2';
-            statusIcon.style.fontSize = '0.625rem';
-            statusContainer.insertBefore(statusIcon, statusEl);
+            statusIcon.className = 'editor-status-dot text-warning me-2';
         }
         // Показываем кнопку "Скасувати"
         if (cancelBtn) {
@@ -160,16 +149,9 @@ function updateEditorStatus() {
     } else {
         statusEl.textContent = 'Готово до редагування';
         statusEl.className = 'text-muted small';
-        // Меняем иконку на успех
+        // Меняем точку на успех (зеленая)
         if (statusIcon) {
-            statusIcon.className = 'fas fa-circle text-success me-2';
-            statusIcon.style.fontSize = '0.5rem';
-        } else if (statusContainer) {
-            // Создаем иконку, если её нет
-            statusIcon = document.createElement('i');
-            statusIcon.className = 'fas fa-circle text-success me-2';
-            statusIcon.style.fontSize = '0.5rem';
-            statusContainer.insertBefore(statusIcon, statusEl);
+            statusIcon.className = 'editor-status-dot text-success me-2';
         }
         // Скрываем кнопку "Скасувати"
         if (cancelBtn) {

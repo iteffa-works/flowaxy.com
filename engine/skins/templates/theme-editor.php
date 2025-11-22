@@ -180,7 +180,7 @@ if (!empty($message)) {
             <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
                 <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-circle text-success me-2" style="font-size: 0.5rem;"></i>
+                        <span id="editor-status-icon" class="editor-status-dot text-success me-2"></span>
                         <span class="text-muted small" id="editor-status">Готово до редагування</span>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
