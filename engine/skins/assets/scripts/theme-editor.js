@@ -1949,15 +1949,26 @@ function handleFileSelection(files) {
 function updateUploadFilesList() {
     const filesList = document.getElementById('upload-files-list');
     const filesItems = document.getElementById('upload-files-items');
+    const dropzone = document.getElementById('upload-dropzone');
     
     if (!filesList || !filesItems) return;
     
     if (selectedFiles.length === 0) {
         filesList.style.display = 'none';
+        // Показываем dropzone когда нет файлов
+        if (dropzone) {
+            dropzone.style.display = 'flex';
+        }
         return;
     }
     
-    filesList.style.display = 'block';
+    // Скрываем dropzone и показываем список файлов
+    if (dropzone) {
+        dropzone.style.display = 'none';
+    }
+    filesList.style.display = 'flex';
+    filesList.style.flexDirection = 'column';
+    filesList.style.height = '100%';
     
     filesItems.innerHTML = selectedFiles.map((file, index) => {
         const fileIcon = file.type.startsWith('image/') ? 'fa-image' : 

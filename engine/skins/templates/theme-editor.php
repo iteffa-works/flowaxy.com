@@ -191,21 +191,21 @@ if (!empty($message)) {
                 <div class="upload-files-container">
                     <div class="upload-dropzone" id="upload-dropzone">
                         <div class="upload-dropzone-content">
-                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                            <h5>Перетягніть файли або папки сюди</h5>
-                            <p class="text-muted mb-3">або</p>
-                            <button type="button" class="btn btn-primary" onclick="document.getElementById('uploadFilesInput').click()">
+                            <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-4"></i>
+                            <h4 class="mb-3">Перетягніть файли або папки сюди</h4>
+                            <p class="text-muted mb-4 fs-5">або</p>
+                            <button type="button" class="btn btn-primary btn-lg px-4 py-2" onclick="document.getElementById('uploadFilesInput').click()">
                                 <i class="fas fa-folder-open me-2"></i>Вибрати файли
                             </button>
                             <input type="file" id="uploadFilesInput" multiple webkitdirectory directory style="display: none;" onchange="handleFileSelection(this.files)">
-                            <p class="text-muted small mt-3 mb-0">Підтримується завантаження множинних файлів та папок</p>
+                            <p class="text-muted mt-4 mb-0">Підтримується завантаження множинних файлів та папок</p>
                         </div>
                     </div>
                     
                     <!-- Список выбранных файлов -->
-                    <div id="upload-files-list" class="upload-files-list mt-4" style="display: none;">
+                    <div id="upload-files-list" class="upload-files-list" style="display: none;">
                         <h6 class="mb-3">Вибрані файли для завантаження:</h6>
-                        <div id="upload-files-items"></div>
+                        <div id="upload-files-items" style="flex: 1; overflow-y: auto; min-height: 0; margin-bottom: 16px;"></div>
                         <div class="mt-3">
                             <label class="form-label">Виберіть цільову папку:</label>
                             <select class="form-select" id="upload-target-folder">
