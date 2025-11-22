@@ -1300,14 +1300,18 @@ function refreshFileTree() {
         return;
     }
     
+    // Получаем текущее значение настройки показа пустых папок из чекбокса
+    const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline') || document.getElementById('showEmptyFolders');
+    const showEmptyFolders = showEmptyCheckbox ? (showEmptyCheckbox.checked ? '1' : '0') : (editorSettings.showEmptyFolders ? '1' : '0');
+    
     // Используем AjaxHelper если доступен
     const url = window.location.href.split('?')[0];
     const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, { action: 'get_file_tree', theme: theme })
+        ? AjaxHelper.post(url, { action: 'get_file_tree', theme: theme, show_empty_folders: showEmptyFolders })
         : fetch(url, {
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: new URLSearchParams({ action: 'get_file_tree', theme: theme, csrf_token: document.querySelector('input[name="csrf_token"]')?.value || '' })
+            body: new URLSearchParams({ action: 'get_file_tree', theme: theme, show_empty_folders: showEmptyFolders, csrf_token: document.querySelector('input[name="csrf_token"]')?.value || '' })
         }).then(r => r.json());
     
     requestFn
@@ -1782,6 +1786,86 @@ function saveEditorSettings() {
 }
 
 /**
+ * Сохранение настроек редактора из футера (для режима настроек)
+ */
+function saveEditorSettingsFromFooter() {
+    // Получаем все элементы настроек
+    const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
+    const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
+    const showLineNumbers = document.getElementById('showLineNumbersInline');
+    const fontFamily = document.getElementById('editorFontFamilyInline');
+    const fontSize = document.getElementById('editorFontSizeInline');
+    const editorTheme = document.getElementById('editorThemeInline');
+    const indentSize = document.getElementById('editorIndentSizeInline');
+    const wordWrap = document.getElementById('wordWrapInline');
+    const autoSave = document.getElementById('autoSaveInline');
+    const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
+    
+    // Сохраняем старое значение для проверки изменений
+    const oldShowEmptyFolders = editorSettings.showEmptyFolders;
+    
+    // Формируем данные для отправки
+    const url = window.location.href.split('?')[0];
+    const formData = {
+        action: 'save_editor_settings',
+        show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
+        enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
+        show_line_numbers: showLineNumbers?.checked ? '1' : '0',
+        font_family: fontFamily?.value || "'Consolas', monospace",
+        font_size: fontSize?.value || '14',
+        editor_theme: editorTheme?.value || 'monokai',
+        indent_size: indentSize?.value || '4',
+        word_wrap: wordWrap?.checked ? '1' : '0',
+        auto_save: autoSave?.checked ? '1' : '0',
+        auto_save_interval: autoSaveInterval?.value || '60'
+    };
+    
+    if (typeof AjaxHelper !== 'undefined') {
+        isSaving = true;
+        AjaxHelper.post(url, formData)
+            .then(data => {
+                isSaving = false;
+                if (data.success) {
+                    // Обновляем глобальные настройки
+                    if (showEmptyCheckbox) editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
+                    if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
+                    
+                    // Применяем настройки к редактору
+                    applyEditorSettingsToCodeMirror();
+                    
+                    // Обновляем дерево файлов, если изменилась настройка показа пустых папок
+                    if (showEmptyCheckbox && oldShowEmptyFolders !== showEmptyCheckbox.checked) {
+                        refreshFileTree();
+                    }
+                    
+                    // Обновляем статус в футере
+                    const statusText = document.getElementById('editor-status');
+                    if (statusText) {
+                        statusText.textContent = 'Налаштування збережено';
+                        statusText.className = 'text-success small';
+                        // Через 2 секунды возвращаем обычный статус
+                        setTimeout(function() {
+                            statusText.textContent = 'Налаштування готові';
+                            statusText.className = 'text-muted small';
+                        }, 2000);
+                    }
+                    
+                    showNotification('Налаштування збережено', 'success');
+                } else {
+                    showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+                }
+            })
+            .catch(error => {
+                isSaving = false;
+                console.error('Error:', error);
+                showNotification('Помилка збереження налаштувань', 'danger');
+            });
+    } else {
+        showNotification('Помилка: AjaxHelper не доступний', 'danger');
+    }
+}
+
+/**
  * Скрыть встроенные режимы (загрузка файлов, настройки) и показать редактор
  */
 function hideEmbeddedModes() {
@@ -2002,7 +2086,7 @@ function showEditorSettings() {
         if (statusText) {
             statusText.style.display = 'block';
             statusText.style.visibility = 'visible';
-            statusText.textContent = 'Готово до редагування';
+            statusText.textContent = 'Налаштування готові';
         }
         const statusIcon = editorFooter.querySelector('#editor-status-icon');
         if (statusIcon) {
@@ -2014,20 +2098,17 @@ function showEditorSettings() {
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
-        // Восстанавливаем оригинальную кнопку "Зберегти" если была изменена
+        // Изменяем кнопку "Зберегти" для сохранения настроек
         const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
         if (saveBtn) {
-            // Восстанавливаем оригинальные значения если были сохранены
-            if (saveBtn.getAttribute('data-original-onclick')) {
-                saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
-                saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
-                saveBtn.removeAttribute('data-original-onclick');
-                saveBtn.removeAttribute('data-original-html');
-            } else if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
-                // Если нет сохраненных значений, восстанавливаем вручную
-                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
-                saveBtn.setAttribute('onclick', 'saveFile()');
+            // Сохраняем оригинальные значения если они еще не сохранены
+            if (!saveBtn.getAttribute('data-original-onclick')) {
+                saveBtn.setAttribute('data-original-onclick', saveBtn.getAttribute('onclick') || 'saveFile()');
+                saveBtn.setAttribute('data-original-html', saveBtn.innerHTML);
             }
+            // Устанавливаем обработчик для сохранения настроек
+            saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
+            saveBtn.setAttribute('onclick', 'saveEditorSettingsFromFooter()');
             // Оставляем кнопку видимой
             saveBtn.style.display = '';
         }

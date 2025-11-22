@@ -791,7 +791,16 @@ class ThemeEditorPage extends AdminPage {
         
         // Завантажуємо налаштування редактора
         $editorSettings = $this->loadEditorSettings();
-        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '1') === '1';
+        
+        // Отримуємо значення show_empty_folders з POST (якщо передано) або з налаштувань
+        $showEmptyFoldersParam = Request::post('show_empty_folders', '');
+        if ($showEmptyFoldersParam !== '') {
+            // Якщо передано в POST, використовуємо його
+            $showEmptyFolders = $showEmptyFoldersParam === '1';
+        } else {
+            // Інакше використовуємо з налаштувань
+            $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '1') === '1';
+        }
         
         // Отримуємо список файлів теми
         $themeFiles = $this->editorManager->getThemeFiles($themePath);
