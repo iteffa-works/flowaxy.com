@@ -88,6 +88,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Инициализация древовидной структуры файлов
     initFileTree();
+    
+    // Проверяем наличие параметра folder в URL - если есть, показываем режим загрузки
+    const urlParams = new URLSearchParams(window.location.search);
+    const folder = urlParams.get('folder');
+    if (folder) {
+        // Небольшая задержка чтобы дерево файлов успело инициализироваться
+        setTimeout(function() {
+            showUploadFiles(folder);
+        }, 300);
+    }
 });
 
 /**
@@ -1234,6 +1244,8 @@ function loadFileInEditor(filePath) {
             // Обновляем URL без перезагрузки
             const url = new URL(window.location.href);
             url.searchParams.set('file', filePath);
+            // Удаляем параметр folder, так как мы открываем файл
+            url.searchParams.delete('folder');
             window.history.pushState({ path: url.href }, '', url.href);
         } else {
             showNotification(data.error || 'Помилка завантаження файлу', 'danger');
@@ -1784,15 +1796,44 @@ function showUploadFiles(targetFolder = '') {
             }
         }
         
+        // Обновляем URL с параметром folder
+        const theme = new URLSearchParams(window.location.search).get('theme') || '';
+        const url = new URL(window.location.href);
+        url.searchParams.set('theme', theme);
+        if (targetFolder) {
+            url.searchParams.set('folder', targetFolder);
+        } else {
+            url.searchParams.delete('folder');
+        }
+        // Удаляем параметр file, так как мы в режиме загрузки
+        url.searchParams.delete('file');
+        window.history.pushState({ path: url.href }, '', url.href);
+        
         // Обновляем заголовок при изменении целевой папки
         const select = document.getElementById('upload-target-folder');
         if (select) {
-            select.addEventListener('change', function() {
+            // Убираем старые обработчики чтобы избежать дублирования
+            const newSelect = select.cloneNode(true);
+            select.parentNode.replaceChild(newSelect, select);
+            
+            newSelect.addEventListener('change', function() {
                 const fileTitle = editorHeader?.querySelector('.editor-file-title');
                 if (fileTitle) {
                     const uploadPath = this.value || 'Коренева папка теми';
                     fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
                 }
+                
+                // Обновляем URL с выбранной папкой
+                const theme = new URLSearchParams(window.location.search).get('theme') || '';
+                const url = new URL(window.location.href);
+                url.searchParams.set('theme', theme);
+                if (this.value) {
+                    url.searchParams.set('folder', this.value);
+                } else {
+                    url.searchParams.delete('folder');
+                }
+                url.searchParams.delete('file');
+                window.history.pushState({ path: url.href }, '', url.href);
             });
         }
     }
@@ -1816,6 +1857,14 @@ function showEditorSettings() {
     // Показываем хедер и футер (они должны быть видимы, как в редакторе)
     const editorHeader = document.getElementById('editor-header');
     const editorFooter = document.getElementById('editor-footer');
+    
+    // Обновляем URL - удаляем параметры file и folder, так как мы в режиме настроек
+    const theme = new URLSearchParams(window.location.search).get('theme') || '';
+    const url = new URL(window.location.href);
+    url.searchParams.set('theme', theme);
+    url.searchParams.delete('file');
+    url.searchParams.delete('folder');
+    window.history.pushState({ path: url.href }, '', url.href);
     
     // Показываем хедер и футер (они остаются как в редакторе, без изменений)
     // Хедер и футер остаются видимыми с их оригинальным содержимым (текущий файл, статус, кнопки)
