@@ -3,13 +3,16 @@
  * Клас для роботи з INI файлами
  * Читання, запис та маніпуляції з INI конфігураційними файлами
  * 
- * @package Engine\Classes
+ * @package Engine\Classes\Files
  * @version 1.0.0
  */
 
 declare(strict_types=1);
 
-class Ini {
+require_once __DIR__ . '/../../interfaces/FileInterface.php';
+require_once __DIR__ . '/../../interfaces/StructuredFileInterface.php';
+
+class Ini implements StructuredFileInterface {
     private string $filePath;
     private array $data = [];
     private bool $hasData = false;
@@ -544,6 +547,7 @@ class Ini {
     
     /**
      * Статичний метод: Видалення ключа з INI файлу
+     * Перейменовано з delete() щоб уникнути конфлікту з FileInterface::delete()
      * 
      * @param string $path Шлях до INI файлу
      * @param string $key Ключ для видалення
@@ -551,7 +555,7 @@ class Ini {
      * @return bool
      * @throws Exception Якщо файл не існує або не вдалося видалити
      */
-    public static function delete(string $path, string $key, bool $processSections = true): bool {
+    public static function deleteKey(string $path, string $key, bool $processSections = true): bool {
         if (!file_exists($path)) {
             return false;
         }
@@ -571,31 +575,33 @@ class Ini {
             $ini->remove($key);
             return $ini->save();
         } catch (Exception $e) {
-            error_log("Ini::delete помилка: " . $e->getMessage());
+            error_log("Ini::deleteKey помилка: " . $e->getMessage());
             return false;
         }
     }
     
     /**
      * Статичний метод: Читання INI файлу
+     * Перейменовано з read() щоб уникнути конфлікту з FileInterface::read()
      * 
      * @param string $path Шлях до INI файлу
      * @param bool $processSections Обробляти чи секції
      * @param int $mode Режим парсингу
      * @return array
      */
-    public static function read(string $path, bool $processSections = true, int $mode = INI_SCANNER_NORMAL): array {
+    public static function readFile(string $path, bool $processSections = true, int $mode = INI_SCANNER_NORMAL): array {
         return self::parse($path, $processSections, $mode);
     }
     
     /**
      * Статичний метод: Запис даних у INI файл
+     * Перейменовано з write() щоб уникнути конфлікту з FileInterface::write()
      * 
      * @param string $path Шлях до INI файлу
      * @param array $data Дані для запису
      * @return bool
      */
-    public static function write(string $path, array $data): bool {
+    public static function writeFile(string $path, array $data): bool {
         try {
             $ini = new self($path);
             // Використовуємо методи для встановлення даних
@@ -613,6 +619,279 @@ class Ini {
             error_log("Ini::write помилка: " . $e->getMessage());
             return false;
         }
+    }
+    
+    // ===== Реалізація методів з FileInterface =====
+    
+    /**
+     * Встановлення шляху до файлу (з FileInterface)
+     * Аліас для setFile()
+     * 
+     * @param string $filePath Шлях до файлу
+     * @return self
+     */
+    public function setPath(string $filePath): self {
+        return $this->setFile($filePath);
+    }
+    
+    /**
+     * Отримання шляху до файлу (з FileInterface)
+     * Аліас для getFilePath()
+     * 
+     * @return string
+     */
+    public function getPath(): string {
+        return $this->getFilePath();
+    }
+    
+    /**
+     * Перевірка існування файлу (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function exists(): bool {
+        return !empty($this->filePath) && file_exists($this->filePath) && is_file($this->filePath);
+    }
+    
+    /**
+     * Читання вмісту файлу (з FileInterface)
+     * 
+     * @return string
+     * @throws Exception
+     */
+    public function read(): string {
+        if (!$this->exists()) {
+            throw new Exception("Файл не існує: {$this->filePath}");
+        }
+        
+        $content = @file_get_contents($this->filePath);
+        if ($content === false) {
+            throw new Exception("Не вдалося прочитати файл: {$this->filePath}");
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Запис вмісту в файл (з FileInterface)
+     * 
+     * @param string $content Вміст для запису
+     * @param bool $append Додавати в кінець файлу
+     * @return bool
+     * @throws Exception
+     */
+    public function write(string $content, bool $append = false): bool {
+        if (empty($this->filePath)) {
+            throw new Exception("Шлях до файлу не встановлено");
+        }
+        
+        $dir = dirname($this->filePath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        $flags = $append ? FILE_APPEND | LOCK_EX : LOCK_EX;
+        $result = @file_put_contents($this->filePath, $content, $flags);
+        
+        if ($result === false) {
+            throw new Exception("Не вдалося записати файл: {$this->filePath}");
+        }
+        
+        @chmod($this->filePath, 0644);
+        return true;
+    }
+    
+    /**
+     * Копіювання файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function copy(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@copy($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося скопіювати файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        @chmod($destinationPath, 0644);
+        return true;
+    }
+    
+    /**
+     * Переміщення/перейменування файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function move(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@rename($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося перемістити файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        $this->filePath = $destinationPath;
+        return true;
+    }
+    
+    /**
+     * Видалення файлу (з FileInterface)
+     * 
+     * @return bool
+     * @throws Exception
+     */
+    public function delete(): bool {
+        if (!$this->exists()) {
+            return true;
+        }
+        
+        if (!@unlink($this->filePath)) {
+            throw new Exception("Не вдалося видалити файл: {$this->filePath}");
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Отримання розміру файлу (з FileInterface)
+     * 
+     * @return int
+     */
+    public function getSize(): int {
+        return $this->exists() ? filesize($this->filePath) : 0;
+    }
+    
+    /**
+     * Отримання MIME типу файлу (з FileInterface)
+     * 
+     * @return string|false
+     */
+    public function getMimeType() {
+        if (!$this->exists()) {
+            return false;
+        }
+        
+        if (function_exists('mime_content_type')) {
+            return @mime_content_type($this->filePath);
+        }
+        
+        if (function_exists('finfo_file')) {
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo === false) {
+                return false;
+            }
+            
+            $mimeType = @finfo_file($finfo, $this->filePath);
+            // finfo_close() is deprecated in PHP 8.1+, resource is automatically closed
+            return $mimeType;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Отримання часу останньої зміни (з FileInterface)
+     * 
+     * @return int|false
+     */
+    public function getMTime() {
+        return $this->exists() ? @filemtime($this->filePath) : false;
+    }
+    
+    /**
+     * Отримання розширення файлу (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getExtension(): string {
+        return !empty($this->filePath) ? strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION)) : '';
+    }
+    
+    /**
+     * Отримання імені файлу з розширенням (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getBasename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_BASENAME) : '';
+    }
+    
+    /**
+     * Отримання імені файлу без шляху та розширення (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getFilename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_FILENAME) : '';
+    }
+    
+    /**
+     * Перевірка доступності файлу для читання (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isReadable(): bool {
+        return $this->exists() && is_readable($this->filePath);
+    }
+    
+    /**
+     * Перевірка доступності файлу для запису (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isWritable(): bool {
+        return $this->exists() && is_writable($this->filePath);
+    }
+    
+    // ===== Методи з StructuredFileInterface =====
+    
+    /**
+     * Отримання даних (з StructuredFileInterface)
+     * 
+     * @return mixed
+     */
+    public function getData() {
+        return $this->hasData ? $this->data : null;
+    }
+    
+    /**
+     * Встановлення даних (з StructuredFileInterface)
+     * 
+     * @param mixed $data Дані
+     * @return self
+     */
+    public function setData($data): self {
+        if (is_array($data)) {
+            $this->data = $data;
+            $this->hasData = true;
+        }
+        return $this;
+    }
+    
+    /**
+     * Перевірка наявності завантажених даних (з StructuredFileInterface)
+     * 
+     * @return bool
+     */
+    public function hasData(): bool {
+        return $this->hasData;
     }
 }
 
