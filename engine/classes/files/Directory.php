@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-if (!class_exists('Directory')) {
+if (!class_exists('Directory', false)) {
     class Directory {
         private string $path;
         
@@ -19,67 +19,67 @@ if (!class_exists('Directory')) {
          * @param string|null $path Шлях до директорії
          */
         public function __construct(?string $path = null) {
-        if ($path !== null) {
-            $this->setPath($path);
+            if ($path !== null) {
+                $this->setPath($path);
+            }
         }
-    }
-    
-    /**
-     * Встановлення шляху до директорії
-     * 
-     * @param string $path Шлях до директорії
-     * @return self
-     */
-    public function setPath(string $path): self {
-        $this->path = rtrim($path, '/\\') . DIRECTORY_SEPARATOR;
-        return $this;
-    }
-    
-    /**
-     * Отримання шляху до директорії
-     * 
-     * @return string
-     */
-    public function getPath(): string {
-        return $this->path;
-    }
-    
-    /**
-     * Перевірка існування директорії
-     * 
-     * @return bool
-     */
-    public function exists(): bool {
-        return is_dir($this->path);
-    }
-    
-    /**
-     * Перевірка, чи є директорія читабельною
-     * 
-     * @return bool
-     */
-    public function isReadable(): bool {
-        return $this->exists() && is_readable($this->path);
-    }
-    
-    /**
-     * Перевірка, чи є директорія доступною для запису
-     * 
-     * @return bool
-     */
-    public function isWritable(): bool {
-        return $this->exists() && is_writable($this->path);
-    }
-    
-    /**
-     * Створення директорії
-     * 
-     * @param int $mode Права доступу (за замовчуванням 0755)
-     * @param bool $recursive Створювати чи вкладені директорії
-     * @return bool
-     * @throws Exception Якщо не вдалося створити
-     */
-    public function create(int $mode = 0755, bool $recursive = true): bool {
+        
+        /**
+         * Встановлення шляху до директорії
+         * 
+         * @param string $path Шлях до директорії
+         * @return self
+         */
+        public function setPath(string $path): self {
+            $this->path = rtrim($path, '/\\') . DIRECTORY_SEPARATOR;
+            return $this;
+        }
+        
+        /**
+         * Отримання шляху до директорії
+         * 
+         * @return string
+         */
+        public function getPath(): string {
+            return $this->path;
+        }
+        
+        /**
+         * Перевірка існування директорії
+         * 
+         * @return bool
+         */
+        public function exists(): bool {
+            return is_dir($this->path);
+        }
+        
+        /**
+         * Перевірка, чи є директорія читабельною
+         * 
+         * @return bool
+         */
+        public function isReadable(): bool {
+            return $this->exists() && is_readable($this->path);
+        }
+        
+        /**
+         * Перевірка, чи є директорія доступною для запису
+         * 
+         * @return bool
+         */
+        public function isWritable(): bool {
+            return $this->exists() && is_writable($this->path);
+        }
+        
+        /**
+         * Створення директорії
+         * 
+         * @param int $mode Права доступу (за замовчуванням 0755)
+         * @param bool $recursive Створювати чи вкладені директорії
+         * @return bool
+         * @throws Exception Якщо не вдалося створити
+         */
+        public function create(int $mode = 0755, bool $recursive = true): bool {
             if ($this->exists()) {
                 return true; // Директорія вже існує
             }
@@ -435,4 +435,3 @@ if (!class_exists('Directory')) {
         }
     }
 }
-
