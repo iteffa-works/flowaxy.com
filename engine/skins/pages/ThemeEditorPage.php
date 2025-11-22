@@ -34,6 +34,7 @@ class ThemeEditorPage extends AdminPage {
         // Додаємо CSS та JS для редактора
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css';
+        $this->additionalCSS[] = UrlHelper::admin('assets/styles/theme-editor.css') . '?v=' . time();
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js';
@@ -41,6 +42,7 @@ class ThemeEditorPage extends AdminPage {
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js';
+        $this->additionalJS[] = UrlHelper::admin('assets/scripts/theme-editor.js') . '?v=' . time();
     }
     
     public function handle(): void {
@@ -102,6 +104,9 @@ class ThemeEditorPage extends AdminPage {
         // Отримуємо список файлів теми
         $themeFiles = $this->editorManager->getThemeFiles($themePath);
         
+        // Створюємо древовидну структуру файлів
+        $fileTree = $this->buildFileTree($themeFiles);
+        
         // Отримуємо вміст вибраного файлу
         $selectedFile = $request->query('file', '');
         $fileContent = null;
@@ -118,6 +123,7 @@ class ThemeEditorPage extends AdminPage {
             'theme' => $theme,
             'themePath' => $themePath,
             'themeFiles' => $themeFiles,
+            'fileTree' => $fileTree,
             'selectedFile' => $selectedFile,
             'fileContent' => $fileContent,
             'fileExtension' => $fileExtension
@@ -291,6 +297,74 @@ class ThemeEditorPage extends AdminPage {
             $this->sendJsonResponse($result, 200);
         } else {
             $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * Побудова древовидної структури файлів
+     */
+    private function buildFileTree(array $files): array {
+        $tree = [];
+        
+        foreach ($files as $file) {
+            $path = $file['path'];
+            $parts = explode('/', $path);
+            $current = &$tree;
+            
+            // Проходимо по всіх частинах шляху
+            for ($i = 0; $i < count($parts) - 1; $i++) {
+                $part = $parts[$i];
+                
+                if (!isset($current[$part])) {
+                    $current[$part] = [
+                        'type' => 'folder',
+                        'name' => $part,
+                        'path' => implode('/', array_slice($parts, 0, $i + 1)),
+                        'children' => []
+                    ];
+                }
+                
+                $current = &$current[$part]['children'];
+            }
+            
+            // Додаємо файл
+            $fileName = $parts[count($parts) - 1];
+            $current[$fileName] = [
+                'type' => 'file',
+                'name' => $fileName,
+                'path' => $path,
+                'data' => $file
+            ];
+        }
+        
+        // Сортуємо: спочатку папки, потім файли
+        $this->sortFileTree($tree);
+        
+        return $tree;
+    }
+    
+    /**
+     * Сортування древовидної структури
+     */
+    private function sortFileTree(array &$tree): void {
+        uksort($tree, function($a, $b) use ($tree) {
+            $aIsFolder = isset($tree[$a]['type']) && $tree[$a]['type'] === 'folder';
+            $bIsFolder = isset($tree[$b]['type']) && $tree[$b]['type'] === 'folder';
+            
+            if ($aIsFolder && !$bIsFolder) {
+                return -1;
+            }
+            if (!$aIsFolder && $bIsFolder) {
+                return 1;
+            }
+            
+            return strcmp($a, $b);
+        });
+        
+        foreach ($tree as &$item) {
+            if (isset($item['children'])) {
+                $this->sortFileTree($item['children']);
+            }
         }
     }
 }
