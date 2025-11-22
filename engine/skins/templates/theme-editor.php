@@ -136,53 +136,52 @@ if (!empty($message)) {
         
         <!-- Область редактирования -->
         <div class="theme-editor-main">
-            <?php if ($selectedFile && $fileContent !== null): ?>
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-0 editor-file-title">
-                                <i class="fas fa-file-code me-2"></i><?= htmlspecialchars(basename($selectedFile)) ?>
-                            </h6>
-                            <small class="text-muted editor-file-path"><?= htmlspecialchars($selectedFile) ?></small>
-                        </div>
-                        <div>
-                            <span class="badge bg-secondary me-2"><?= strtoupper($fileExtension) ?></span>
-                            <span class="text-muted small">
-                                <?= formatBytes($themeFiles[array_search($selectedFile, array_column($themeFiles, 'path'), true)]['size'] ?? 0) ?>
-                            </span>
-                        </div>
+            <!-- Структура редактора (всегда присутствует, скрывается если нет файла) -->
+            <div class="card-header" id="editor-header" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 editor-file-title">
+                            <i class="fas fa-file-code me-2"></i><?= $selectedFile ? htmlspecialchars(basename($selectedFile)) : '' ?>
+                        </h6>
+                        <small class="text-muted editor-file-path"><?= $selectedFile ? htmlspecialchars($selectedFile) : '' ?></small>
+                    </div>
+                    <div>
+                        <span class="badge bg-secondary me-2" id="editor-extension"><?= $selectedFile ? strtoupper($fileExtension ?? '') : '' ?></span>
+                        <span class="text-muted small" id="editor-size">
+                            <?= ($selectedFile && isset($themeFiles)) ? formatBytes($themeFiles[array_search($selectedFile, array_column($themeFiles, 'path'), true)]['size'] ?? 0) : '' ?>
+                        </span>
                     </div>
                 </div>
-                <div class="card-body">
-                    <textarea id="theme-file-editor" 
-                              data-theme="<?= htmlspecialchars($theme['slug']) ?>"
-                              data-file="<?= htmlspecialchars($selectedFile) ?>"
-                              data-extension="<?= htmlspecialchars($fileExtension) ?>"><?= htmlspecialchars($fileContent) ?></textarea>
-                </div>
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="text-muted small" id="editor-status">Готово до редагування</span>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetEditor()">
-                                <i class="fas fa-undo me-1"></i>Скасувати
-                            </button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="saveFile()">
-                                <i class="fas fa-save me-1"></i>Зберегти
-                            </button>
-                        </div>
+            </div>
+            <div class="card-body" id="editor-body" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
+                <textarea id="theme-file-editor" 
+                          data-theme="<?= htmlspecialchars($theme['slug']) ?>"
+                          data-file="<?= $selectedFile ? htmlspecialchars($selectedFile) : '' ?>"
+                          data-extension="<?= $selectedFile ? htmlspecialchars($fileExtension ?? '') : '' ?>"><?= ($selectedFile && $fileContent !== null) ? htmlspecialchars($fileContent) : '' ?></textarea>
+            </div>
+            <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small" id="editor-status">Готово до редагування</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetEditor()">
+                            <i class="fas fa-undo me-1"></i>Скасувати
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveFile()">
+                            <i class="fas fa-save me-1"></i>Зберегти
+                        </button>
                     </div>
                 </div>
-            <?php else: ?>
-                <div class="card-body">
-                    <div class="editor-placeholder">
-                        <i class="fas fa-file-code"></i>
-                        <h5>Оберіть файл для редагування</h5>
-                        <p>Виберіть файл зі списку зліва, щоб почати редагування</p>
-                    </div>
+            </div>
+            <!-- Placeholder (показывается если нет файла) -->
+            <div class="card-body editor-placeholder-wrapper" style="<?= ($selectedFile && $fileContent !== null) ? 'display: none;' : '' ?>">
+                <div class="editor-placeholder">
+                    <i class="fas fa-file-code"></i>
+                    <h5>Оберіть файл для редагування</h5>
+                    <p>Виберіть файл зі списку зліва, щоб почати редагування</p>
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>

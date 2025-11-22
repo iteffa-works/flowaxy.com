@@ -946,8 +946,48 @@ function loadFileInEditor(filePath) {
                 fileWrapper.classList.add('active');
             }
             
+            // Показываем редактор, скрываем placeholder
+            const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
+            const editorHeader = document.getElementById('editor-header');
+            const editorBody = document.getElementById('editor-body');
+            const editorFooter = document.getElementById('editor-footer');
+            
+            if (editorPlaceholder) {
+                editorPlaceholder.style.display = 'none';
+            }
+            if (editorHeader) {
+                editorHeader.style.display = 'block';
+            }
+            if (editorBody) {
+                editorBody.style.display = 'block';
+            }
+            if (editorFooter) {
+                editorFooter.style.display = 'block';
+            }
+            
+            // Убеждаемся, что textarea существует и обновлен
+            let textareaEl = document.getElementById('theme-file-editor');
+            if (!textareaEl) {
+                // Создаем textarea если его нет
+                if (editorBody) {
+                    textareaEl = document.createElement('textarea');
+                    textareaEl.id = 'theme-file-editor';
+                    editorBody.appendChild(textareaEl);
+                }
+            }
+            
+            if (textareaEl) {
+                // Обновляем атрибуты textarea
+                const extension = filePath.split('.').pop() || '';
+                textareaEl.setAttribute('data-theme', theme);
+                textareaEl.setAttribute('data-file', filePath);
+                textareaEl.setAttribute('data-extension', extension);
+                textareaEl.value = data.content;
+            }
+            
             // Загружаем содержимое в редактор
             if (codeEditor) {
+                // Если редактор уже инициализирован, обновляем его
                 codeEditor.setValue(data.content);
                 originalContent = data.content;
                 isModified = false;
@@ -957,19 +997,11 @@ function loadFileInEditor(filePath) {
                 const extension = filePath.split('.').pop() || '';
                 const mode = getCodeMirrorMode(extension);
                 codeEditor.setOption('mode', mode);
+                codeEditor.refresh();
             } else {
-                // Если редактор еще не инициализирован, обновляем textarea
-                const textarea = document.getElementById('theme-file-editor');
-                if (textarea) {
-                    const extension = filePath.split('.').pop() || '';
-                    textarea.value = data.content;
-                    textarea.setAttribute('data-file', filePath);
-                    textarea.setAttribute('data-extension', extension);
-                    
-                    // Инициализируем редактор, если он еще не создан
-                    if (typeof CodeMirror !== 'undefined') {
-                        initCodeMirror();
-                    }
+                // Если редактор еще не инициализирован, инициализируем его
+                if (typeof CodeMirror !== 'undefined' && textareaEl) {
+                    initCodeMirror();
                 }
             }
             
@@ -991,16 +1023,6 @@ function loadFileInEditor(filePath) {
             }
             if (filePathEl) {
                 filePathEl.textContent = filePath;
-            }
-            
-            // Показываем редактор, скрываем placeholder
-            const editorPlaceholder = document.querySelector('.editor-placeholder');
-            const editorCard = document.querySelector('.theme-editor-main');
-            if (editorPlaceholder) {
-                editorPlaceholder.style.display = 'none';
-            }
-            if (editorCard) {
-                editorCard.style.display = 'block';
             }
             
             // Прокручиваем к активному файлу
