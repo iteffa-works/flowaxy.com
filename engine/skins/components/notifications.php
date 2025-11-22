@@ -10,9 +10,10 @@
 <style>
 .notifications-container {
     position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: calc(var(--header-height, 40px) + 3px + 10px);
+    right: 20px;
+    left: auto;
+    transform: none;
     z-index: 10000;
     display: flex;
     flex-direction: column;
@@ -37,6 +38,7 @@
     border-left: 3px solid;
     animation: slideInRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     transform-origin: right center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .notification.fade-out {
@@ -186,7 +188,7 @@
 /* Адаптивность */
 @media (max-width: 768px) {
     .notifications-container {
-        bottom: 10px;
+        top: calc(var(--header-height-mobile, 48px) + 3px + 10px);
         left: 10px;
         right: 10px;
         transform: none;
