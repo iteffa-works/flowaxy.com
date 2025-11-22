@@ -534,7 +534,7 @@
 
 .theme-editor-main .card-header {
     padding: 0 16px;
-    border-bottom: none;
+    border-bottom: 1px solid #dee2e6;
     flex-shrink: 0;
     background: #fff;
     border-radius: 0;

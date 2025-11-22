@@ -1704,7 +1704,7 @@ function showUploadFiles(targetFolder = '') {
         const fileTitle = editorHeader.querySelector('.editor-file-title');
         if (fileTitle) {
             const uploadPath = targetFolder ? targetFolder : 'Коренева папка теми';
-            fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли: ' + uploadPath;
+            fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
         }
         // Скрываем информацию о файле (PHP 481 B)
         const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
@@ -1779,7 +1779,7 @@ function showUploadFiles(targetFolder = '') {
                 const fileTitle = editorHeader?.querySelector('.editor-file-title');
                 if (fileTitle) {
                     const uploadPath = targetFolder || 'Коренева папка теми';
-                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли: ' + uploadPath;
+                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
                 }
             }
         }
@@ -1791,7 +1791,7 @@ function showUploadFiles(targetFolder = '') {
                 const fileTitle = editorHeader?.querySelector('.editor-file-title');
                 if (fileTitle) {
                     const uploadPath = this.value || 'Коренева папка теми';
-                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли: ' + uploadPath;
+                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
                 }
             });
         }
