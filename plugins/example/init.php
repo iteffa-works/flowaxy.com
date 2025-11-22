@@ -51,7 +51,7 @@ class ExamplePlugin extends BasePlugin {
         $adminMenuItems = [
             // Категорія: CMS (Основні функції системи)
             [
-                'text' => 'CMS',
+                'text' => 'Платформа',
                 'icon' => 'fas fa-cube',
                 'href' => '#',
                 'page' => 'cms',
@@ -85,7 +85,7 @@ class ExamplePlugin extends BasePlugin {
                     [
                         'text' => 'Редактор теми',
                         'icon' => 'fas fa-code',
-                        'href' => UrlHelper::admin('theme-editor'),
+                        'href' => UrlHelper::admin('theme-editor?theme=example'),
                         'page' => 'theme-editor',
                         'order' => 4,
                         'permission' => 'admin.themes.edit'
