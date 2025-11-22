@@ -9,7 +9,9 @@
 
 declare(strict_types=1);
 
-class AjaxHandler {
+require_once __DIR__ . '/../../interfaces/AjaxHandlerInterface.php';
+
+class AjaxHandler implements AjaxHandlerInterface {
     private array $actions = [];
     private bool $requireCsrf = true;
     private bool $requireAuth = true;
