@@ -8,7 +8,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/AdminPage.php';
 require_once __DIR__ . '/../../classes/managers/ThemeEditorManager.php';
 require_once __DIR__ . '/../../classes/files/File.php';
-// Directory завантажується через autoloader, не потрібно require_once
+require_once __DIR__ . '/../../classes/files/Directory.php';
 require_once __DIR__ . '/../../classes/files/Ini.php';
 require_once __DIR__ . '/../../classes/files/Zip.php';
 require_once __DIR__ . '/../../classes/data/Logger.php';
@@ -618,9 +618,24 @@ class ThemeEditorPage extends AdminPage {
         $folders = [];
         
         try {
-            // Використовуємо стандартні PHP функції для перевірки
-            if (!is_dir($themePath) || !is_readable($themePath)) {
-                return $folders;
+            // Використовуємо клас Directory для перевірки
+            // Переконуємося, що клас завантажений та має всі необхідні методи
+            if (!class_exists('Directory')) {
+                require_once __DIR__ . '/../../classes/files/Directory.php';
+            }
+            
+            // Перевіряємо, що клас має метод exists()
+            if (!method_exists('Directory', 'exists')) {
+                Logger::getInstance()->logError("Directory class doesn't have exists() method. Using fallback.");
+                // Використовуємо стандартні PHP функції як fallback
+                if (!is_dir($themePath) || !is_readable($themePath)) {
+                    return $folders;
+                }
+            } else {
+                $dir = new Directory($themePath);
+                if (!$dir->exists() || !$dir->isReadable()) {
+                    return $folders;
+                }
             }
             
             $iterator = new RecursiveIteratorIterator(
