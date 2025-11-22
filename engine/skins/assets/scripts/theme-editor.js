@@ -1218,15 +1218,10 @@ function loadFileInEditor(filePath) {
             // Обновляем заголовок файла
             const fileTitle = document.querySelector('.editor-file-title');
             if (fileTitle) {
-                const icon = fileTitle.querySelector('i');
                 fileTitle.innerHTML = '';
-                if (icon) {
-                    fileTitle.appendChild(icon);
-                } else {
-                    const newIcon = document.createElement('i');
-                    newIcon.className = 'fas fa-file-code me-2';
-                    fileTitle.appendChild(newIcon);
-                }
+                const newIcon = document.createElement('i');
+                newIcon.className = 'fas fa-edit me-2';
+                fileTitle.appendChild(newIcon);
                 fileTitle.appendChild(document.createTextNode(filePath));
             }
             
@@ -1517,11 +1512,22 @@ function autoSaveEditorSettings() {
         
         // Если используется AjaxHelper, используем его
         if (typeof AjaxHelper !== 'undefined') {
-            AjaxHelper.post(url, {
+            // Собираем все настройки
+            const formData = {
                 action: 'save_editor_settings',
                 show_empty_folders: newShowEmptyFolders ? '1' : '0',
-                enable_syntax_highlighting: newHighlighting ? '1' : '0'
-            })
+                enable_syntax_highlighting: newHighlighting ? '1' : '0',
+                show_line_numbers: (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0',
+                font_family: (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Consolas', monospace",
+                font_size: (document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize'))?.value || '14',
+                editor_theme: (document.getElementById('editorThemeInline') || document.getElementById('editorTheme'))?.value || 'monokai',
+                indent_size: (document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize'))?.value || '4',
+                word_wrap: (document.getElementById('wordWrapInline') || document.getElementById('wordWrap'))?.checked ? '1' : '0',
+                auto_save: (document.getElementById('autoSaveInline') || document.getElementById('autoSave'))?.checked ? '1' : '0',
+                auto_save_interval: (document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval'))?.value || '60'
+            };
+            
+            AjaxHelper.post(url, formData)
             .then(data => {
                 isSaving = false;
                 
@@ -1563,6 +1569,14 @@ function autoSaveEditorSettings() {
         formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
         formData.append('show_empty_folders', newShowEmptyFolders ? '1' : '0');
         formData.append('enable_syntax_highlighting', newHighlighting ? '1' : '0');
+        formData.append('show_line_numbers', (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0');
+        formData.append('font_family', (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Consolas', monospace");
+        formData.append('font_size', (document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize'))?.value || '14');
+        formData.append('editor_theme', (document.getElementById('editorThemeInline') || document.getElementById('editorTheme'))?.value || 'monokai');
+        formData.append('indent_size', (document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize'))?.value || '4');
+        formData.append('word_wrap', (document.getElementById('wordWrapInline') || document.getElementById('wordWrap'))?.checked ? '1' : '0');
+        formData.append('auto_save', (document.getElementById('autoSaveInline') || document.getElementById('autoSave'))?.checked ? '1' : '0');
+        formData.append('auto_save_interval', (document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval'))?.value || '60');
         
         fetch(url, {
             method: 'POST',
@@ -1721,20 +1735,11 @@ function showUploadFiles(targetFolder = '') {
     const editorHeader = document.getElementById('editor-header');
     const editorFooter = document.getElementById('editor-footer');
     
-    // Показываем хедер и обновляем заголовок для режима загрузки
+    // Показываем хедер, но НЕ изменяем его содержимое - оставляем как для редактирования файла
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // Обновляем заголовок на "Завантажити файли" + путь
-        const fileTitle = editorHeader.querySelector('.editor-file-title');
-        if (fileTitle) {
-            const uploadPath = targetFolder ? targetFolder : 'Коренева папка теми';
-            fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
-        }
-        // Скрываем информацию о файле (PHP 481 B)
-        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
-        if (fileInfo) {
-            fileInfo.style.display = 'none';
-        }
+        // НЕ изменяем заголовок - оставляем пустым или с текущим файлом
+        // Информация о файле остается как есть
     }
     
     // Показываем футер и обновляем для режима загрузки
@@ -1884,19 +1889,11 @@ function showEditorSettings() {
     // Показываем хедер и футер (они остаются как в редакторе, без изменений)
     // Хедер и футер остаются видимыми с их оригинальным содержимым (текущий файл, статус, кнопки)
     
-    // Показываем хедер и обновляем заголовок для режима настроек
+    // Показываем хедер, но НЕ изменяем его содержимое - оставляем как для редактирования файла
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // Обновляем заголовок на "Налаштування редактора"
-        const fileTitle = editorHeader.querySelector('.editor-file-title');
-        if (fileTitle) {
-            fileTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Налаштування редактора';
-        }
-        // Скрываем информацию о файле (PHP 481 B)
-        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
-        if (fileInfo) {
-            fileInfo.style.display = 'none';
-        }
+        // НЕ изменяем заголовок - оставляем пустым или с текущим файлом
+        // Информация о файле остается как есть
     }
     
     // Показываем футер - он должен быть всегда виден
@@ -2287,19 +2284,45 @@ function loadEditorSettingsInline() {
     .then(response => response.json())
     .then(data => {
         if (data.success && data.settings) {
-            // Обновляем глобальные настройки
-            editorSettings.showEmptyFolders = data.settings.show_empty_folders === '1';
-            editorSettings.enableSyntaxHighlighting = data.settings.enable_syntax_highlighting === '1';
+            const settings = data.settings;
             
-            // Устанавливаем значения чекбоксов
+            // Обновляем глобальные настройки
+            editorSettings.showEmptyFolders = settings.show_empty_folders === '1';
+            editorSettings.enableSyntaxHighlighting = settings.enable_syntax_highlighting === '1';
+            
+            // Устанавливаем значения всех полей
             const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
             const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
+            const showLineNumbers = document.getElementById('showLineNumbersInline');
+            const fontFamily = document.getElementById('editorFontFamilyInline');
+            const fontSize = document.getElementById('editorFontSizeInline');
+            const editorTheme = document.getElementById('editorThemeInline');
+            const indentSize = document.getElementById('editorIndentSizeInline');
+            const wordWrap = document.getElementById('wordWrapInline');
+            const autoSave = document.getElementById('autoSaveInline');
+            const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
             
-            if (showEmptyCheckbox) {
-                showEmptyCheckbox.checked = editorSettings.showEmptyFolders;
+            if (showEmptyCheckbox) showEmptyCheckbox.checked = editorSettings.showEmptyFolders;
+            if (syntaxCheckbox) syntaxCheckbox.checked = editorSettings.enableSyntaxHighlighting;
+            if (showLineNumbers) showLineNumbers.checked = settings.show_line_numbers === '1';
+            if (fontFamily) fontFamily.value = settings.font_family || "'Consolas', monospace";
+            if (fontSize) fontSize.value = settings.font_size || '14';
+            if (editorTheme) editorTheme.value = settings.editor_theme || 'monokai';
+            if (indentSize) indentSize.value = settings.indent_size || '4';
+            if (wordWrap) wordWrap.checked = settings.word_wrap === '1';
+            if (autoSave) {
+                autoSave.checked = settings.auto_save === '1';
+                if (autoSaveInterval) {
+                    autoSaveInterval.disabled = !autoSave.checked;
+                    autoSaveInterval.value = settings.auto_save_interval || '60';
+                }
             }
-            if (syntaxCheckbox) {
-                syntaxCheckbox.checked = editorSettings.enableSyntaxHighlighting;
+            
+            // Обработчик для включения/выключения поля интервала автозбереження
+            if (autoSave && autoSaveInterval) {
+                autoSave.addEventListener('change', function() {
+                    autoSaveInterval.disabled = !this.checked;
+                });
             }
         }
         
@@ -2316,24 +2339,70 @@ function loadEditorSettingsInline() {
  * Автоматическое сохранение настроек в inline режиме
  */
 function setupAutoSaveEditorSettingsInline() {
+    // Получаем все элементы настроек
     const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
     const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
+    const showLineNumbers = document.getElementById('showLineNumbersInline');
+    const fontFamily = document.getElementById('editorFontFamilyInline');
+    const fontSize = document.getElementById('editorFontSizeInline');
+    const editorTheme = document.getElementById('editorThemeInline');
+    const indentSize = document.getElementById('editorIndentSizeInline');
+    const wordWrap = document.getElementById('wordWrapInline');
+    const autoSave = document.getElementById('autoSaveInline');
+    const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
     
-    // Удаляем старые обработчики
-    if (showEmptyCheckbox) {
-        const newCheckbox = showEmptyCheckbox.cloneNode(true);
-        showEmptyCheckbox.parentNode.replaceChild(newCheckbox, showEmptyCheckbox);
-        newCheckbox.addEventListener('change', function() {
-            autoSaveEditorSettings();
+    // Функция для сохранения всех настроек
+    const saveAllSettings = function() {
+        if (isSaving) return;
+        
+        const url = window.location.href.split('?')[0];
+        const formData = {
+            action: 'save_editor_settings',
+            show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
+            enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
+            show_line_numbers: showLineNumbers?.checked ? '1' : '0',
+            font_family: fontFamily?.value || "'Consolas', monospace",
+            font_size: fontSize?.value || '14',
+            editor_theme: editorTheme?.value || 'monokai',
+            indent_size: indentSize?.value || '4',
+            word_wrap: wordWrap?.checked ? '1' : '0',
+            auto_save: autoSave?.checked ? '1' : '0',
+            auto_save_interval: autoSaveInterval?.value || '60'
+        };
+        
+        isSaving = true;
+        if (typeof AjaxHelper !== 'undefined') {
+            AjaxHelper.post(url, formData)
+                .then(data => {
+                    isSaving = false;
+                    if (data.success) {
+                        showNotification('Налаштування збережено', 'success');
+                    }
+                })
+                .catch(error => {
+                    isSaving = false;
+                    console.error('Error:', error);
+                });
+        }
+    };
+    
+    // Добавляем обработчики для всех полей
+    if (showEmptyCheckbox) showEmptyCheckbox.addEventListener('change', saveAllSettings);
+    if (syntaxCheckbox) syntaxCheckbox.addEventListener('change', saveAllSettings);
+    if (showLineNumbers) showLineNumbers.addEventListener('change', saveAllSettings);
+    if (fontFamily) fontFamily.addEventListener('change', saveAllSettings);
+    if (fontSize) fontSize.addEventListener('change', saveAllSettings);
+    if (editorTheme) editorTheme.addEventListener('change', saveAllSettings);
+    if (indentSize) indentSize.addEventListener('change', saveAllSettings);
+    if (wordWrap) wordWrap.addEventListener('change', saveAllSettings);
+    if (autoSave) {
+        autoSave.addEventListener('change', function() {
+            if (autoSaveInterval) {
+                autoSaveInterval.disabled = !this.checked;
+            }
+            saveAllSettings();
         });
     }
-    
-    if (syntaxCheckbox) {
-        const newCheckbox = syntaxCheckbox.cloneNode(true);
-        syntaxCheckbox.parentNode.replaceChild(newCheckbox, syntaxCheckbox);
-        newCheckbox.addEventListener('change', function() {
-            autoSaveEditorSettings();
-        });
-    }
+    if (autoSaveInterval) autoSaveInterval.addEventListener('change', saveAllSettings);
 }
 

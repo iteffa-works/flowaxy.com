@@ -1143,3 +1143,64 @@
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
+.editor-settings-container .settings-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 24px;
+}
+
+.editor-settings-container .settings-section:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.editor-settings-container .settings-section-title {
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+}
+
+.editor-settings-container .form-label {
+    color: #1a202c;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.editor-settings-container .form-label strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.editor-settings-container .form-label p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: normal;
+}
+
+.editor-settings-container .form-select,
+.editor-settings-container .form-control {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+}
+
+.editor-settings-container .form-select:focus,
+.editor-settings-container .form-control:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.editor-settings-container .form-control:disabled {
+    background-color: #e9ecef;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+

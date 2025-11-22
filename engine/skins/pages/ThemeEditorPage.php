@@ -484,7 +484,15 @@ class ThemeEditorPage extends AdminPage {
         
         $settings = [
             'show_empty_folders' => '0',
-            'enable_syntax_highlighting' => '1'
+            'enable_syntax_highlighting' => '1',
+            'show_line_numbers' => '1',
+            'font_family' => "'Consolas', monospace",
+            'font_size' => '14',
+            'editor_theme' => 'monokai',
+            'indent_size' => '4',
+            'word_wrap' => '1',
+            'auto_save' => '0',
+            'auto_save_interval' => '60'
         ];
         
         if (file_exists($settingsFile)) {
@@ -679,6 +687,14 @@ class ThemeEditorPage extends AdminPage {
         
         $showEmptyFolders = Request::post('show_empty_folders', '0') === '1' ? '1' : '0';
         $enableSyntaxHighlighting = Request::post('enable_syntax_highlighting', '1') === '1' ? '1' : '0';
+        $showLineNumbers = Request::post('show_line_numbers', '1') === '1' ? '1' : '0';
+        $fontFamily = Request::post('font_family', "'Consolas', monospace");
+        $fontSize = max(12, min(24, (int)Request::post('font_size', '14')));
+        $editorTheme = Request::post('editor_theme', 'monokai');
+        $indentSize = max(2, min(8, (int)Request::post('indent_size', '4')));
+        $wordWrap = Request::post('word_wrap', '1') === '1' ? '1' : '0';
+        $autoSave = Request::post('auto_save', '0') === '1' ? '1' : '0';
+        $autoSaveInterval = max(30, min(300, (int)Request::post('auto_save_interval', '60')));
         
         $settingsDir = dirname(__DIR__, 2) . '/data';
         if (!is_dir($settingsDir)) {
@@ -694,6 +710,14 @@ class ThemeEditorPage extends AdminPage {
         $iniContent .= "; Автоматично згенеровано\n\n";
         $iniContent .= "show_empty_folders = " . $showEmptyFolders . "\n";
         $iniContent .= "enable_syntax_highlighting = " . $enableSyntaxHighlighting . "\n";
+        $iniContent .= "show_line_numbers = " . $showLineNumbers . "\n";
+        $iniContent .= "font_family = " . $fontFamily . "\n";
+        $iniContent .= "font_size = " . $fontSize . "\n";
+        $iniContent .= "editor_theme = " . $editorTheme . "\n";
+        $iniContent .= "indent_size = " . $indentSize . "\n";
+        $iniContent .= "word_wrap = " . $wordWrap . "\n";
+        $iniContent .= "auto_save = " . $autoSave . "\n";
+        $iniContent .= "auto_save_interval = " . $autoSaveInterval . "\n";
         
         if (file_put_contents($settingsFile, $iniContent) === false) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося зберегти налаштування'], 500);
@@ -714,7 +738,15 @@ class ThemeEditorPage extends AdminPage {
         
         $settings = [
             'show_empty_folders' => '0',
-            'enable_syntax_highlighting' => '1'
+            'enable_syntax_highlighting' => '1',
+            'show_line_numbers' => '1',
+            'font_family' => "'Consolas', monospace",
+            'font_size' => '14',
+            'editor_theme' => 'monokai',
+            'indent_size' => '4',
+            'word_wrap' => '1',
+            'auto_save' => '0',
+            'auto_save_interval' => '60'
         ];
         
         if (file_exists($settingsFile)) {
@@ -723,7 +755,7 @@ class ThemeEditorPage extends AdminPage {
                 $settings = array_merge($settings, $parsed);
             }
         }
-        
+
         $this->sendJsonResponse([
             'success' => true,
             'settings' => $settings
