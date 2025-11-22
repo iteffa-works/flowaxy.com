@@ -166,7 +166,8 @@ if (!empty($message)) {
                 <textarea id="theme-file-editor" 
                           data-theme="<?= htmlspecialchars($theme['slug']) ?>"
                           data-file="<?= $selectedFile ? htmlspecialchars($selectedFile) : '' ?>"
-                          data-extension="<?= $selectedFile ? htmlspecialchars($fileExtension ?? '') : '' ?>"><?= ($selectedFile && $fileContent !== null) ? htmlspecialchars($fileContent) : '' ?></textarea>
+                          data-extension="<?= $selectedFile ? htmlspecialchars($fileExtension ?? '') : '' ?>"
+                          data-syntax-highlighting="<?= ($enableSyntaxHighlighting ?? true) ? '1' : '0' ?>"><?= ($selectedFile && $fileContent !== null) ? htmlspecialchars($fileContent) : '' ?></textarea>
             </div>
             <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
                 <div class="d-flex justify-content-between align-items-center">

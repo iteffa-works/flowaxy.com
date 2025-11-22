@@ -115,11 +115,19 @@ class ThemeEditorPage extends AdminPage {
         
         $themePath = themeManager()->getThemePath($themeSlug);
         
+        // Завантажуємо налаштування редактора
+        $editorSettings = $this->loadEditorSettings();
+        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '0') === '1';
+        $enableSyntaxHighlighting = ($editorSettings['enable_syntax_highlighting'] ?? '1') === '1';
+        
         // Отримуємо список файлів теми
         $themeFiles = $this->editorManager->getThemeFiles($themePath);
         
+        // Отримуємо список всіх папок (включаючи порожні)
+        $allFolders = $this->getAllFolders($themePath);
+        
         // Створюємо древовидну структуру файлів
-        $fileTree = $this->buildFileTree($themeFiles);
+        $fileTree = $this->buildFileTree($themeFiles, $allFolders, $showEmptyFolders);
         
         // Отримуємо вміст вибраного файлу
         $selectedFile = $request->query('file', '');
@@ -147,7 +155,8 @@ class ThemeEditorPage extends AdminPage {
             'fileTree' => $fileTree,
             'selectedFile' => $selectedFile,
             'fileContent' => $fileContent,
-            'fileExtension' => $fileExtension
+            'fileExtension' => $fileExtension,
+            'enableSyntaxHighlighting' => $enableSyntaxHighlighting
         ]);
     }
     
@@ -439,11 +448,102 @@ class ThemeEditorPage extends AdminPage {
     }
     
     /**
+     * Завантаження налаштувань редактора
+     */
+    private function loadEditorSettings(): array {
+        $settingsFile = dirname(__DIR__, 2) . '/data/theme-editor.ini';
+        
+        $settings = [
+            'show_empty_folders' => '0',
+            'enable_syntax_highlighting' => '1'
+        ];
+        
+        if (file_exists($settingsFile)) {
+            $parsed = parse_ini_file($settingsFile);
+            if ($parsed !== false) {
+                $settings = array_merge($settings, $parsed);
+            }
+        }
+        
+        return $settings;
+    }
+    
+    /**
+     * Отримання всіх папок теми (включаючи порожні)
+     */
+    private function getAllFolders(string $themePath): array {
+        $folders = [];
+        
+        if (!is_dir($themePath) || !is_readable($themePath)) {
+            return $folders;
+        }
+        
+        try {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($themePath, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+            
+            foreach ($iterator as $item) {
+                if ($item->isDir()) {
+                    $relativePath = str_replace($themePath, '', $item->getPathname());
+                    $relativePath = str_replace('\\', '/', $relativePath);
+                    $relativePath = ltrim($relativePath, '/');
+                    
+                    if (!empty($relativePath)) {
+                        $folders[] = $relativePath;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error getting all folders: " . $e->getMessage());
+        }
+        
+        return $folders;
+    }
+    
+    /**
      * Побудова древовидної структури файлів
      */
-    private function buildFileTree(array $files): array {
+    private function buildFileTree(array $files, array $allFolders = [], bool $showEmptyFolders = false): array {
         $tree = [];
         
+        // Спочатку додаємо всі папки (включаючи порожні), якщо налаштування дозволяє
+        if ($showEmptyFolders && !empty($allFolders)) {
+            foreach ($allFolders as $folderPath) {
+                if (empty($folderPath)) {
+                    continue;
+                }
+                
+                $parts = explode('/', $folderPath);
+                $current = &$tree;
+                
+                // Проходимо по всіх частинах шляху
+                foreach ($parts as $index => $part) {
+                    if (!isset($current[$part])) {
+                        // Створюємо папку, якщо її немає
+                        $folderParts = array_slice($parts, 0, $index + 1);
+                        $current[$part] = [
+                            'type' => 'folder',
+                            'name' => $part,
+                            'path' => implode('/', $folderParts),
+                            'children' => []
+                        ];
+                    }
+                    
+                    if (isset($current[$part]['type']) && $current[$part]['type'] === 'folder') {
+                        if (!isset($current[$part]['children'])) {
+                            $current[$part]['children'] = [];
+                        }
+                        $current = &$current[$part]['children'];
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Потім додаємо файли та папки, що містять файли
         foreach ($files as $file) {
             $path = $file['path'];
             $parts = explode('/', $path);
@@ -460,6 +560,8 @@ class ThemeEditorPage extends AdminPage {
                         'path' => implode('/', array_slice($parts, 0, $i + 1)),
                         'children' => []
                     ];
+                } else if (!isset($current[$part]['children'])) {
+                    $current[$part]['children'] = [];
                 }
                 
                 $current = &$current[$part]['children'];
@@ -478,7 +580,38 @@ class ThemeEditorPage extends AdminPage {
         // Сортуємо: спочатку папки, потім файли
         $this->sortFileTree($tree);
         
+        // Фільтруємо пусті папки, якщо потрібно
+        if (!$showEmptyFolders) {
+            $tree = $this->filterEmptyFolders($tree);
+        }
+        
         return $tree;
+    }
+    
+    /**
+     * Фільтрація пустих папок
+     */
+    private function filterEmptyFolders(array $tree): array {
+        $filtered = [];
+        
+        foreach ($tree as $key => $item) {
+            if ($item['type'] === 'folder') {
+                // Рекурсивно фільтруємо дітей
+                if (!empty($item['children'])) {
+                    $filteredChildren = $this->filterEmptyFolders($item['children']);
+                    // Якщо після фільтрації залишились діти, додаємо папку
+                    if (!empty($filteredChildren)) {
+                        $item['children'] = $filteredChildren;
+                        $filtered[$key] = $item;
+                    }
+                }
+            } else {
+                // Файли завжди додаємо
+                $filtered[$key] = $item;
+            }
+        }
+        
+        return $filtered;
     }
     
     /**

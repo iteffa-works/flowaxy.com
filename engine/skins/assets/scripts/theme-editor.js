@@ -5,6 +5,10 @@
 let codeEditor = null;
 let originalContent = '';
 let isModified = false;
+let editorSettings = {
+    enableSyntaxHighlighting: true,
+    showEmptyFolders: false
+};
 
 // Функция инициализации CodeMirror
 function initCodeMirror() {
@@ -22,21 +26,26 @@ function initCodeMirror() {
         return;
     }
     
+    // Проверяем, включена ли подсветка синтаксиса
+    const enableSyntaxHighlighting = textarea.getAttribute('data-syntax-highlighting') !== '0';
+    // Обновляем глобальную настройку
+    editorSettings.enableSyntaxHighlighting = enableSyntaxHighlighting;
+    
     const extension = textarea.getAttribute('data-extension');
-    const mode = getCodeMirrorMode(extension);
+    const mode = enableSyntaxHighlighting ? getCodeMirrorMode(extension) : null;
     
     try {
         codeEditor = CodeMirror.fromTextArea(textarea, {
             lineNumbers: true,
             mode: mode,
-            theme: 'monokai',
+            theme: enableSyntaxHighlighting ? 'monokai' : 'default',
             indentUnit: 4,
             indentWithTabs: false,
             lineWrapping: true,
-            matchBrackets: true,
-            autoCloseBrackets: true,
-            foldGutter: true,
-            gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']
+            matchBrackets: enableSyntaxHighlighting,
+            autoCloseBrackets: enableSyntaxHighlighting,
+            foldGutter: enableSyntaxHighlighting,
+            gutters: enableSyntaxHighlighting ? ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'] : ['CodeMirror-linenumbers']
         });
         
         // Скрываем textarea после успешной инициализации
@@ -67,12 +76,28 @@ function initCodeMirror() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Загружаем настройки редактора
+    loadEditorSettings();
+    
     // Инициализация CodeMirror
     initCodeMirror();
     
     // Инициализация древовидной структуры файлов
     initFileTree();
 });
+
+/**
+ * Загрузка настроек редактора
+ */
+function loadEditorSettings() {
+    const textarea = document.getElementById('theme-file-editor');
+    if (textarea) {
+        editorSettings.enableSyntaxHighlighting = textarea.getAttribute('data-syntax-highlighting') !== '0';
+    }
+    
+    // Также загружаем из настроек при открытии модального окна
+    // настройки будут обновлены в openEditorSettings()
+}
 
 /**
  * Получение режима CodeMirror по расширению файла
@@ -979,6 +1004,7 @@ function loadFileInEditor(filePath) {
                 textareaEl.setAttribute('data-theme', theme);
                 textareaEl.setAttribute('data-file', filePath);
                 textareaEl.setAttribute('data-extension', extension);
+                textareaEl.setAttribute('data-syntax-highlighting', editorSettings.enableSyntaxHighlighting ? '1' : '0');
                 textareaEl.value = data.content;
             }
             
@@ -992,9 +1018,15 @@ function loadFileInEditor(filePath) {
                 
                 // Обновляем режим редактора
                 const extension = filePath.split('.').pop() || '';
-                const mode = getCodeMirrorMode(extension);
-                codeEditor.setOption('mode', mode);
-                codeEditor.refresh();
+                if (editorSettings.enableSyntaxHighlighting && codeEditor) {
+                    const mode = getCodeMirrorMode(extension);
+                    codeEditor.setOption('mode', mode);
+                } else if (codeEditor) {
+                    codeEditor.setOption('mode', null);
+                }
+                if (codeEditor) {
+                    codeEditor.refresh();
+                }
             } else {
                 // Если редактор еще не инициализирован, инициализируем его
                 if (typeof CodeMirror !== 'undefined' && textareaEl) {
@@ -1060,9 +1092,13 @@ function openEditorSettings() {
     .then(response => response.json())
     .then(data => {
         if (data.success && data.settings) {
+            // Обновляем глобальные настройки
+            editorSettings.showEmptyFolders = data.settings.show_empty_folders === '1';
+            editorSettings.enableSyntaxHighlighting = data.settings.enable_syntax_highlighting === '1';
+            
             // Устанавливаем значения чекбоксов
-            document.getElementById('showEmptyFolders').checked = data.settings.show_empty_folders === '1';
-            document.getElementById('enableSyntaxHighlighting').checked = data.settings.enable_syntax_highlighting === '1';
+            document.getElementById('showEmptyFolders').checked = editorSettings.showEmptyFolders;
+            document.getElementById('enableSyntaxHighlighting').checked = editorSettings.enableSyntaxHighlighting;
         }
         
         // Настраиваем автоматическое сохранение при изменении
@@ -1128,6 +1164,23 @@ function autoSaveEditorSettings() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Обновляем глобальные настройки
+            editorSettings.showEmptyFolders = document.getElementById('showEmptyFolders').checked;
+            editorSettings.enableSyntaxHighlighting = document.getElementById('enableSyntaxHighlighting').checked;
+            
+            // Если редактор уже инициализирован и настройка подсветки изменилась, перезагружаем страницу
+            if (codeEditor) {
+                const newHighlighting = editorSettings.enableSyntaxHighlighting;
+                const currentMode = codeEditor.getOption('mode');
+                if ((newHighlighting && !currentMode) || (!newHighlighting && currentMode)) {
+                    // Настройка изменилась, нужно перезагрузить страницу для применения
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                    return;
+                }
+            }
+            
             showNotification('Налаштування збережено', 'success');
         } else {
             showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
