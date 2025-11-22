@@ -68,8 +68,12 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+    overflow-x: hidden;
     min-height: 0;
+    min-width: 0;
     gap: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* Боковая панель с файлами */
@@ -529,7 +533,11 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overflow-x: hidden;
     background: #fff;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .theme-editor-main .card-header {
@@ -967,8 +975,12 @@
     padding: 0;
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* Загрузка файлов */
@@ -1059,6 +1071,7 @@
 /* Настройки редактора */
 .editor-settings-container {
     max-width: 100%;
+    width: 100%;
     margin: 0;
     padding: 16px 20px;
     height: 100%;
@@ -1066,6 +1079,8 @@
     flex-direction: column;
     justify-content: flex-start;
     overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .editor-settings-container h5 {
@@ -1087,7 +1102,9 @@
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
 }
 
 .editor-settings-container .form-check-label strong {
@@ -1095,41 +1112,44 @@
     color: #1a202c;
     font-size: 0.875rem;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.3;
 }
 
 .editor-settings-container .form-check-label p {
     margin: 0;
     color: #6c757d;
     font-size: 0.75rem;
-    line-height: 1.3;
+    line-height: 1.4;
 }
 
 .editor-settings-container .form-check {
-    padding: 12px;
-    background: #fff;
-    border-radius: 6px;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
     margin-bottom: 0;
-    border: 1px solid #e9ecef;
-    transition: all 0.2s ease;
+    border: none;
+    transition: none;
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    min-height: 100%;
+    gap: 12px;
+    width: 100%;
 }
 
 .editor-settings-container .form-check:hover {
-    background: #f8f9fa;
-    border-color: #dee2e6;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
 }
 
 .editor-settings-container .form-check-input {
     margin-top: 0;
+    margin-bottom: 0;
     width: 40px;
     height: 20px;
     cursor: pointer;
     flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 2px;
 }
 
 .editor-settings-container .form-check-input:checked {
@@ -1165,45 +1185,58 @@
 .editor-settings-container .settings-section-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 16px 20px;
+    align-items: start;
 }
 
 .editor-settings-container .settings-section-grid > div {
-    padding: 12px;
-    background: #fff;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-    transition: all 0.2s ease;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    border: none;
+    transition: none;
+    min-height: auto;
 }
 
 .editor-settings-container .settings-section-grid > div:hover {
-    background: #f8f9fa;
-    border-color: #dee2e6;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
 }
 
 .editor-settings-container .settings-section-grid > .form-check {
-    padding: 12px;
+    padding: 0;
     margin-bottom: 0;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
 }
 
 .editor-settings-container .settings-section-grid > div:not(.form-check) {
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
 .editor-settings-container .form-label {
     color: #1a202c;
     font-weight: 600;
     font-size: 0.875rem;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     display: block;
+    width: 100%;
 }
 
 .editor-settings-container .form-label strong {
     display: block;
-    margin-bottom: 2px;
-    font-size: 0.8125rem;
+    margin-bottom: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 .editor-settings-container .form-label p {
@@ -1211,17 +1244,19 @@
     color: #6c757d;
     font-size: 0.75rem;
     font-weight: normal;
-    line-height: 1.2;
+    line-height: 1.4;
 }
 
 .editor-settings-container .form-select,
 .editor-settings-container .form-control {
     border: 1px solid #dee2e6;
     border-radius: 5px;
-    padding: 4px 10px;
+    padding: 5px 10px;
     font-size: 0.875rem;
     transition: all 0.2s ease;
-    height: 32px;
+    height: 34px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .editor-settings-container .form-select:focus,
