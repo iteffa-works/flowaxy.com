@@ -151,35 +151,37 @@ function saveFile() {
     const file = textarea.getAttribute('data-file');
     const content = codeEditor.getValue();
     
-    const formData = new FormData();
-    formData.append('action', 'save_file');
-    formData.append('theme', theme);
-    formData.append('file', file);
-    formData.append('content', content);
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+    // Используем AjaxHelper если доступен
+    const url = window.location.href.split('?')[0];
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, { action: 'save_file', theme: theme, file: file, content: content })
+        : fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: new URLSearchParams({ 
+                action: 'save_file', 
+                theme: theme, 
+                file: file, 
+                content: content,
+                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
+            })
+        }).then(r => r.json());
     
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            originalContent = content;
-            isModified = false;
-            updateEditorStatus();
-            showNotification('Файл успішно збережено', 'success');
-        } else {
-            showNotification(data.error || 'Помилка збереження', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка збереження файлу', 'danger');
-    });
+    requestFn
+        .then(data => {
+            if (data.success) {
+                originalContent = content;
+                isModified = false;
+                updateEditorStatus();
+                showNotification('Файл успішно збережено', 'success');
+            } else {
+                showNotification(data.error || 'Помилка збереження', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Помилка збереження файлу', 'danger');
+        });
 }
 
 /**
@@ -331,23 +333,36 @@ function submitInlineCreateFile(button, folderPath) {
     button.disabled = true;
     input.disabled = true;
     
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Файл успішно створено', 'success');
-            form.remove();
-            
-            // Перезагружаем страницу для обновления дерева файлов
-            const url = new URL(window.location.href);
-            url.searchParams.set('file', data.path);
-            window.location.href = url.toString();
+    // Используем AjaxHelper если доступен
+    const url = window.location.href.split('?')[0];
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, {
+            action: 'create_file',
+            theme: new URLSearchParams(window.location.search).get('theme') || '',
+            file: fullPath,
+            content: ''
+        })
+        : fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        }).then(r => r.json());
+    
+    requestFn
+        .then(data => {
+            if (data.success) {
+                showNotification('Файл успішно створено', 'success');
+                form.remove();
+                
+                // Обновляем дерево файлов через AJAX
+                refreshFileTree();
+                
+                // Открываем созданный файл в редакторе
+                if (data.path) {
+                    setTimeout(() => {
+                        loadFileInEditor(data.path);
+                    }, 300);
+                }
         } else {
             showNotification(data.error || 'Помилка створення', 'danger');
             button.disabled = false;
@@ -488,22 +503,27 @@ function submitInlineCreateDirectory(button, folderPath) {
     button.disabled = true;
     input.disabled = true;
     
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Папку успішно створено', 'success');
-            form.remove();
-            // Перезагружаем страницу для обновления дерева
-            setTimeout(() => {
-                window.location.reload();
-            }, 200);
+    // Используем AjaxHelper если доступен
+    const url = window.location.href.split('?')[0];
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, {
+            action: 'create_directory',
+            theme: new URLSearchParams(window.location.search).get('theme') || '',
+            directory: fullPath
+        })
+        : fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        }).then(r => r.json());
+    
+    requestFn
+        .then(data => {
+            if (data.success) {
+                showNotification('Папку успішно створено', 'success');
+                form.remove();
+                // Обновляем дерево файлов через AJAX
+                refreshFileTree();
         } else {
             showNotification(data.error || 'Помилка створення', 'danger');
             button.disabled = false;
@@ -544,26 +564,61 @@ function deleteCurrentFile(event, filePath) {
         'Видалити файл',
         'Ви впевнені, що хочете видалити цей файл? Цю дію неможливо скасувати.',
         function() {
-            const formData = new FormData();
-            formData.append('action', 'delete_file');
-            formData.append('theme', theme);
-            formData.append('file', filePath);
-            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+            // Используем AjaxHelper если доступен
+            const url = window.location.href.split('?')[0];
+            const requestFn = typeof AjaxHelper !== 'undefined' 
+                ? AjaxHelper.post(url, {
+                    action: 'delete_file',
+                    theme: theme,
+                    file: filePath
+                })
+                : fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new URLSearchParams({
+                        action: 'delete_file',
+                        theme: theme,
+                        file: filePath,
+                        csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
+                    })
+                }).then(r => r.json());
             
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
+            requestFn
+                .then(data => {
                 if (data.success) {
                     showNotification('Файл успішно видалено', 'success');
-                    setTimeout(() => {
-                        window.location.href = window.location.href.split('&file=')[0];
-                    }, 500);
+                    
+                    // Закрываем редактор, если удален открытый файл
+                    const textarea = document.getElementById('theme-file-editor');
+                    const currentFile = textarea ? textarea.getAttribute('data-file') : '';
+                    if (currentFile === filePath) {
+                        // Скрываем редактор, показываем placeholder
+                        const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
+                        const editorHeader = document.getElementById('editor-header');
+                        const editorBody = document.getElementById('editor-body');
+                        const editorFooter = document.getElementById('editor-footer');
+                        
+                        if (editorPlaceholder) {
+                            editorPlaceholder.style.display = 'flex';
+                        }
+                        if (editorHeader) {
+                            editorHeader.style.display = 'none';
+                        }
+                        if (editorBody) {
+                            editorBody.style.display = 'none';
+                        }
+                        if (editorFooter) {
+                            editorFooter.style.display = 'none';
+                        }
+                        
+                        // Обновляем URL без перезагрузки
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('file');
+                        window.history.pushState({ path: url.href }, '', url.href);
+                    }
+                    
+                    // Обновляем дерево файлов через AJAX
+                    refreshFileTree();
                 } else {
                     showNotification(data.error || 'Помилка видалення', 'danger');
                 }
@@ -783,9 +838,8 @@ function submitUploadFile() {
                 if (data.success) {
                     showNotification('Файл успішно завантажено', 'success');
                     bootstrap.Modal.getInstance(document.getElementById('uploadFileModal')).hide();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 500);
+                    // Обновляем дерево файлов через AJAX
+                    refreshFileTree();
                 } else {
                     showNotification(data.error || 'Помилка завантаження', 'danger');
                 }
@@ -877,8 +931,8 @@ function addFileToTree(filePath, parentFolder) {
     }
     
     if (!targetFolder) {
-        // Если не нашли папку, просто перезагружаем страницу
-        setTimeout(() => window.location.reload(), 500);
+        // Если не нашли папку, обновляем дерево через AJAX
+        refreshFileTree();
         return;
     }
     
@@ -981,7 +1035,30 @@ function getFileIcon(extension) {
 }
 
 /**
- * Загрузка файла в редактор
+ * Загрузка файла (обработчик клика по файлу)
+ */
+function loadFile(event, filePath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    // Обновляем активный файл в дереве
+    document.querySelectorAll('.file-tree-item-wrapper').forEach(wrapper => {
+        wrapper.classList.remove('active');
+    });
+    
+    const clickedWrapper = event?.target.closest('.file-tree-item-wrapper');
+    if (clickedWrapper) {
+        clickedWrapper.classList.add('active');
+    }
+    
+    // Загружаем файл в редактор
+    loadFileInEditor(filePath);
+}
+
+/**
+ * Загрузка файла в редактор через AJAX
  */
 function loadFileInEditor(filePath) {
     let theme = new URLSearchParams(window.location.search).get('theme') || '';
@@ -999,20 +1076,26 @@ function loadFileInEditor(filePath) {
         return;
     }
     
-    const formData = new FormData();
-    formData.append('action', 'get_file');
-    formData.append('theme', theme);
-    formData.append('file', filePath);
+    // Используем AjaxHelper для загрузки файла
+    const url = window.location.href.split('?')[0];
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, { action: 'get_file', theme: theme, file: filePath })
+        : fetch(url, {
+            method: 'POST',
+            headers: { 
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ 
+                action: 'get_file', 
+                theme: theme, 
+                file: filePath,
+                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
+            })
+        }).then(r => r.json());
     
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
+    requestFn
+        .then(data => {
         if (data.success && data.content !== undefined) {
             // Обновляем активный файл в дереве
             document.querySelectorAll('.file-tree-item-wrapper').forEach(item => {
@@ -1105,6 +1188,20 @@ function loadFileInEditor(filePath) {
                 fileTitle.appendChild(document.createTextNode(filePath));
             }
             
+            // Обновляем расширение и размер
+            const extensionEl = document.getElementById('editor-extension');
+            if (extensionEl) {
+                extensionEl.textContent = filePath.split('.').pop()?.toUpperCase() || '';
+            }
+            
+            // Обновляем размер файла если доступен
+            if (data.size !== undefined) {
+                const sizeEl = document.getElementById('editor-size');
+                if (sizeEl) {
+                    sizeEl.textContent = formatBytes(data.size);
+                }
+            }
+            
             // Прокручиваем к активному файлу
             if (fileWrapper) {
                 fileWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1112,6 +1209,11 @@ function loadFileInEditor(filePath) {
             
             // Раскрываем путь к файлу
             expandPathToFile(filePath);
+            
+            // Обновляем URL без перезагрузки
+            const url = new URL(window.location.href);
+            url.searchParams.set('file', filePath);
+            window.history.pushState({ path: url.href }, '', url.href);
         } else {
             showNotification(data.error || 'Помилка завантаження файлу', 'danger');
         }
@@ -1123,10 +1225,200 @@ function loadFileInEditor(filePath) {
 }
 
 /**
+ * Загрузка файла (обработчик клика по файлу)
+ */
+function loadFile(event, filePath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    // Обновляем активный файл в дереве
+    document.querySelectorAll('.file-tree-item-wrapper').forEach(wrapper => {
+        wrapper.classList.remove('active');
+    });
+    
+    const clickedWrapper = event?.target.closest('.file-tree-item-wrapper');
+    if (clickedWrapper) {
+        clickedWrapper.classList.add('active');
+    }
+    
+    // Загружаем файл в редактор
+    loadFileInEditor(filePath);
+}
+
+/**
  * Обновление дерева файлов
  */
+/**
+ * Обновление дерева файлов через AJAX
+ */
 function refreshFileTree() {
-    window.location.reload();
+    const textarea = document.getElementById('theme-file-editor');
+    const theme = textarea ? textarea.getAttribute('data-theme') : new URLSearchParams(window.location.search).get('theme') || '';
+    
+    if (!theme) {
+        showNotification('Тему не вказано', 'warning');
+        return;
+    }
+    
+    // Используем AjaxHelper если доступен
+    const url = window.location.href.split('?')[0];
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, { action: 'get_file_tree', theme: theme })
+        : fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: new URLSearchParams({ action: 'get_file_tree', theme: theme, csrf_token: document.querySelector('input[name="csrf_token"]')?.value || '' })
+        }).then(r => r.json());
+    
+    requestFn
+        .then(data => {
+            if (data.success && data.tree) {
+                // Обновляем дерево файлов (передаем объект темы)
+                updateFileTree(data.tree, data.theme || theme);
+            } else {
+                showNotification(data.error || 'Помилка оновлення дерева', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Помилка оновлення дерева файлів', 'danger');
+        });
+}
+
+/**
+ * Обновление дерева файлов в DOM
+ */
+function updateFileTree(treeArray, theme) {
+    const treeContainer = document.querySelector('.file-tree');
+    if (!treeContainer) {
+        return;
+    }
+    
+    // Рендерим новое дерево
+    const treeHtml = renderFileTreeFromArray(treeArray, theme);
+    
+    // Сохраняем состояние раскрытия папок
+    const expandedFolders = [];
+    document.querySelectorAll('.file-tree-folder-header.expanded').forEach(header => {
+        const path = header.getAttribute('data-folder-path');
+        if (path) {
+            expandedFolders.push(path);
+        }
+    });
+    
+    // Заменяем содержимое
+    const rootFolder = treeContainer.querySelector('.file-tree-root');
+    if (rootFolder) {
+        const rootContent = rootFolder.querySelector('.file-tree-folder-content');
+        if (rootContent) {
+            rootContent.innerHTML = treeHtml;
+            
+            // Восстанавливаем раскрытие папок
+            expandedFolders.forEach(path => {
+                const folder = document.querySelector(`[data-folder-path="${path}"]`);
+                if (folder) {
+                    const header = folder.querySelector('.file-tree-folder-header');
+                    const content = folder.querySelector('.file-tree-folder-content');
+                    if (header && content) {
+                        header.classList.add('expanded');
+                        content.classList.add('expanded');
+                        const icon = header.querySelector('.folder-icon');
+                        if (icon) {
+                            icon.className = 'fas fa-chevron-down folder-icon';
+                        }
+                    }
+                }
+            });
+            
+            // Инициализируем обработчики
+            initFileTree();
+        }
+    }
+}
+
+/**
+ * Рендеринг дерева файлов из массива
+ */
+function renderFileTreeFromArray(treeArray, theme, level = 1) {
+    let html = '';
+    
+    // Получаем slug темы
+    const themeSlug = theme && typeof theme === 'object' ? theme.slug : theme || '';
+    
+    treeArray.forEach(item => {
+        if (item.type === 'folder') {
+            html += `<div class="file-tree-folder" data-folder-path="${escapeHtml(item.path)}">
+                <div class="file-tree-folder-header" data-folder-path="${escapeHtml(item.path)}">
+                    <i class="fas fa-chevron-right folder-icon"></i>
+                    <i class="fas fa-folder file-icon"></i>
+                    <span class="file-name">${escapeHtml(item.name)}</span>
+                    <div class="file-tree-context-menu">
+                        <button type="button" class="context-menu-btn" onclick="createNewFileInFolder(event, '${escapeHtml(item.path)}')" title="Створити файл">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="context-menu-btn" onclick="createNewDirectoryInFolder(event, '${escapeHtml(item.path)}')" title="Створити папку">
+                            <i class="fas fa-folder"></i>
+                        </button>
+                        <button type="button" class="context-menu-btn" onclick="uploadFileToFolder(event, '${escapeHtml(item.path)}')" title="Завантажити файл">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                        <button type="button" class="context-menu-btn" onclick="downloadFolder(event, '${escapeHtml(item.path)}')" title="Скачати папку">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>`;
+            
+            if (item.children && item.children.length > 0) {
+                html += `<div class="file-tree-folder-content">
+                    ${renderFileTreeFromArray(item.children, theme, level + 1)}
+                </div>`;
+            }
+            
+            html += '</div>';
+        } else {
+            html += `<div class="file-tree-item-wrapper" data-file-path="${escapeHtml(item.path)}">
+                <a href="#" 
+                   class="file-tree-item"
+                   onclick="loadFile(event, '${escapeHtml(item.path)}'); return false;"
+                   data-file="${escapeHtml(item.path)}">
+                    <i class="fas fa-file-code file-icon"></i>
+                    <span class="file-name">${escapeHtml(item.name)}</span>
+                </a>
+                <div class="file-tree-context-menu">
+                    <button type="button" class="context-menu-btn" onclick="downloadFile(event, '${escapeHtml(item.path)}')" title="Скачати файл">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button type="button" class="context-menu-btn context-menu-btn-danger" onclick="deleteCurrentFile(event, '${escapeHtml(item.path)}')" title="Видалити файл">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+        }
+    });
+    
+    return html;
+}
+
+/**
+ * Экранирование HTML
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Форматирование размера в байтах
+ */
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
 /**
@@ -1204,48 +1496,131 @@ function setupAutoSaveEditorSettings() {
  * Автоматическое сохранение настроек редактора
  */
 function autoSaveEditorSettings() {
-    const formData = new FormData();
-    formData.append('action', 'save_editor_settings');
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-    formData.append('show_empty_folders', document.getElementById('showEmptyFolders').checked ? '1' : '0');
-    formData.append('enable_syntax_highlighting', document.getElementById('enableSyntaxHighlighting').checked ? '1' : '0');
+    const newHighlighting = document.getElementById('enableSyntaxHighlighting').checked;
+    const newShowEmptyFolders = document.getElementById('showEmptyFolders').checked;
     
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Обновляем глобальные настройки
-            editorSettings.showEmptyFolders = document.getElementById('showEmptyFolders').checked;
-            editorSettings.enableSyntaxHighlighting = document.getElementById('enableSyntaxHighlighting').checked;
-            
-            // Если редактор уже инициализирован и настройка подсветки изменилась, перезагружаем страницу
-            if (codeEditor) {
-                const newHighlighting = editorSettings.enableSyntaxHighlighting;
-                const currentMode = codeEditor.getOption('mode');
-                if ((newHighlighting && !currentMode) || (!newHighlighting && currentMode)) {
-                    // Настройка изменилась, нужно перезагрузить страницу для применения
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 500);
-                    return;
+    // Сохраняем старые значения для проверки изменений
+    const oldHighlighting = editorSettings.enableSyntaxHighlighting;
+    const oldShowEmptyFolders = editorSettings.showEmptyFolders;
+    
+    // Если используется AjaxHelper, используем его
+    if (typeof AjaxHelper !== 'undefined') {
+        AjaxHelper.post(window.location.href, {
+            action: 'save_editor_settings',
+            show_empty_folders: newShowEmptyFolders ? '1' : '0',
+            enable_syntax_highlighting: newHighlighting ? '1' : '0'
+        })
+        .then(data => {
+            if (data.success) {
+                // Обновляем глобальные настройки
+                editorSettings.showEmptyFolders = newShowEmptyFolders;
+                editorSettings.enableSyntaxHighlighting = newHighlighting;
+                
+                // Динамически обновляем подсветку кода без перезагрузки
+                if (codeEditor && oldHighlighting !== newHighlighting) {
+                    updateCodeMirrorHighlighting(newHighlighting);
                 }
+                
+                // Обновляем дерево файлов, если изменилась настройка показа пустых папок
+                if (oldShowEmptyFolders !== newShowEmptyFolders) {
+                    refreshFileTree();
+                }
+                
+                showNotification('Налаштування збережено', 'success');
+            } else {
+                // Восстанавливаем значения чекбоксов при ошибке
+                document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
+                document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+                showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
             }
-            
-            showNotification('Налаштування збережено', 'success');
-        } else {
-            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка збереження налаштувань', 'danger');
-    });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Восстанавливаем значения чекбоксов при ошибке
+            document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
+            document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+            showNotification('Помилка збереження налаштувань', 'danger');
+        });
+    } else {
+        // Fallback на старый способ
+        const formData = new FormData();
+        formData.append('action', 'save_editor_settings');
+        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+        formData.append('show_empty_folders', newShowEmptyFolders ? '1' : '0');
+        formData.append('enable_syntax_highlighting', newHighlighting ? '1' : '0');
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                editorSettings.showEmptyFolders = newShowEmptyFolders;
+                editorSettings.enableSyntaxHighlighting = newHighlighting;
+                
+                if (codeEditor && oldHighlighting !== newHighlighting) {
+                    updateCodeMirrorHighlighting(newHighlighting);
+                }
+                
+                if (oldShowEmptyFolders !== newShowEmptyFolders) {
+                    refreshFileTree();
+                }
+                
+                showNotification('Налаштування збережено', 'success');
+            } else {
+                document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
+                document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+                showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
+            document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+            showNotification('Помилка збереження налаштувань', 'danger');
+        });
+    }
+}
+
+/**
+ * Динамическое обновление подсветки синтаксиса в CodeMirror
+ */
+function updateCodeMirrorHighlighting(enable) {
+    if (!codeEditor) {
+        return;
+    }
+    
+    const textarea = document.getElementById('theme-file-editor');
+    if (!textarea) {
+        return;
+    }
+    
+    const extension = textarea.getAttribute('data-extension');
+    
+    if (enable) {
+        // Включаем подсветку
+        const mode = getCodeMirrorMode(extension);
+        codeEditor.setOption('mode', mode);
+        codeEditor.setOption('theme', 'monokai');
+        codeEditor.setOption('matchBrackets', true);
+        codeEditor.setOption('autoCloseBrackets', true);
+        codeEditor.setOption('foldGutter', true);
+        codeEditor.setOption('gutters', ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']);
+    } else {
+        // Выключаем подсветку
+        codeEditor.setOption('mode', null);
+        codeEditor.setOption('theme', 'default');
+        codeEditor.setOption('matchBrackets', false);
+        codeEditor.setOption('autoCloseBrackets', false);
+        codeEditor.setOption('foldGutter', false);
+        codeEditor.setOption('gutters', ['CodeMirror-linenumbers']);
+    }
+    
+    codeEditor.refresh();
 }
 
 /**
@@ -1270,10 +1645,7 @@ function saveEditorSettings() {
         if (data.success) {
             showNotification('Налаштування успішно збережено', 'success');
             bootstrap.Modal.getInstance(document.getElementById('editorSettingsModal')).hide();
-            // Перезагружаем страницу для применения настроек
-            setTimeout(() => {
-                window.location.reload();
-            }, 300);
+            // Настройки уже применены через autoSaveEditorSettings, ничего не делаем
         } else {
             showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
         }

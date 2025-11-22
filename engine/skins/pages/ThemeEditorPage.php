@@ -82,6 +82,9 @@ class ThemeEditorPage extends AdminPage {
                 case 'get_editor_settings':
                     $this->ajaxGetEditorSettings();
                     return;
+                case 'get_file_tree':
+                    $this->ajaxGetFileTree();
+                    return;
             }
         }
         
@@ -699,6 +702,83 @@ class ThemeEditorPage extends AdminPage {
             'success' => true,
             'settings' => $settings
         ], 200);
+    }
+    
+    /**
+     * AJAX: Получение дерева файлов
+     */
+    private function ajaxGetFileTree(): void {
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput($request->post('theme', $request->query('theme', '')));
+        
+        if (empty($themeSlug)) {
+            $activeTheme = themeManager()->getActiveTheme();
+            if ($activeTheme !== null && isset($activeTheme['slug'])) {
+                $themeSlug = $activeTheme['slug'];
+            } else {
+                $this->sendJsonResponse(['success' => false, 'error' => 'Тему не вказано'], 400);
+                return;
+            }
+        }
+        
+        // Перевіряємо існування теми
+        $theme = themeManager()->getTheme($themeSlug);
+        if ($theme === null) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        
+        // Завантажуємо налаштування редактора
+        $editorSettings = $this->loadEditorSettings();
+        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '0') === '1';
+        
+        // Отримуємо список файлів теми
+        $themeFiles = $this->editorManager->getThemeFiles($themePath);
+        
+        // Отримуємо список всіх папок (включаючи порожні)
+        $allFolders = $this->getAllFolders($themePath);
+        
+        // Створюємо древовидну структуру файлів
+        $fileTree = $this->buildFileTree($themeFiles, $allFolders, $showEmptyFolders);
+        
+        // Конвертуємо дерево в массив для JSON
+        $treeArray = $this->convertTreeToArray($fileTree);
+        
+        $this->sendJsonResponse([
+            'success' => true,
+            'tree' => $treeArray,
+            'theme' => $theme
+        ], 200);
+    }
+    
+    /**
+     * Конвертация дерева в массив для JSON
+     */
+    private function convertTreeToArray(array $tree): array {
+        $result = [];
+        
+        foreach ($tree as $key => $item) {
+            if ($item['type'] === 'folder') {
+                $result[] = [
+                    'type' => 'folder',
+                    'name' => $item['name'],
+                    'path' => $item['path'],
+                    'children' => $this->convertTreeToArray($item['children'] ?? [])
+                ];
+            } else {
+                $result[] = [
+                    'type' => 'file',
+                    'name' => $item['name'],
+                    'path' => $item['path'],
+                    'extension' => $item['data']['extension'] ?? '',
+                    'size' => $item['data']['size'] ?? 0
+                ];
+            }
+        }
+        
+        return $result;
     }
 }
 

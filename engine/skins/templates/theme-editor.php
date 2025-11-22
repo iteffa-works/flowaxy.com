@@ -54,8 +54,9 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
             $fileUrl = UrlHelper::admin('theme-editor?theme=' . urlencode($theme['slug']) . '&file=' . urlencode($item['path']));
             ?>
             <div class="file-tree-item-wrapper <?= $isActive ? 'active' : '' ?>" data-file-path="<?= htmlspecialchars($item['path']) ?>">
-                <a href="<?= $fileUrl ?>" 
+                <a href="#" 
                    class="file-tree-item"
+                   onclick="loadFile(event, '<?= htmlspecialchars($item['path']) ?>'); return false;"
                    data-file="<?= htmlspecialchars($item['path']) ?>">
                     <i class="fas fa-file-code file-icon"></i>
                     <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
@@ -141,6 +142,14 @@ if (!empty($message)) {
                         </div>
                     </div>
                 <?php endif; ?>
+            </div>
+            <!-- Футер боковой панели -->
+            <div class="card-footer theme-editor-sidebar-footer">
+                <div class="sidebar-footer-content">
+                    <span class="sidebar-footer-text">
+                        <a href="#" class="sidebar-footer-link">Theme Editor</a> <span class="sidebar-footer-separator">•</span> v1.0 Dev
+                    </span>
+                </div>
             </div>
         </div>
         
