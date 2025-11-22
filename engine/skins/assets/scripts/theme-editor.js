@@ -52,6 +52,10 @@ function initCodeMirror() {
         textarea.style.display = 'none';
         
         originalContent = codeEditor.getValue();
+        isModified = false;
+        
+        // Инициализируем статус при загрузке
+        updateEditorStatus();
         
         codeEditor.on('change', function() {
             isModified = codeEditor.getValue() !== originalContent;
@@ -124,13 +128,52 @@ function getCodeMirrorMode(extension) {
  */
 function updateEditorStatus() {
     const statusEl = document.getElementById('editor-status');
-    if (statusEl) {
-        if (isModified) {
-            statusEl.textContent = 'Є незбережені зміни';
-            statusEl.className = 'text-warning small';
-        } else {
-            statusEl.textContent = 'Готово до редагування';
-            statusEl.className = 'text-muted small';
+    const cancelBtn = document.getElementById('cancel-btn');
+    
+    if (!statusEl) {
+        return;
+    }
+    
+    // Находим родительский элемент со статусом и иконкой
+    const statusContainer = statusEl.parentElement;
+    // Иконка находится перед статусом в том же контейнере
+    let statusIcon = statusContainer?.querySelector('i.fa-circle, i.fa-exclamation-circle');
+    
+    if (isModified) {
+        statusEl.textContent = 'Є незбережені зміни';
+        statusEl.className = 'text-warning small';
+        // Меняем иконку на предупреждение
+        if (statusIcon) {
+            statusIcon.className = 'fas fa-exclamation-circle text-warning me-2';
+            statusIcon.style.fontSize = '0.625rem';
+        } else if (statusContainer) {
+            // Создаем иконку, если её нет
+            statusIcon = document.createElement('i');
+            statusIcon.className = 'fas fa-exclamation-circle text-warning me-2';
+            statusIcon.style.fontSize = '0.625rem';
+            statusContainer.insertBefore(statusIcon, statusEl);
+        }
+        // Показываем кнопку "Скасувати"
+        if (cancelBtn) {
+            cancelBtn.style.display = '';
+        }
+    } else {
+        statusEl.textContent = 'Готово до редагування';
+        statusEl.className = 'text-muted small';
+        // Меняем иконку на успех
+        if (statusIcon) {
+            statusIcon.className = 'fas fa-circle text-success me-2';
+            statusIcon.style.fontSize = '0.5rem';
+        } else if (statusContainer) {
+            // Создаем иконку, если её нет
+            statusIcon = document.createElement('i');
+            statusIcon.className = 'fas fa-circle text-success me-2';
+            statusIcon.style.fontSize = '0.5rem';
+            statusContainer.insertBefore(statusIcon, statusEl);
+        }
+        // Скрываем кнопку "Скасувати"
+        if (cancelBtn) {
+            cancelBtn.style.display = 'none';
         }
     }
 }
@@ -188,24 +231,30 @@ function saveFile() {
  * Сброс изменений в редакторе
  */
 function resetEditor() {
-    if (!codeEditor) return;
-    
-    if (isModified) {
-        showConfirmDialog(
-            'Скасувати зміни',
-            'Ви впевнені, що хочете скасувати всі зміни? Внесені зміни будуть втрачені.',
-            function() {
-                codeEditor.setValue(originalContent);
-                isModified = false;
-                updateEditorStatus();
-            }
-        );
+    if (!codeEditor) {
         return;
     }
     
-    codeEditor.setValue(originalContent);
-    isModified = false;
-    updateEditorStatus();
+    // Если изменений нет, ничего не делаем
+    if (!isModified) {
+        return;
+    }
+    
+    // Если есть изменения, спрашиваем подтверждение
+    showConfirmDialog(
+        'Скасувати зміни',
+        'Ви впевнені, що хочете скасувати всі зміни? Внесені зміни будуть втрачені.',
+        function() {
+            // Восстанавливаем оригинальное содержимое
+            codeEditor.setValue(originalContent);
+            // Обновляем флаг изменений
+            isModified = false;
+            // Обновляем статус редактора (скроет кнопку "Скасувати" и изменит иконку)
+            updateEditorStatus();
+            // Показываем уведомление
+            showNotification('Зміни скасовано', 'info');
+        }
+    );
 }
 
 /**
@@ -1172,6 +1221,8 @@ function loadFileInEditor(filePath) {
                 codeEditor.setValue(data.content);
                 originalContent = data.content;
                 isModified = false;
+                
+                // Убеждаемся, что статус и кнопки обновлены
                 updateEditorStatus();
                 
                 // Обновляем режим редактора

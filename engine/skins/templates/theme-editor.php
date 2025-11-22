@@ -178,12 +178,13 @@ if (!empty($message)) {
                           data-syntax-highlighting="<?= ($enableSyntaxHighlighting ?? true) ? '1' : '0' ?>"><?= ($selectedFile && $fileContent !== null) ? htmlspecialchars($fileContent) : '' ?></textarea>
             </div>
             <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
+                <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-circle text-success me-2" style="font-size: 0.5rem;"></i>
                         <span class="text-muted small" id="editor-status">Готово до редагування</span>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetEditor()">
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-btn" onclick="resetEditor()" style="display: none;">
                             <i class="fas fa-undo me-1"></i>Скасувати
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" onclick="saveFile()">

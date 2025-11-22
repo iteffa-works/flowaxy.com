@@ -748,6 +748,11 @@
     font-weight: 500;
     border-radius: 6px;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
 }
 
 .theme-editor-main .card-footer .btn:hover {
@@ -757,6 +762,13 @@
 
 .theme-editor-main .card-footer .btn i {
     margin-right: 6px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+}
+
+.theme-editor-main .card-footer .d-flex {
+    height: 100%;
 }
 
 /* Модальные окна */
