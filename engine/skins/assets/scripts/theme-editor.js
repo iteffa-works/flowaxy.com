@@ -425,3 +425,108 @@ window.addEventListener('beforeunload', function(e) {
     }
 });
 
+/**
+ * Загрузка файла в папку
+ */
+function uploadFileToFolder(event, folderPath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('uploadFileModal'));
+    document.getElementById('uploadFileFolder').value = folderPath || '';
+    document.getElementById('uploadFileInput').value = '';
+    document.getElementById('uploadFileProgress').classList.add('d-none');
+    modal.show();
+}
+
+/**
+ * Отправка формы загрузки файла
+ */
+function submitUploadFile() {
+    const form = document.getElementById('uploadFileForm');
+    const fileInput = document.getElementById('uploadFileInput');
+    const progressBar = document.getElementById('uploadFileProgress');
+    const progressBarInner = progressBar.querySelector('.progress-bar');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showNotification('Виберіть файл для завантаження', 'warning');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    formData.append('action', 'upload_file');
+    
+    progressBar.classList.remove('d-none');
+    progressBarInner.style.width = '0%';
+    
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBarInner.style.width = percentComplete + '%';
+        }
+    });
+    
+    xhr.addEventListener('load', function() {
+        if (xhr.status === 200) {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    showNotification('Файл успішно завантажено', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('uploadFileModal')).hide();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    showNotification(data.error || 'Помилка завантаження', 'danger');
+                }
+            } catch (e) {
+                showNotification('Помилка обробки відповіді', 'danger');
+            }
+        } else {
+            showNotification('Помилка завантаження файлу', 'danger');
+        }
+        progressBar.classList.add('d-none');
+    });
+    
+    xhr.addEventListener('error', function() {
+        showNotification('Помилка завантаження файлу', 'danger');
+        progressBar.classList.add('d-none');
+    });
+    
+    xhr.open('POST', window.location.href);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.send(formData);
+}
+
+/**
+ * Скачивание файла
+ */
+function downloadFile(event, filePath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const theme = new URLSearchParams(window.location.search).get('theme') || '';
+    const url = window.location.href.split('?')[0] + '?action=download_file&theme=' + encodeURIComponent(theme) + '&file=' + encodeURIComponent(filePath);
+    window.location.href = url;
+}
+
+/**
+ * Скачивание папки (ZIP)
+ */
+function downloadFolder(event, folderPath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const theme = new URLSearchParams(window.location.search).get('theme') || '';
+    const url = window.location.href.split('?')[0] + '?action=download_folder&theme=' + encodeURIComponent(theme) + '&folder=' + encodeURIComponent(folderPath);
+    window.location.href = url;
+}
+

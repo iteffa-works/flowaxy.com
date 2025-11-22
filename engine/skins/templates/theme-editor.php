@@ -29,10 +29,16 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                     <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
                     <div class="file-tree-context-menu">
                         <button type="button" class="context-menu-btn" onclick="createNewFileInFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Створити файл">
-                            <i class="fas fa-file-plus"></i>
+                            <i class="fas fa-plus"></i>
                         </button>
                         <button type="button" class="context-menu-btn" onclick="createNewDirectoryInFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Створити папку">
-                            <i class="fas fa-folder-plus"></i>
+                            <i class="fas fa-folder"></i>
+                        </button>
+                        <button type="button" class="context-menu-btn" onclick="uploadFileToFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Завантажити файл">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                        <button type="button" class="context-menu-btn" onclick="downloadFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Скачати папку">
+                            <i class="fas fa-download"></i>
                         </button>
                     </div>
                 </div>
@@ -55,6 +61,12 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                     <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
                 </a>
                 <div class="file-tree-context-menu">
+                    <button type="button" 
+                            class="context-menu-btn" 
+                            onclick="downloadFile(event, '<?= htmlspecialchars($item['path']) ?>')"
+                            title="Скачати файл">
+                        <i class="fas fa-download"></i>
+                    </button>
                     <button type="button" 
                             class="context-menu-btn context-menu-btn-danger" 
                             onclick="deleteCurrentFile(event, '<?= htmlspecialchars($item['path']) ?>')"
@@ -103,10 +115,13 @@ if (!empty($message)) {
                                 <span class="file-name"><?= htmlspecialchars($theme['name']) ?></span>
                                 <div class="file-tree-context-menu">
                                     <button type="button" class="context-menu-btn" onclick="createNewFileInFolder(event, '')" title="Створити файл">
-                                        <i class="fas fa-file-plus"></i>
+                                        <i class="fas fa-plus"></i>
                                     </button>
                                     <button type="button" class="context-menu-btn" onclick="createNewDirectoryInFolder(event, '')" title="Створити папку">
-                                        <i class="fas fa-folder-plus"></i>
+                                        <i class="fas fa-folder"></i>
+                                    </button>
+                                    <button type="button" class="context-menu-btn" onclick="uploadFileToFolder(event, '')" title="Завантажити файл">
+                                        <i class="fas fa-upload"></i>
                                     </button>
                                 </div>
                             </div>
@@ -229,6 +244,37 @@ if (!empty($message)) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
                 <button type="button" class="btn btn-primary" onclick="submitCreateDirectory()">Створити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно загрузки файла -->
+<div class="modal fade" id="uploadFileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Завантажити файл</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadFileForm" enctype="multipart/form-data">
+                    <?= SecurityHelper::csrfField() ?>
+                    <input type="hidden" name="theme" value="<?= htmlspecialchars($theme['slug']) ?>">
+                    <input type="hidden" id="uploadFileFolder" name="folder" value="">
+                    <div class="mb-3">
+                        <label for="uploadFileInput" class="form-label">Виберіть файл</label>
+                        <input type="file" class="form-control" id="uploadFileInput" name="file" required>
+                        <small class="form-text text-muted">Можна завантажити зображення, відео, скрипти та інші файли</small>
+                    </div>
+                    <div id="uploadFileProgress" class="progress d-none mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" onclick="submitUploadFile()">Завантажити</button>
             </div>
         </div>
     </div>

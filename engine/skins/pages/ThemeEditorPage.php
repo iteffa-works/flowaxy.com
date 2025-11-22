@@ -42,6 +42,17 @@ class ThemeEditorPage extends AdminPage {
     public function handle(): void {
         $request = Request::getInstance();
         
+        // Обробка GET запитів для скачування
+        $getAction = $request->query('action', '');
+        if ($getAction === 'download_file') {
+            $this->ajaxDownloadFile();
+            return;
+        }
+        if ($getAction === 'download_folder') {
+            $this->ajaxDownloadFolder();
+            return;
+        }
+        
         // Обробка AJAX запитів
         if ($request->isAjax()) {
             $action = Request::post('action', '');
@@ -61,6 +72,9 @@ class ThemeEditorPage extends AdminPage {
                     return;
                 case 'create_directory':
                     $this->ajaxCreateDirectory();
+                    return;
+                case 'upload_file':
+                    $this->ajaxUploadFile();
                     return;
             }
         }
@@ -299,6 +313,122 @@ class ThemeEditorPage extends AdminPage {
         } else {
             $this->sendJsonResponse($result, 400);
         }
+    }
+    
+    /**
+     * AJAX: Завантаження файлу
+     */
+    private function ajaxUploadFile(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
+        $folderPath = SecurityHelper::sanitizeInput(Request::post('folder', ''));
+        
+        if (empty($themeSlug)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка завантаження файлу'], 400);
+            return;
+        }
+        
+        $result = $this->editorManager->uploadFile($_FILES['file'], $folderPath, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Скачування файлу
+     */
+    private function ajaxDownloadFile(): void {
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme', ''));
+        $filePath = SecurityHelper::sanitizeInput($request->query('file', ''));
+        
+        if (empty($themeSlug) || empty($filePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $fullPath = $themePath . $filePath;
+        
+        // Перевірка безпеки шляху
+        $realThemePath = realpath($themePath);
+        $realFilePath = realpath($fullPath);
+        
+        if ($realThemePath === false || $realFilePath === false || 
+            !str_starts_with($realFilePath, $realThemePath) || !is_file($realFilePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Файл не знайдено'], 404);
+            return;
+        }
+        
+        // Відправляємо файл
+        $fileName = basename($filePath);
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+        header('Content-Length: ' . filesize($realFilePath));
+        readfile($realFilePath);
+        exit;
+    }
+    
+    /**
+     * AJAX: Скачування папки (ZIP архів)
+     */
+    private function ajaxDownloadFolder(): void {
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme', ''));
+        $folderPath = SecurityHelper::sanitizeInput($request->query('folder', ''));
+        
+        if (empty($themeSlug) || empty($folderPath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або папку'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $zipPath = $this->editorManager->createFolderZip($folderPath, $themePath);
+        
+        if ($zipPath === null || !file_exists($zipPath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити архів'], 500);
+            return;
+        }
+        
+        // Відправляємо ZIP файл
+        $folderName = basename($folderPath) ?: 'folder';
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $folderName . '.zip"');
+        header('Content-Length: ' . filesize($zipPath));
+        readfile($zipPath);
+        
+        // Видаляємо тимчасовий файл
+        @unlink($zipPath);
+        exit;
     }
     
     /**

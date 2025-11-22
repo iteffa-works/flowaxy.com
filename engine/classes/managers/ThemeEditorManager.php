@@ -320,5 +320,116 @@ class ThemeEditorManager {
         
         return $structure;
     }
+    
+    /**
+     * Завантаження файлу в папку теми
+     */
+    public function uploadFile(array $uploadedFile, string $folderPath, string $themePath): array {
+        try {
+            if (!isset($uploadedFile['tmp_name']) || !is_uploaded_file($uploadedFile['tmp_name'])) {
+                return ['success' => false, 'error' => 'Файл не було завантажено'];
+            }
+            
+            $fileName = $uploadedFile['name'];
+            $tmpName = $uploadedFile['tmp_name'];
+            
+            // Перевірка на небезпечні символи в імені файлу
+            if (preg_match('/[\/\\\?\*\|<>:"]/', $fileName)) {
+                return ['success' => false, 'error' => 'Недопустимі символи в імені файлу'];
+            }
+            
+            // Формуємо повний шлях
+            $targetPath = rtrim($themePath, '/\\') . '/';
+            if (!empty($folderPath)) {
+                $targetPath .= trim($folderPath, '/\\') . '/';
+            }
+            $targetPath .= $fileName;
+            
+            // Перевірка безпеки шляху
+            $realThemePath = realpath($themePath);
+            $realTargetPath = realpath(dirname($targetPath));
+            
+            if ($realThemePath === false || $realTargetPath === false || 
+                !str_starts_with($realTargetPath, $realThemePath)) {
+                return ['success' => false, 'error' => 'Недопустимий шлях для завантаження'];
+            }
+            
+            // Створюємо директорію, якщо вона не існує
+            $targetDir = dirname($targetPath);
+            if (!is_dir($targetDir)) {
+                if (!mkdir($targetDir, 0755, true)) {
+                    return ['success' => false, 'error' => 'Не вдалося створити директорію'];
+                }
+            }
+            
+            // Переміщуємо файл
+            if (!move_uploaded_file($tmpName, $targetPath)) {
+                return ['success' => false, 'error' => 'Не вдалося зберегти файл'];
+            }
+            
+            // Встановлюємо права доступу
+            @chmod($targetPath, 0644);
+            
+            return [
+                'success' => true,
+                'message' => 'Файл успішно завантажено',
+                'path' => str_replace($themePath, '', $targetPath),
+                'name' => $fileName
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Створення ZIP архіву папки
+     */
+    public function createFolderZip(string $folderPath, string $themePath): ?string {
+        try {
+            $fullFolderPath = rtrim($themePath, '/\\') . '/' . trim($folderPath, '/\\');
+            
+            if (!is_dir($fullFolderPath)) {
+                return null;
+            }
+            
+            // Перевірка безпеки шляху
+            $realThemePath = realpath($themePath);
+            $realFolderPath = realpath($fullFolderPath);
+            
+            if ($realThemePath === false || $realFolderPath === false || 
+                !str_starts_with($realFolderPath, $realThemePath)) {
+                return null;
+            }
+            
+            // Створюємо тимчасовий файл для архіву
+            $zipPath = sys_get_temp_dir() . '/theme_folder_' . uniqid() . '.zip';
+            
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                return null;
+            }
+            
+            // Додаємо всі файли з папки до архіву
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($fullFolderPath, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+            
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $relativePath = str_replace($fullFolderPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                    $relativePath = str_replace('\\', '/', $relativePath);
+                    $zip->addFile($file->getPathname(), $relativePath);
+                }
+            }
+            
+            $zip->close();
+            
+            return $zipPath;
+        } catch (Exception $e) {
+            error_log("Error creating folder zip: " . $e->getMessage());
+            return null;
+        }
+    }
 }
 

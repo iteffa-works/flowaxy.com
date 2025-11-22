@@ -201,20 +201,25 @@
 
 /* Контекстное меню для папок и файлов */
 .file-tree-context-menu {
-    display: flex;
+    display: flex !important;
     gap: 2px;
     margin-left: auto;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 10;
+    position: relative;
 }
 
 .file-tree-folder-header:hover .file-tree-context-menu,
-.file-tree-item-wrapper:hover .file-tree-context-menu {
-    opacity: 1;
+.file-tree-item-wrapper:hover .file-tree-context-menu,
+.file-tree-root .file-tree-folder-header:hover .file-tree-context-menu {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .context-menu-btn {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     width: 24px;
@@ -228,6 +233,7 @@
     transition: all 0.15s ease;
     flex-shrink: 0;
     font-size: 0.6875rem;
+    pointer-events: auto;
 }
 
 .context-menu-btn:hover {
@@ -259,10 +265,16 @@
     border: none;
     margin-bottom: 0;
     padding: 2px 4px;
+    position: relative;
 }
 
 .file-tree-root .file-tree-folder-header:hover {
     background: #e8f4f8;
+}
+
+.file-tree-root .file-tree-folder-header:hover .file-tree-context-menu {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .file-tree-root .file-tree-folder-content {
@@ -291,6 +303,8 @@
     min-height: 24px;
     gap: 4px;
     width: 100%;
+    position: relative;
+    overflow: visible;
 }
 
 .file-tree-folder-header:hover {
