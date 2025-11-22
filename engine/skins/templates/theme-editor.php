@@ -362,7 +362,7 @@ if (!empty($message)) {
             </div>
             
             <!-- Футер (всегда последний элемент) -->
-            <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
+            <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? 'display: flex;' : 'display: none;' ?>">
                 <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
                     <div class="d-flex align-items-center flex-grow-1" style="min-width: 0;">
                         <span id="editor-status-icon" class="editor-status-dot text-success me-2"></span>

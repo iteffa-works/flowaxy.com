@@ -631,7 +631,7 @@
     background: #fff;
     min-height: 52px;
     height: 52px;
-    display: none !important; /* Скрываем футер */
+    display: flex;
     align-items: center;
     box-sizing: border-box;
     order: 999;

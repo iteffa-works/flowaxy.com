@@ -95,11 +95,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация древовидной структуры файлов
     initFileTree();
     
-    // Проверяем наличие параметров в URL для автоматического показа режимов
+    // Проверяем, есть ли открытый файл при загрузке страницы
     const urlParams = new URLSearchParams(window.location.search);
+    const file = urlParams.get('file');
     const folder = urlParams.get('folder');
     const mode = urlParams.get('mode');
     
+    // Если файл открыт, показываем футер
+    if (file && !folder && !mode) {
+        const editorFooter = document.getElementById('editor-footer');
+        const editorHeader = document.getElementById('editor-header');
+        const editorBody = document.getElementById('editor-body');
+        
+        if (editorFooter) {
+            editorFooter.style.setProperty('display', 'flex', 'important');
+        }
+        if (editorHeader) {
+            editorHeader.style.display = 'block';
+        }
+        if (editorBody) {
+            editorBody.style.display = 'block';
+        }
+    }
+    
+    // Проверяем наличие параметров в URL для автоматического показа режимов
     if (folder) {
         // Небольшая задержка чтобы дерево файлов успело инициализироваться
         setTimeout(function() {
@@ -1141,7 +1160,7 @@ function loadFileInEditor(filePath) {
                 editorBody.style.display = 'block';
             }
             if (editorFooter) {
-                editorFooter.style.display = 'block';
+                editorFooter.style.setProperty('display', 'flex', 'important');
                 // Восстанавливаем кнопки в футере
                 const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
                 if (footerButtons) footerButtons.style.display = 'flex';
