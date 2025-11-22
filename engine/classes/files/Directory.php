@@ -9,8 +9,7 @@
 
 declare(strict_types=1);
 
-if (!class_exists('Directory')) {
-    class Directory {
+class Directory {
     private string $path;
     
     /**
@@ -51,6 +50,24 @@ if (!class_exists('Directory')) {
      */
     public function exists(): bool {
         return is_dir($this->path);
+    }
+    
+    /**
+     * Перевірка, чи є директорія читабельною
+     * 
+     * @return bool
+     */
+    public function isReadable(): bool {
+        return $this->exists() && is_readable($this->path);
+    }
+    
+    /**
+     * Перевірка, чи є директорія доступною для запису
+     * 
+     * @return bool
+     */
+    public function isWritable(): bool {
+        return $this->exists() && is_writable($this->path);
     }
     
     /**
@@ -415,6 +432,5 @@ if (!class_exists('Directory')) {
     public static function directoryExists(string $path): bool {
         return is_dir($path);
     }
-    } // Кінець класу Directory
 }
 

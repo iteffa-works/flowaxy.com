@@ -344,6 +344,77 @@ class File implements FileInterface {
     }
     
     /**
+     * Перевірка, чи знаходиться файл всередині базової директорії (захист від path traversal)
+     * 
+     * @param string $basePath Базова директорія
+     * @return bool
+     */
+    public function isPathSafe(string $basePath): bool {
+        $realBasePath = realpath($basePath);
+        $realFilePath = realpath($this->filePath);
+        
+        if ($realBasePath === false || $realFilePath === false) {
+            // Якщо файл не існує, перевіряємо директорію
+            $realDirPath = realpath(dirname($this->filePath));
+            if ($realDirPath === false) {
+                return false;
+            }
+            $realFilePath = $realDirPath;
+        }
+        
+        // Нормалізуємо шляхи для порівняння (замінюємо зворотні слеші на прямі)
+        $normalizedBasePath = str_replace('\\', '/', $realBasePath);
+        $normalizedFilePath = str_replace('\\', '/', $realFilePath);
+        
+        return str_starts_with($normalizedFilePath, $normalizedBasePath);
+    }
+    
+    /**
+     * Нормалізація шляху (видалення .., . та дублюючих слешів)
+     * 
+     * @param string $path Шлях для нормалізації
+     * @return string
+     */
+    public static function normalizePath(string $path): string {
+        // Замінюємо зворотні слеші на прямі
+        $path = str_replace('\\', '/', $path);
+        
+        // Видаляємо дублюючі слеші
+        $path = preg_replace('#/+#', '/', $path);
+        
+        // Обробка ..
+        $parts = explode('/', $path);
+        $result = [];
+        
+        foreach ($parts as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                if (!empty($result)) {
+                    array_pop($result);
+                }
+            } else {
+                $result[] = $part;
+            }
+        }
+        
+        return implode('/', $result);
+    }
+    
+    /**
+     * Статичний метод: Перевірка, чи знаходиться шлях всередині базової директорії
+     * 
+     * @param string $path Шлях для перевірки
+     * @param string $basePath Базова директорія
+     * @return bool
+     */
+    public static function isPathInDirectory(string $path, string $basePath): bool {
+        $file = new self($path);
+        return $file->isPathSafe($basePath);
+    }
+    
+    /**
      * Статичний метод: Запис в файл
      * Перейменовано з write() щоб уникнути конфлікту з методом екземпляра
      * 

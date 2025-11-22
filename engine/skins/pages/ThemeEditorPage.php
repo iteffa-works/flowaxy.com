@@ -7,6 +7,17 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/AdminPage.php';
 require_once __DIR__ . '/../../classes/managers/ThemeEditorManager.php';
+require_once __DIR__ . '/../../classes/files/File.php';
+require_once __DIR__ . '/../../classes/files/Directory.php';
+require_once __DIR__ . '/../../classes/files/Ini.php';
+require_once __DIR__ . '/../../classes/files/Zip.php';
+require_once __DIR__ . '/../../classes/data/Logger.php';
+require_once __DIR__ . '/../../classes/validators/Validator.php';
+require_once __DIR__ . '/../../classes/security/Security.php';
+require_once __DIR__ . '/../../classes/security/Hash.php';
+require_once __DIR__ . '/../../classes/http/Response.php';
+require_once __DIR__ . '/../../classes/files/MimeType.php';
+require_once __DIR__ . '/../../classes/data/Cache.php';
 
 class ThemeEditorPage extends AdminPage {
     private ?ThemeEditorManager $editorManager = null;
@@ -28,7 +39,9 @@ class ThemeEditorPage extends AdminPage {
         // Додаємо CSS та JS для редактора
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css';
-        $this->additionalCSS[] = UrlHelper::admin('assets/styles/theme-editor.css') . '?v=' . time();
+            // Використовуємо Hash для створення версії файлу (замість time() для кешування)
+            $cssVersion = class_exists('Hash') ? substr(Hash::md5((string)filemtime(__DIR__ . '/../assets/styles/theme-editor.css')), 0, 8) : time();
+            $this->additionalCSS[] = UrlHelper::admin('assets/styles/theme-editor.css') . '?v=' . $cssVersion;
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js';
@@ -36,11 +49,13 @@ class ThemeEditorPage extends AdminPage {
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js';
         $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js';
-        $this->additionalJS[] = UrlHelper::admin('assets/scripts/theme-editor.js') . '?v=' . time();
+        // Використовуємо Hash для створення версії файлу (замість time() для кешування)
+        $jsVersion = class_exists('Hash') ? substr(Hash::md5((string)filemtime(__DIR__ . '/../assets/scripts/theme-editor.js')), 0, 8) : time();
+        $this->additionalJS[] = UrlHelper::admin('assets/scripts/theme-editor.js') . '?v=' . $jsVersion;
     }
     
     public function handle(): void {
-        $request = Request::getInstance();
+        $request = $this->request();
         
         // Обробка GET запитів для скачування
         $getAction = $request->query('action', '');
@@ -53,15 +68,9 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        // Обробка AJAX запитів
-        // Проверяем как через Request::isAjax(), так и напрямую через заголовок
-        $xRequestedWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
-        $isAjax = $request->isAjax() || 
-                  (!empty($xRequestedWith) && 
-                   strtolower($xRequestedWith) === 'xmlhttprequest');
-        
-        if ($isAjax) {
-            $action = Request::post('action', '');
+        // Обробка AJAX запитів через AdminPage метод
+        if ($this->isAjaxRequest()) {
+            $action = $request->postValue('action', '');
             
             // Если action не найден в POST, пробуем GET
             if (empty($action)) {
@@ -102,7 +111,7 @@ class ThemeEditorPage extends AdminPage {
                         exit;
                 }
                 // Если мы дошли сюда, action не найден
-                $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія: ' . htmlspecialchars($action)], 404);
+                $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія: ' . Security::clean($action)], 404);
                 exit;
             }
         }
@@ -159,13 +168,16 @@ class ThemeEditorPage extends AdminPage {
         if (!empty($selectedFile)) {
             $filePath = $themePath . $selectedFile;
             $fileContent = $this->editorManager->getFileContent($filePath);
-            $fileExtension = pathinfo($selectedFile, PATHINFO_EXTENSION);
+            
+            // Використовуємо клас File для отримання розширення
+            $file = new File($filePath);
+            $fileExtension = $file->getExtension();
         }
         
         // Встановлюємо заголовок сторінки з інформацією про тему
         $this->setPageHeader(
             'Редактор теми',
-            'Редактор теми: ' . htmlspecialchars($theme['name']),
+            'Редактор теми: ' . Security::clean($theme['name']),
             'fas fa-code'
         );
         
@@ -192,10 +204,10 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
-        $filePath = SecurityHelper::sanitizeInput(Request::post('file', ''));
-        $content = Request::post('content', '');
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $filePath = Validator::sanitizeString($request->postValue('file', ''));
+        $content = $request->postValue('content', '');
         
         if (empty($themeSlug) || empty($filePath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
@@ -229,10 +241,10 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $request = Request::getInstance();
+        $request = $this->request();
         // Пробуем получить из POST, если нет - из GET
-        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', $request->query('theme', '')));
-        $filePath = SecurityHelper::sanitizeInput(Request::post('file', $request->query('file', '')));
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', $request->query('theme', '')));
+        $filePath = Validator::sanitizeString($request->postValue('file', $request->query('file', '')));
         
         if (empty($themeSlug) || empty($filePath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
@@ -253,10 +265,13 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
+        // Використовуємо клас File для отримання розширення
+        $file = new File($fullPath);
+        
         $this->sendJsonResponse([
             'success' => true,
             'content' => $content,
-            'extension' => pathinfo($filePath, PATHINFO_EXTENSION)
+            'extension' => $file->getExtension()
         ], 200);
     }
     
@@ -269,10 +284,10 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
-        $filePath = SecurityHelper::sanitizeInput(Request::post('file', ''));
-        $content = Request::post('content', '');
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $filePath = Validator::sanitizeString($request->postValue('file', ''));
+        $content = $request->postValue('content', '');
         
         if (empty($themeSlug) || empty($filePath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
@@ -303,9 +318,9 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
-        $filePath = SecurityHelper::sanitizeInput(Request::post('file', ''));
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $filePath = Validator::sanitizeString($request->postValue('file', ''));
         
         if (empty($themeSlug) || empty($filePath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
@@ -337,9 +352,9 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
-        $dirPath = SecurityHelper::sanitizeInput(Request::post('directory', ''));
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $dirPath = Validator::sanitizeString($request->postValue('directory', ''));
         
         if (empty($themeSlug) || empty($dirPath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або директорію'], 400);
@@ -370,9 +385,9 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
-        $folderPath = SecurityHelper::sanitizeInput(Request::post('folder', ''));
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $folderPath = Validator::sanitizeString($request->postValue('folder', ''));
         
         if (empty($themeSlug)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему'], 400);
@@ -403,9 +418,9 @@ class ThemeEditorPage extends AdminPage {
      * AJAX: Скачування файлу
      */
     private function ajaxDownloadFile(): void {
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme', ''));
-        $filePath = SecurityHelper::sanitizeInput($request->query('file', ''));
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->query('theme', ''));
+        $filePath = Validator::sanitizeString($request->query('file', ''));
         
         if (empty($themeSlug) || empty($filePath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
@@ -420,32 +435,65 @@ class ThemeEditorPage extends AdminPage {
         
         $fullPath = $themePath . $filePath;
         
-        // Перевірка безпеки шляху
-        $realThemePath = realpath($themePath);
-        $realFilePath = realpath($fullPath);
-        
-        if ($realThemePath === false || $realFilePath === false || 
-            !str_starts_with($realFilePath, $realThemePath) || !is_file($realFilePath)) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Файл не знайдено'], 404);
+        try {
+            // Використовуємо клас File для перевірки та відправки файлу
+            $file = new File($fullPath);
+            
+            // Перевірка безпеки шляху через клас File
+            $realThemePath = realpath($themePath);
+            if ($realThemePath === false || !$file->exists() || !$file->isFile() || !$file->isPathSafe($realThemePath)) {
+                $this->sendJsonResponse(['success' => false, 'error' => 'Файл не знайдено'], 404);
+                return;
+            }
+            
+            // Відправляємо файл через Response клас
+            $fileName = $file->getBasename();
+            // Використовуємо MimeType клас для визначення типу файлу
+            $mimeType = $file->getMimeType();
+            if ($mimeType === false) {
+                // Якщо не вдалося визначити через finfo, використовуємо MimeType клас
+                $mimeType = MimeType::get($file->getPath());
+            }
+            $contentType = $mimeType;
+            
+            // Вимикаємо буферизацію перед відправкою файлу
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            // Використовуємо Response для відправки файлу
+            $response = new Response();
+            $response->status(200)
+                     ->header('Content-Type', $contentType)
+                     ->header('Content-Disposition', 'attachment; filename="' . Security::clean($fileName) . '"')
+                     ->header('Content-Length', (string)$file->getSize())
+                     ->send();
+            
+            // Відправляємо вміст файлу
+            readfile($file->getPath());
+            exit;
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorPage: Error downloading file', [
+                    'error' => $e->getMessage(),
+                    'theme' => $themeSlug,
+                    'file' => $filePath
+                ]);
+            } else {
+                error_log("ThemeEditorPage: Error downloading file: " . $e->getMessage());
+            }
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка завантаження файлу'], 500);
             return;
         }
-        
-        // Відправляємо файл
-        $fileName = basename($filePath);
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . $fileName . '"');
-        header('Content-Length: ' . filesize($realFilePath));
-        readfile($realFilePath);
-        exit;
     }
     
     /**
      * AJAX: Скачування папки (ZIP архів)
      */
     private function ajaxDownloadFolder(): void {
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme', ''));
-        $folderPath = SecurityHelper::sanitizeInput($request->query('folder', ''));
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->query('theme', ''));
+        $folderPath = Validator::sanitizeString($request->query('folder', ''));
         
         if (empty($themeSlug) || empty($folderPath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або папку'], 400);
@@ -461,34 +509,60 @@ class ThemeEditorPage extends AdminPage {
         try {
             $zipPath = $this->editorManager->createFolderZip($folderPath, $themePath);
             
-            if ($zipPath === null || !file_exists($zipPath)) {
-                error_log("ThemeEditorPage: Failed to create ZIP archive. Theme: {$themeSlug}, Folder: {$folderPath}");
+            // Використовуємо клас File для перевірки та відправки ZIP
+            $zipFile = new File($zipPath);
+            
+            if ($zipPath === null || !$zipFile->exists()) {
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorPage: Failed to create ZIP archive', ['theme' => $themeSlug, 'folder' => $folderPath]);
+                } else {
+                    error_log("ThemeEditorPage: Failed to create ZIP archive. Theme: {$themeSlug}, Folder: {$folderPath}");
+                }
                 $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити архів. Перевірте права доступу та логи сервера.'], 500);
                 return;
             }
             
             // Відправляємо ZIP файл
-            $folderName = basename($folderPath) ?: 'folder';
+            // Використовуємо клас File для отримання імені папки
+            $folderFile = new File($folderPath);
+            $folderName = $folderFile->getFilename() ?: 'folder';
             $folderName = preg_replace('/[^a-zA-Z0-9\-_\.]/', '_', $folderName); // Безпечне ім'я файлу
             
-            header('Content-Type: application/zip');
-            header('Content-Disposition: attachment; filename="' . $folderName . '.zip"');
-            header('Content-Length: ' . filesize($zipPath));
-            header('Cache-Control: no-cache, must-revalidate');
-            header('Pragma: no-cache');
-            
-            // Вимикаємо буферизацію для великих файлів
-            if (ob_get_level()) {
+            // Вимикаємо буферизацію перед відправкою файлу
+            while (ob_get_level() > 0) {
                 ob_end_clean();
             }
             
+            // Використовуємо Response для відправки ZIP файлу
+            $response = new Response();
+            $response->status(200)
+                     ->header('Content-Type', 'application/zip')
+                     ->header('Content-Disposition', 'attachment; filename="' . Security::clean($folderName . '.zip') . '"')
+                     ->header('Content-Length', (string)$zipFile->getSize())
+                     ->header('Cache-Control', 'no-cache, must-revalidate')
+                     ->header('Pragma', 'no-cache')
+                     ->send();
+            
+            // Відправляємо вміст ZIP файлу
             readfile($zipPath);
             
             // Видаляємо тимчасовий файл
-            @unlink($zipPath);
+            try {
+                $zipFile->delete();
+            } catch (Exception $e) {
+                @unlink($zipPath);
+            }
             exit;
         } catch (Exception $e) {
-            error_log("ThemeEditorPage: Exception in ajaxDownloadFolder: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorPage: Exception in ajaxDownloadFolder', [
+                    'error' => $e->getMessage(),
+                    'theme' => $themeSlug,
+                    'folder' => $folderPath
+                ]);
+            } else {
+                error_log("ThemeEditorPage: Exception in ajaxDownloadFolder: " . $e->getMessage());
+            }
             $this->sendJsonResponse(['success' => false, 'error' => 'Помилка створення архіву: ' . $e->getMessage()], 500);
             return;
         }
@@ -500,7 +574,7 @@ class ThemeEditorPage extends AdminPage {
     private function loadEditorSettings(): array {
         $settingsFile = dirname(__DIR__, 2) . '/data/theme-editor.ini';
         
-        $settings = [
+        $defaultSettings = [
             'show_empty_folders' => '1',
             'enable_syntax_highlighting' => '1',
             'show_line_numbers' => '1',
@@ -513,14 +587,28 @@ class ThemeEditorPage extends AdminPage {
             'auto_save_interval' => '60'
         ];
         
-        if (file_exists($settingsFile)) {
-            $parsed = parse_ini_file($settingsFile);
-            if ($parsed !== false) {
-                $settings = array_merge($settings, $parsed);
+        try {
+            // Використовуємо клас Ini для роботи з налаштуваннями
+            $ini = new Ini($settingsFile);
+            
+            if ($ini->exists() && $ini->isReadable()) {
+                $ini->load();
+                
+                // Отримуємо всі налаштування
+                foreach ($defaultSettings as $key => $defaultValue) {
+                    $value = $ini->get($key, $defaultValue);
+                    $defaultSettings[$key] = $value;
+                }
+            }
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logWarning('ThemeEditorPage: Error loading editor settings', ['error' => $e->getMessage()]);
+            } else {
+                error_log("ThemeEditorPage: Error loading editor settings: " . $e->getMessage());
             }
         }
         
-        return $settings;
+        return $defaultSettings;
     }
     
     /**
@@ -529,11 +617,13 @@ class ThemeEditorPage extends AdminPage {
     private function getAllFolders(string $themePath): array {
         $folders = [];
         
-        if (!is_dir($themePath) || !is_readable($themePath)) {
-            return $folders;
-        }
-        
         try {
+            // Використовуємо клас Directory для перевірки
+            $dir = new Directory($themePath);
+            if (!$dir->exists() || !$dir->isReadable()) {
+                return $folders;
+            }
+            
             $iterator = new RecursiveIteratorIterator(
                 new RecursiveDirectoryIterator($themePath, RecursiveDirectoryIterator::SKIP_DOTS),
                 RecursiveIteratorIterator::SELF_FIRST
@@ -551,7 +641,11 @@ class ThemeEditorPage extends AdminPage {
                 }
             }
         } catch (Exception $e) {
-            error_log("Error getting all folders: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('Error getting all folders', ['error' => $e->getMessage(), 'themePath' => $themePath]);
+            } else {
+                error_log("Error getting all folders: " . $e->getMessage());
+            }
         }
         
         return $folders;
@@ -703,42 +797,54 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $showEmptyFolders = Request::post('show_empty_folders', '0') === '1' ? '1' : '0';
-        $enableSyntaxHighlighting = Request::post('enable_syntax_highlighting', '1') === '1' ? '1' : '0';
-        $showLineNumbers = Request::post('show_line_numbers', '1') === '1' ? '1' : '0';
-        $fontFamily = Request::post('font_family', "'Consolas', monospace");
-        $fontSize = max(12, min(24, (int)Request::post('font_size', '14')));
-        $editorTheme = Request::post('editor_theme', 'monokai');
-        $indentSize = max(2, min(8, (int)Request::post('indent_size', '4')));
-        $wordWrap = Request::post('word_wrap', '1') === '1' ? '1' : '0';
-        $autoSave = Request::post('auto_save', '0') === '1' ? '1' : '0';
-        $autoSaveInterval = max(30, min(300, (int)Request::post('auto_save_interval', '60')));
+        $request = $this->request();
+        $showEmptyFolders = $request->postValue('show_empty_folders', '0') === '1' ? '1' : '0';
+        $enableSyntaxHighlighting = $request->postValue('enable_syntax_highlighting', '1') === '1' ? '1' : '0';
+        $showLineNumbers = $request->postValue('show_line_numbers', '1') === '1' ? '1' : '0';
+        $fontFamily = $request->postValue('font_family', "'Consolas', monospace");
+        $fontSize = max(12, min(24, (int)$request->postValue('font_size', '14')));
+        $editorTheme = $request->postValue('editor_theme', 'monokai');
+        $indentSize = max(2, min(8, (int)$request->postValue('indent_size', '4')));
+        $wordWrap = $request->postValue('word_wrap', '1') === '1' ? '1' : '0';
+        $autoSave = $request->postValue('auto_save', '0') === '1' ? '1' : '0';
+        $autoSaveInterval = max(30, min(300, (int)$request->postValue('auto_save_interval', '60')));
         
         $settingsDir = dirname(__DIR__, 2) . '/data';
-        if (!is_dir($settingsDir)) {
-            if (!mkdir($settingsDir, 0755, true)) {
-                $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити директорію для налаштувань'], 500);
-                return;
-            }
-        }
-        
         $settingsFile = $settingsDir . '/theme-editor.ini';
         
-        $iniContent = "; Налаштування редактора теми\n";
-        $iniContent .= "; Автоматично згенеровано\n\n";
-        $iniContent .= "show_empty_folders = " . $showEmptyFolders . "\n";
-        $iniContent .= "enable_syntax_highlighting = " . $enableSyntaxHighlighting . "\n";
-        $iniContent .= "show_line_numbers = " . $showLineNumbers . "\n";
-        $iniContent .= "font_family = " . $fontFamily . "\n";
-        $iniContent .= "font_size = " . $fontSize . "\n";
-        $iniContent .= "editor_theme = " . $editorTheme . "\n";
-        $iniContent .= "indent_size = " . $indentSize . "\n";
-        $iniContent .= "word_wrap = " . $wordWrap . "\n";
-        $iniContent .= "auto_save = " . $autoSave . "\n";
-        $iniContent .= "auto_save_interval = " . $autoSaveInterval . "\n";
-        
-        if (file_put_contents($settingsFile, $iniContent) === false) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося зберегти налаштування'], 500);
+        try {
+            // Створюємо директорію, якщо потрібно
+            $dir = new Directory($settingsDir);
+            if (!$dir->exists()) {
+                $dir->create(0755, true);
+            }
+            
+            // Використовуємо клас Ini для збереження налаштувань
+            $ini = new Ini($settingsFile);
+            
+            // Встановлюємо всі налаштування
+            $ini->set('show_empty_folders', $showEmptyFolders)
+                ->set('enable_syntax_highlighting', $enableSyntaxHighlighting)
+                ->set('show_line_numbers', $showLineNumbers)
+                ->set('font_family', $fontFamily)
+                ->set('font_size', (string)$fontSize)
+                ->set('editor_theme', $editorTheme)
+                ->set('indent_size', (string)$indentSize)
+                ->set('word_wrap', $wordWrap)
+                ->set('auto_save', $autoSave)
+                ->set('auto_save_interval', (string)$autoSaveInterval);
+            
+            // Зберігаємо налаштування
+            if (!$ini->save()) {
+                throw new Exception('Не вдалося зберегти налаштування');
+            }
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorPage: Error saving editor settings', ['error' => $e->getMessage()]);
+            } else {
+                error_log("ThemeEditorPage: Error saving editor settings: " . $e->getMessage());
+            }
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося зберегти налаштування: ' . $e->getMessage()], 500);
             return;
         }
         
@@ -754,7 +860,7 @@ class ThemeEditorPage extends AdminPage {
     private function ajaxGetEditorSettings(): void {
         $settingsFile = dirname(__DIR__, 2) . '/data/theme-editor.ini';
         
-        $settings = [
+        $defaultSettings = [
             'show_empty_folders' => '1',
             'enable_syntax_highlighting' => '1',
             'show_line_numbers' => '1',
@@ -767,16 +873,30 @@ class ThemeEditorPage extends AdminPage {
             'auto_save_interval' => '60'
         ];
         
-        if (file_exists($settingsFile)) {
-            $parsed = parse_ini_file($settingsFile);
-            if ($parsed !== false) {
-                $settings = array_merge($settings, $parsed);
+        try {
+            // Використовуємо клас Ini для роботи з налаштуваннями
+            $ini = new Ini($settingsFile);
+            
+            if ($ini->exists() && $ini->isReadable()) {
+                $ini->load();
+                
+                // Отримуємо всі налаштування
+                foreach ($defaultSettings as $key => $defaultValue) {
+                    $value = $ini->get($key, $defaultValue);
+                    $defaultSettings[$key] = $value;
+                }
+            }
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logWarning('ThemeEditorPage: Error getting editor settings', ['error' => $e->getMessage()]);
+            } else {
+                error_log("ThemeEditorPage: Error getting editor settings: " . $e->getMessage());
             }
         }
 
         $this->sendJsonResponse([
             'success' => true,
-            'settings' => $settings
+            'settings' => $defaultSettings
         ], 200);
     }
     
@@ -784,8 +904,8 @@ class ThemeEditorPage extends AdminPage {
      * AJAX: Получение дерева файлов
      */
     private function ajaxGetFileTree(): void {
-        $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput($request->post('theme', $request->query('theme', '')));
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', $request->query('theme', '')));
         
         if (empty($themeSlug)) {
             $activeTheme = themeManager()->getActiveTheme();
@@ -810,7 +930,8 @@ class ThemeEditorPage extends AdminPage {
         $editorSettings = $this->loadEditorSettings();
         
         // Отримуємо значення show_empty_folders з POST (якщо передано) або з налаштувань
-        $showEmptyFoldersParam = Request::post('show_empty_folders', '');
+        $request = $this->request();
+        $showEmptyFoldersParam = $request->postValue('show_empty_folders', '');
         if ($showEmptyFoldersParam !== '') {
             // Якщо передано в POST, використовуємо його
             $showEmptyFolders = $showEmptyFoldersParam === '1';

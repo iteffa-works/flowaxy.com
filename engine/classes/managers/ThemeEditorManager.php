@@ -8,6 +8,15 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../files/File.php';
+require_once __DIR__ . '/../files/Directory.php';
+require_once __DIR__ . '/../files/Zip.php';
+require_once __DIR__ . '/../files/Ini.php';
+require_once __DIR__ . '/../files/Upload.php';
+require_once __DIR__ . '/../data/Logger.php';
+require_once __DIR__ . '/../data/Cache.php';
+require_once __DIR__ . '/../validators/Validator.php';
+
 class ThemeEditorManager {
     private static ?ThemeEditorManager $instance = null;
     private ?PDO $db = null;
@@ -16,7 +25,11 @@ class ThemeEditorManager {
         try {
             $this->db = DatabaseHelper::getConnection();
         } catch (Exception $e) {
-            error_log("ThemeEditorManager constructor error: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager constructor error', ['error' => $e->getMessage()]);
+            } else {
+                error_log("ThemeEditorManager constructor error: " . $e->getMessage());
+            }
             $this->db = null;
         }
     }
@@ -92,7 +105,11 @@ class ThemeEditorManager {
                 return strcmp($a['path'], $b['path']);
             });
         } catch (Exception $e) {
-            error_log("Error getting theme files: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('Error getting theme files', ['error' => $e->getMessage(), 'themePath' => $themePath]);
+            } else {
+                error_log("Error getting theme files: " . $e->getMessage());
+            }
         }
         
         return $files;
@@ -102,59 +119,67 @@ class ThemeEditorManager {
      * Отримання вмісту файлу
      */
     public function getFileContent(string $filePath): ?string {
-        if (!file_exists($filePath) || !is_readable($filePath)) {
+        try {
+            $file = new File($filePath);
+            
+            if (!$file->exists() || !$file->isReadable()) {
+                return null;
+            }
+            
+            return $file->read();
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Error reading file content', ['error' => $e->getMessage(), 'filePath' => $filePath]);
+            } else {
+                error_log("ThemeEditorManager: Error reading file content: " . $e->getMessage());
+            }
             return null;
         }
-        
-        // Перевіряємо, що файл знаходиться в допустимій директорії теми
-        $realPath = realpath($filePath);
-        if ($realPath === false) {
-            return null;
-        }
-        
-        return file_get_contents($realPath) ?: null;
     }
     
     /**
      * Збереження файлу
      */
     public function saveFile(string $filePath, string $content, string $themePath): array {
-        // Перевіряємо безпеку шляху
-        $realFilePath = realpath($filePath);
-        $realThemePath = realpath($themePath);
-        
-        if ($realFilePath === false || $realThemePath === false) {
-            return ['success' => false, 'error' => 'Невірний шлях до файлу'];
-        }
-        
-        // Перевіряємо, що файл знаходиться в директорії теми
-        if (!str_starts_with($realFilePath, $realThemePath)) {
-            return ['success' => false, 'error' => 'Файл не належить до теми'];
-        }
-        
-        // Перевіряємо права на запис
-        if (!is_writable($realFilePath) && file_exists($realFilePath)) {
-            return ['success' => false, 'error' => 'Немає прав на запис файлу'];
-        }
-        
-        // Перевіряємо права на запис директорії (якщо файл не існує)
-        $fileDir = dirname($realFilePath);
-        if (!file_exists($realFilePath) && !is_writable($fileDir)) {
-            return ['success' => false, 'error' => 'Немає прав на створення файлу'];
-        }
-        
         try {
-            // Зберігаємо файл
-            $result = file_put_contents($realFilePath, $content);
+            // Перевіряємо безпеку шляху
+            $realThemePath = realpath($themePath);
+            $realFilePath = realpath($filePath);
             
-            if ($result === false) {
-                return ['success' => false, 'error' => 'Помилка збереження файлу'];
+            // Якщо файл не існує, створюємо його шлях
+            if ($realFilePath === false) {
+                $realFilePath = realpath(dirname($filePath));
+                if ($realFilePath === false) {
+                    return ['success' => false, 'error' => 'Невірний шлях до файлу'];
+                }
+                $realFilePath = $filePath;
             }
+            
+            if ($realThemePath === false) {
+                return ['success' => false, 'error' => 'Невірний шлях до теми'];
+            }
+            
+            // Перевіряємо, що файл знаходиться в директорії теми
+            $file = new File($filePath);
+            if (!$file->isPathSafe($realThemePath)) {
+                return ['success' => false, 'error' => 'Файл не належить до теми'];
+            }
+            
+            // Використовуємо клас File для збереження
+            $file = new File($realFilePath);
+            
+            // Перевіряємо права на запис
+            if ($file->exists() && !$file->isWritable()) {
+                return ['success' => false, 'error' => 'Немає прав на запис файлу'];
+            }
+            
+            // Зберігаємо файл
+            $file->write($content);
             
             return [
                 'success' => true,
                 'message' => 'Файл успішно збережено',
-                'size' => $result
+                'size' => strlen($content)
             ];
         } catch (Exception $e) {
             return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
@@ -188,17 +213,19 @@ class ThemeEditorManager {
         
         // Створюємо директорію, якщо потрібно
         $fileDir = dirname($fullPath);
-        if (!is_dir($fileDir)) {
-            if (!mkdir($fileDir, 0755, true)) {
-                return ['success' => false, 'error' => 'Неможливо створити директорію'];
+        try {
+            $dir = new Directory($fileDir);
+            if (!$dir->exists()) {
+                $dir->create(0755, true);
             }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => 'Неможливо створити директорію: ' . $e->getMessage()];
         }
         
         try {
-            $result = file_put_contents($fullPath, $content);
-            if ($result === false) {
-                return ['success' => false, 'error' => 'Помилка створення файлу'];
-            }
+            // Використовуємо клас File для створення
+            $file = new File($fullPath);
+            $file->write($content);
             
             return [
                 'success' => true,
@@ -222,21 +249,23 @@ class ThemeEditorManager {
         }
         
         // Перевіряємо, що файл знаходиться в директорії теми
-        if (!str_starts_with($realFilePath, $realThemePath)) {
+        $file = new File($realFilePath);
+        if (!$file->isPathSafe($realThemePath)) {
             return ['success' => false, 'error' => 'Файл не належить до теми'];
         }
         
         // Забороняємо видалення критичних файлів
         $criticalFiles = ['index.php', 'theme.json', 'functions.php'];
-        $fileName = basename($realFilePath);
+        $file = new File($realFilePath);
+        $fileName = $file->getBasename();
         if (in_array($fileName, $criticalFiles, true)) {
             return ['success' => false, 'error' => 'Неможливо видалити критичний файл'];
         }
         
         try {
-            if (!unlink($realFilePath)) {
-                return ['success' => false, 'error' => 'Помилка видалення файлу'];
-            }
+            // Використовуємо клас File для видалення
+            $file = new File($realFilePath);
+            $file->delete();
             
             return ['success' => true, 'message' => 'Файл успішно видалено'];
         } catch (Exception $e) {
@@ -259,8 +288,9 @@ class ThemeEditorManager {
         $fullPath = $realThemePath . '/' . $dirPath;
         
         // Перевіряємо, що директорія знаходиться в теми
-        $realFullPath = realpath(dirname($fullPath));
-        if ($realFullPath === false || !str_starts_with($realFullPath, $realThemePath)) {
+        $dir = new Directory($fullPath);
+        $file = new File($fullPath);
+        if (!$file->isPathSafe($realThemePath)) {
             return ['success' => false, 'error' => 'Невірний шлях до директорії'];
         }
         
@@ -270,9 +300,9 @@ class ThemeEditorManager {
         }
         
         try {
-            if (!mkdir($fullPath, 0755, true)) {
-                return ['success' => false, 'error' => 'Помилка створення директорії'];
-            }
+            // Використовуємо клас Directory для створення
+            $dir = new Directory($fullPath);
+            $dir->create(0755, true);
             
             return [
                 'success' => true,
@@ -317,7 +347,11 @@ class ThemeEditorManager {
                 }
             }
         } catch (Exception $e) {
-            error_log("Error getting directory structure: " . $e->getMessage());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('Error getting directory structure', ['error' => $e->getMessage(), 'themePath' => $themePath]);
+            } else {
+                error_log("Error getting directory structure: " . $e->getMessage());
+            }
         }
         
         return $structure;
@@ -328,57 +362,92 @@ class ThemeEditorManager {
      */
     public function uploadFile(array $uploadedFile, string $folderPath, string $themePath): array {
         try {
-            if (!isset($uploadedFile['tmp_name']) || !is_uploaded_file($uploadedFile['tmp_name'])) {
-                return ['success' => false, 'error' => 'Файл не було завантажено'];
-            }
-            
-            $fileName = $uploadedFile['name'];
-            $tmpName = $uploadedFile['tmp_name'];
-            
-            // Перевірка на небезпечні символи в імені файлу
-            if (preg_match('/[\/\\\?\*\|<>:"]/', $fileName)) {
-                return ['success' => false, 'error' => 'Недопустимі символи в імені файлу'];
-            }
-            
-            // Формуємо повний шлях
-            $targetPath = rtrim($themePath, '/\\') . '/';
-            if (!empty($folderPath)) {
-                $targetPath .= trim($folderPath, '/\\') . '/';
-            }
-            $targetPath .= $fileName;
-            
             // Перевірка безпеки шляху
             $realThemePath = realpath($themePath);
-            $realTargetPath = realpath(dirname($targetPath));
-            
-            if ($realThemePath === false || $realTargetPath === false || 
-                !str_starts_with($realTargetPath, $realThemePath)) {
-                return ['success' => false, 'error' => 'Недопустимий шлях для завантаження'];
+            if ($realThemePath === false) {
+                return ['success' => false, 'error' => 'Невірний шлях до теми'];
             }
             
-            // Створюємо директорію, якщо вона не існує
-            $targetDir = dirname($targetPath);
-            if (!is_dir($targetDir)) {
-                if (!mkdir($targetDir, 0755, true)) {
-                    return ['success' => false, 'error' => 'Не вдалося створити директорію'];
+            // Формуємо повний шлях до директорії завантаження
+            $targetDir = rtrim($realThemePath, '/\\') . DIRECTORY_SEPARATOR;
+            if (!empty($folderPath)) {
+                $targetDir .= trim($folderPath, '/\\') . DIRECTORY_SEPARATOR;
+            }
+            
+            // Перевірка безпеки шляху директорії
+            $realTargetDir = realpath($targetDir);
+            if ($realTargetDir === false) {
+                // Спробуємо створити директорію
+                try {
+                    $dir = new Directory($targetDir);
+                    $dir->create(0755, true);
+                    $realTargetDir = realpath($targetDir);
+                } catch (Exception $e) {
+                    if (class_exists('Logger')) {
+                        Logger::getInstance()->logError('ThemeEditorManager: Failed to create upload directory', ['error' => $e->getMessage(), 'targetDir' => $targetDir]);
+                    }
+                    return ['success' => false, 'error' => 'Не вдалося створити директорію: ' . $e->getMessage()];
                 }
             }
             
-            // Переміщуємо файл
-            if (!move_uploaded_file($tmpName, $targetPath)) {
-                return ['success' => false, 'error' => 'Не вдалося зберегти файл'];
+            // Перевіряємо безпеку шляху через клас File
+            $targetFile = new File($realTargetDir . DIRECTORY_SEPARATOR . ($uploadedFile['name'] ?? 'temp'));
+            if (!$targetFile->isPathSafe($realThemePath)) {
+                return ['success' => false, 'error' => 'Недопустимий шлях для завантаження'];
             }
             
-            // Встановлюємо права доступу
-            @chmod($targetPath, 0644);
+            // Використовуємо клас Upload для завантаження файлу
+            $upload = new Upload($realTargetDir);
+            
+            // Валідуємо ім'я файлу через Validator
+            $fileName = $uploadedFile['name'] ?? '';
+            if (empty($fileName)) {
+                return ['success' => false, 'error' => 'Ім\'я файлу не може бути порожнім'];
+            }
+            
+            // Перевіряємо на небезпечні символи (використовуємо валідацію slug як базову, але розширюємо для файлів)
+            if (!Validator::validateString($fileName, 1, 255) || preg_match('/[\/\\\?\*\|<>:"]/', $fileName)) {
+                return ['success' => false, 'error' => 'Недопустимі символи в імені файлу'];
+            }
+            
+            // Завантажуємо файл
+            $result = $upload->upload($uploadedFile);
+            
+            if (!$result['success']) {
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorManager: File upload failed', ['error' => $result['error'] ?? 'Unknown error', 'fileName' => $fileName]);
+                }
+                return ['success' => false, 'error' => $result['error'] ?? 'Помилка завантаження файлу'];
+            }
+            
+            // Отримуємо відносний шлях від теми
+            $relativePath = str_replace($realThemePath, '', $result['file']);
+            $relativePath = str_replace('\\', '/', $relativePath);
+            $relativePath = ltrim($relativePath, '/');
+            
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logInfo('ThemeEditorManager: File uploaded successfully', [
+                    'fileName' => $result['name'] ?? $fileName,
+                    'path' => $relativePath,
+                    'size' => $result['size'] ?? 0
+                ]);
+            }
             
             return [
                 'success' => true,
                 'message' => 'Файл успішно завантажено',
-                'path' => str_replace($themePath, '', $targetPath),
-                'name' => $fileName
+                'path' => $relativePath,
+                'name' => $result['name'] ?? $fileName,
+                'size' => $result['size'] ?? 0
             ];
         } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Exception in uploadFile', [
+                    'error' => $e->getMessage(),
+                    'folderPath' => $folderPath,
+                    'themePath' => $themePath
+                ]);
+            }
             return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
         }
     }
@@ -397,90 +466,102 @@ class ThemeEditorManager {
             $realFolderPath = realpath($fullFolderPath);
             
             if ($realThemePath === false || $realFolderPath === false) {
-                error_log("ThemeEditorManager: Invalid paths - theme: {$themePath}, folder: {$fullFolderPath}");
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorManager: Invalid paths', ['theme' => $themePath, 'folder' => $fullFolderPath]);
+                } else {
+                    error_log("ThemeEditorManager: Invalid paths - theme: {$themePath}, folder: {$fullFolderPath}");
+                }
                 return null;
             }
             
-            if (!str_starts_with($realFolderPath, $realThemePath)) {
-                error_log("ThemeEditorManager: Folder path is outside theme directory");
+            // Перевіряємо безпеку шляху через клас File
+            $folderFile = new File($realFolderPath);
+            if (!$folderFile->isPathSafe($realThemePath)) {
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logWarning('ThemeEditorManager: Folder path is outside theme directory', ['folderPath' => $realFolderPath, 'themePath' => $realThemePath]);
+                } else {
+                    error_log("ThemeEditorManager: Folder path is outside theme directory");
+                }
                 return null;
             }
             
             if (!is_dir($realFolderPath) || !is_readable($realFolderPath)) {
-                error_log("ThemeEditorManager: Folder does not exist or is not readable: {$realFolderPath}");
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorManager: Folder does not exist or is not readable', ['folderPath' => $realFolderPath]);
+                } else {
+                    error_log("ThemeEditorManager: Folder does not exist or is not readable: {$realFolderPath}");
+                }
                 return null;
             }
             
             // Створюємо тимчасовий файл для архіву
             $tempDir = sys_get_temp_dir();
             if (!is_writable($tempDir)) {
-                error_log("ThemeEditorManager: Temporary directory is not writable: {$tempDir}");
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorManager: Temporary directory is not writable', ['tempDir' => $tempDir]);
+                } else {
+                    error_log("ThemeEditorManager: Temporary directory is not writable: {$tempDir}");
+                }
                 return null;
             }
             
             $zipPath = rtrim($tempDir, '/\\') . DIRECTORY_SEPARATOR . 'theme_folder_' . uniqid() . '.zip';
             
-            // Створюємо ZIP архів
-            $zip = new ZipArchive();
-            $result = $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-            
-            if ($result !== true) {
-                $errorMsg = $zip->getStatusString() ?: "Unknown error (code: {$result})";
-                error_log("ThemeEditorManager: Failed to create ZIP archive at {$zipPath}: {$errorMsg}");
-                return null;
-            }
-            
-            // Додаємо всі файли з папки до архіву
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($realFolderPath, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::LEAVES_ONLY
-            );
-            
-            $basePathLength = strlen($realFolderPath) + 1;
-            $fileCount = 0;
-            
-            foreach ($iterator as $file) {
-                if ($file->isFile() && $file->isReadable()) {
-                    $filePath = $file->getPathname();
-                    // Отримуємо відносний шлях від папки
-                    $relativePath = substr($filePath, $basePathLength);
-                    // Нормалізуємо для ZIP (використовуємо прямі слеші)
-                    $relativePath = str_replace('\\', '/', $relativePath);
-                    
-                    if (!$zip->addFile($filePath, $relativePath)) {
-                        error_log("ThemeEditorManager: Failed to add file to archive: {$filePath}");
+            // Створюємо ZIP архів використовуючи клас Zip
+            try {
+                $zip = new Zip($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+                
+                // Додаємо директорію до архіву
+                $folderFile = new File($realFolderPath);
+                $baseName = $folderFile->getBasename();
+                $zip->addDirectory($realFolderPath, $baseName);
+                
+                // Закриваємо архів
+                if (!$zip->close()) {
+                    if (class_exists('Logger')) {
+                        Logger::getInstance()->logError('ThemeEditorManager: Failed to close ZIP archive', ['zipPath' => $zipPath]);
                     } else {
-                        $fileCount++;
+                        error_log("ThemeEditorManager: Failed to close ZIP archive");
                     }
+                    @unlink($zipPath);
+                    return null;
                 }
-            }
-            
-            // Якщо не додано жодного файлу, повертаємо помилку
-            if ($fileCount === 0) {
-                $zip->close();
-                @unlink($zipPath);
-                error_log("ThemeEditorManager: No files were added to the archive");
-                return null;
-            }
-            
-            // Закриваємо архів
-            if (!$zip->close()) {
-                $errorMsg = $zip->getStatusString() ?: "Unknown error";
-                error_log("ThemeEditorManager: Failed to close ZIP archive: {$errorMsg}");
-                @unlink($zipPath);
-                return null;
-            }
-            
-            // Перевіряємо, що файл архіву створено і доступний
-            if (!file_exists($zipPath) || !is_readable($zipPath)) {
-                error_log("ThemeEditorManager: ZIP archive file was not created or is not readable: {$zipPath}");
+                
+                // Перевіряємо, що файл архіву створено і доступний
+                $zipFile = new File($zipPath);
+                if (!$zipFile->exists() || !$zipFile->isReadable()) {
+                    if (class_exists('Logger')) {
+                        Logger::getInstance()->logError('ThemeEditorManager: ZIP archive file was not created or is not readable', ['zipPath' => $zipPath]);
+                    } else {
+                        error_log("ThemeEditorManager: ZIP archive file was not created or is not readable: {$zipPath}");
+                    }
+                    return null;
+                }
+            } catch (Exception $e) {
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorManager: Error creating ZIP archive', ['error' => $e->getMessage(), 'zipPath' => $zipPath]);
+                } else {
+                    error_log("ThemeEditorManager: Error creating ZIP archive: " . $e->getMessage());
+                }
+                if (file_exists($zipPath)) {
+                    @unlink($zipPath);
+                }
                 return null;
             }
             
             return $zipPath;
         } catch (Exception $e) {
-            error_log("ThemeEditorManager: Exception in createFolderZip: " . $e->getMessage());
-            error_log("ThemeEditorManager: Stack trace: " . $e->getTraceAsString());
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Exception in createFolderZip', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'folderPath' => $folderPath,
+                    'themePath' => $themePath
+                ]);
+            } else {
+                error_log("ThemeEditorManager: Exception in createFolderZip: " . $e->getMessage());
+                error_log("ThemeEditorManager: Stack trace: " . $e->getTraceAsString());
+            }
             return null;
         }
     }
