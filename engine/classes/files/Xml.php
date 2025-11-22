@@ -9,8 +9,11 @@
 
 declare(strict_types=1);
 
-class Xml {
-    private string $filePath;
+require_once __DIR__ . '/../../interfaces/FileInterface.php';
+require_once __DIR__ . '/../../interfaces/StructuredFileInterface.php';
+
+class Xml implements StructuredFileInterface {
+    private string $filePath = '';
     private ?DOMDocument $document = null;
     private bool $hasData = false;
     
@@ -312,6 +315,353 @@ class Xml {
         return $this->filePath;
     }
     
+    // ===== Методи з FileInterface =====
+    
+    /**
+     * Встановлення шляху до файлу (з FileInterface)
+     * 
+     * @param string $filePath Шлях до файлу
+     * @return self
+     */
+    public function setPath(string $filePath): self {
+        $this->filePath = $filePath;
+        $this->hasData = false;
+        return $this;
+    }
+    
+    /**
+     * Отримання шляху до файлу (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getPath(): string {
+        return $this->filePath;
+    }
+    
+    /**
+     * Перевірка існування файлу (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function exists(): bool {
+        return !empty($this->filePath) && file_exists($this->filePath);
+    }
+    
+    /**
+     * Читання вмісту файлу (з FileInterface)
+     * 
+     * @return string
+     * @throws Exception
+     */
+    public function read(): string {
+        if (!$this->exists()) {
+            throw new Exception("Файл не існує: {$this->filePath}");
+        }
+        
+        $content = @file_get_contents($this->filePath);
+        if ($content === false) {
+            throw new Exception("Не вдалося прочитати файл: {$this->filePath}");
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Запис вмісту в файл (з FileInterface)
+     * 
+     * @param string $content Вміст для запису
+     * @param bool $append Додавати в кінець файлу
+     * @return bool
+     * @throws Exception
+     */
+    public function write(string $content, bool $append = false): bool {
+        if (empty($this->filePath)) {
+            throw new Exception("Шлях до файлу не встановлено");
+        }
+        
+        $dir = dirname($this->filePath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        $flags = $append ? FILE_APPEND | LOCK_EX : LOCK_EX;
+        $result = @file_put_contents($this->filePath, $content, $flags);
+        
+        if ($result === false) {
+            throw new Exception("Не вдалося записати файл: {$this->filePath}");
+        }
+        
+        @chmod($this->filePath, 0644);
+        return true;
+    }
+    
+    /**
+     * Копіювання файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function copy(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@copy($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося скопіювати файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        @chmod($destinationPath, 0644);
+        return true;
+    }
+    
+    /**
+     * Переміщення/перейменування файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function move(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@rename($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося перемістити файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        $this->filePath = $destinationPath;
+        return true;
+    }
+    
+    /**
+     * Видалення файлу (з FileInterface)
+     * 
+     * @return bool
+     * @throws Exception
+     */
+    public function delete(): bool {
+        if (!$this->exists()) {
+            return true;
+        }
+        
+        if (!@unlink($this->filePath)) {
+            throw new Exception("Не вдалося видалити файл: {$this->filePath}");
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Отримання розміру файлу (з FileInterface)
+     * 
+     * @return int
+     */
+    public function getSize(): int {
+        return $this->exists() ? filesize($this->filePath) : 0;
+    }
+    
+    /**
+     * Отримання MIME типу файлу (з FileInterface)
+     * 
+     * @return string|false
+     */
+    public function getMimeType() {
+        if (!$this->exists()) {
+            return false;
+        }
+        
+        if (function_exists('mime_content_type')) {
+            return @mime_content_type($this->filePath);
+        }
+        
+        if (function_exists('finfo_file')) {
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo === false) {
+                return false;
+            }
+            
+            $mimeType = @finfo_file($finfo, $this->filePath);
+            // finfo_close() is deprecated in PHP 8.1+, resource is automatically closed
+            return $mimeType;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Отримання часу останньої зміни (з FileInterface)
+     * 
+     * @return int|false
+     */
+    public function getMTime() {
+        return $this->exists() ? @filemtime($this->filePath) : false;
+    }
+    
+    /**
+     * Отримання розширення файлу (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getExtension(): string {
+        return !empty($this->filePath) ? strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION)) : '';
+    }
+    
+    /**
+     * Отримання імені файлу з розширенням (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getBasename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_BASENAME) : '';
+    }
+    
+    /**
+     * Отримання імені файлу без шляху та розширення (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getFilename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_FILENAME) : '';
+    }
+    
+    /**
+     * Перевірка доступності файлу для читання (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isReadable(): bool {
+        return $this->exists() && is_readable($this->filePath);
+    }
+    
+    /**
+     * Перевірка доступності файлу для запису (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isWritable(): bool {
+        return $this->exists() && is_writable($this->filePath);
+    }
+    
+    // ===== Методи з StructuredFileInterface =====
+    
+    /**
+     * Отримання даних (з StructuredFileInterface)
+     * Повертає DOMDocument
+     * 
+     * @return mixed
+     */
+    public function getData() {
+        return $this->hasData ? $this->document : null;
+    }
+    
+    /**
+     * Встановлення даних (з StructuredFileInterface)
+     * Приймає DOMDocument або XML рядок
+     * 
+     * @param mixed $data Дані (DOMDocument або XML рядок)
+     * @return self
+     */
+    public function setData($data): self {
+        if ($data instanceof DOMDocument) {
+            $this->document = $data;
+            $this->hasData = true;
+        } elseif (is_string($data)) {
+            $this->loadString($data);
+        } else {
+            throw new Exception("Невідомий тип даних. Очікується DOMDocument або XML рядок");
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * Перевірка наявності завантажених даних (з StructuredFileInterface)
+     * 
+     * @return bool
+     */
+    public function hasData(): bool {
+        return $this->hasData;
+    }
+    
+    /**
+     * Отримання значення за ключем (з StructuredFileInterface)
+     * Для XML використовується XPath
+     * 
+     * @param string $key XPath вираз
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public function get(string $key, $default = null) {
+        return $this->getValue($key, $default);
+    }
+    
+    /**
+     * Встановлення значення за ключем (з StructuredFileInterface)
+     * Для XML використовується XPath
+     * 
+     * @param string $key XPath вираз
+     * @param mixed $value Значення
+     * @return self
+     */
+    public function set(string $key, $value): self {
+        return $this->setValue($key, (string)$value);
+    }
+    
+    /**
+     * Перевірка наявності ключа (з StructuredFileInterface)
+     * Для XML використовується XPath
+     * 
+     * @param string $key XPath вираз
+     * @return bool
+     */
+    public function has(string $key): bool {
+        if (!$this->hasData) {
+            return false;
+        }
+        
+        $xpathObj = new DOMXPath($this->document);
+        $nodes = $xpathObj->query($key);
+        
+        return $nodes !== false && $nodes->length > 0;
+    }
+    
+    /**
+     * Видалення значення за ключем (з StructuredFileInterface)
+     * Для XML використовується XPath
+     * 
+     * @param string $key XPath вираз
+     * @return self
+     */
+    public function remove(string $key): self {
+        $this->removeElement($key);
+        return $this;
+    }
+    
+    /**
+     * Очищення всіх даних (з StructuredFileInterface)
+     * 
+     * @return self
+     */
+    public function clear(): self {
+        $this->document = new DOMDocument('1.0', 'UTF-8');
+        $this->document->formatOutput = true;
+        $this->document->preserveWhiteSpace = false;
+        $this->hasData = false;
+        return $this;
+    }
+    
     /**
      * Валідація XML за схемою
      * 
@@ -337,7 +687,7 @@ class Xml {
      * @param int $options Прапорці для завантаження
      * @return Xml
      */
-    public static function read(string $filePath, int $options = 0): Xml {
+    public static function readFile(string $filePath, int $options = 0): Xml {
         $xml = new self($filePath);
         $xml->load($options);
         return $xml;
