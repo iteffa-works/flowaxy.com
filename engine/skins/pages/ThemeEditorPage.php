@@ -619,25 +619,8 @@ class ThemeEditorPage extends AdminPage {
         
         try {
             // Використовуємо стандартні PHP функції для перевірки
-            // (як fallback, якщо клас Directory не працює правильно)
             if (!is_dir($themePath) || !is_readable($themePath)) {
                 return $folders;
-            }
-            
-            // Використовуємо клас Directory для роботи з директоріями
-            if (class_exists('Directory')) {
-                try {
-                    $dir = new Directory($themePath);
-                    // Перевіряємо, що метод exists() доступний
-                    if (method_exists($dir, 'exists') && method_exists($dir, 'isReadable')) {
-                        if (!$dir->exists() || !$dir->isReadable()) {
-                            return $folders;
-                        }
-                    }
-                } catch (Throwable $e) {
-                    Logger::getInstance()->logError("Directory class error: " . $e->getMessage());
-                    // Продовжуємо зі стандартними PHP функціями
-                }
             }
             
             $iterator = new RecursiveIteratorIterator(
