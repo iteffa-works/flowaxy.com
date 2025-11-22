@@ -144,12 +144,6 @@ class ThemeEditorManager {
         }
         
         try {
-            // Створюємо резервну копію перед збереженням
-            if (file_exists($realFilePath)) {
-                $backupPath = $realFilePath . '.backup.' . date('Y-m-d_H-i-s');
-                @copy($realFilePath, $backupPath);
-            }
-            
             // Зберігаємо файл
             $result = file_put_contents($realFilePath, $content);
             
