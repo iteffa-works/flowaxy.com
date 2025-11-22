@@ -1065,6 +1065,9 @@ function openEditorSettings() {
             document.getElementById('enableSyntaxHighlighting').checked = data.settings.enable_syntax_highlighting === '1';
         }
         
+        // Настраиваем автоматическое сохранение при изменении
+        setupAutoSaveEditorSettings();
+        
         // Показываем модальное окно
         const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
         modal.show();
@@ -1074,6 +1077,65 @@ function openEditorSettings() {
         // Показываем модальное окно даже при ошибке
         const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
         modal.show();
+        setupAutoSaveEditorSettings();
+    });
+}
+
+/**
+ * Настройка автоматического сохранения настроек редактора
+ */
+function setupAutoSaveEditorSettings() {
+    const showEmptyFolders = document.getElementById('showEmptyFolders');
+    const enableSyntaxHighlighting = document.getElementById('enableSyntaxHighlighting');
+    
+    if (!showEmptyFolders || !enableSyntaxHighlighting) {
+        return;
+    }
+    
+    // Удаляем старые обработчики, если они есть (удаляем атрибут data-listener)
+    if (showEmptyFolders.dataset.listener) {
+        showEmptyFolders.removeEventListener('change', autoSaveEditorSettings);
+    }
+    if (enableSyntaxHighlighting.dataset.listener) {
+        enableSyntaxHighlighting.removeEventListener('change', autoSaveEditorSettings);
+    }
+    
+    // Добавляем обработчики изменения
+    showEmptyFolders.addEventListener('change', autoSaveEditorSettings);
+    showEmptyFolders.dataset.listener = 'true';
+    
+    enableSyntaxHighlighting.addEventListener('change', autoSaveEditorSettings);
+    enableSyntaxHighlighting.dataset.listener = 'true';
+}
+
+/**
+ * Автоматическое сохранение настроек редактора
+ */
+function autoSaveEditorSettings() {
+    const formData = new FormData();
+    formData.append('action', 'save_editor_settings');
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+    formData.append('show_empty_folders', document.getElementById('showEmptyFolders').checked ? '1' : '0');
+    formData.append('enable_syntax_highlighting', document.getElementById('enableSyntaxHighlighting').checked ? '1' : '0');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Налаштування збережено', 'success');
+        } else {
+            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Помилка збереження налаштувань', 'danger');
     });
 }
 

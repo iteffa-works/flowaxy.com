@@ -92,7 +92,7 @@
     color: #495057;
     border-bottom: 1px solid #dee2e6;
     flex-shrink: 0;
-    background: #e9ecef;
+    background: #fff;
     border-radius: 0;
     margin: 0;
     position: relative;
@@ -161,7 +161,6 @@
     overflow-y: auto;
     padding: 8px;
     background: #fff;
-    border-top: 1px solid #dee2e6;
 }
 
 /* Кастомный скроллбар для боковой панели */
@@ -486,10 +485,13 @@
 }
 
 .theme-editor-main .card-header {
-    padding: 0 20px;
-    border-bottom: 1px solid #dee2e6;
+    padding: 0 16px;
+    border-bottom: none;
     flex-shrink: 0;
     background: #fff;
+    border-radius: 0;
+    margin: 0;
+    position: relative;
     min-height: 52px;
     height: 52px;
     display: flex;
@@ -542,8 +544,6 @@
     background: #1e1e1e;
     border-radius: 0;
     min-height: 0;
-    border-top: 1px solid #dee2e6;
-    border-bottom: 1px solid #dee2e6;
 }
 
 /* Кастомный скроллбар для CodeMirror */
