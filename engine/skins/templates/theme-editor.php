@@ -201,6 +201,80 @@ if (!empty($message)) {
                     <p>Виберіть файл зі списку зліва, щоб почати редагування</p>
                 </div>
             </div>
+            
+            <!-- Режим: Загрузка файлов (встраивается вместо редактора) -->
+            <div class="card-body editor-embedded-mode" id="upload-mode-content" style="display: none;">
+                <div class="upload-files-container">
+                    <div class="upload-dropzone" id="upload-dropzone">
+                        <div class="upload-dropzone-content">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h5>Перетягніть файли або папки сюди</h5>
+                            <p class="text-muted mb-3">або</p>
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('uploadFilesInput').click()">
+                                <i class="fas fa-folder-open me-2"></i>Вибрати файли
+                            </button>
+                            <input type="file" id="uploadFilesInput" multiple webkitdirectory directory style="display: none;" onchange="handleFileSelection(this.files)">
+                            <p class="text-muted small mt-3 mb-0">Підтримується завантаження множинних файлів та папок</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Список выбранных файлов -->
+                    <div id="upload-files-list" class="upload-files-list mt-4" style="display: none;">
+                        <h6 class="mb-3">Вибрані файли для завантаження:</h6>
+                        <div id="upload-files-items"></div>
+                        <div class="mt-3">
+                            <label class="form-label">Виберіть цільову папку:</label>
+                            <select class="form-select" id="upload-target-folder">
+                                <option value="">Коренева папка теми</option>
+                            </select>
+                        </div>
+                        <div class="mt-3 d-flex gap-2">
+                            <button type="button" class="btn btn-primary" onclick="startFilesUpload()">
+                                <i class="fas fa-upload me-2"></i>Завантажити файли
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearUploadList()">
+                                <i class="fas fa-times me-2"></i>Очистити список
+                            </button>
+                        </div>
+                        <div id="upload-progress-container" class="mt-3" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar" id="upload-progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-muted small mt-2 mb-0" id="upload-progress-text">Готується до завантаження...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Режим: Настройки (встраивается вместо редактора) -->
+            <div class="card-body editor-embedded-mode" id="settings-mode-content" style="display: none;">
+                <div class="editor-settings-container">
+                    <h5 class="mb-4">
+                        <i class="fas fa-cog me-2"></i>Налаштування редактора
+                    </h5>
+                    <form id="editorSettingsFormInline">
+                        <?= SecurityHelper::csrfField() ?>
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders">
+                                <label class="form-check-label" for="showEmptyFoldersInline">
+                                    <strong>Показувати пусті папки</strong>
+                                    <p class="text-muted small mb-0">Відображати порожні папки в дереві файлів</p>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableSyntaxHighlightingInline" name="enable_syntax_highlighting" checked>
+                                <label class="form-check-label" for="enableSyntaxHighlightingInline">
+                                    <strong>Увімкнути підсвітку коду</strong>
+                                    <p class="text-muted small mb-0">Підсвітка синтаксису коду в редакторі</p>
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -261,33 +335,3 @@ if (!empty($message)) {
     </div>
 </div>
 
-<!-- Модальное окно загрузки файла -->
-<div class="modal fade" id="uploadFileModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Завантажити файл</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="uploadFileForm" enctype="multipart/form-data">
-                    <?= SecurityHelper::csrfField() ?>
-                    <input type="hidden" name="theme" value="<?= htmlspecialchars($theme['slug']) ?>">
-                    <input type="hidden" id="uploadFileFolder" name="folder" value="">
-                    <div class="mb-3">
-                        <label for="uploadFileInput" class="form-label">Виберіть файл</label>
-                        <input type="file" class="form-control" id="uploadFileInput" name="file" required>
-                        <small class="form-text text-muted">Можна завантажити зображення, відео, скрипти та інші файли</small>
-                    </div>
-                    <div id="uploadFileProgress" class="progress d-none mb-3">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-                <button type="button" class="btn btn-primary" onclick="submitUploadFile()">Завантажити</button>
-            </div>
-        </div>
-    </div>
-</div>

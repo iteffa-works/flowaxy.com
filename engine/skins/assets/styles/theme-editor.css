@@ -956,3 +956,119 @@
     }
 }
 
+/* ========================================
+   ВСТРОЕННЫЕ РЕЖИМЫ (Загрузка файлов, Настройки)
+   ======================================== */
+
+.editor-embedded-mode {
+    background: #fff !important;
+    padding: 40px 20px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Загрузка файлов */
+.upload-files-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.upload-dropzone {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 60px 20px;
+    text-align: center;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-dropzone:hover {
+    border-color: #007bff;
+    background: #e7f3ff;
+}
+
+.upload-dropzone.drag-over {
+    border-color: #007bff;
+    background: #cfe2ff;
+    transform: scale(1.02);
+}
+
+.upload-dropzone-content {
+    pointer-events: none;
+}
+
+.upload-dropzone-content i {
+    color: #6c757d;
+    margin-bottom: 16px;
+}
+
+.upload-dropzone-content h5 {
+    color: #495057;
+    font-size: 1.125rem;
+    margin-bottom: 8px;
+}
+
+.upload-dropzone-content p {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.upload-files-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.upload-file-item {
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.upload-file-item:hover {
+    background: #f8f9fa;
+}
+
+/* Настройки редактора */
+.editor-settings-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.editor-settings-container h5 {
+    color: #1a202c;
+    font-weight: 600;
+    margin-bottom: 32px;
+}
+
+.editor-settings-container .form-check-label {
+    font-size: 0.9375rem;
+    cursor: pointer;
+}
+
+.editor-settings-container .form-check-label strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #1a202c;
+}
+
+.editor-settings-container .form-check-label p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.8125rem;
+}
+
+.editor-settings-container .form-check {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.editor-settings-container .form-check:hover {
+    background: #fff;
+    border-color: #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+

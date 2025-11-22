@@ -812,7 +812,7 @@ window.addEventListener('beforeunload', function(e) {
 });
 
 /**
- * Загрузка файла в папку
+ * Загрузка файла в папку (открывает встроенный режим загрузки)
  */
 function uploadFileToFolder(event, folderPath) {
     if (event) {
@@ -820,72 +820,10 @@ function uploadFileToFolder(event, folderPath) {
         event.stopPropagation();
     }
     
-    const modal = new bootstrap.Modal(document.getElementById('uploadFileModal'));
-    document.getElementById('uploadFileFolder').value = folderPath || '';
-    document.getElementById('uploadFileInput').value = '';
-    document.getElementById('uploadFileProgress').classList.add('d-none');
-    modal.show();
+    // Открываем встроенный режим загрузки вместо модального окна
+    showUploadFiles(folderPath || '');
 }
 
-/**
- * Отправка формы загрузки файла
- */
-function submitUploadFile() {
-    const form = document.getElementById('uploadFileForm');
-    const fileInput = document.getElementById('uploadFileInput');
-    const progressBar = document.getElementById('uploadFileProgress');
-    const progressBarInner = progressBar.querySelector('.progress-bar');
-    
-    if (!fileInput.files || fileInput.files.length === 0) {
-        showNotification('Виберіть файл для завантаження', 'warning');
-        return;
-    }
-    
-    const formData = new FormData(form);
-    formData.append('action', 'upload_file');
-    
-    progressBar.classList.remove('d-none');
-    progressBarInner.style.width = '0%';
-    
-    const xhr = new XMLHttpRequest();
-    
-    xhr.upload.addEventListener('progress', function(e) {
-        if (e.lengthComputable) {
-            const percentComplete = (e.loaded / e.total) * 100;
-            progressBarInner.style.width = percentComplete + '%';
-        }
-    });
-    
-    xhr.addEventListener('load', function() {
-        if (xhr.status === 200) {
-            try {
-                const data = JSON.parse(xhr.responseText);
-                if (data.success) {
-                    showNotification('Файл успішно завантажено', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('uploadFileModal')).hide();
-                    // Обновляем дерево файлов через AJAX
-                    refreshFileTree();
-                } else {
-                    showNotification(data.error || 'Помилка завантаження', 'danger');
-                }
-            } catch (e) {
-                showNotification('Помилка обробки відповіді', 'danger');
-            }
-        } else {
-            showNotification('Помилка завантаження файлу', 'danger');
-        }
-        progressBar.classList.add('d-none');
-    });
-    
-    xhr.addEventListener('error', function() {
-        showNotification('Помилка завантаження файлу', 'danger');
-        progressBar.classList.add('d-none');
-    });
-    
-    xhr.open('POST', window.location.href);
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-    xhr.send(formData);
-}
 
 /**
  * Скачивание файла
@@ -1156,6 +1094,9 @@ function loadFileInEditor(filePath) {
             if (fileWrapper) {
                 fileWrapper.classList.add('active');
             }
+            
+            // Скрываем встроенные режимы (загрузка файлов, настройки)
+            hideEmbeddedModes();
             
             // Показываем редактор, скрываем placeholder
             const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
@@ -1448,50 +1389,10 @@ function formatBytes(bytes) {
 }
 
 /**
- * Открытие настроек редактора
+ * Открытие настроек редактора (переключение на встроенный режим настроек)
  */
 function openEditorSettings() {
-    // Загружаем текущие настройки
-    const formData = new FormData();
-    formData.append('action', 'get_editor_settings');
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-    
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.settings) {
-            // Обновляем глобальные настройки
-            editorSettings.showEmptyFolders = data.settings.show_empty_folders === '1';
-            editorSettings.enableSyntaxHighlighting = data.settings.enable_syntax_highlighting === '1';
-            
-            // Устанавливаем значения чекбоксов
-            document.getElementById('showEmptyFolders').checked = editorSettings.showEmptyFolders;
-            document.getElementById('enableSyntaxHighlighting').checked = editorSettings.enableSyntaxHighlighting;
-        }
-        
-        // Настраиваем автоматическое сохранение при изменении
-        setupAutoSaveEditorSettings();
-        
-        // Показываем модальное окно
-        const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
-        modal.show();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        // Показываем модальное окно даже при ошибке
-        const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
-        modal.show();
-        // Настраиваем обработчики только один раз
-        if (!document.getElementById('showEmptyFolders')?.dataset.listener) {
-            setupAutoSaveEditorSettings();
-        }
-    });
+    showEditorSettings();
 }
 
 /**
@@ -1541,8 +1442,16 @@ function autoSaveEditorSettings() {
     
     // Запускаем сохранение с задержкой (debounce 300ms)
     autoSaveTimeout = setTimeout(() => {
-        const newHighlighting = document.getElementById('enableSyntaxHighlighting').checked;
-        const newShowEmptyFolders = document.getElementById('showEmptyFolders').checked;
+        // Проверяем inline версию настроек, если есть, иначе модальную
+        const highlightingEl = document.getElementById('enableSyntaxHighlightingInline') || document.getElementById('enableSyntaxHighlighting');
+        const showEmptyEl = document.getElementById('showEmptyFoldersInline') || document.getElementById('showEmptyFolders');
+        
+        if (!highlightingEl || !showEmptyEl) {
+            return;
+        }
+        
+        const newHighlighting = highlightingEl.checked;
+        const newShowEmptyFolders = showEmptyEl.checked;
         
         // Сохраняем старые значения для проверки изменений
         const oldHighlighting = editorSettings.enableSyntaxHighlighting;
@@ -1721,5 +1630,423 @@ function saveEditorSettings() {
         console.error('Error:', error);
         showNotification('Помилка збереження налаштувань', 'danger');
     });
+}
+
+/**
+ * Скрыть встроенные режимы (загрузка файлов, настройки) и показать редактор
+ */
+function hideEmbeddedModes() {
+    const uploadContent = document.getElementById('upload-mode-content');
+    const settingsContent = document.getElementById('settings-mode-content');
+    
+    if (uploadContent) {
+        uploadContent.style.display = 'none';
+    }
+    if (settingsContent) {
+        settingsContent.style.display = 'none';
+    }
+}
+
+/**
+ * Показать режим загрузки файлов (встраивается вместо редактора)
+ * Вызывается из контекстного меню папок
+ */
+function showUploadFiles(targetFolder = '') {
+    // Показываем хедер и футер, скрываем тело редактора
+    const editorHeader = document.getElementById('editor-header');
+    const editorBody = document.getElementById('editor-body');
+    const editorFooter = document.getElementById('editor-footer');
+    const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
+    const uploadContent = document.getElementById('upload-mode-content');
+    const settingsContent = document.getElementById('settings-mode-content');
+    
+    // Скрываем тело редактора и placeholder
+    if (editorBody) editorBody.style.display = 'none';
+    if (editorPlaceholder) editorPlaceholder.style.display = 'none';
+    if (settingsContent) settingsContent.style.display = 'none';
+    
+    // Показываем хедер и футер
+    if (editorHeader) {
+        editorHeader.style.display = 'block';
+        // Обновляем заголовок
+        const fileTitle = editorHeader.querySelector('.editor-file-title');
+        if (fileTitle) {
+            fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли';
+        }
+        // Скрываем информацию о файле
+        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
+        if (fileInfo) fileInfo.style.display = 'none';
+    }
+    
+    if (editorFooter) {
+        editorFooter.style.display = 'block';
+        // Скрываем кнопки в футере для режима загрузки
+        const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
+        if (footerButtons) footerButtons.style.display = 'none';
+        const statusText = editorFooter.querySelector('#editor-status');
+        if (statusText) statusText.style.display = 'none';
+        const statusIcon = editorFooter.querySelector('#editor-status-icon');
+        if (statusIcon) statusIcon.style.display = 'none';
+    }
+    
+    // Показываем режим загрузки
+    if (uploadContent) {
+        uploadContent.style.display = 'block';
+        // Инициализируем dropzone при первом показе
+        if (!uploadContent.dataset.initialized) {
+            initUploadDropzone();
+            loadFoldersForUpload();
+            uploadContent.dataset.initialized = 'true';
+        }
+        // Устанавливаем целевую папку если указана
+        if (targetFolder) {
+            const select = document.getElementById('upload-target-folder');
+            if (select) {
+                select.value = targetFolder;
+            }
+        }
+    }
+}
+
+/**
+ * Показать режим настроек (встраивается вместо редактора)
+ */
+function showEditorSettings() {
+    // Показываем хедер и футер, скрываем тело редактора
+    const editorHeader = document.getElementById('editor-header');
+    const editorBody = document.getElementById('editor-body');
+    const editorFooter = document.getElementById('editor-footer');
+    const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
+    const uploadContent = document.getElementById('upload-mode-content');
+    const settingsContent = document.getElementById('settings-mode-content');
+    
+    // Скрываем тело редактора и placeholder
+    if (editorBody) editorBody.style.display = 'none';
+    if (editorPlaceholder) editorPlaceholder.style.display = 'none';
+    if (uploadContent) uploadContent.style.display = 'none';
+    
+    // Показываем хедер и футер
+    if (editorHeader) {
+        editorHeader.style.display = 'block';
+        // Обновляем заголовок
+        const fileTitle = editorHeader.querySelector('.editor-file-title');
+        if (fileTitle) {
+            fileTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Налаштування редактора';
+        }
+        // Скрываем информацию о файле
+        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
+        if (fileInfo) fileInfo.style.display = 'none';
+    }
+    
+    if (editorFooter) {
+        editorFooter.style.display = 'block';
+        // Скрываем кнопки в футере для режима настроек
+        const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
+        if (footerButtons) footerButtons.style.display = 'none';
+        const statusText = editorFooter.querySelector('#editor-status');
+        if (statusText) statusText.style.display = 'none';
+        const statusIcon = editorFooter.querySelector('#editor-status-icon');
+        if (statusIcon) statusIcon.style.display = 'none';
+    }
+    
+    // Показываем режим настроек
+    if (settingsContent) {
+        settingsContent.style.display = 'block';
+        // Загружаем настройки
+        loadEditorSettingsInline();
+    }
+}
+
+/**
+ * Инициализация drag & drop для загрузки файлов
+ */
+function initUploadDropzone() {
+    const dropzone = document.getElementById('upload-dropzone');
+    if (!dropzone) return;
+    
+    // Убираем старые обработчики
+    const newDropzone = dropzone.cloneNode(true);
+    dropzone.parentNode.replaceChild(newDropzone, dropzone);
+    
+    newDropzone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('drag-over');
+    });
+    
+    newDropzone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+    });
+    
+    newDropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+        
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+            handleFileSelection(files);
+        }
+    });
+}
+
+/**
+ * Обработка выбранных файлов
+ */
+let selectedFiles = [];
+
+function handleFileSelection(files) {
+    const filesArray = Array.from(files);
+    
+    // Добавляем файлы в список (избегаем дубликатов)
+    filesArray.forEach(file => {
+        const existingIndex = selectedFiles.findIndex(f => f.name === file.name && f.size === file.size);
+        if (existingIndex === -1) {
+            selectedFiles.push(file);
+        }
+    });
+    
+    updateUploadFilesList();
+}
+
+/**
+ * Обновление списка файлов для загрузки
+ */
+function updateUploadFilesList() {
+    const filesList = document.getElementById('upload-files-list');
+    const filesItems = document.getElementById('upload-files-items');
+    
+    if (!filesList || !filesItems) return;
+    
+    if (selectedFiles.length === 0) {
+        filesList.style.display = 'none';
+        return;
+    }
+    
+    filesList.style.display = 'block';
+    
+    filesItems.innerHTML = selectedFiles.map((file, index) => {
+        const fileIcon = file.type.startsWith('image/') ? 'fa-image' : 
+                        file.type.startsWith('text/') ? 'fa-file-code' :
+                        file.type.includes('pdf') ? 'fa-file-pdf' :
+                        'fa-file';
+        return `
+            <div class="upload-file-item d-flex justify-content-between align-items-center p-2 border rounded mb-2">
+                <div class="d-flex align-items-center">
+                    <i class="fas ${fileIcon} text-muted me-2"></i>
+                    <div>
+                        <div class="small fw-semibold">${escapeHtml(file.name)}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">${formatBytes(file.size)}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFileFromUploadList(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Удаление файла из списка загрузки
+ */
+function removeFileFromUploadList(index) {
+    selectedFiles.splice(index, 1);
+    updateUploadFilesList();
+}
+
+/**
+ * Очистка списка загрузки
+ */
+function clearUploadList() {
+    selectedFiles = [];
+    updateUploadFilesList();
+    const fileInput = document.getElementById('uploadFilesInput');
+    if (fileInput) {
+        fileInput.value = '';
+    }
+}
+
+/**
+ * Загрузка списка папок для выбора цели загрузки
+ */
+function loadFoldersForUpload() {
+    const textarea = document.getElementById('theme-file-editor');
+    const theme = textarea ? textarea.getAttribute('data-theme') : '';
+    if (!theme) return;
+    
+    const select = document.getElementById('upload-target-folder');
+    if (!select) return;
+    
+    // Очищаем существующие опции (кроме первой)
+    while (select.children.length > 1) {
+        select.removeChild(select.lastChild);
+    }
+    
+    // Собираем все папки из дерева файлов
+    const folders = document.querySelectorAll('.file-tree-folder[data-folder-path]');
+    folders.forEach(folder => {
+        const path = folder.getAttribute('data-folder-path');
+        if (path) {
+            const header = folder.querySelector('.file-tree-folder-header');
+            const name = header ? header.textContent.trim().replace(/^.*?\s/, '') : path;
+            const option = document.createElement('option');
+            option.value = path;
+            option.textContent = name || 'Корень';
+            select.appendChild(option);
+        }
+    });
+}
+
+/**
+ * Начало загрузки файлов
+ */
+function startFilesUpload() {
+    if (selectedFiles.length === 0) {
+        showNotification('Виберіть файли для завантаження', 'warning');
+        return;
+    }
+    
+    const textarea = document.getElementById('theme-file-editor');
+    const theme = textarea ? textarea.getAttribute('data-theme') : '';
+    if (!theme) {
+        showNotification('Тему не вказано', 'danger');
+        return;
+    }
+    
+    const targetFolder = document.getElementById('upload-target-folder').value || '';
+    const progressContainer = document.getElementById('upload-progress-container');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const progressText = document.getElementById('upload-progress-text');
+    
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Готується до завантаження...';
+    
+    let uploaded = 0;
+    let errors = 0;
+    
+    // Загружаем файлы по одному
+    selectedFiles.forEach((file, index) => {
+        const formData = new FormData();
+        formData.append('action', 'upload_file');
+        formData.append('theme', theme);
+        formData.append('folder', targetFolder);
+        formData.append('file', file);
+        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            uploaded++;
+            const progress = (uploaded / selectedFiles.length) * 100;
+            progressBar.style.width = progress + '%';
+            progressText.textContent = `Завантажено ${uploaded} з ${selectedFiles.length} файлів`;
+            
+            if (!data.success) {
+                errors++;
+            }
+            
+            // Когда все файлы загружены
+            if (uploaded === selectedFiles.length) {
+                if (errors === 0) {
+                    showNotification(`Успішно завантажено ${uploaded} файлів`, 'success');
+                    clearUploadList();
+                    refreshFileTree();
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 2000);
+                } else {
+                    showNotification(`Завантажено ${uploaded - errors} з ${selectedFiles.length} файлів. Помилок: ${errors}`, 'warning');
+                }
+            }
+        })
+        .catch(error => {
+            uploaded++;
+            errors++;
+            const progress = (uploaded / selectedFiles.length) * 100;
+            progressBar.style.width = progress + '%';
+            
+            if (uploaded === selectedFiles.length) {
+                showNotification(`Помилка завантаження. Завантажено ${uploaded - errors} з ${selectedFiles.length}`, 'danger');
+            }
+        });
+    });
+}
+
+/**
+ * Загрузка настроек для inline режима
+ */
+function loadEditorSettingsInline() {
+    const formData = new FormData();
+    formData.append('action', 'get_editor_settings');
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.settings) {
+            // Обновляем глобальные настройки
+            editorSettings.showEmptyFolders = data.settings.show_empty_folders === '1';
+            editorSettings.enableSyntaxHighlighting = data.settings.enable_syntax_highlighting === '1';
+            
+            // Устанавливаем значения чекбоксов
+            const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
+            const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
+            
+            if (showEmptyCheckbox) {
+                showEmptyCheckbox.checked = editorSettings.showEmptyFolders;
+            }
+            if (syntaxCheckbox) {
+                syntaxCheckbox.checked = editorSettings.enableSyntaxHighlighting;
+            }
+        }
+        
+        // Настраиваем автоматическое сохранение при изменении
+        setupAutoSaveEditorSettingsInline();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Помилка завантаження налаштувань', 'danger');
+    });
+}
+
+/**
+ * Автоматическое сохранение настроек в inline режиме
+ */
+function setupAutoSaveEditorSettingsInline() {
+    const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
+    const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
+    
+    // Удаляем старые обработчики
+    if (showEmptyCheckbox) {
+        const newCheckbox = showEmptyCheckbox.cloneNode(true);
+        showEmptyCheckbox.parentNode.replaceChild(newCheckbox, showEmptyCheckbox);
+        newCheckbox.addEventListener('change', function() {
+            autoSaveEditorSettings();
+        });
+    }
+    
+    if (syntaxCheckbox) {
+        const newCheckbox = syntaxCheckbox.cloneNode(true);
+        syntaxCheckbox.parentNode.replaceChild(newCheckbox, syntaxCheckbox);
+        newCheckbox.addEventListener('change', function() {
+            autoSaveEditorSettings();
+        });
+    }
 }
 
