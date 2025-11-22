@@ -140,10 +140,10 @@ if (!empty($message)) {
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="mb-0">
+                            <h6 class="mb-0 editor-file-title">
                                 <i class="fas fa-file-code me-2"></i><?= htmlspecialchars(basename($selectedFile)) ?>
                             </h6>
-                            <small class="text-muted"><?= htmlspecialchars($selectedFile) ?></small>
+                            <small class="text-muted editor-file-path"><?= htmlspecialchars($selectedFile) ?></small>
                         </div>
                         <div>
                             <span class="badge bg-secondary me-2"><?= strtoupper($fileExtension) ?></span>
@@ -183,68 +183,6 @@ if (!empty($message)) {
                     </div>
                 </div>
             <?php endif; ?>
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно создания файла -->
-<div class="modal fade" id="createFileModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Створити новий файл</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="createFileForm">
-                    <?= SecurityHelper::csrfField() ?>
-                    <input type="hidden" name="theme" value="<?= htmlspecialchars($theme['slug']) ?>">
-                    <input type="hidden" id="createFileFolder" name="folder" value="">
-                    <div class="mb-3">
-                        <label for="newFilePath" class="form-label">Назва файлу</label>
-                        <input type="text" class="form-control" id="newFilePath" name="file" 
-                               placeholder="наприклад: header.php" required>
-                        <small class="form-text text-muted">Вкажіть назву файлу (шлях буде додано автоматично)</small>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newFileContent" class="form-label">Вміст файлу (опціонально)</label>
-                        <textarea class="form-control font-monospace" id="newFileContent" name="content" rows="5"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-                <button type="button" class="btn btn-primary" onclick="submitCreateFile()">Створити</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно создания папки -->
-<div class="modal fade" id="createDirectoryModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Створити нову папку</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="createDirectoryForm">
-                    <?= SecurityHelper::csrfField() ?>
-                    <input type="hidden" name="theme" value="<?= htmlspecialchars($theme['slug']) ?>">
-                    <input type="hidden" id="createDirectoryFolder" name="folder" value="">
-                    <div class="mb-3">
-                        <label for="newDirectoryPath" class="form-label">Назва папки</label>
-                        <input type="text" class="form-control" id="newDirectoryPath" name="directory" 
-                               placeholder="наприклад: layouts" required>
-                        <small class="form-text text-muted">Вкажіть назву папки (шлях буде додано автоматично)</small>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-                <button type="button" class="btn btn-primary" onclick="submitCreateDirectory()">Створити</button>
-            </div>
         </div>
     </div>
 </div>

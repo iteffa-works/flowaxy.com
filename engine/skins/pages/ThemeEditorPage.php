@@ -185,8 +185,9 @@ class ThemeEditorPage extends AdminPage {
      */
     private function ajaxGetFile(): void {
         $request = Request::getInstance();
-        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme', ''));
-        $filePath = SecurityHelper::sanitizeInput($request->query('file', ''));
+        // Пробуем получить из POST, если нет - из GET
+        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', $request->query('theme', '')));
+        $filePath = SecurityHelper::sanitizeInput(Request::post('file', $request->query('file', '')));
         
         if (empty($themeSlug) || empty($filePath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);

@@ -172,10 +172,7 @@ function resetEditor() {
  * Создание нового файла
  */
 function createNewFile() {
-    const modal = new bootstrap.Modal(document.getElementById('createFileModal'));
-    // Очищаем поле папки
-    document.getElementById('createFileFolder').value = '';
-    modal.show();
+    createNewFileInFolder(null, '');
 }
 
 /**
@@ -186,28 +183,115 @@ function createNewFileInFolder(event, folderPath) {
         event.preventDefault();
         event.stopPropagation();
     }
-    const modal = new bootstrap.Modal(document.getElementById('createFileModal'));
-    // Устанавливаем путь к папке
-    document.getElementById('createFileFolder').value = folderPath || '';
-    modal.show();
+    
+    // Находим целевую папку в дереве
+    let targetFolder = null;
+    if (folderPath) {
+        const folderPathParts = folderPath.split('/');
+        let currentFolder = document.querySelector('.file-tree-root');
+        
+        for (const folderName of folderPathParts) {
+            if (!currentFolder) break;
+            const folders = currentFolder.querySelectorAll('.file-tree-folder');
+            currentFolder = Array.from(folders).find(f => {
+                const header = f.querySelector('.file-tree-folder-header');
+                return header && header.textContent.trim() === folderName;
+            });
+        }
+        
+        if (currentFolder) {
+            const content = currentFolder.querySelector('.file-tree-folder-content');
+            if (content) {
+                targetFolder = content;
+                // Раскрываем папку
+                const folderHeader = currentFolder.querySelector('.file-tree-folder-header');
+                const folderContent = currentFolder.querySelector('.file-tree-folder-content');
+                if (folderHeader && folderContent) {
+                    folderHeader.classList.add('expanded');
+                    folderContent.classList.add('expanded');
+                }
+            }
+        }
+    } else {
+        // Если папка не указана, добавляем в корень
+        const rootFolder = document.querySelector('.file-tree-root');
+        if (rootFolder) {
+            const rootContent = rootFolder.querySelector('.file-tree-folder-content');
+            if (rootContent) {
+                targetFolder = rootContent;
+            }
+        }
+    }
+    
+    if (!targetFolder) {
+        showNotification('Не вдалося знайти папку', 'danger');
+        return;
+    }
+    
+    // Удаляем существующие инлайн-формы
+    document.querySelectorAll('.file-tree-inline-form').forEach(form => form.remove());
+    
+    // Создаем инлайн-форму
+    const inlineForm = document.createElement('div');
+    inlineForm.className = 'file-tree-inline-form';
+    inlineForm.innerHTML = `
+        <input type="text" 
+               class="file-tree-inline-input" 
+               placeholder="наприклад: header.php"
+               autofocus>
+        <button type="button" class="file-tree-inline-btn file-tree-inline-btn-success" onclick="submitInlineCreateFile(this, '${folderPath || ''}')">
+            <i class="fas fa-check"></i>
+        </button>
+        <button type="button" class="file-tree-inline-btn file-tree-inline-btn-cancel" onclick="cancelInlineForm(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Добавляем обработчик Enter
+    const input = inlineForm.querySelector('.file-tree-inline-input');
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            submitInlineCreateFile(this.nextElementSibling, folderPath || '');
+        } else if (e.key === 'Escape') {
+            cancelInlineForm(this.nextElementSibling.nextElementSibling);
+        }
+    });
+    
+    // Вставляем форму в начало папки
+    targetFolder.insertBefore(inlineForm, targetFolder.firstChild);
+    input.focus();
 }
 
 /**
- * Отправка формы создания файла
+ * Отправка инлайн-формы создания файла
  */
-function submitCreateFile() {
-    const form = document.getElementById('createFileForm');
-    const formData = new FormData(form);
+function submitInlineCreateFile(button, folderPath) {
+    const form = button.closest('.file-tree-inline-form');
+    const input = form.querySelector('.file-tree-inline-input');
+    const fileName = input.value.trim();
+    
+    if (!fileName) {
+        showNotification('Введіть назву файлу', 'warning');
+        input.focus();
+        return;
+    }
+    
+    const formData = new FormData();
     formData.append('action', 'create_file');
+    formData.append('theme', new URLSearchParams(window.location.search).get('theme') || '');
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     
     // Формируем полный путь к файлу
-    const folder = formData.get('folder') || '';
-    const fileName = formData.get('file') || '';
-    if (folder && fileName) {
-        formData.set('file', folder + '/' + fileName);
-    } else if (fileName) {
-        formData.set('file', fileName);
+    let fullPath = fileName;
+    if (folderPath) {
+        fullPath = folderPath + '/' + fileName;
     }
+    formData.append('file', fullPath);
+    formData.append('content', '');
+    
+    // Блокируем кнопку
+    button.disabled = true;
+    input.disabled = true;
     
     fetch(window.location.href, {
         method: 'POST',
@@ -220,17 +304,29 @@ function submitCreateFile() {
     .then(data => {
         if (data.success) {
             showNotification('Файл успішно створено', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('createFileModal')).hide();
-            setTimeout(() => {
-                window.location.href = window.location.href.split('&file=')[0] + '&file=' + encodeURIComponent(data.path);
-            }, 500);
+            form.remove();
+            
+            // Добавляем файл в дерево и открываем в редакторе
+            addFileToTree(data.path, folderPath);
+            loadFileInEditor(data.path);
+            
+            // Обновляем URL без перезагрузки
+            const url = new URL(window.location.href);
+            url.searchParams.set('file', data.path);
+            window.history.pushState({}, '', url);
         } else {
             showNotification(data.error || 'Помилка створення', 'danger');
+            button.disabled = false;
+            input.disabled = false;
+            input.focus();
         }
     })
     .catch(error => {
         console.error('Error:', error);
         showNotification('Помилка створення файлу', 'danger');
+        button.disabled = false;
+        input.disabled = false;
+        input.focus();
     });
 }
 
@@ -238,10 +334,7 @@ function submitCreateFile() {
  * Создание новой папки
  */
 function createNewDirectory() {
-    const modal = new bootstrap.Modal(document.getElementById('createDirectoryModal'));
-    // Очищаем поле папки
-    document.getElementById('createDirectoryFolder').value = '';
-    modal.show();
+    createNewDirectoryInFolder(null, '');
 }
 
 /**
@@ -252,28 +345,114 @@ function createNewDirectoryInFolder(event, folderPath) {
         event.preventDefault();
         event.stopPropagation();
     }
-    const modal = new bootstrap.Modal(document.getElementById('createDirectoryModal'));
-    // Устанавливаем путь к папке
-    document.getElementById('createDirectoryFolder').value = folderPath || '';
-    modal.show();
+    
+    // Находим целевую папку в дереве
+    let targetFolder = null;
+    if (folderPath) {
+        const folderPathParts = folderPath.split('/');
+        let currentFolder = document.querySelector('.file-tree-root');
+        
+        for (const folderName of folderPathParts) {
+            if (!currentFolder) break;
+            const folders = currentFolder.querySelectorAll('.file-tree-folder');
+            currentFolder = Array.from(folders).find(f => {
+                const header = f.querySelector('.file-tree-folder-header');
+                return header && header.textContent.trim() === folderName;
+            });
+        }
+        
+        if (currentFolder) {
+            const content = currentFolder.querySelector('.file-tree-folder-content');
+            if (content) {
+                targetFolder = content;
+                // Раскрываем папку
+                const folderHeader = currentFolder.querySelector('.file-tree-folder-header');
+                const folderContent = currentFolder.querySelector('.file-tree-folder-content');
+                if (folderHeader && folderContent) {
+                    folderHeader.classList.add('expanded');
+                    folderContent.classList.add('expanded');
+                }
+            }
+        }
+    } else {
+        // Если папка не указана, добавляем в корень
+        const rootFolder = document.querySelector('.file-tree-root');
+        if (rootFolder) {
+            const rootContent = rootFolder.querySelector('.file-tree-folder-content');
+            if (rootContent) {
+                targetFolder = rootContent;
+            }
+        }
+    }
+    
+    if (!targetFolder) {
+        showNotification('Не вдалося знайти папку', 'danger');
+        return;
+    }
+    
+    // Удаляем существующие инлайн-формы
+    document.querySelectorAll('.file-tree-inline-form').forEach(form => form.remove());
+    
+    // Создаем инлайн-форму
+    const inlineForm = document.createElement('div');
+    inlineForm.className = 'file-tree-inline-form';
+    inlineForm.innerHTML = `
+        <input type="text" 
+               class="file-tree-inline-input" 
+               placeholder="наприклад: layouts"
+               autofocus>
+        <button type="button" class="file-tree-inline-btn file-tree-inline-btn-success" onclick="submitInlineCreateDirectory(this, '${folderPath || ''}')">
+            <i class="fas fa-check"></i>
+        </button>
+        <button type="button" class="file-tree-inline-btn file-tree-inline-btn-cancel" onclick="cancelInlineForm(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Добавляем обработчик Enter
+    const input = inlineForm.querySelector('.file-tree-inline-input');
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            submitInlineCreateDirectory(this.nextElementSibling, folderPath || '');
+        } else if (e.key === 'Escape') {
+            cancelInlineForm(this.nextElementSibling.nextElementSibling);
+        }
+    });
+    
+    // Вставляем форму в начало папки
+    targetFolder.insertBefore(inlineForm, targetFolder.firstChild);
+    input.focus();
 }
 
 /**
- * Отправка формы создания папки
+ * Отправка инлайн-формы создания папки
  */
-function submitCreateDirectory() {
-    const form = document.getElementById('createDirectoryForm');
-    const formData = new FormData(form);
+function submitInlineCreateDirectory(button, folderPath) {
+    const form = button.closest('.file-tree-inline-form');
+    const input = form.querySelector('.file-tree-inline-input');
+    const directoryName = input.value.trim();
+    
+    if (!directoryName) {
+        showNotification('Введіть назву папки', 'warning');
+        input.focus();
+        return;
+    }
+    
+    const formData = new FormData();
     formData.append('action', 'create_directory');
+    formData.append('theme', new URLSearchParams(window.location.search).get('theme') || '');
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     
     // Формируем полный путь к папке
-    const folder = formData.get('folder') || '';
-    const directoryName = formData.get('directory') || '';
-    if (folder && directoryName) {
-        formData.set('directory', folder + '/' + directoryName);
-    } else if (directoryName) {
-        formData.set('directory', directoryName);
+    let fullPath = directoryName;
+    if (folderPath) {
+        fullPath = folderPath + '/' + directoryName;
     }
+    formData.append('directory', fullPath);
+    
+    // Блокируем кнопку
+    button.disabled = true;
+    input.disabled = true;
     
     fetch(window.location.href, {
         method: 'POST',
@@ -286,18 +465,34 @@ function submitCreateDirectory() {
     .then(data => {
         if (data.success) {
             showNotification('Папку успішно створено', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('createDirectoryModal')).hide();
+            form.remove();
             setTimeout(() => {
                 window.location.reload();
-            }, 500);
+            }, 300);
         } else {
             showNotification(data.error || 'Помилка створення', 'danger');
+            button.disabled = false;
+            input.disabled = false;
+            input.focus();
         }
     })
     .catch(error => {
         console.error('Error:', error);
         showNotification('Помилка створення папки', 'danger');
+        button.disabled = false;
+        input.disabled = false;
+        input.focus();
     });
+}
+
+/**
+ * Отмена инлайн-формы
+ */
+function cancelInlineForm(button) {
+    const form = button.closest('.file-tree-inline-form');
+    if (form) {
+        form.remove();
+    }
 }
 
 /**
@@ -399,9 +594,42 @@ function initFileTree() {
         }
     }
     
+    // Обработка кликов по файлам
+    document.querySelectorAll('.file-tree-item').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const filePath = this.getAttribute('data-file');
+            if (filePath) {
+                // Получаем тему из URL или из data-атрибута
+                let theme = new URLSearchParams(window.location.search).get('theme') || '';
+                if (!theme) {
+                    const textarea = document.getElementById('theme-file-editor');
+                    if (textarea) {
+                        theme = textarea.getAttribute('data-theme') || '';
+                    }
+                }
+                
+                loadFileInEditor(filePath);
+                
+                // Обновляем URL без перезагрузки
+                const url = new URL(window.location.href);
+                if (theme) {
+                    url.searchParams.set('theme', theme);
+                }
+                url.searchParams.set('file', filePath);
+                window.history.pushState({}, '', url);
+            }
+        });
+    });
+    
     // Обработка кликов по папкам
     document.querySelectorAll('.file-tree-folder-header').forEach(header => {
-        header.addEventListener('click', function() {
+        header.addEventListener('click', function(e) {
+            // Не раскрываем папку, если кликнули на кнопку контекстного меню
+            if (e.target.closest('.file-tree-context-menu')) {
+                return;
+            }
+            
             const folder = this.closest('.file-tree-folder');
             const content = folder.querySelector('.file-tree-folder-content');
             const isExpanded = this.classList.contains('expanded');
@@ -528,5 +756,267 @@ function downloadFolder(event, folderPath) {
     const theme = new URLSearchParams(window.location.search).get('theme') || '';
     const url = window.location.href.split('?')[0] + '?action=download_folder&theme=' + encodeURIComponent(theme) + '&folder=' + encodeURIComponent(folderPath);
     window.location.href = url;
+}
+
+/**
+ * Добавление файла в дерево файлов
+ */
+function addFileToTree(filePath, parentFolder) {
+    const fileName = filePath.split('/').pop();
+    const extension = fileName.split('.').pop() || '';
+    const fileIcon = getFileIcon(extension);
+    
+    // Находим родительскую папку в дереве
+    let targetFolder = null;
+    if (parentFolder) {
+        const folderPath = parentFolder.split('/');
+        let currentFolder = document.querySelector('.file-tree-root');
+        
+        for (const folderName of folderPath) {
+            if (!currentFolder) break;
+            const folders = currentFolder.querySelectorAll('.file-tree-folder');
+            currentFolder = Array.from(folders).find(f => {
+                const header = f.querySelector('.file-tree-folder-header');
+                return header && header.textContent.trim() === folderName;
+            });
+        }
+        
+        if (currentFolder) {
+            const content = currentFolder.querySelector('.file-tree-folder-content');
+            if (content) {
+                targetFolder = content;
+            }
+        }
+    } else {
+        // Если папка не указана, добавляем в корень
+        const rootFolder = document.querySelector('.file-tree-root');
+        if (rootFolder) {
+            const rootContent = rootFolder.querySelector('.file-tree-folder-content');
+            if (rootContent) {
+                targetFolder = rootContent;
+            }
+        }
+    }
+    
+    if (!targetFolder) {
+        // Если не нашли папку, просто перезагружаем страницу
+        setTimeout(() => window.location.reload(), 500);
+        return;
+    }
+    
+    // Создаем элемент файла
+    const fileWrapper = document.createElement('div');
+    fileWrapper.className = 'file-tree-item-wrapper';
+    fileWrapper.setAttribute('data-file-path', filePath);
+    
+    const fileUrl = window.location.href.split('?')[0] + '?theme=' + 
+                   encodeURIComponent(new URLSearchParams(window.location.search).get('theme') || '') + 
+                   '&file=' + encodeURIComponent(filePath);
+    
+    fileWrapper.innerHTML = `
+        <a href="${fileUrl}" 
+           class="file-tree-item"
+           data-file="${filePath}">
+            <i class="fas ${fileIcon} file-icon"></i>
+            <span class="file-name">${fileName}</span>
+        </a>
+        <div class="file-tree-context-menu">
+            <button type="button" 
+                    class="context-menu-btn" 
+                    onclick="downloadFile(event, '${filePath}')"
+                    title="Скачати файл">
+                <i class="fas fa-download"></i>
+            </button>
+            <button type="button" 
+                    class="context-menu-btn context-menu-btn-danger" 
+                    onclick="deleteCurrentFile(event, '${filePath}')"
+                    title="Видалити файл">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    // Добавляем обработчик клика
+    const fileLink = fileWrapper.querySelector('.file-tree-item');
+    fileLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        loadFileInEditor(filePath);
+    });
+    
+    // Вставляем файл в правильное место (сортируем)
+    const existingFiles = Array.from(targetFolder.querySelectorAll('.file-tree-item-wrapper'));
+    let inserted = false;
+    
+    for (const existingFile of existingFiles) {
+        const existingFileName = existingFile.querySelector('.file-name')?.textContent || '';
+        if (fileName.localeCompare(existingFileName) < 0) {
+            targetFolder.insertBefore(fileWrapper, existingFile);
+            inserted = true;
+            break;
+        }
+    }
+    
+    if (!inserted) {
+        targetFolder.appendChild(fileWrapper);
+    }
+    
+    // Раскрываем родительскую папку
+    if (parentFolder) {
+        const folderElement = targetFolder.closest('.file-tree-folder');
+        if (folderElement) {
+            const folderHeader = folderElement.querySelector('.file-tree-folder-header');
+            const folderContent = folderElement.querySelector('.file-tree-folder-content');
+            if (folderHeader && folderContent) {
+                folderHeader.classList.add('expanded');
+                folderContent.classList.add('expanded');
+            }
+        }
+    }
+}
+
+/**
+ * Получение иконки для файла по расширению
+ */
+function getFileIcon(extension) {
+    const icons = {
+        'php': 'fa-file-code',
+        'js': 'fa-file-code',
+        'css': 'fa-file-code',
+        'html': 'fa-file-code',
+        'htm': 'fa-file-code',
+        'json': 'fa-file-code',
+        'xml': 'fa-file-code',
+        'yaml': 'fa-file-code',
+        'yml': 'fa-file-code',
+        'txt': 'fa-file-alt',
+        'md': 'fa-file-alt',
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image',
+        'gif': 'fa-file-image',
+        'svg': 'fa-file-image',
+        'pdf': 'fa-file-pdf',
+        'zip': 'fa-file-archive',
+        'rar': 'fa-file-archive'
+    };
+    return icons[extension.toLowerCase()] || 'fa-file';
+}
+
+/**
+ * Загрузка файла в редактор
+ */
+function loadFileInEditor(filePath) {
+    let theme = new URLSearchParams(window.location.search).get('theme') || '';
+    
+    // Если тема не указана в URL, пробуем получить из data-атрибута textarea
+    if (!theme) {
+        const textarea = document.getElementById('theme-file-editor');
+        if (textarea) {
+            theme = textarea.getAttribute('data-theme') || '';
+        }
+    }
+    
+    if (!theme) {
+        showNotification('Тему не вказано', 'danger');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'get_file');
+    formData.append('theme', theme);
+    formData.append('file', filePath);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.content !== undefined) {
+            // Обновляем активный файл в дереве
+            document.querySelectorAll('.file-tree-item-wrapper').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            let fileWrapper = document.querySelector(`[data-file-path="${filePath}"]`);
+            if (fileWrapper) {
+                fileWrapper.classList.add('active');
+            }
+            
+            // Загружаем содержимое в редактор
+            if (codeEditor) {
+                codeEditor.setValue(data.content);
+                originalContent = data.content;
+                isModified = false;
+                updateEditorStatus();
+                
+                // Обновляем режим редактора
+                const extension = filePath.split('.').pop() || '';
+                const mode = getCodeMirrorMode(extension);
+                codeEditor.setOption('mode', mode);
+            } else {
+                // Если редактор еще не инициализирован, обновляем textarea
+                const textarea = document.getElementById('theme-file-editor');
+                if (textarea) {
+                    const extension = filePath.split('.').pop() || '';
+                    textarea.value = data.content;
+                    textarea.setAttribute('data-file', filePath);
+                    textarea.setAttribute('data-extension', extension);
+                    
+                    // Инициализируем редактор, если он еще не создан
+                    if (typeof CodeMirror !== 'undefined') {
+                        initCodeMirror();
+                    }
+                }
+            }
+            
+            // Обновляем заголовок файла
+            const fileName = filePath.split('/').pop();
+            const fileTitle = document.querySelector('.editor-file-title');
+            const filePathEl = document.querySelector('.editor-file-path');
+            if (fileTitle) {
+                const icon = fileTitle.querySelector('i');
+                fileTitle.innerHTML = '';
+                if (icon) {
+                    fileTitle.appendChild(icon);
+                } else {
+                    const newIcon = document.createElement('i');
+                    newIcon.className = 'fas fa-file-code me-2';
+                    fileTitle.appendChild(newIcon);
+                }
+                fileTitle.appendChild(document.createTextNode(fileName));
+            }
+            if (filePathEl) {
+                filePathEl.textContent = filePath;
+            }
+            
+            // Показываем редактор, скрываем placeholder
+            const editorPlaceholder = document.querySelector('.editor-placeholder');
+            const editorCard = document.querySelector('.theme-editor-main');
+            if (editorPlaceholder) {
+                editorPlaceholder.style.display = 'none';
+            }
+            if (editorCard) {
+                editorCard.style.display = 'block';
+            }
+            
+            // Прокручиваем к активному файлу
+            if (fileWrapper) {
+                fileWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            
+            // Раскрываем путь к файлу
+            expandPathToFile(filePath);
+        } else {
+            showNotification(data.error || 'Помилка завантаження файлу', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Помилка завантаження файлу', 'danger');
+    });
 }
 
