@@ -1003,9 +1003,7 @@ function loadFileInEditor(filePath) {
             }
             
             // Обновляем заголовок файла
-            const fileName = filePath.split('/').pop();
             const fileTitle = document.querySelector('.editor-file-title');
-            const filePathEl = document.querySelector('.editor-file-path');
             if (fileTitle) {
                 const icon = fileTitle.querySelector('i');
                 fileTitle.innerHTML = '';
@@ -1016,10 +1014,7 @@ function loadFileInEditor(filePath) {
                     newIcon.className = 'fas fa-file-code me-2';
                     fileTitle.appendChild(newIcon);
                 }
-                fileTitle.appendChild(document.createTextNode(fileName));
-            }
-            if (filePathEl) {
-                filePathEl.textContent = filePath;
+                fileTitle.appendChild(document.createTextNode(filePath));
             }
             
             // Прокручиваем к активному файлу

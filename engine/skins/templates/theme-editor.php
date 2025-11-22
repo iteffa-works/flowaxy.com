@@ -149,11 +149,10 @@ if (!empty($message)) {
             <!-- Структура редактора (всегда присутствует, скрывается если нет файла) -->
             <div class="card-header" id="editor-header" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div>
+                    <div class="editor-file-path-container">
                         <h6 class="mb-0 editor-file-title">
-                            <i class="fas fa-file-code me-2"></i><?= $selectedFile ? htmlspecialchars(basename($selectedFile)) : '' ?>
+                            <i class="fas fa-file-code me-2"></i><?= $selectedFile ? htmlspecialchars($selectedFile) : '' ?>
                         </h6>
-                        <small class="text-muted editor-file-path"><?= $selectedFile ? htmlspecialchars($selectedFile) : '' ?></small>
                     </div>
                     <div>
                         <span class="badge bg-secondary me-2" id="editor-extension"><?= $selectedFile ? strtoupper($fileExtension ?? '') : '' ?></span>
