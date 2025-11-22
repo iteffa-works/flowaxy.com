@@ -154,7 +154,24 @@ class ThemeManager extends BaseModule {
      * @return array|null
      */
     public function getActiveTheme(): ?array {
+        // Если активная тема не загружена, пытаемся загрузить
+        if (empty($this->activeTheme)) {
+            $this->loadActiveTheme();
+        }
         return $this->activeTheme;
+    }
+    
+    /**
+     * Принудительная перезагрузка активной темы
+     * 
+     * @return void
+     */
+    public function reloadActiveTheme(): void {
+        // Очищаем кеш
+        cache_forget('active_theme_slug');
+        cache_forget('active_theme');
+        // Перезагружаем
+        $this->loadActiveTheme();
     }
     
     /**

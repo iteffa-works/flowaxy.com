@@ -9,6 +9,7 @@
 declare(strict_types=1);
 
 define('FLOWAXY', true);
+define('FLOWAXY_CMS', true);
 define('ROOT_DIR', dirname(__FILE__));
 define('ENGINE_DIR', ROOT_DIR . '/engine');
 

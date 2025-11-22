@@ -373,10 +373,58 @@ class RouterManager {
                 $tm = themeManager();
                 $active = $tm->getActiveTheme();
 
-                if ($active && isset($active['slug'])) {
+                // Якщо активна тема не завантажена, спробуємо перезавантажити
+                if (empty($active) || !isset($active['slug']) || empty($active['slug'])) {
+                    // Використовуємо метод перезавантаження, якщо він доступний
+                    if (method_exists($tm, 'reloadActiveTheme')) {
+                        $tm->reloadActiveTheme();
+                        $active = $tm->getActiveTheme();
+                    } else {
+                        // Fallback: очищаємо кеш та спробуємо отримати з БД
+                        if (function_exists('cache_forget')) {
+                            cache_forget('active_theme_slug');
+                            cache_forget('active_theme');
+                        }
+                        $db = DatabaseHelper::getConnection();
+                        if ($db) {
+                            try {
+                                $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'active_theme' LIMIT 1");
+                                $stmt->execute();
+                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                $activeSlug = $result ? ($result['setting_value'] ?? null) : null;
+                                
+                                if ($activeSlug && !empty($activeSlug)) {
+                                    $active = $tm->getTheme($activeSlug);
+                                    if ($active && isset($active['slug'])) {
+                                        // Оновлюємо активну тему в менеджері через Reflection
+                                        try {
+                                            $reflection = new ReflectionClass($tm);
+                                            $property = $reflection->getProperty('activeTheme');
+                                            $property->setAccessible(true);
+                                            $property->setValue($tm, $active);
+                                        } catch (Exception $e) {
+                                            error_log("RouterManager: Error updating active theme: " . $e->getMessage());
+                                        }
+                                    }
+                                }
+                            } catch (Exception $e) {
+                                error_log("RouterManager: Error loading active theme from DB: " . $e->getMessage());
+                            }
+                        }
+                    }
+                }
+
+                // Повторна перевірка після спроби перезавантаження
+                $active = $tm->getActiveTheme();
+                if ($active && isset($active['slug']) && !empty($active['slug'])) {
                     $path = $tm->getThemePath($active['slug']);
 
                     if ($path && file_exists($path . 'index.php')) {
+                        // Визначаємо константу для перевірки в темі
+                        if (!defined('FLOWAXY_CMS')) {
+                            define('FLOWAXY_CMS', true);
+                        }
+                        
                         extract([
                             'theme_path' => $path,
                             'theme_url' => '/themes/' . $active['slug'],
@@ -384,6 +432,8 @@ class RouterManager {
                         ]);
                         include $path . 'index.php';
                         return true;
+                    } else {
+                        error_log("RouterManager: Theme index.php not found. Path: {$path}, Slug: {$active['slug']}");
                     }
                 }
             }
