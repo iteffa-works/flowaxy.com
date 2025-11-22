@@ -208,7 +208,7 @@ class Response {
      */
     public function securityHeaders(array $options = []): self {
         $defaults = [
-            'csp' => "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net data:;",
+            'csp' => "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com data:;",
             'x_frame_options' => 'SAMEORIGIN',
             'x_content_type_options' => 'nosniff',
             'x_xss_protection' => '1; mode=block',

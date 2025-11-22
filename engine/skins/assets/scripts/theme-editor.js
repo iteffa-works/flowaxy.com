@@ -6,13 +6,26 @@ let codeEditor = null;
 let originalContent = '';
 let isModified = false;
 
-document.addEventListener('DOMContentLoaded', function() {
+// Функция инициализации CodeMirror
+function initCodeMirror() {
+    // Проверяем наличие CodeMirror
+    if (typeof CodeMirror === 'undefined') {
+        console.error('CodeMirror не завантажено! Перевірте підключення скриптів.');
+        // Повторная попытка через небольшую задержку
+        setTimeout(initCodeMirror, 100);
+        return;
+    }
+    
     // Инициализация CodeMirror
     const textarea = document.getElementById('theme-file-editor');
-    if (textarea) {
-        const extension = textarea.getAttribute('data-extension');
-        const mode = getCodeMirrorMode(extension);
-        
+    if (!textarea) {
+        return;
+    }
+    
+    const extension = textarea.getAttribute('data-extension');
+    const mode = getCodeMirrorMode(extension);
+    
+    try {
         codeEditor = CodeMirror.fromTextArea(textarea, {
             lineNumbers: true,
             mode: mode,
@@ -26,13 +39,36 @@ document.addEventListener('DOMContentLoaded', function() {
             gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']
         });
         
+        // Скрываем textarea после успешной инициализации
+        textarea.style.display = 'none';
+        
         originalContent = codeEditor.getValue();
         
         codeEditor.on('change', function() {
             isModified = codeEditor.getValue() !== originalContent;
             updateEditorStatus();
         });
+        
+        // Обновляем размер редактора при изменении размера окна
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            if (codeEditor) {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    codeEditor.refresh();
+                }, 100);
+            }
+        });
+    } catch (error) {
+        console.error('Помилка ініціалізації CodeMirror:', error);
+        // Показываем textarea если CodeMirror не инициализировался
+        textarea.style.display = 'block';
     }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация CodeMirror
+    initCodeMirror();
     
     // Инициализация древовидной структуры файлов
     initFileTree();

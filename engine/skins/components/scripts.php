@@ -176,8 +176,6 @@ var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return;
         }
         
-        console.log('Integrations dropdown initialized');
-        
         // Обработчик клика на кнопку (работает и на touch устройствах)
         integrationsDropdownToggle.addEventListener('click', function(e) {
             e.preventDefault();
