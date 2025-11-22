@@ -279,7 +279,7 @@ class ThemeEditorPage extends AdminPage {
         
         $request = Request::getInstance();
         $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
-        $dirPath = SecurityHelper::sanitizeInput(Request::post('dir', ''));
+        $dirPath = SecurityHelper::sanitizeInput(Request::post('directory', ''));
         
         if (empty($themeSlug) || empty($dirPath)) {
             $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або директорію'], 400);

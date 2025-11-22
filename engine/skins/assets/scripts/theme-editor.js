@@ -173,6 +173,22 @@ function resetEditor() {
  */
 function createNewFile() {
     const modal = new bootstrap.Modal(document.getElementById('createFileModal'));
+    // Очищаем поле папки
+    document.getElementById('createFileFolder').value = '';
+    modal.show();
+}
+
+/**
+ * Создание нового файла в конкретной папке
+ */
+function createNewFileInFolder(event, folderPath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const modal = new bootstrap.Modal(document.getElementById('createFileModal'));
+    // Устанавливаем путь к папке
+    document.getElementById('createFileFolder').value = folderPath || '';
     modal.show();
 }
 
@@ -183,6 +199,15 @@ function submitCreateFile() {
     const form = document.getElementById('createFileForm');
     const formData = new FormData(form);
     formData.append('action', 'create_file');
+    
+    // Формируем полный путь к файлу
+    const folder = formData.get('folder') || '';
+    const fileName = formData.get('file') || '';
+    if (folder && fileName) {
+        formData.set('file', folder + '/' + fileName);
+    } else if (fileName) {
+        formData.set('file', fileName);
+    }
     
     fetch(window.location.href, {
         method: 'POST',
@@ -214,6 +239,22 @@ function submitCreateFile() {
  */
 function createNewDirectory() {
     const modal = new bootstrap.Modal(document.getElementById('createDirectoryModal'));
+    // Очищаем поле папки
+    document.getElementById('createDirectoryFolder').value = '';
+    modal.show();
+}
+
+/**
+ * Создание новой папки в конкретной папке
+ */
+function createNewDirectoryInFolder(event, folderPath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const modal = new bootstrap.Modal(document.getElementById('createDirectoryModal'));
+    // Устанавливаем путь к папке
+    document.getElementById('createDirectoryFolder').value = folderPath || '';
     modal.show();
 }
 
@@ -224,6 +265,15 @@ function submitCreateDirectory() {
     const form = document.getElementById('createDirectoryForm');
     const formData = new FormData(form);
     formData.append('action', 'create_directory');
+    
+    // Формируем полный путь к папке
+    const folder = formData.get('folder') || '';
+    const directoryName = formData.get('directory') || '';
+    if (folder && directoryName) {
+        formData.set('directory', folder + '/' + directoryName);
+    } else if (directoryName) {
+        formData.set('directory', directoryName);
+    }
     
     fetch(window.location.href, {
         method: 'POST',

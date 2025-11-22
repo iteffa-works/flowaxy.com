@@ -27,6 +27,14 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                     <i class="fas fa-chevron-right folder-icon"></i>
                     <i class="fas fa-folder file-icon"></i>
                     <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
+                    <div class="file-tree-context-menu">
+                        <button type="button" class="context-menu-btn" onclick="createNewFileInFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Створити файл">
+                            <i class="fas fa-file-plus"></i>
+                        </button>
+                        <button type="button" class="context-menu-btn" onclick="createNewDirectoryInFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Створити папку">
+                            <i class="fas fa-folder-plus"></i>
+                        </button>
+                    </div>
                 </div>
                 <?php if ($hasChildren): ?>
                     <div class="file-tree-folder-content <?= $isExpanded ? 'expanded' : '' ?>">
@@ -46,14 +54,14 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                     <i class="fas fa-file-code file-icon"></i>
                     <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
                 </a>
-                <?php if ($isActive): ?>
+                <div class="file-tree-context-menu">
                     <button type="button" 
-                            class="file-delete-btn" 
+                            class="context-menu-btn context-menu-btn-danger" 
                             onclick="deleteCurrentFile(event, '<?= htmlspecialchars($item['path']) ?>')"
                             title="Видалити файл">
                         <i class="fas fa-trash"></i>
                     </button>
-                <?php endif; ?>
+                </div>
             </div>
             <?php
         }
@@ -80,14 +88,6 @@ if (!empty($message)) {
                 </h6>
             </div>
             <div class="card-body">
-                <div class="file-tree-actions mb-3">
-                    <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="createNewFile()">
-                        <i class="fas fa-file-plus me-1"></i>Створити файл
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="createNewDirectory()">
-                        <i class="fas fa-folder-plus me-1"></i>Створити папку
-                    </button>
-                </div>
                 <?php if (empty($fileTree)): ?>
                     <div class="p-3 text-muted text-center small">
                         <i class="fas fa-folder-open fa-2x mb-2 d-block"></i>
@@ -95,7 +95,25 @@ if (!empty($message)) {
                     </div>
                 <?php else: ?>
                     <div class="file-tree">
-                        <?php renderFileTree($fileTree, $theme, $selectedFile); ?>
+                        <!-- Корневая папка темы (всегда открыта) -->
+                        <div class="file-tree-folder file-tree-root" data-folder-path="">
+                            <div class="file-tree-folder-header expanded" data-folder-path="">
+                                <i class="fas fa-chevron-down folder-icon"></i>
+                                <i class="fas fa-folder file-icon"></i>
+                                <span class="file-name"><?= htmlspecialchars($theme['name']) ?></span>
+                                <div class="file-tree-context-menu">
+                                    <button type="button" class="context-menu-btn" onclick="createNewFileInFolder(event, '')" title="Створити файл">
+                                        <i class="fas fa-file-plus"></i>
+                                    </button>
+                                    <button type="button" class="context-menu-btn" onclick="createNewDirectoryInFolder(event, '')" title="Створити папку">
+                                        <i class="fas fa-folder-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="file-tree-folder-content expanded">
+                                <?php renderFileTree($fileTree, $theme, $selectedFile, 1); ?>
+                            </div>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>
@@ -166,11 +184,12 @@ if (!empty($message)) {
                 <form id="createFileForm">
                     <?= SecurityHelper::csrfField() ?>
                     <input type="hidden" name="theme" value="<?= htmlspecialchars($theme['slug']) ?>">
+                    <input type="hidden" id="createFileFolder" name="folder" value="">
                     <div class="mb-3">
-                        <label for="newFilePath" class="form-label">Шлях до файлу</label>
+                        <label for="newFilePath" class="form-label">Назва файлу</label>
                         <input type="text" class="form-control" id="newFilePath" name="file" 
-                               placeholder="наприклад: templates/header.php" required>
-                        <small class="form-text text-muted">Вкажіть відносний шлях від кореня теми</small>
+                               placeholder="наприклад: header.php" required>
+                        <small class="form-text text-muted">Вкажіть назву файлу (шлях буде додано автоматично)</small>
                     </div>
                     <div class="mb-3">
                         <label for="newFileContent" class="form-label">Вміст файлу (опціонально)</label>
@@ -198,11 +217,12 @@ if (!empty($message)) {
                 <form id="createDirectoryForm">
                     <?= SecurityHelper::csrfField() ?>
                     <input type="hidden" name="theme" value="<?= htmlspecialchars($theme['slug']) ?>">
+                    <input type="hidden" id="createDirectoryFolder" name="folder" value="">
                     <div class="mb-3">
-                        <label for="newDirectoryPath" class="form-label">Шлях до папки</label>
-                        <input type="text" class="form-control" id="newDirectoryPath" name="dir" 
-                               placeholder="наприклад: templates/layouts" required>
-                        <small class="form-text text-muted">Вкажіть відносний шлях від кореня теми</small>
+                        <label for="newDirectoryPath" class="form-label">Назва папки</label>
+                        <input type="text" class="form-control" id="newDirectoryPath" name="directory" 
+                               placeholder="наприклад: layouts" required>
+                        <small class="form-text text-muted">Вкажіть назву папки (шлях буде додано автоматично)</small>
                     </div>
                 </form>
             </div>
