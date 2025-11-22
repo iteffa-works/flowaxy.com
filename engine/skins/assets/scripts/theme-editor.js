@@ -1115,6 +1115,34 @@ function loadFileInEditor(filePath) {
             }
             if (editorFooter) {
                 editorFooter.style.display = 'block';
+                // Восстанавливаем кнопки в футере
+                const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
+                if (footerButtons) footerButtons.style.display = 'flex';
+                const statusText = editorFooter.querySelector('#editor-status');
+                if (statusText) statusText.style.display = 'block';
+                const statusIcon = editorFooter.querySelector('#editor-status-icon');
+                if (statusIcon) statusIcon.style.display = 'inline-block';
+                // Восстанавливаем информацию о файле в хедере
+                const fileInfo = editorHeader?.querySelector('.d-flex.justify-content-between > div:last-child');
+                if (fileInfo) fileInfo.style.display = 'block';
+                // Восстанавливаем оригинальную кнопку "Зберегти"
+                const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
+                if (saveBtn) {
+                    // Восстанавливаем оригинальные значения если были изменены
+                    if (saveBtn.getAttribute('data-original-onclick')) {
+                        saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
+                        saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
+                        saveBtn.removeAttribute('data-original-onclick');
+                        saveBtn.removeAttribute('data-original-html');
+                    } else if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
+                        // Если нет сохраненных значений, восстанавливаем вручную
+                        saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
+                        saveBtn.setAttribute('onclick', 'saveFile()');
+                    }
+                    if (saveBtn.style.display === 'none') {
+                        saveBtn.style.display = '';
+                    }
+                }
             }
             
             // Убеждаемся, что textarea существует и обновлен
@@ -1652,10 +1680,10 @@ function hideEmbeddedModes() {
  * Вызывается из контекстного меню папок
  */
 function showUploadFiles(targetFolder = '') {
-    // Показываем хедер и футер, скрываем тело редактора
-    const editorHeader = document.getElementById('editor-header');
+    // Заменяем ТОЛЬКО тело редактора (черное окно с кодом) на режим загрузки
+    // Хедер и футер остаются как в редакторе, без изменений
+    
     const editorBody = document.getElementById('editor-body');
-    const editorFooter = document.getElementById('editor-footer');
     const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
     const uploadContent = document.getElementById('upload-mode-content');
     const settingsContent = document.getElementById('settings-mode-content');
@@ -1665,31 +1693,63 @@ function showUploadFiles(targetFolder = '') {
     if (editorPlaceholder) editorPlaceholder.style.display = 'none';
     if (settingsContent) settingsContent.style.display = 'none';
     
-    // Показываем хедер и футер
+    // Показываем хедер и футер (если они были скрыты), но НЕ изменяем их содержимое
+    const editorHeader = document.getElementById('editor-header');
+    const editorFooter = document.getElementById('editor-footer');
+    
+    // Показываем хедер (если он был скрыт), оставляем содержимое как есть
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // Обновляем заголовок
-        const fileTitle = editorHeader.querySelector('.editor-file-title');
-        if (fileTitle) {
-            fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли';
-        }
-        // Скрываем информацию о файле
-        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
-        if (fileInfo) fileInfo.style.display = 'none';
+        // НЕ изменяем заголовок - оставляем как в редакторе (с текущим файлом, если открыт)
     }
     
+    // Показываем футер - он должен быть всегда виден
     if (editorFooter) {
-        editorFooter.style.display = 'block';
-        // Скрываем кнопки в футере для режима загрузки
+        // Явно показываем футер, переопределяя inline стиль display: none
+        editorFooter.style.setProperty('display', 'block', 'important');
+        editorFooter.style.setProperty('visibility', 'visible', 'important');
+        // Показываем все элементы футера, НЕ изменяем их содержимое
         const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
-        if (footerButtons) footerButtons.style.display = 'none';
+        if (footerButtons) {
+            footerButtons.style.display = 'flex';
+        }
         const statusText = editorFooter.querySelector('#editor-status');
-        if (statusText) statusText.style.display = 'none';
+        if (statusText) {
+            statusText.style.display = 'block';
+            statusText.style.visibility = 'visible';
+            // НЕ изменяем текст статуса - оставляем "Готово до редагування"
+        }
         const statusIcon = editorFooter.querySelector('#editor-status-icon');
-        if (statusIcon) statusIcon.style.display = 'none';
+        if (statusIcon) {
+            statusIcon.style.display = 'inline-block';
+            statusIcon.style.visibility = 'visible';
+        }
+        // Скрываем кнопку "Скасувати"
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.style.display = 'none';
+        }
+        // Восстанавливаем оригинальную кнопку "Зберегти" если была изменена
+        const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
+        if (saveBtn) {
+            if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
+                // Восстанавливаем оригинальную кнопку
+                if (saveBtn.getAttribute('data-original-onclick')) {
+                    saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
+                    saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
+                    saveBtn.removeAttribute('data-original-onclick');
+                    saveBtn.removeAttribute('data-original-html');
+                } else {
+                    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
+                    saveBtn.setAttribute('onclick', 'saveFile()');
+                }
+            }
+            // Оставляем кнопку видимой
+            saveBtn.style.display = '';
+        }
     }
     
-    // Показываем режим загрузки
+    // Показываем режим загрузки (заменяет тело редактора - черное окно с кодом)
     if (uploadContent) {
         uploadContent.style.display = 'block';
         // Инициализируем dropzone при первом показе
@@ -1712,10 +1772,8 @@ function showUploadFiles(targetFolder = '') {
  * Показать режим настроек (встраивается вместо редактора)
  */
 function showEditorSettings() {
-    // Показываем хедер и футер, скрываем тело редактора
-    const editorHeader = document.getElementById('editor-header');
+    // Скрываем тело редактора и показываем режим настроек
     const editorBody = document.getElementById('editor-body');
-    const editorFooter = document.getElementById('editor-footer');
     const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
     const uploadContent = document.getElementById('upload-mode-content');
     const settingsContent = document.getElementById('settings-mode-content');
@@ -1725,36 +1783,80 @@ function showEditorSettings() {
     if (editorPlaceholder) editorPlaceholder.style.display = 'none';
     if (uploadContent) uploadContent.style.display = 'none';
     
-    // Показываем хедер и футер
+    // Показываем хедер и футер (они должны быть видимы, как в редакторе)
+    const editorHeader = document.getElementById('editor-header');
+    const editorFooter = document.getElementById('editor-footer');
+    
+    // Показываем хедер и футер (они остаются как в редакторе, без изменений)
+    // Хедер и футер остаются видимыми с их оригинальным содержимым (текущий файл, статус, кнопки)
+    
+    // Показываем хедер (если он был скрыт), НЕ изменяем его содержимое
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // Обновляем заголовок
-        const fileTitle = editorHeader.querySelector('.editor-file-title');
-        if (fileTitle) {
-            fileTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Налаштування редактора';
-        }
-        // Скрываем информацию о файле
-        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
-        if (fileInfo) fileInfo.style.display = 'none';
+        // НЕ изменяем заголовок - оставляем как в редакторе (с текущим файлом, если открыт)
+        // Если файл не открыт, заголовок останется пустым - это нормально
     }
     
+    // Показываем футер - он должен быть всегда виден
     if (editorFooter) {
-        editorFooter.style.display = 'block';
-        // Скрываем кнопки в футере для режима настроек
+        // Явно показываем футер, переопределяя inline стиль display: none
+        editorFooter.style.setProperty('display', 'block', 'important');
+        editorFooter.style.setProperty('visibility', 'visible', 'important');
+        // Показываем все элементы футера, НЕ изменяем их содержимое
         const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
-        if (footerButtons) footerButtons.style.display = 'none';
+        if (footerButtons) {
+            footerButtons.style.display = 'flex';
+        }
         const statusText = editorFooter.querySelector('#editor-status');
-        if (statusText) statusText.style.display = 'none';
+        if (statusText) {
+            statusText.style.display = 'block';
+            statusText.style.visibility = 'visible';
+            // НЕ изменяем текст статуса - оставляем "Готово до редагування"
+        }
         const statusIcon = editorFooter.querySelector('#editor-status-icon');
-        if (statusIcon) statusIcon.style.display = 'none';
+        if (statusIcon) {
+            statusIcon.style.display = 'inline-block';
+            statusIcon.style.visibility = 'visible';
+        }
+        // Скрываем кнопку "Скасувати"
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.style.display = 'none';
+        }
+        // Восстанавливаем оригинальную кнопку "Зберегти" если была изменена
+        const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
+        if (saveBtn) {
+            // Восстанавливаем оригинальные значения если были сохранены
+            if (saveBtn.getAttribute('data-original-onclick')) {
+                saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
+                saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
+                saveBtn.removeAttribute('data-original-onclick');
+                saveBtn.removeAttribute('data-original-html');
+            } else if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
+                // Если нет сохраненных значений, восстанавливаем вручную
+                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
+                saveBtn.setAttribute('onclick', 'saveFile()');
+            }
+            // Оставляем кнопку видимой
+            saveBtn.style.display = '';
+        }
     }
     
-    // Показываем режим настроек
+    // Показываем режим настроек (заменяет тело редактора)
     if (settingsContent) {
         settingsContent.style.display = 'block';
         // Загружаем настройки
         loadEditorSettingsInline();
     }
+    
+    // Убеждаемся, что футер виден после небольшой задержки
+    setTimeout(function() {
+        const footer = document.getElementById('editor-footer');
+        if (footer) {
+            footer.style.setProperty('display', 'block', 'important');
+            footer.style.setProperty('visibility', 'visible', 'important');
+        }
+    }, 50);
 }
 
 /**
