@@ -72,6 +72,11 @@ function initCodeMirror() {
                 }, 100);
             }
         });
+        
+        // Применяем настройки после инициализации
+        setTimeout(function() {
+            applyEditorSettingsToCodeMirror();
+        }, 100);
     } catch (error) {
         console.error('Помилка ініціалізації CodeMirror:', error);
         // Показываем textarea если CodeMirror не инициализировался
@@ -1203,17 +1208,8 @@ function loadFileInEditor(filePath) {
                 // Убеждаемся, что статус и кнопки обновлены
                 updateEditorStatus();
                 
-                // Обновляем режим редактора
-                const extension = filePath.split('.').pop() || '';
-                if (editorSettings.enableSyntaxHighlighting && codeEditor) {
-                    const mode = getCodeMirrorMode(extension);
-                    codeEditor.setOption('mode', mode);
-                } else if (codeEditor) {
-                    codeEditor.setOption('mode', null);
-                }
-                if (codeEditor) {
-                    codeEditor.refresh();
-                }
+                // Применяем все настройки к редактору
+                applyEditorSettingsToCodeMirror();
             } else {
                 // Если редактор еще не инициализирован, инициализируем его
                 if (typeof CodeMirror !== 'undefined' && textareaEl) {
@@ -1542,10 +1538,8 @@ function autoSaveEditorSettings() {
                     editorSettings.showEmptyFolders = newShowEmptyFolders;
                     editorSettings.enableSyntaxHighlighting = newHighlighting;
                     
-                    // Динамически обновляем подсветку кода без перезагрузки
-                    if (codeEditor && oldHighlighting !== newHighlighting) {
-                        updateCodeMirrorHighlighting(newHighlighting);
-                    }
+                    // Применяем все настройки к редактору
+                    applyEditorSettingsToCodeMirror();
                     
                     // Обновляем дерево файлов, если изменилась настройка показа пустых папок
                     if (oldShowEmptyFolders !== newShowEmptyFolders) {
@@ -1608,9 +1602,8 @@ function autoSaveEditorSettings() {
                     editorSettings.showEmptyFolders = newShowEmptyFolders;
                     editorSettings.enableSyntaxHighlighting = newHighlighting;
                     
-                    if (codeEditor && oldHighlighting !== newHighlighting) {
-                        updateCodeMirrorHighlighting(newHighlighting);
-                    }
+                    // Применяем все настройки к редактору
+                    applyEditorSettingsToCodeMirror();
                     
                     if (oldShowEmptyFolders !== newShowEmptyFolders) {
                         refreshFileTree();
@@ -1666,6 +1659,70 @@ function updateCodeMirrorHighlighting(enable) {
         codeEditor.setOption('autoCloseBrackets', false);
         codeEditor.setOption('foldGutter', false);
         codeEditor.setOption('gutters', ['CodeMirror-linenumbers']);
+    }
+    
+    codeEditor.refresh();
+}
+
+/**
+ * Применение всех настроек редактора к CodeMirror
+ */
+function applyEditorSettingsToCodeMirror() {
+    if (!codeEditor) {
+        return;
+    }
+    
+    // Получаем текущие настройки из формы
+    const showLineNumbers = document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers');
+    const fontFamily = document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily');
+    const fontSize = document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize');
+    const editorTheme = document.getElementById('editorThemeInline') || document.getElementById('editorTheme');
+    const indentSize = document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize');
+    const wordWrap = document.getElementById('wordWrapInline') || document.getElementById('wordWrap');
+    const syntaxHighlighting = document.getElementById('enableSyntaxHighlightingInline') || document.getElementById('enableSyntaxHighlighting');
+    
+    // Применяем настройки
+    if (showLineNumbers) {
+        codeEditor.setOption('lineNumbers', showLineNumbers.checked);
+    }
+    
+    if (fontFamily) {
+        const fontValue = fontFamily.value || "'Consolas', monospace";
+        codeEditor.getWrapperElement().style.fontFamily = fontValue;
+    }
+    
+    if (fontSize) {
+        const sizeValue = fontSize.value || '14';
+        codeEditor.getWrapperElement().style.fontSize = sizeValue + 'px';
+    }
+    
+    if (editorTheme) {
+        const themeValue = editorTheme.value || 'monokai';
+        codeEditor.setOption('theme', themeValue);
+    }
+    
+    if (indentSize) {
+        const indentValue = parseInt(indentSize.value || '4', 10);
+        codeEditor.setOption('indentUnit', indentValue);
+        codeEditor.setOption('tabSize', indentValue);
+    }
+    
+    if (wordWrap) {
+        codeEditor.setOption('lineWrapping', wordWrap.checked);
+    }
+    
+    // Обновляем подсветку синтаксиса
+    if (syntaxHighlighting) {
+        const textarea = document.getElementById('theme-file-editor');
+        if (textarea) {
+            const extension = textarea.getAttribute('data-extension');
+            if (syntaxHighlighting.checked) {
+                const mode = getCodeMirrorMode(extension);
+                codeEditor.setOption('mode', mode);
+            } else {
+                codeEditor.setOption('mode', null);
+            }
+        }
     }
     
     codeEditor.refresh();
@@ -2338,6 +2395,11 @@ function loadEditorSettingsInline() {
                     autoSaveInterval.disabled = !this.checked;
                 });
             }
+            
+            // Применяем настройки к редактору, если он уже инициализирован
+            if (codeEditor) {
+                applyEditorSettingsToCodeMirror();
+            }
         }
         
         // Настраиваем автоматическое сохранение при изменении
@@ -2365,50 +2427,100 @@ function setupAutoSaveEditorSettingsInline() {
     const autoSave = document.getElementById('autoSaveInline');
     const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
     
+    // Debounce для сохранения настроек
+    let saveSettingsTimeout = null;
+    
+    // Функция для применения настроек к редактору (без сохранения)
+    const applySettingsToEditor = function() {
+        if (codeEditor) {
+            applyEditorSettingsToCodeMirror();
+        }
+    };
+    
     // Функция для сохранения всех настроек
     const saveAllSettings = function() {
         if (isSaving) return;
         
-        const url = window.location.href.split('?')[0];
-        const formData = {
-            action: 'save_editor_settings',
-            show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
-            enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
-            show_line_numbers: showLineNumbers?.checked ? '1' : '0',
-            font_family: fontFamily?.value || "'Consolas', monospace",
-            font_size: fontSize?.value || '14',
-            editor_theme: editorTheme?.value || 'monokai',
-            indent_size: indentSize?.value || '4',
-            word_wrap: wordWrap?.checked ? '1' : '0',
-            auto_save: autoSave?.checked ? '1' : '0',
-            auto_save_interval: autoSaveInterval?.value || '60'
-        };
+        // Применяем настройки к редактору сразу (без сохранения)
+        applySettingsToEditor();
         
-        isSaving = true;
-        if (typeof AjaxHelper !== 'undefined') {
-            AjaxHelper.post(url, formData)
-                .then(data => {
-                    isSaving = false;
-                    if (data.success) {
-                        showNotification('Налаштування збережено', 'success');
-                    }
-                })
-                .catch(error => {
-                    isSaving = false;
-                    console.error('Error:', error);
-                });
+        // Отменяем предыдущий таймер
+        if (saveSettingsTimeout) {
+            clearTimeout(saveSettingsTimeout);
         }
+        
+        // Запускаем сохранение с задержкой (debounce 300ms)
+        saveSettingsTimeout = setTimeout(function() {
+            const url = window.location.href.split('?')[0];
+            const formData = {
+                action: 'save_editor_settings',
+                show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
+                enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
+                show_line_numbers: showLineNumbers?.checked ? '1' : '0',
+                font_family: fontFamily?.value || "'Consolas', monospace",
+                font_size: fontSize?.value || '14',
+                editor_theme: editorTheme?.value || 'monokai',
+                indent_size: indentSize?.value || '4',
+                word_wrap: wordWrap?.checked ? '1' : '0',
+                auto_save: autoSave?.checked ? '1' : '0',
+                auto_save_interval: autoSaveInterval?.value || '60'
+            };
+            
+            isSaving = true;
+            if (typeof AjaxHelper !== 'undefined') {
+                AjaxHelper.post(url, formData)
+                    .then(data => {
+                        isSaving = false;
+                        if (data.success) {
+                            // Обновляем глобальные настройки
+                            if (showEmptyCheckbox) editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
+                            if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
+                            
+                            // Обновляем дерево файлов, если изменилась настройка показа пустых папок
+                            const oldShowEmpty = editorSettings.showEmptyFolders;
+                            if (showEmptyCheckbox && oldShowEmpty !== showEmptyCheckbox.checked) {
+                                refreshFileTree();
+                            }
+                            
+                            showNotification('Налаштування збережено', 'success');
+                        }
+                    })
+                    .catch(error => {
+                        isSaving = false;
+                        console.error('Error:', error);
+                        showNotification('Помилка збереження налаштувань', 'danger');
+                    });
+            }
+        }, 300);
     };
     
     // Добавляем обработчики для всех полей
-    if (showEmptyCheckbox) showEmptyCheckbox.addEventListener('change', saveAllSettings);
-    if (syntaxCheckbox) syntaxCheckbox.addEventListener('change', saveAllSettings);
-    if (showLineNumbers) showLineNumbers.addEventListener('change', saveAllSettings);
-    if (fontFamily) fontFamily.addEventListener('change', saveAllSettings);
-    if (fontSize) fontSize.addEventListener('change', saveAllSettings);
-    if (editorTheme) editorTheme.addEventListener('change', saveAllSettings);
-    if (indentSize) indentSize.addEventListener('change', saveAllSettings);
-    if (wordWrap) wordWrap.addEventListener('change', saveAllSettings);
+    if (showEmptyCheckbox) {
+        showEmptyCheckbox.addEventListener('change', saveAllSettings);
+    }
+    if (syntaxCheckbox) {
+        syntaxCheckbox.addEventListener('change', saveAllSettings);
+    }
+    if (showLineNumbers) {
+        showLineNumbers.addEventListener('change', saveAllSettings);
+    }
+    if (fontFamily) {
+        fontFamily.addEventListener('change', saveAllSettings);
+    }
+    if (fontSize) {
+        fontSize.addEventListener('input', applySettingsToEditor);
+        fontSize.addEventListener('change', saveAllSettings);
+    }
+    if (editorTheme) {
+        editorTheme.addEventListener('change', saveAllSettings);
+    }
+    if (indentSize) {
+        indentSize.addEventListener('input', applySettingsToEditor);
+        indentSize.addEventListener('change', saveAllSettings);
+    }
+    if (wordWrap) {
+        wordWrap.addEventListener('change', saveAllSettings);
+    }
     if (autoSave) {
         autoSave.addEventListener('change', function() {
             if (autoSaveInterval) {
@@ -2417,6 +2529,9 @@ function setupAutoSaveEditorSettingsInline() {
             saveAllSettings();
         });
     }
-    if (autoSaveInterval) autoSaveInterval.addEventListener('change', saveAllSettings);
+    if (autoSaveInterval) {
+        autoSaveInterval.addEventListener('input', applySettingsToEditor);
+        autoSaveInterval.addEventListener('change', saveAllSettings);
+    }
 }
 
