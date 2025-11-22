@@ -27,21 +27,22 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
             $isActive = ($selectedFile === $item['path']);
             $fileUrl = UrlHelper::admin('theme-editor?theme=' . urlencode($theme['slug']) . '&file=' . urlencode($item['path']));
             ?>
-            <a href="<?= $fileUrl ?>" 
-               class="file-tree-item <?= $isActive ? 'active' : '' ?>"
-               data-file="<?= htmlspecialchars($item['path']) ?>">
-                <i class="fas fa-file-code file-icon"></i>
-                <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
+            <div class="file-tree-item-wrapper <?= $isActive ? 'active' : '' ?>">
+                <a href="<?= $fileUrl ?>" 
+                   class="file-tree-item"
+                   data-file="<?= htmlspecialchars($item['path']) ?>">
+                    <i class="fas fa-file-code file-icon"></i>
+                    <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>
+                </a>
                 <?php if ($isActive): ?>
-                    <div class="file-actions">
-                        <button type="button" class="btn btn-sm btn-link text-danger p-0" 
-                                onclick="deleteCurrentFile(event, '<?= htmlspecialchars($item['path']) ?>')"
-                                title="Видалити файл">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                    <button type="button" 
+                            class="file-delete-btn" 
+                            onclick="deleteCurrentFile(event, '<?= htmlspecialchars($item['path']) ?>')"
+                            title="Видалити файл">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 <?php endif; ?>
-            </a>
+            </div>
             <?php
         }
     }
@@ -58,26 +59,6 @@ if (!empty($message)) {
 ?>
 
 <div class="theme-editor-wrapper">
-    <div class="theme-editor-header">
-        <div>
-            <h5>
-                <i class="fas fa-code me-2"></i>Редактор теми: <strong><?= htmlspecialchars($theme['name']) ?></strong>
-            </h5>
-            <small class="text-muted"><?= htmlspecialchars($theme['slug']) ?></small>
-        </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="createNewFile()">
-                <i class="fas fa-file-plus me-1"></i>Створити файл
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="createNewDirectory()">
-                <i class="fas fa-folder-plus me-1"></i>Створити папку
-            </button>
-            <a href="<?= UrlHelper::admin('themes') ?>" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i>Назад
-            </a>
-        </div>
-    </div>
-    
     <div class="theme-editor-content-wrapper">
         <!-- Боковая панель с файлами -->
         <div class="theme-editor-sidebar">
@@ -87,6 +68,14 @@ if (!empty($message)) {
                 </h6>
             </div>
             <div class="card-body">
+                <div class="file-tree-actions mb-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="createNewFile()">
+                        <i class="fas fa-file-plus me-1"></i>Створити файл
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="createNewDirectory()">
+                        <i class="fas fa-folder-plus me-1"></i>Створити папку
+                    </button>
+                </div>
                 <?php if (empty($fileTree)): ?>
                     <div class="p-3 text-muted text-center small">
                         <i class="fas fa-folder-open fa-2x mb-2 d-block"></i>

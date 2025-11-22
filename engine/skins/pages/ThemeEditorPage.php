@@ -23,12 +23,6 @@ class ThemeEditorPage extends AdminPage {
         $this->pageTitle = 'Редактор теми - Flowaxy CMS';
         $this->templateName = 'theme-editor';
         
-        $this->setPageHeader(
-            'Редактор теми',
-            'Редагування файлів теми',
-            'fas fa-code'
-        );
-        
         $this->editorManager = ThemeEditorManager::getInstance();
         
         // Додаємо CSS та JS для редактора
@@ -117,6 +111,13 @@ class ThemeEditorPage extends AdminPage {
             $fileContent = $this->editorManager->getFileContent($filePath);
             $fileExtension = pathinfo($selectedFile, PATHINFO_EXTENSION);
         }
+        
+        // Встановлюємо заголовок сторінки з інформацією про тему
+        $this->setPageHeader(
+            'Редактор теми',
+            'Редактор теми: ' . htmlspecialchars($theme['name']),
+            'fas fa-code'
+        );
         
         // Рендеримо сторінку
         $this->render([

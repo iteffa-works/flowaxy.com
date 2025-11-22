@@ -115,14 +115,35 @@
     font-size: 0.8125rem;
 }
 
+/* Кнопки создания файлов/папок */
+.file-tree-actions {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e1e5e9;
+    margin-bottom: 12px;
+}
+
+/* Обертка для элемента файла */
+.file-tree-item-wrapper {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+    border-radius: 6px;
+    position: relative;
+    min-height: 32px;
+}
+
+.file-tree-item-wrapper.active {
+    background-color: #e7f3ff;
+}
+
 .file-tree-item {
     display: flex;
     align-items: center;
+    flex: 1;
     padding: 6px 10px;
     color: #495057;
     text-decoration: none;
     border-radius: 6px;
-    margin-bottom: 2px;
     transition: all 0.2s ease;
     min-height: 32px;
     position: relative;
@@ -150,14 +171,14 @@
     background: #0073aa;
 }
 
-.file-tree-item.active {
+.file-tree-item-wrapper.active .file-tree-item {
     background-color: #e7f3ff;
     color: #0056b3;
     font-weight: 500;
     padding-left: 12px;
 }
 
-.file-tree-item.active::before {
+.file-tree-item-wrapper.active .file-tree-item::before {
     background: #0056b3;
 }
 
@@ -173,7 +194,7 @@
     color: #6c757d;
 }
 
-.file-tree-item.active .file-icon {
+.file-tree-item-wrapper.active .file-tree-item .file-icon {
     color: #0056b3;
 }
 
@@ -185,24 +206,33 @@
     font-size: 0.875rem;
 }
 
-.file-tree-item .file-actions {
+/* Кнопка удаления файла */
+.file-delete-btn {
     display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     margin-left: 8px;
+    margin-right: 4px;
+    background: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 6px;
+    color: #dc3545;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
-.file-tree-item:hover .file-actions,
-.file-tree-item.active .file-actions {
-    opacity: 1;
+.file-delete-btn:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
 }
 
-.file-tree-item .file-actions .btn {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-    line-height: 1;
-    border-radius: 4px;
+.file-delete-btn i {
+    font-size: 0.875rem;
 }
 
 /* Папки */
