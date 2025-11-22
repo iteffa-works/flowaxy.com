@@ -107,6 +107,11 @@ class ThemesPage extends AdminPage {
             $this->activateTheme();
         }
         
+        // Обробка деактивації теми
+        if ($_POST && isset($_POST['action']) && $_POST['action'] === 'deactivate_theme') {
+            $this->deactivateTheme();
+        }
+        
         // Обробка видалення теми
         if ($_POST && isset($_POST['action']) && $_POST['action'] === 'delete_theme') {
             $this->deleteTheme();
@@ -937,6 +942,74 @@ class ThemesPage extends AdminPage {
     }
     
     /**
+     * Деактивація теми
+     */
+    private function deactivateTheme() {
+        if (!$this->verifyCsrf()) {
+            $this->setMessage('Помилка безпеки', 'danger');
+            return;
+        }
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.activate')) {
+            $this->setMessage('У вас немає прав на деактивацію тем', 'danger');
+            return;
+        }
+        
+        $themeSlug = SecurityHelper::sanitizeInput($_POST['theme_slug'] ?? '');
+        
+        if (empty($themeSlug)) {
+            $this->setMessage('Тему не вибрано', 'danger');
+            return;
+        }
+        
+        // Перевіряємо, чи тема активна
+        $activeTheme = themeManager()->getActiveTheme();
+        if (!$activeTheme || $activeTheme['slug'] !== $themeSlug) {
+            $this->setMessage('Тема не активна', 'danger');
+            return;
+        }
+        
+        // Перевіряємо, чи це стандартна тема
+        $session = sessionManager();
+        $userId = (int)$session->get('admin_user_id');
+        $theme = themeManager()->getTheme($themeSlug);
+        $isDefault = $theme && ($theme['is_default'] ?? false);
+        
+        if ($isDefault) {
+            // Перевіряємо, чи це єдина тема
+            $allThemes = themeManager()->getAllThemes();
+            $themesCount = count($allThemes);
+            
+            // Якщо тема одна і стандартна - тільки розробник може її деактивувати
+            if ($themesCount === 1) {
+                if ($userId !== 1) {
+                    $this->setMessage('Неможливо деактивувати стандартну встановлену тему. Це єдина доступна тема.', 'danger');
+                    return;
+                }
+            } else {
+                // Якщо тем більше однієї, стандартну тему не можна деактивувати
+                $this->setMessage('Неможливо деактивувати стандартну встановлену тему.', 'danger');
+                return;
+            }
+        }
+        
+        // Деактивуємо тему
+        $result = themeManager()->deactivateTheme($themeSlug);
+        
+        if ($result) {
+            // Очищаємо кеш
+            themeManager()->clearThemeCache($themeSlug);
+            
+            $this->setMessage('Тему успішно деактивовано', 'success');
+            $this->redirect('themes');
+            exit;
+        } else {
+            $this->setMessage('Помилка при деактивації теми. Перевірте логи системи.', 'danger');
+        }
+    }
+    
+    /**
      * Видалення теми
      */
     private function deleteTheme() {
@@ -958,11 +1031,36 @@ class ThemesPage extends AdminPage {
             return;
         }
         
-        // Перевіряємо, чи тема активна
-        $activeTheme = themeManager()->getActiveTheme();
-        if ($activeTheme && $activeTheme['slug'] === $themeSlug) {
-            $this->setMessage('Неможливо видалити активну тему. Спочатку активуйте іншу тему.', 'danger');
-            return;
+        // Перевіряємо, чи це стандартна тема
+        $session = sessionManager();
+        $userId = (int)$session->get('admin_user_id');
+        $theme = themeManager()->getTheme($themeSlug);
+        $isDefault = $theme && ($theme['is_default'] ?? false);
+        
+        if ($isDefault) {
+            // Перевіряємо, чи це єдина тема
+            $allThemes = themeManager()->getAllThemes();
+            $themesCount = count($allThemes);
+            
+            // Якщо тема одна і стандартна - тільки розробник може її видалити (навіть якщо активна)
+            if ($themesCount === 1) {
+                if ($userId !== 1) {
+                    $this->setMessage('Неможливо видалити стандартну встановлену тему. Це єдина доступна тема.', 'danger');
+                    return;
+                }
+                // Розробник може видалити стандартну тему навіть якщо вона активна
+            } else {
+                // Якщо тем більше однієї, стандартну тему не можна видаляти
+                $this->setMessage('Неможливо видалити стандартну встановлену тему.', 'danger');
+                return;
+            }
+        } else {
+            // Для нестандартних тем перевіряємо, чи тема активна
+            $activeTheme = themeManager()->getActiveTheme();
+            if ($activeTheme && $activeTheme['slug'] === $themeSlug) {
+                $this->setMessage('Неможливо видалити активну тему. Спочатку активуйте іншу тему.', 'danger');
+                return;
+            }
         }
         
         // Отримуємо шлях до теми

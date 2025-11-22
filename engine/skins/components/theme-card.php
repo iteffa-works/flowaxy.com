@@ -33,6 +33,7 @@ $themeSlug = htmlspecialchars($theme['slug'] ?? '');
 $themeVersion = htmlspecialchars($theme['version'] ?? '1.0.0');
 $themeDescription = htmlspecialchars($theme['description'] ?? 'Опис відсутній');
 $isActive = ($theme['is_active'] ?? 0) == 1;
+$isDefault = ($theme['is_default'] ?? false);
 $hasScssSupport = isset($theme['has_scss']) ? (bool)$theme['has_scss'] : (function_exists('themeManager') && themeManager()->hasScssSupport($themeSlug));
 
 $status = $isActive ? 'active' : 'inactive';
@@ -156,10 +157,71 @@ $status = $isActive ? 'active' : 'inactive';
                         include __DIR__ . '/button.php';
                         ?>
                     <?php endif; ?>
+                    
+                    <?php
+                    // Перевірка, чи можна деактивувати тему
+                    $canDeactivate = false;
+                    if ($hasActivateAccess) {
+                        if ($isDefault) {
+                            // Отримуємо кількість тем
+                            $allThemes = function_exists('themeManager') ? themeManager()->getAllThemes() : [];
+                            $themesCount = count($allThemes);
+                            
+                            // Стандартну тему можна деактивувати тільки якщо вона єдина і користувач - розробник
+                            if ($themesCount === 1 && $userId === 1) {
+                                $canDeactivate = true;
+                            }
+                        } else {
+                            // Нестандартну тему можна деактивувати звичайно
+                            $canDeactivate = true;
+                        }
+                    }
+                    
+                    if ($canDeactivate):
+                    ?>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
+                            <input type="hidden" name="action" value="deactivate_theme">
+                            <input type="hidden" name="theme_slug" value="<?= $themeSlug ?>">
+                            <?php
+                            $text = 'Деактивувати';
+                            $type = 'outline-warning';
+                            $icon = 'times';
+                            $attributes = ['type' => 'submit', 'title' => 'Деактивувати тему'];
+                            unset($url);
+                            include __DIR__ . '/button.php';
+                            ?>
+                        </form>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
             
-            <?php if (!$isActive && $hasDeleteAccess): ?>
+            <?php 
+            // Логіка видалення стандартної теми:
+            // - Якщо тема стандартна і єдина - тільки розробник може видалити (навіть якщо активна)
+            // - Якщо тема стандартна, але є інші теми - ніхто не може видалити
+            // - Якщо тема не стандартна - звичайна перевірка прав (тільки неактивну)
+            $canDelete = false;
+            if ($hasDeleteAccess) {
+                if ($isDefault) {
+                    // Отримуємо кількість тем
+                    $allThemes = function_exists('themeManager') ? themeManager()->getAllThemes() : [];
+                    $themesCount = count($allThemes);
+                    
+                    // Стандартну тему можна видалити тільки якщо вона єдина і користувач - розробник
+                    // (навіть якщо вона активна)
+                    if ($themesCount === 1 && $userId === 1) {
+                        $canDelete = true;
+                    }
+                } else {
+                    // Нестандартну тему можна видаляти тільки якщо вона неактивна
+                    if (!$isActive) {
+                        $canDelete = true;
+                    }
+                }
+            }
+            
+            if ($canDelete): ?>
                 <?php
                 $text = '';
                 $type = 'danger';

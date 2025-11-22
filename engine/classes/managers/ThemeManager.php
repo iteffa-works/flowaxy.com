@@ -225,6 +225,7 @@ class ThemeManager extends BaseModule {
                             'version' => $config['version'] ?? '1.0.0',
                             'author' => $config['author'] ?? '',
                             'is_active' => $isActive ? 1 : 0,
+                            'is_default' => $config['is_default'] ?? false,
                             'screenshot' => $this->getThemeScreenshot($themeSlug),
                             'supports_customization' => $config['supports_customization'] ?? false
                         ];
@@ -438,6 +439,52 @@ class ThemeManager extends BaseModule {
             return true;
         } catch (Exception $e) {
             error_log("ThemeManager activateTheme error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Деактивация темы
+     * 
+     * @param string $slug Slug темы
+     * @return bool
+     */
+    public function deactivateTheme(string $slug): bool {
+        $db = $this->getDB();
+        if ($db === null || empty($slug)) {
+            return false;
+        }
+        
+        if (!Validator::validateSlug($slug)) {
+            error_log("ThemeManager: Invalid theme slug for deactivation: {$slug}");
+            return false;
+        }
+        
+        try {
+            // Удаляем активную тему из site_settings (устанавливаем в NULL)
+            $stmt = $db->prepare("
+                UPDATE site_settings 
+                SET setting_value = NULL 
+                WHERE setting_key = 'active_theme' AND setting_value = ?
+            ");
+            $result = $stmt->execute([$slug]);
+            
+            if (!$result) {
+                error_log("ThemeManager: Failed to deactivate theme in database");
+                return false;
+            }
+            
+            // Очищаем кеш
+            $this->clearThemeCache($slug);
+            cache_forget('active_theme_slug');
+            cache_forget('active_theme');
+            
+            // Очищаем активную тему из памяти
+            $this->activeTheme = null;
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("ThemeManager deactivateTheme error: " . $e->getMessage());
             return false;
         }
     }
