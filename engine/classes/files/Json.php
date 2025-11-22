@@ -9,7 +9,10 @@
 
 declare(strict_types=1);
 
-class Json {
+require_once __DIR__ . '/../../interfaces/FileInterface.php';
+require_once __DIR__ . '/../../interfaces/StructuredFileInterface.php';
+
+class Json implements StructuredFileInterface {
     private string $filePath = '';
     private mixed $data = null;
     private bool $hasData = false;
@@ -140,23 +143,86 @@ class Json {
     }
     
     /**
-     * Отримання даних
+     * Отримання значення за ключем (з StructuredFileInterface)
+     * 
+     * @param string $key Ключ
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public function get(string $key, $default = null) {
+        if (!$this->hasData) {
+            return $default;
+        }
+        
+        if (is_array($this->data)) {
+            return $this->data[$key] ?? $default;
+        }
+        
+        if (is_object($this->data)) {
+            return $this->data->$key ?? $default;
+        }
+        
+        return $default;
+    }
+    
+    /**
+     * Встановлення значення за ключем (з StructuredFileInterface)
+     * 
+     * @param string $key Ключ
+     * @param mixed $value Значення
+     * @return self
+     */
+    public function set(string $key, $value): self {
+        if (!$this->hasData) {
+            $this->data = [];
+            $this->hasData = true;
+        }
+        
+        if (is_array($this->data)) {
+            $this->data[$key] = $value;
+        } elseif (is_object($this->data)) {
+            $this->data->$key = $value;
+        } else {
+            $this->data = [$key => $value];
+            $this->hasData = true;
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * Отримання всіх даних
+     * Для отримання значення за ключем використовуйте get($key)
      * 
      * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function get(mixed $default = null): mixed {
+    public function getAll(mixed $default = null): mixed {
         return $this->hasData ? $this->data : $default;
     }
     
     /**
-     * Отримання значення за шляхом (крапкова нотація)
+     * Встановлення всіх даних
+     * Для встановлення значення за ключем використовуйте set($key, $value)
+     * 
+     * @param mixed $data Дані
+     * @return self
+     */
+    public function setAll(mixed $data): self {
+        $this->data = $data;
+        $this->hasData = true;
+        return $this;
+    }
+    
+    /**
+     * Отримання значення за шляхом в даних (крапкова нотація)
+     * Використовується для роботи з вкладеними даними через dot notation
      * 
      * @param string $path Шлях до значення (наприклад, "user.name" або "users.0.email")
      * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function getPath(string $path, mixed $default = null): mixed {
+    private function getDataPathInternal(string $path, mixed $default = null): mixed {
         if (!$this->hasData) {
             return $default;
         }
@@ -177,65 +243,6 @@ class Json {
         return $value;
     }
     
-    /**
-     * Встановлення даних
-     * 
-     * @param mixed $data Дані
-     * @return self
-     */
-    public function set(mixed $data): self {
-        $this->data = $data;
-        $this->hasData = true;
-        return $this;
-    }
-    
-    /**
-     * Встановлення значення за шляхом (крапкова нотація)
-     * 
-     * @param string $path Шлях до значення
-     * @param mixed $value Значення
-     * @return self
-     */
-    public function setPath(string $path, mixed $value): self {
-        if (!$this->hasData) {
-            $this->data = [];
-            $this->hasData = true;
-        }
-        
-        $keys = explode('.', $path);
-        $lastKey = array_pop($keys);
-        $target = &$this->data;
-        
-        foreach ($keys as $key) {
-            if (is_array($target)) {
-                if (!isset($target[$key]) || !is_array($target[$key])) {
-                    $target[$key] = [];
-                }
-                $target = &$target[$key];
-            } elseif (is_object($target)) {
-                if (!isset($target->$key) || !is_array($target->$key)) {
-                    $target->$key = [];
-                }
-                $target = &$target->$key;
-            } else {
-                $target = (array)$target;
-                if (!isset($target[$key])) {
-                    $target[$key] = [];
-                }
-                $target = &$target[$key];
-            }
-        }
-        
-        if (is_array($target)) {
-            $target[$lastKey] = $value;
-        } elseif (is_object($target)) {
-            $target->$lastKey = $value;
-        } else {
-            $target = [$lastKey => $value];
-        }
-        
-        return $this;
-    }
     
     /**
      * Видалення значення за шляхом
@@ -440,8 +447,8 @@ class Json {
      * @param bool $assoc Перетворювати в асоціативний масив
      * @return mixed
      */
-    public static function read(string $filePath, bool $assoc = true): mixed {
-        return (new self($filePath))->load($assoc)->get();
+    public static function readFile(string $filePath, bool $assoc = true): mixed {
+        return (new self($filePath))->load($assoc)->getAll();
     }
     
     /**
@@ -452,7 +459,7 @@ class Json {
      * @param int $flags Прапорці кодування
      * @return bool
      */
-    public static function write(string $filePath, mixed $data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): bool {
+    public static function writeFile(string $filePath, mixed $data, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT): bool {
         return (new self())->save($filePath, $data, $flags);
     }
     
@@ -601,5 +608,384 @@ class Json {
         
         return $data;
     }
+    
+    // ===== Реалізація методів з FileInterface =====
+    
+    /**
+     * Встановлення шляху до файлу (з FileInterface)
+     * Аліас для setFile()
+     * 
+     * @param string $filePath Шлях до файлу
+     * @return self
+     */
+    public function setPath(string $filePath): self {
+        return $this->setFile($filePath);
+    }
+    
+    /**
+     * Отримання шляху до файлу (з FileInterface)
+     * Аліас для getFilePath()
+     * 
+     * @return string
+     */
+    public function getPath(): string {
+        return $this->getFilePath();
+    }
+    
+    /**
+     * Перевірка існування файлу (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function exists(): bool {
+        return !empty($this->filePath) && file_exists($this->filePath) && is_file($this->filePath);
+    }
+    
+    /**
+     * Читання вмісту файлу (з FileInterface)
+     * 
+     * @return string
+     * @throws Exception
+     */
+    public function read(): string {
+        if (!$this->exists()) {
+            throw new Exception("Файл не існує: {$this->filePath}");
+        }
+        
+        $content = @file_get_contents($this->filePath);
+        if ($content === false) {
+            throw new Exception("Не вдалося прочитати файл: {$this->filePath}");
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Запис вмісту в файл (з FileInterface)
+     * 
+     * @param string $content Вміст для запису
+     * @param bool $append Додавати в кінець файлу
+     * @return bool
+     * @throws Exception
+     */
+    public function write(string $content, bool $append = false): bool {
+        if (empty($this->filePath)) {
+            throw new Exception("Шлях до файлу не встановлено");
+        }
+        
+        $dir = dirname($this->filePath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        $flags = $append ? FILE_APPEND | LOCK_EX : LOCK_EX;
+        $result = @file_put_contents($this->filePath, $content, $flags);
+        
+        if ($result === false) {
+            throw new Exception("Не вдалося записати файл: {$this->filePath}");
+        }
+        
+        @chmod($this->filePath, 0644);
+        return true;
+    }
+    
+    /**
+     * Копіювання файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function copy(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@copy($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося скопіювати файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        @chmod($destinationPath, 0644);
+        return true;
+    }
+    
+    /**
+     * Переміщення/перейменування файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function move(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@rename($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося перемістити файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        $this->filePath = $destinationPath;
+        return true;
+    }
+    
+    /**
+     * Видалення файлу (з FileInterface)
+     * 
+     * @return bool
+     * @throws Exception
+     */
+    public function delete(): bool {
+        if (!$this->exists()) {
+            return true;
+        }
+        
+        if (!@unlink($this->filePath)) {
+            throw new Exception("Не вдалося видалити файл: {$this->filePath}");
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Отримання розміру файлу (з FileInterface)
+     * 
+     * @return int
+     */
+    public function getSize(): int {
+        return $this->exists() ? filesize($this->filePath) : 0;
+    }
+    
+    /**
+     * Отримання MIME типу файлу (з FileInterface)
+     * 
+     * @return string|false
+     */
+    public function getMimeType() {
+        if (!$this->exists()) {
+            return false;
+        }
+        
+        if (function_exists('mime_content_type')) {
+            return @mime_content_type($this->filePath);
+        }
+        
+        if (function_exists('finfo_file')) {
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo === false) {
+                return false;
+            }
+            
+            $mimeType = @finfo_file($finfo, $this->filePath);
+            // finfo_close() is deprecated in PHP 8.1+, resource is automatically closed
+            return $mimeType;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Отримання часу останньої зміни (з FileInterface)
+     * 
+     * @return int|false
+     */
+    public function getMTime() {
+        return $this->exists() ? @filemtime($this->filePath) : false;
+    }
+    
+    /**
+     * Отримання розширення файлу (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getExtension(): string {
+        return !empty($this->filePath) ? strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION)) : '';
+    }
+    
+    /**
+     * Отримання імені файлу з розширенням (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getBasename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_BASENAME) : '';
+    }
+    
+    /**
+     * Отримання імені файлу без шляху та розширення (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getFilename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_FILENAME) : '';
+    }
+    
+    /**
+     * Перевірка доступності файлу для читання (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isReadable(): bool {
+        return $this->exists() && is_readable($this->filePath);
+    }
+    
+    /**
+     * Перевірка доступності файлу для запису (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isWritable(): bool {
+        return $this->exists() && is_writable($this->filePath);
+    }
+    
+    // ===== Допоміжні методи для роботи з даними =====
+    
+    /**
+     * Отримання значення за шляхом в даних (крапкова нотація)
+     * Публічний метод для роботи з вкладеними даними
+     * 
+     * @param string $path Шлях до значення
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public function getDataPath(string $path, mixed $default = null): mixed {
+        return $this->getDataPathInternal($path, $default);
+    }
+    
+    /**
+     * Встановлення значення за шляхом в даних (крапкова нотація)
+     * Публічний метод для роботи з вкладеними даними
+     * 
+     * @param string $path Шлях до значення
+     * @param mixed $value Значення
+     * @return self
+     */
+    public function setDataPath(string $path, mixed $value): self {
+        if (!$this->hasData) {
+            $this->data = [];
+            $this->hasData = true;
+        }
+        
+        $keys = explode('.', $path);
+        $lastKey = array_pop($keys);
+        $target = &$this->data;
+        
+        foreach ($keys as $key) {
+            if (is_array($target)) {
+                if (!isset($target[$key]) || !is_array($target[$key])) {
+                    $target[$key] = [];
+                }
+                $target = &$target[$key];
+            } elseif (is_object($target)) {
+                if (!isset($target->$key) || !is_array($target->$key)) {
+                    $target->$key = [];
+                }
+                $target = &$target->$key;
+            } else {
+                $target = (array)$target;
+                if (!isset($target[$key])) {
+                    $target[$key] = [];
+                }
+                $target = &$target[$key];
+            }
+        }
+        
+        if (is_array($target)) {
+            $target[$lastKey] = $value;
+        } elseif (is_object($target)) {
+            $target->$lastKey = $value;
+        } else {
+            $target = [$lastKey => $value];
+        }
+        
+        return $this;
+    }
+    
+    // ===== Методи з StructuredFileInterface =====
+    
+    /**
+     * Отримання даних (з StructuredFileInterface)
+     * Повертає всі дані
+     * 
+     * @return mixed
+     */
+    public function getData() {
+        return $this->hasData ? $this->data : null;
+    }
+    
+    /**
+     * Встановлення даних (з StructuredFileInterface)
+     * Встановлює всі дані
+     * 
+     * @param mixed $data Дані
+     * @return self
+     */
+    public function setData($data): self {
+        $this->data = $data;
+        $this->hasData = true;
+        return $this;
+    }
+    
+    /**
+     * Перевірка наявності завантажених даних (з StructuredFileInterface)
+     * 
+     * @return bool
+     */
+    public function hasData(): bool {
+        return $this->hasData;
+    }
+    
+    /**
+     * Перевірка наявності ключа (з StructuredFileInterface)
+     * 
+     * @param string $key Ключ
+     * @return bool
+     */
+    public function has(string $key): bool {
+        if (!$this->hasData) {
+            return false;
+        }
+        
+        if (is_array($this->data)) {
+            return isset($this->data[$key]);
+        }
+        
+        if (is_object($this->data)) {
+            return isset($this->data->$key);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Видалення значення за ключем (з StructuredFileInterface)
+     * 
+     * @param string $key Ключ
+     * @return self
+     */
+    public function remove(string $key): self {
+        if (!$this->hasData) {
+            return $this;
+        }
+        
+        if (is_array($this->data)) {
+            unset($this->data[$key]);
+        } elseif (is_object($this->data)) {
+            unset($this->data->$key);
+        }
+        
+        return $this;
+    }
+    
 }
 
