@@ -1123,33 +1123,35 @@
 }
 
 .editor-settings-container .form-check {
-    padding: 0;
-    background: transparent;
-    border-radius: 0;
+    padding: 16px;
+    background: #fff;
+    border-radius: 6px;
     margin-bottom: 0;
-    border: none;
-    transition: none;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
+    gap: 14px;
     width: 100%;
+    box-sizing: border-box;
+    min-height: 80px;
 }
 
 .editor-settings-container .form-check:hover {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .editor-settings-container .form-check-input {
     margin-top: 0;
     margin-bottom: 0;
-    width: 40px;
-    height: 20px;
+    width: 44px;
+    height: 22px;
     cursor: pointer;
     flex-shrink: 0;
-    align-self: flex-start;
-    margin-top: 2px;
+    align-self: center;
+    margin-top: 0;
 }
 
 .editor-settings-container .form-check-input:checked {
@@ -1185,35 +1187,47 @@
 .editor-settings-container .settings-section-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px 20px;
-    align-items: start;
+    gap: 12px;
+    align-items: stretch;
 }
 
 .editor-settings-container .settings-section-grid > div {
-    padding: 0;
-    background: transparent;
-    border-radius: 0;
-    border: none;
-    transition: none;
-    min-height: auto;
+    padding: 16px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+    min-height: 100px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .editor-settings-container .settings-section-grid > div:hover {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .editor-settings-container .settings-section-grid > .form-check {
-    padding: 0;
+    padding: 16px;
     margin-bottom: 0;
-    border: none;
-    background: transparent;
-    border-radius: 0;
+    border: 1px solid #e9ecef;
+    background: #fff;
+    border-radius: 6px;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
+    gap: 14px;
     width: 100%;
+    box-sizing: border-box;
+    min-height: 80px;
+}
+
+.editor-settings-container .settings-section-grid > .form-check:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .editor-settings-container .settings-section-grid > div:not(.form-check) {
