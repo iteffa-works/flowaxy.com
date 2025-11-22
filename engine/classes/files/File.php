@@ -9,7 +9,9 @@
 
 declare(strict_types=1);
 
-class File {
+require_once __DIR__ . '/../../interfaces/FileInterface.php';
+
+class File implements FileInterface {
     private string $filePath;
     
     /**
@@ -190,7 +192,7 @@ class File {
             }
             
             $mimeType = @finfo_file($finfo, $this->filePath);
-            finfo_close($finfo);
+            // finfo_close() is deprecated in PHP 8.1+, resource is automatically closed
             return $mimeType;
         }
         
