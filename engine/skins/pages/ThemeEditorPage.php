@@ -178,7 +178,8 @@ class ThemeEditorPage extends AdminPage {
             'selectedFile' => $selectedFile,
             'fileContent' => $fileContent,
             'fileExtension' => $fileExtension,
-            'enableSyntaxHighlighting' => $enableSyntaxHighlighting
+            'enableSyntaxHighlighting' => $enableSyntaxHighlighting,
+            'editorSettings' => $editorSettings
         ]);
     }
     

@@ -241,28 +241,28 @@ if (!empty($message)) {
                             <h6 class="settings-section-title">Відображення</h6>
                             <div class="settings-section-grid">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders">
+                                    <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders" <?= (($editorSettings['show_empty_folders'] ?? '0') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="showEmptyFoldersInline">
                                         <strong>Показувати пусті папки</strong>
                                         <p class="text-muted small mb-0">Відображати порожні папки в дереві файлів</p>
                                     </label>
                                 </div>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="enableSyntaxHighlightingInline" name="enable_syntax_highlighting" checked>
+                                    <input class="form-check-input" type="checkbox" id="enableSyntaxHighlightingInline" name="enable_syntax_highlighting" <?= (($editorSettings['enable_syntax_highlighting'] ?? '1') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="enableSyntaxHighlightingInline">
                                         <strong>Увімкнути підсвітку коду</strong>
                                         <p class="text-muted small mb-0">Підсвітка синтаксису коду в редакторі</p>
                                     </label>
                                 </div>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="showLineNumbersInline" name="show_line_numbers" checked>
+                                    <input class="form-check-input" type="checkbox" id="showLineNumbersInline" name="show_line_numbers" <?= (($editorSettings['show_line_numbers'] ?? '1') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="showLineNumbersInline">
                                         <strong>Показувати номери рядків</strong>
                                         <p class="text-muted small mb-0">Відображати номери рядків у редакторі</p>
                                     </label>
                                 </div>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="wordWrapInline" name="word_wrap" checked>
+                                    <input class="form-check-input" type="checkbox" id="wordWrapInline" name="word_wrap" <?= (($editorSettings['word_wrap'] ?? '1') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="wordWrapInline">
                                         <strong>Перенос рядків</strong>
                                         <p class="text-muted small mb-0">Автоматичний перенос довгих рядків</p>
@@ -281,13 +281,21 @@ if (!empty($message)) {
                                         <p class="text-muted small mb-0">Виберіть шрифт для редактора</p>
                                     </label>
                                     <select class="form-select" id="editorFontFamilyInline" name="font_family">
-                                        <option value="'Courier New', monospace">Courier New</option>
-                                        <option value="'Consolas', monospace" selected>Consolas</option>
-                                        <option value="'Monaco', monospace">Monaco</option>
-                                        <option value="'Menlo', monospace">Menlo</option>
-                                        <option value="'Fira Code', monospace">Fira Code</option>
-                                        <option value="'Source Code Pro', monospace">Source Code Pro</option>
-                                        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                                        <?php
+                                        $fontFamily = $editorSettings['font_family'] ?? "'Consolas', monospace";
+                                        $fontOptions = [
+                                            "'Courier New', monospace" => 'Courier New',
+                                            "'Consolas', monospace" => 'Consolas',
+                                            "'Monaco', monospace" => 'Monaco',
+                                            "'Menlo', monospace" => 'Menlo',
+                                            "'Fira Code', monospace" => 'Fira Code',
+                                            "'Source Code Pro', monospace" => 'Source Code Pro',
+                                            "'JetBrains Mono', monospace" => 'JetBrains Mono'
+                                        ];
+                                        foreach ($fontOptions as $value => $label):
+                                        ?>
+                                        <option value="<?= htmlspecialchars($value) ?>" <?= ($fontFamily === $value) ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div>
@@ -295,7 +303,7 @@ if (!empty($message)) {
                                         <strong>Розмір шрифту</strong>
                                         <p class="text-muted small mb-0">Розмір шрифту в пікселях (12-24px)</p>
                                     </label>
-                                    <input type="number" class="form-control" id="editorFontSizeInline" name="font_size" min="12" max="24" value="14" step="1">
+                                    <input type="number" class="form-control" id="editorFontSizeInline" name="font_size" min="12" max="24" value="<?= htmlspecialchars($editorSettings['font_size'] ?? '14') ?>" step="1">
                                 </div>
                                 <div>
                                     <label class="form-label" for="editorThemeInline">
@@ -303,12 +311,20 @@ if (!empty($message)) {
                                         <p class="text-muted small mb-0">Кольорова схема редактора</p>
                                     </label>
                                     <select class="form-select" id="editorThemeInline" name="editor_theme">
-                                        <option value="monokai" selected>Monokai (темна)</option>
-                                        <option value="default">Default (світла)</option>
-                                        <option value="dracula">Dracula</option>
-                                        <option value="material">Material</option>
-                                        <option value="solarized-dark">Solarized Dark</option>
-                                        <option value="solarized-light">Solarized Light</option>
+                                        <?php
+                                        $editorTheme = $editorSettings['editor_theme'] ?? 'monokai';
+                                        $themeOptions = [
+                                            'monokai' => 'Monokai (темна)',
+                                            'default' => 'Default (світла)',
+                                            'dracula' => 'Dracula',
+                                            'material' => 'Material',
+                                            'solarized-dark' => 'Solarized Dark',
+                                            'solarized-light' => 'Solarized Light'
+                                        ];
+                                        foreach ($themeOptions as $value => $label):
+                                        ?>
+                                        <option value="<?= htmlspecialchars($value) ?>" <?= ($editorTheme === $value) ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div>
@@ -316,7 +332,7 @@ if (!empty($message)) {
                                         <strong>Розмір відступу</strong>
                                         <p class="text-muted small mb-0">Кількість пробілів для відступу (2-8)</p>
                                     </label>
-                                    <input type="number" class="form-control" id="editorIndentSizeInline" name="indent_size" min="2" max="8" value="4" step="1">
+                                    <input type="number" class="form-control" id="editorIndentSizeInline" name="indent_size" min="2" max="8" value="<?= htmlspecialchars($editorSettings['indent_size'] ?? '4') ?>" step="1">
                                 </div>
                             </div>
                         </div>
@@ -326,7 +342,7 @@ if (!empty($message)) {
                             <h6 class="settings-section-title">Додатково</h6>
                             <div class="settings-section-grid">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="autoSaveInline" name="auto_save">
+                                    <input class="form-check-input" type="checkbox" id="autoSaveInline" name="auto_save" <?= (($editorSettings['auto_save'] ?? '0') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="autoSaveInline">
                                         <strong>Автозбереження</strong>
                                         <p class="text-muted small mb-0">Автоматично зберігати зміни через певний час</p>
@@ -337,7 +353,7 @@ if (!empty($message)) {
                                         <strong>Інтервал автозбереження</strong>
                                         <p class="text-muted small mb-0">Час у секундах між автозбереженнями (30-300)</p>
                                     </label>
-                                    <input type="number" class="form-control" id="autoSaveIntervalInline" name="auto_save_interval" min="30" max="300" value="60" step="10" disabled>
+                                    <input type="number" class="form-control" id="autoSaveIntervalInline" name="auto_save_interval" min="30" max="300" value="<?= htmlspecialchars($editorSettings['auto_save_interval'] ?? '60') ?>" step="10" <?= (($editorSettings['auto_save'] ?? '0') === '1') ? '' : 'disabled' ?>>
                                 </div>
                             </div>
                         </div>
