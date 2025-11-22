@@ -2408,8 +2408,21 @@ function setupAutoSaveEditorSettingsInline() {
     
     // Функция для сохранения всех настроек
     const saveAllSettings = function() {
+        // Сохраняем старое значение ДО применения изменений
+        const oldShowEmptyFolders = editorSettings.showEmptyFolders;
+        
         // Применяем настройки к редактору сразу (без сохранения)
         applySettingsToEditor();
+        
+        // Обновляем глобальные настройки сразу для проверки изменений
+        if (showEmptyCheckbox) {
+            editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
+        }
+        
+        // Обновляем дерево файлов сразу, если изменилась настройка показа пустых папок
+        if (showEmptyCheckbox && oldShowEmptyFolders !== showEmptyCheckbox.checked) {
+            refreshFileTree();
+        }
         
         // Отменяем предыдущий таймер
         if (saveSettingsTimeout) {
@@ -2445,28 +2458,35 @@ function setupAutoSaveEditorSettingsInline() {
                     .then(data => {
                         isSaving = false;
                         if (data.success) {
-                            // Обновляем глобальные настройки
-                            if (showEmptyCheckbox) editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
+                            // Обновляем глобальные настройки (если еще не обновлены)
                             if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
-                            
-                            // Обновляем дерево файлов, если изменилась настройка показа пустых папок
-                            const oldShowEmpty = editorSettings.showEmptyFolders;
-                            if (showEmptyCheckbox && oldShowEmpty !== showEmptyCheckbox.checked) {
-                                refreshFileTree();
-                            }
                             
                             // Не показываем уведомление при каждом изменении, только при ошибках
                             // showNotification('Налаштування збережено', 'success');
                         } else {
                             isSaving = false; // Сбрасываем флаг при ошибке
-            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-        }
-    })
-    .catch(error => {
+                            // Восстанавливаем старое значение при ошибке
+                            if (showEmptyCheckbox) {
+                                editorSettings.showEmptyFolders = oldShowEmptyFolders;
+                                showEmptyCheckbox.checked = oldShowEmptyFolders;
+                                // Обновляем дерево обратно
+                                refreshFileTree();
+                            }
+                            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+                        }
+                    })
+                    .catch(error => {
                         isSaving = false;
-        console.error('Error:', error);
-        showNotification('Помилка збереження налаштувань', 'danger');
-    });
+                        console.error('Error:', error);
+                        // Восстанавливаем старое значение при ошибке
+                        if (showEmptyCheckbox) {
+                            editorSettings.showEmptyFolders = oldShowEmptyFolders;
+                            showEmptyCheckbox.checked = oldShowEmptyFolders;
+                            // Обновляем дерево обратно
+                            refreshFileTree();
+                        }
+                        showNotification('Помилка збереження налаштувань', 'danger');
+                    });
             } else {
                 // Если AjaxHelper недоступен, сбрасываем флаг
                 isSaving = false;
