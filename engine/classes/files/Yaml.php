@@ -11,8 +11,11 @@
 
 declare(strict_types=1);
 
-class Yaml {
-    private string $filePath;
+require_once __DIR__ . '/../../interfaces/FileInterface.php';
+require_once __DIR__ . '/../../interfaces/StructuredFileInterface.php';
+
+class Yaml implements StructuredFileInterface {
+    private string $filePath = '';
     private mixed $data = null;
     private bool $hasData = false;
     private int $inline = 2; // Рівень вкладеності для інлайн запису
@@ -237,29 +240,62 @@ class Yaml {
     }
     
     /**
-     * Отримання даних
+     * Отримання значення за ключем (з StructuredFileInterface)
      * 
+     * @param string $key Ключ
      * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function get($default = null) {
+    public function get(string $key, $default = null) {
         if (!$this->hasData) {
             return $default;
         }
         
-        return $this->data;
+        if (is_array($this->data)) {
+            return $this->data[$key] ?? $default;
+        }
+        
+        if (is_object($this->data)) {
+            return $this->data->$key ?? $default;
+        }
+        
+        return $default;
     }
     
     /**
-     * Встановлення даних
+     * Встановлення значення за ключем (з StructuredFileInterface)
      * 
-     * @param mixed $data Дані
+     * @param string $key Ключ
+     * @param mixed $value Значення
      * @return self
      */
-    public function set($data): self {
-        $this->data = $data;
-        $this->hasData = true;
+    public function set(string $key, $value): self {
+        if (!$this->hasData) {
+            $this->data = [];
+            $this->hasData = true;
+        }
+        
+        if (is_array($this->data)) {
+            $this->data[$key] = $value;
+        } elseif (is_object($this->data)) {
+            $this->data->$key = $value;
+        } else {
+            $this->data = [$key => $value];
+            $this->hasData = true;
+        }
+        
         return $this;
+    }
+    
+    /**
+     * Отримання всіх даних
+     * Для отримання значення за ключем використовуйте get($key)
+     * 
+     * @param mixed $default Значення за замовчуванням
+     * @return mixed
+     */
+    public function getAll(mixed $default = null): mixed {
+        return $this->hasData ? $this->data : $default;
     }
     
     /**
@@ -269,7 +305,7 @@ class Yaml {
      * @param mixed $default Значення за замовчуванням
      * @return mixed
      */
-    public function getPath(string $path, $default = null) {
+    public function getDataPath(string $path, $default = null) {
         if (!$this->hasData || !is_array($this->data)) {
             return $default;
         }
@@ -317,6 +353,322 @@ class Yaml {
         return $this->filePath;
     }
     
+    // ===== Методи з FileInterface =====
+    
+    /**
+     * Встановлення шляху до файлу (з FileInterface)
+     * 
+     * @param string $filePath Шлях до файлу
+     * @return self
+     */
+    public function setPath(string $filePath): self {
+        $this->filePath = $filePath;
+        $this->hasData = false;
+        $this->data = null;
+        return $this;
+    }
+    
+    /**
+     * Отримання шляху до файлу (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getPath(): string {
+        return $this->filePath;
+    }
+    
+    /**
+     * Перевірка існування файлу (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function exists(): bool {
+        return !empty($this->filePath) && file_exists($this->filePath);
+    }
+    
+    /**
+     * Читання вмісту файлу (з FileInterface)
+     * 
+     * @return string
+     * @throws Exception
+     */
+    public function read(): string {
+        if (!$this->exists()) {
+            throw new Exception("Файл не існує: {$this->filePath}");
+        }
+        
+        $content = @file_get_contents($this->filePath);
+        if ($content === false) {
+            throw new Exception("Не вдалося прочитати файл: {$this->filePath}");
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Запис вмісту в файл (з FileInterface)
+     * 
+     * @param string $content Вміст для запису
+     * @param bool $append Додавати в кінець файлу
+     * @return bool
+     * @throws Exception
+     */
+    public function write(string $content, bool $append = false): bool {
+        if (empty($this->filePath)) {
+            throw new Exception("Шлях до файлу не встановлено");
+        }
+        
+        $dir = dirname($this->filePath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        $flags = $append ? FILE_APPEND | LOCK_EX : LOCK_EX;
+        $result = @file_put_contents($this->filePath, $content, $flags);
+        
+        if ($result === false) {
+            throw new Exception("Не вдалося записати файл: {$this->filePath}");
+        }
+        
+        @chmod($this->filePath, 0644);
+        return true;
+    }
+    
+    /**
+     * Копіювання файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function copy(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@copy($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося скопіювати файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        @chmod($destinationPath, 0644);
+        return true;
+    }
+    
+    /**
+     * Переміщення/перейменування файлу (з FileInterface)
+     * 
+     * @param string $destinationPath Шлях призначення
+     * @return bool
+     * @throws Exception
+     */
+    public function move(string $destinationPath): bool {
+        if (!$this->exists()) {
+            throw new Exception("Вихідний файл не існує: {$this->filePath}");
+        }
+        
+        $dir = dirname($destinationPath);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            throw new Exception("Не вдалося створити директорію: {$dir}");
+        }
+        
+        if (!@rename($this->filePath, $destinationPath)) {
+            throw new Exception("Не вдалося перемістити файл з '{$this->filePath}' в '{$destinationPath}'");
+        }
+        
+        $this->filePath = $destinationPath;
+        return true;
+    }
+    
+    /**
+     * Видалення файлу (з FileInterface)
+     * 
+     * @return bool
+     * @throws Exception
+     */
+    public function delete(): bool {
+        if (!$this->exists()) {
+            return true;
+        }
+        
+        if (!@unlink($this->filePath)) {
+            throw new Exception("Не вдалося видалити файл: {$this->filePath}");
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Отримання розміру файлу (з FileInterface)
+     * 
+     * @return int
+     */
+    public function getSize(): int {
+        return $this->exists() ? filesize($this->filePath) : 0;
+    }
+    
+    /**
+     * Отримання MIME типу файлу (з FileInterface)
+     * 
+     * @return string|false
+     */
+    public function getMimeType() {
+        if (!$this->exists()) {
+            return false;
+        }
+        
+        if (function_exists('mime_content_type')) {
+            return @mime_content_type($this->filePath);
+        }
+        
+        if (function_exists('finfo_file')) {
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo === false) {
+                return false;
+            }
+            
+            $mimeType = @finfo_file($finfo, $this->filePath);
+            // finfo_close() is deprecated in PHP 8.1+, resource is automatically closed
+            return $mimeType;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Отримання часу останньої зміни (з FileInterface)
+     * 
+     * @return int|false
+     */
+    public function getMTime() {
+        return $this->exists() ? @filemtime($this->filePath) : false;
+    }
+    
+    /**
+     * Отримання розширення файлу (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getExtension(): string {
+        return !empty($this->filePath) ? strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION)) : '';
+    }
+    
+    /**
+     * Отримання імені файлу з розширенням (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getBasename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_BASENAME) : '';
+    }
+    
+    /**
+     * Отримання імені файлу без шляху та розширення (з FileInterface)
+     * 
+     * @return string
+     */
+    public function getFilename(): string {
+        return !empty($this->filePath) ? pathinfo($this->filePath, PATHINFO_FILENAME) : '';
+    }
+    
+    /**
+     * Перевірка доступності файлу для читання (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isReadable(): bool {
+        return $this->exists() && is_readable($this->filePath);
+    }
+    
+    /**
+     * Перевірка доступності файлу для запису (з FileInterface)
+     * 
+     * @return bool
+     */
+    public function isWritable(): bool {
+        return $this->exists() && is_writable($this->filePath);
+    }
+    
+    // ===== Методи з StructuredFileInterface =====
+    
+    /**
+     * Отримання даних (з StructuredFileInterface)
+     * Повертає всі дані
+     * 
+     * @return mixed
+     */
+    public function getData() {
+        return $this->hasData ? $this->data : null;
+    }
+    
+    /**
+     * Встановлення даних (з StructuredFileInterface)
+     * Встановлює всі дані
+     * 
+     * @param mixed $data Дані
+     * @return self
+     */
+    public function setData($data): self {
+        $this->data = $data;
+        $this->hasData = true;
+        return $this;
+    }
+    
+    /**
+     * Перевірка наявності завантажених даних (з StructuredFileInterface)
+     * 
+     * @return bool
+     */
+    public function hasData(): bool {
+        return $this->hasData;
+    }
+    
+    /**
+     * Перевірка наявності ключа (з StructuredFileInterface)
+     * 
+     * @param string $key Ключ
+     * @return bool
+     */
+    public function has(string $key): bool {
+        if (!$this->hasData) {
+            return false;
+        }
+        
+        if (is_array($this->data)) {
+            return isset($this->data[$key]);
+        }
+        
+        if (is_object($this->data)) {
+            return isset($this->data->$key);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Видалення значення за ключем (з StructuredFileInterface)
+     * 
+     * @param string $key Ключ
+     * @return self
+     */
+    public function remove(string $key): self {
+        if (!$this->hasData) {
+            return $this;
+        }
+        
+        if (is_array($this->data)) {
+            unset($this->data[$key]);
+        } elseif (is_object($this->data)) {
+            unset($this->data->$key);
+        }
+        
+        return $this;
+    }
+    
     /**
      * Встановлення рівня вкладеності для інлайн запису
      * 
@@ -345,10 +697,10 @@ class Yaml {
      * @param string $filePath Шлях до файлу
      * @return mixed
      */
-    public static function read(string $filePath) {
+    public static function readFile(string $filePath) {
         $yaml = new self($filePath);
         $yaml->load();
-        return $yaml->get();
+        return $yaml->getAll();
     }
     
     /**
@@ -358,9 +710,9 @@ class Yaml {
      * @param mixed $data Дані
      * @return bool
      */
-    public static function write(string $filePath, $data): bool {
+    public static function writeFile(string $filePath, $data): bool {
         $yaml = new self();
-        $yaml->set($data);
+        $yaml->setData($data);
         return $yaml->save($filePath);
     }
     
@@ -372,7 +724,7 @@ class Yaml {
      */
     public static function parseString(string $yamlString) {
         $yaml = new self();
-        return $yaml->loadString($yamlString)->get();
+        return $yaml->loadString($yamlString)->getAll();
     }
     
     /**
