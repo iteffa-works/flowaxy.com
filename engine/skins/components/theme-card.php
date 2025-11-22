@@ -158,6 +158,17 @@ $status = $isActive ? 'active' : 'inactive';
                         ?>
                     <?php endif; ?>
                     
+                    <?php if ($hasEditAccess): ?>
+                        <?php
+                        $text = 'Редактор';
+                        $type = 'outline-info';
+                        $icon = 'code';
+                        $url = UrlHelper::admin('theme-editor?theme=' . urlencode($themeSlug));
+                        $attributes = ['title' => 'Редактор теми'];
+                        include __DIR__ . '/button.php';
+                        ?>
+                    <?php endif; ?>
+                    
                     <?php
                     // Перевірка, чи можна деактивувати тему
                     $canDeactivate = false;

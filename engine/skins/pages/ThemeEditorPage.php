@@ -6,11 +6,19 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/AdminPage.php';
+require_once __DIR__ . '/../../classes/managers/ThemeEditorManager.php';
 
 class ThemeEditorPage extends AdminPage {
+    private ?ThemeEditorManager $editorManager = null;
     
     public function __construct() {
         parent::__construct();
+        
+        // Перевірка прав доступу
+        if (!function_exists('current_user_can') || !current_user_can('admin.themes.edit')) {
+            Response::redirectStatic(UrlHelper::admin('dashboard'));
+            exit;
+        }
         
         $this->pageTitle = 'Редактор теми - Flowaxy CMS';
         $this->templateName = 'theme-editor';
@@ -20,92 +28,270 @@ class ThemeEditorPage extends AdminPage {
             'Редагування файлів теми',
             'fas fa-code'
         );
+        
+        $this->editorManager = ThemeEditorManager::getInstance();
+        
+        // Додаємо CSS та JS для редактора
+        $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
+        $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js';
+        $this->additionalJS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js';
     }
     
-    public function handle() {
-        $themeSlug = $_GET['theme'] ?? '';
+    public function handle(): void {
+        $request = Request::getInstance();
         
+        // Обробка AJAX запитів
+        if ($request->isAjax()) {
+            $action = Request::post('action', '');
+            
+            switch ($action) {
+                case 'save_file':
+                    $this->ajaxSaveFile();
+                    return;
+                case 'get_file':
+                    $this->ajaxGetFile();
+                    return;
+                case 'create_file':
+                    $this->ajaxCreateFile();
+                    return;
+                case 'delete_file':
+                    $this->ajaxDeleteFile();
+                    return;
+                case 'create_directory':
+                    $this->ajaxCreateDirectory();
+                    return;
+            }
+        }
+        
+        $themeSlug = $request->query('theme', '');
+        
+        // Якщо тема не вказана, використовуємо активну тему
         if (empty($themeSlug)) {
-            $this->setMessage('Тему не вибрано', 'danger');
-            $this->redirect('themes');
+            $activeTheme = themeManager()->getActiveTheme();
+            if ($activeTheme !== null && isset($activeTheme['slug'])) {
+                $themeSlug = $activeTheme['slug'];
+            } else {
+                // Якщо активної теми немає, перенаправляємо на сторінку тем
+                $session = sessionManager();
+                $session->setFlash('admin_message', 'Спочатку активуйте тему в розділі "Теми"');
+                $session->setFlash('admin_message_type', 'warning');
+                $this->redirect('themes');
+                return;
+            }
         }
         
         // Перевіряємо існування теми
         $theme = themeManager()->getTheme($themeSlug);
         if ($theme === null) {
-            $this->setMessage('Тему не знайдено', 'danger');
+            // Зберігаємо повідомлення в сесії для відображення після редиректу
+            $session = sessionManager();
+            $session->setFlash('admin_message', 'Тему не знайдено');
+            $session->setFlash('admin_message_type', 'danger');
             $this->redirect('themes');
+            return;
         }
         
         $themePath = themeManager()->getThemePath($themeSlug);
         
         // Отримуємо список файлів теми
-        $themeFiles = $this->getThemeFiles($themePath);
+        $themeFiles = $this->editorManager->getThemeFiles($themePath);
+        
+        // Отримуємо вміст вибраного файлу
+        $selectedFile = $request->query('file', '');
+        $fileContent = null;
+        $fileExtension = '';
+        
+        if (!empty($selectedFile)) {
+            $filePath = $themePath . $selectedFile;
+            $fileContent = $this->editorManager->getFileContent($filePath);
+            $fileExtension = pathinfo($selectedFile, PATHINFO_EXTENSION);
+        }
         
         // Рендеримо сторінку
         $this->render([
             'theme' => $theme,
             'themePath' => $themePath,
             'themeFiles' => $themeFiles,
-            'selectedFile' => $_GET['file'] ?? null
+            'selectedFile' => $selectedFile,
+            'fileContent' => $fileContent,
+            'fileExtension' => $fileExtension
         ]);
     }
     
     /**
-     * Отримання списку файлів теми
+     * AJAX: Збереження файлу
      */
-    private function getThemeFiles(string $themePath): array {
-        $files = [];
-        
-        if (!is_dir($themePath)) {
-            return $files;
+    private function ajaxSaveFile(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
         }
         
-        $allowedExtensions = ['php', 'css', 'js', 'json', 'html', 'htm'];
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($themePath, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
+        $filePath = SecurityHelper::sanitizeInput(Request::post('file', ''));
+        $content = Request::post('content', '');
         
-        foreach ($iterator as $file) {
-            if ($file->isFile()) {
-                $extension = strtolower($file->getExtension());
-                if (in_array($extension, $allowedExtensions, true)) {
-                    $relativePath = str_replace($themePath, '', $file->getPathname());
-                    $relativePath = ltrim($relativePath, '/\\');
-                    
-                    $files[] = [
-                        'path' => $relativePath,
-                        'fullPath' => $file->getPathname(),
-                        'name' => $file->getFilename(),
-                        'extension' => $extension,
-                        'size' => $file->getSize(),
-                        'modified' => $file->getMTime()
-                    ];
-                }
-            }
+        if (empty($themeSlug) || empty($filePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
+            return;
         }
         
-        // Сортуємо файли: спочатку основні, потім за ім'ям
-        usort($files, function($a, $b) {
-            $priority = ['index.php', 'style.css', 'script.js', 'theme.json', 'customizer.php'];
-            $aPriority = array_search($a['name'], $priority, true);
-            $bPriority = array_search($b['name'], $priority, true);
-            
-            if ($aPriority !== false && $bPriority !== false) {
-                return $aPriority <=> $bPriority;
-            }
-            if ($aPriority !== false) {
-                return -1;
-            }
-            if ($bPriority !== false) {
-                return 1;
-            }
-            
-            return strcmp($a['name'], $b['name']);
-        });
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
         
-        return $files;
+        $fullPath = $themePath . $filePath;
+        $result = $this->editorManager->saveFile($fullPath, $content, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Отримання вмісту файлу
+     */
+    private function ajaxGetFile(): void {
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput($request->query('theme', ''));
+        $filePath = SecurityHelper::sanitizeInput($request->query('file', ''));
+        
+        if (empty($themeSlug) || empty($filePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $fullPath = $themePath . $filePath;
+        $content = $this->editorManager->getFileContent($fullPath);
+        
+        if ($content === null) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Файл не знайдено або недоступний'], 404);
+            return;
+        }
+        
+        $this->sendJsonResponse([
+            'success' => true,
+            'content' => $content,
+            'extension' => pathinfo($filePath, PATHINFO_EXTENSION)
+        ], 200);
+    }
+    
+    /**
+     * AJAX: Створення файлу
+     */
+    private function ajaxCreateFile(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
+        $filePath = SecurityHelper::sanitizeInput(Request::post('file', ''));
+        $content = Request::post('content', '');
+        
+        if (empty($themeSlug) || empty($filePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $result = $this->editorManager->createFile($filePath, $themePath, $content);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Видалення файлу
+     */
+    private function ajaxDeleteFile(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
+        $filePath = SecurityHelper::sanitizeInput(Request::post('file', ''));
+        
+        if (empty($themeSlug) || empty($filePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $fullPath = $themePath . $filePath;
+        $result = $this->editorManager->deleteFile($fullPath, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Створення директорії
+     */
+    private function ajaxCreateDirectory(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = Request::getInstance();
+        $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', ''));
+        $dirPath = SecurityHelper::sanitizeInput(Request::post('dir', ''));
+        
+        if (empty($themeSlug) || empty($dirPath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або директорію'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $result = $this->editorManager->createDirectory($dirPath, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
     }
 }
 

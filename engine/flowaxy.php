@@ -139,7 +139,7 @@ spl_autoload_register(function (string $className): void {
             'Security' => 'security', 'Hash' => 'security', 'Encryption' => 'security', 'Session' => 'security',
             'Cookie' => 'http', 'Response' => 'http', 'Request' => 'http', 'Router' => 'http', 'AjaxHandler' => 'http',
             'RouterManager' => 'managers', 'CookieManager' => 'managers', 'SessionManager' => 'managers', 
-            'StorageManager' => 'managers', 'StorageFactory' => 'managers',
+            'StorageManager' => 'managers', 'StorageFactory' => 'managers', 'ThemeEditorManager' => 'managers',
             'View' => 'view', 'Mail' => 'mail', 'ModalHandler' => 'ui',
             'ModuleLoader' => 'system', 'HookManager' => 'system',
             'RoleManager' => 'managers',
