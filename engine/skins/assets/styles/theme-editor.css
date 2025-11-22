@@ -623,7 +623,7 @@
     background: #fff;
     min-height: 52px;
     height: 52px;
-    display: flex;
+    display: none !important; /* Скрываем футер */
     align-items: center;
     box-sizing: border-box;
     order: 999;
@@ -1058,8 +1058,8 @@
 
 /* Настройки редактора */
 .editor-settings-container {
-    max-width: 1000px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     padding: 16px 20px;
     height: 100%;
     display: flex;

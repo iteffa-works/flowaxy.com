@@ -1143,6 +1143,12 @@ function loadFileInEditor(filePath) {
                 if (statusText) statusText.style.display = 'block';
                 const statusIcon = editorFooter.querySelector('#editor-status-icon');
                 if (statusIcon) statusIcon.style.display = 'inline-block';
+                // Восстанавливаем заголовок файла в хедере
+                const fileTitle = editorHeader?.querySelector('.editor-file-title');
+                if (fileTitle && filePath) {
+                    const extension = filePath.split('.').pop() || '';
+                    fileTitle.innerHTML = '<i class="fas fa-edit me-2"></i>' + escapeHtml(filePath);
+                }
                 // Восстанавливаем информацию о файле в хедере
                 const fileInfo = editorHeader?.querySelector('.d-flex.justify-content-between > div:last-child');
                 if (fileInfo) fileInfo.style.display = 'block';
@@ -1889,11 +1895,19 @@ function showEditorSettings() {
     // Показываем хедер и футер (они остаются как в редакторе, без изменений)
     // Хедер и футер остаются видимыми с их оригинальным содержимым (текущий файл, статус, кнопки)
     
-    // Показываем хедер, но НЕ изменяем его содержимое - оставляем как для редактирования файла
+    // Показываем хедер и изменяем заголовок на "Налаштування редактора"
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // НЕ изменяем заголовок - оставляем пустым или с текущим файлом
-        // Информация о файле остается как есть
+        // Изменяем заголовок на "Налаштування редактора"
+        const fileTitle = editorHeader.querySelector('.editor-file-title');
+        if (fileTitle) {
+            fileTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Налаштування редактора';
+        }
+        // Скрываем информацию о файле (PHP 481 B)
+        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
+        if (fileInfo) {
+            fileInfo.style.display = 'none';
+        }
     }
     
     // Показываем футер - он должен быть всегда виден
