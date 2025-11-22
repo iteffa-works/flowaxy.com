@@ -89,13 +89,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация древовидной структуры файлов
     initFileTree();
     
-    // Проверяем наличие параметра folder в URL - если есть, показываем режим загрузки
+    // Проверяем наличие параметров в URL для автоматического показа режимов
     const urlParams = new URLSearchParams(window.location.search);
     const folder = urlParams.get('folder');
+    const mode = urlParams.get('mode');
+    
     if (folder) {
         // Небольшая задержка чтобы дерево файлов успело инициализироваться
         setTimeout(function() {
             showUploadFiles(folder);
+        }, 300);
+    } else if (mode === 'settings') {
+        // Небольшая задержка чтобы дерево файлов успело инициализироваться
+        setTimeout(function() {
+            showEditorSettings();
         }, 300);
     }
 });
@@ -799,7 +806,11 @@ function initFileTree() {
             }
             
             const folder = this.closest('.file-tree-folder');
+            if (!folder) return;
+            
             const content = folder.querySelector('.file-tree-folder-content');
+            if (!content) return; // Если папка не имеет содержимого, ничего не делаем
+            
             const isExpanded = this.classList.contains('expanded');
             
             if (isExpanded) {
@@ -1244,8 +1255,9 @@ function loadFileInEditor(filePath) {
             // Обновляем URL без перезагрузки
             const url = new URL(window.location.href);
             url.searchParams.set('file', filePath);
-            // Удаляем параметр folder, так как мы открываем файл
+            // Удаляем параметры folder и mode, так как мы открываем файл
             url.searchParams.delete('folder');
+            url.searchParams.delete('mode');
             window.history.pushState({ path: url.href }, '', url.href);
         } else {
             showNotification(data.error || 'Помилка завантаження файлу', 'danger');
@@ -1805,8 +1817,9 @@ function showUploadFiles(targetFolder = '') {
         } else {
             url.searchParams.delete('folder');
         }
-        // Удаляем параметр file, так как мы в режиме загрузки
+        // Удаляем параметры file и mode, так как мы в режиме загрузки
         url.searchParams.delete('file');
+        url.searchParams.delete('mode');
         window.history.pushState({ path: url.href }, '', url.href);
         
         // Обновляем заголовок при изменении целевой папки
@@ -1833,6 +1846,7 @@ function showUploadFiles(targetFolder = '') {
                     url.searchParams.delete('folder');
                 }
                 url.searchParams.delete('file');
+                url.searchParams.delete('mode');
                 window.history.pushState({ path: url.href }, '', url.href);
             });
         }
@@ -1858,10 +1872,11 @@ function showEditorSettings() {
     const editorHeader = document.getElementById('editor-header');
     const editorFooter = document.getElementById('editor-footer');
     
-    // Обновляем URL - удаляем параметры file и folder, так как мы в режиме настроек
+    // Обновляем URL - добавляем параметр mode=settings
     const theme = new URLSearchParams(window.location.search).get('theme') || '';
     const url = new URL(window.location.href);
     url.searchParams.set('theme', theme);
+    url.searchParams.set('mode', 'settings');
     url.searchParams.delete('file');
     url.searchParams.delete('folder');
     window.history.pushState({ path: url.href }, '', url.href);
