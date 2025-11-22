@@ -263,11 +263,21 @@ if (!empty($message)) {
             <!-- Футер (всегда последний элемент) -->
             <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? '' : 'display: none;' ?>">
                 <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center flex-grow-1" style="min-width: 0;">
                         <span id="editor-status-icon" class="editor-status-dot text-success me-2"></span>
                         <span class="text-muted small" id="editor-status">Готово до редагування</span>
+                        <!-- Прогресс бар загрузки файлов (скрыт по умолчанию) -->
+                        <div id="footer-upload-progress" class="ms-3 flex-grow-1" style="display: none; max-width: 300px;">
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     id="footer-upload-progress-bar" 
+                                     role="progressbar" 
+                                     style="width: 0%">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
+                    <div class="d-flex gap-2 align-items-center flex-shrink-0">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-btn" onclick="resetEditor()" style="display: none;">
                             <i class="fas fa-undo me-1"></i>Скасувати
                         </button>

@@ -1697,55 +1697,67 @@ function showUploadFiles(targetFolder = '') {
     const editorHeader = document.getElementById('editor-header');
     const editorFooter = document.getElementById('editor-footer');
     
-    // Показываем хедер (если он был скрыт), оставляем содержимое как есть
+    // Показываем хедер и обновляем заголовок для режима загрузки
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // НЕ изменяем заголовок - оставляем как в редакторе (с текущим файлом, если открыт)
+        // Обновляем заголовок на "Завантажити файли" + путь
+        const fileTitle = editorHeader.querySelector('.editor-file-title');
+        if (fileTitle) {
+            const uploadPath = targetFolder ? targetFolder : 'Коренева папка теми';
+            fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли: ' + uploadPath;
+        }
+        // Скрываем информацию о файле (PHP 481 B)
+        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
+        if (fileInfo) {
+            fileInfo.style.display = 'none';
+        }
     }
     
-    // Показываем футер - он должен быть всегда виден
+    // Показываем футер и обновляем для режима загрузки
     if (editorFooter) {
         // Явно показываем футер, переопределяя inline стиль display: none
         editorFooter.style.setProperty('display', 'block', 'important');
         editorFooter.style.setProperty('visibility', 'visible', 'important');
-        // Показываем все элементы футера, НЕ изменяем их содержимое
+        // Показываем все элементы футера
         const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
         if (footerButtons) {
             footerButtons.style.display = 'flex';
         }
+        // Обновляем статус на "FTP сервер: подключен"
         const statusText = editorFooter.querySelector('#editor-status');
         if (statusText) {
             statusText.style.display = 'block';
             statusText.style.visibility = 'visible';
-            // НЕ изменяем текст статуса - оставляем "Готово до редагування"
+            statusText.textContent = 'FTP сервер: подключен';
         }
         const statusIcon = editorFooter.querySelector('#editor-status-icon');
         if (statusIcon) {
             statusIcon.style.display = 'inline-block';
             statusIcon.style.visibility = 'visible';
+            statusIcon.className = 'editor-status-dot text-success me-2';
         }
         // Скрываем кнопку "Скасувати"
         const cancelBtn = document.getElementById('cancel-btn');
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
-        // Восстанавливаем оригинальную кнопку "Зберегти" если была изменена
+        // Обновляем кнопку "Зберегти" на "Завантажити"
         const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
         if (saveBtn) {
-            if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
-                // Восстанавливаем оригинальную кнопку
-                if (saveBtn.getAttribute('data-original-onclick')) {
-                    saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
-                    saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
-                    saveBtn.removeAttribute('data-original-onclick');
-                    saveBtn.removeAttribute('data-original-html');
-                } else {
-                    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
-                    saveBtn.setAttribute('onclick', 'saveFile()');
-                }
+            // Сохраняем оригинальную кнопку если еще не сохранена
+            if (!saveBtn.getAttribute('data-original-onclick')) {
+                saveBtn.setAttribute('data-original-onclick', saveBtn.getAttribute('onclick') || 'saveFile()');
+                saveBtn.setAttribute('data-original-html', saveBtn.innerHTML);
             }
-            // Оставляем кнопку видимой
+            // Изменяем на "Завантажити"
+            saveBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Завантажити';
+            saveBtn.setAttribute('onclick', 'startFilesUpload()');
             saveBtn.style.display = '';
+        }
+        // Скрываем прогресс бар в футере (пока что)
+        const footerProgressBar = editorFooter.querySelector('#footer-upload-progress');
+        if (footerProgressBar) {
+            footerProgressBar.style.display = 'none';
         }
     }
     
@@ -1763,7 +1775,25 @@ function showUploadFiles(targetFolder = '') {
             const select = document.getElementById('upload-target-folder');
             if (select) {
                 select.value = targetFolder;
+                // Обновляем заголовок с путем
+                const fileTitle = editorHeader?.querySelector('.editor-file-title');
+                if (fileTitle) {
+                    const uploadPath = targetFolder || 'Коренева папка теми';
+                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли: ' + uploadPath;
+                }
             }
+        }
+        
+        // Обновляем заголовок при изменении целевой папки
+        const select = document.getElementById('upload-target-folder');
+        if (select) {
+            select.addEventListener('change', function() {
+                const fileTitle = editorHeader?.querySelector('.editor-file-title');
+                if (fileTitle) {
+                    const uploadPath = this.value || 'Коренева папка теми';
+                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли: ' + uploadPath;
+                }
+            });
         }
     }
 }
@@ -2023,9 +2053,28 @@ function startFilesUpload() {
     const progressBar = document.getElementById('upload-progress-bar');
     const progressText = document.getElementById('upload-progress-text');
     
-    progressContainer.style.display = 'block';
-    progressBar.style.width = '0%';
-    progressText.textContent = 'Готується до завантаження...';
+    // Элементы футера для прогресса
+    const editorFooter = document.getElementById('editor-footer');
+    const footerProgressBar = document.getElementById('footer-upload-progress');
+    const footerProgressBarInner = document.getElementById('footer-upload-progress-bar');
+    const statusText = document.getElementById('editor-status');
+    const statusIcon = document.getElementById('editor-status-icon');
+    
+    // Показываем прогресс в футере
+    if (footerProgressBar && footerProgressBarInner && statusText) {
+        footerProgressBar.style.display = 'block';
+        footerProgressBarInner.style.width = '0%';
+        statusText.textContent = 'Завантаження файлів...';
+        if (statusIcon) {
+            statusIcon.className = 'editor-status-dot text-warning me-2';
+        }
+    }
+    
+    if (progressContainer && progressBar && progressText) {
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Готується до завантаження...';
+    }
     
     let uploaded = 0;
     let errors = 0;
@@ -2050,8 +2099,22 @@ function startFilesUpload() {
         .then(data => {
             uploaded++;
             const progress = (uploaded / selectedFiles.length) * 100;
-            progressBar.style.width = progress + '%';
-            progressText.textContent = `Завантажено ${uploaded} з ${selectedFiles.length} файлів`;
+            
+            // Обновляем прогресс бар в футере
+            if (footerProgressBarInner) {
+                footerProgressBarInner.style.width = progress + '%';
+            }
+            if (statusText) {
+                statusText.textContent = `Завантаження: ${uploaded} з ${selectedFiles.length} файлів`;
+            }
+            
+            // Обновляем прогресс в основном контейнере
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+            }
+            if (progressText) {
+                progressText.textContent = `Завантажено ${uploaded} з ${selectedFiles.length} файлів`;
+            }
             
             if (!data.success) {
                 errors++;
@@ -2060,13 +2123,38 @@ function startFilesUpload() {
             // Когда все файлы загружены
             if (uploaded === selectedFiles.length) {
                 if (errors === 0) {
+                    // Обновляем статус на "Успешно все файли загружены"
+                    if (statusText) {
+                        statusText.textContent = 'Успешно все файли загружены';
+                    }
+                    if (statusIcon) {
+                        statusIcon.className = 'editor-status-dot text-success me-2';
+                    }
+                    // Скрываем прогресс бар через 3 секунды и возвращаем статус FTP
+                    setTimeout(() => {
+                        if (footerProgressBar) {
+                            footerProgressBar.style.display = 'none';
+                        }
+                        if (statusText) {
+                            statusText.textContent = 'FTP сервер: подключен';
+                        }
+                    }, 3000);
+                    
                     showNotification(`Успішно завантажено ${uploaded} файлів`, 'success');
                     clearUploadList();
                     refreshFileTree();
-                    setTimeout(() => {
-                        progressContainer.style.display = 'none';
-                    }, 2000);
+                    if (progressContainer) {
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                        }, 2000);
+                    }
                 } else {
+                    if (statusText) {
+                        statusText.textContent = `Завантажено ${uploaded - errors} з ${selectedFiles.length} файлів. Помилок: ${errors}`;
+                    }
+                    if (statusIcon) {
+                        statusIcon.className = 'editor-status-dot text-warning me-2';
+                    }
                     showNotification(`Завантажено ${uploaded - errors} з ${selectedFiles.length} файлів. Помилок: ${errors}`, 'warning');
                 }
             }
@@ -2075,7 +2163,20 @@ function startFilesUpload() {
             uploaded++;
             errors++;
             const progress = (uploaded / selectedFiles.length) * 100;
-            progressBar.style.width = progress + '%';
+            
+            if (footerProgressBarInner) {
+                footerProgressBarInner.style.width = progress + '%';
+            }
+            if (statusText) {
+                statusText.textContent = `Помилка завантаження: ${uploaded - errors} з ${selectedFiles.length}`;
+            }
+            if (statusIcon) {
+                statusIcon.className = 'editor-status-dot text-danger me-2';
+            }
+            
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+            }
             
             if (uploaded === selectedFiles.length) {
                 showNotification(`Помилка завантаження. Завантажено ${uploaded - errors} з ${selectedFiles.length}`, 'danger');
