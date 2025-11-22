@@ -388,48 +388,99 @@ class ThemeEditorManager {
      */
     public function createFolderZip(string $folderPath, string $themePath): ?string {
         try {
-            $fullFolderPath = rtrim($themePath, '/\\') . '/' . trim($folderPath, '/\\');
-            
-            if (!is_dir($fullFolderPath)) {
-                return null;
-            }
+            // Нормалізуємо шлях до папки
+            $folderPath = trim($folderPath, '/\\');
+            $fullFolderPath = rtrim($themePath, '/\\') . '/' . $folderPath;
             
             // Перевірка безпеки шляху
             $realThemePath = realpath($themePath);
             $realFolderPath = realpath($fullFolderPath);
             
-            if ($realThemePath === false || $realFolderPath === false || 
-                !str_starts_with($realFolderPath, $realThemePath)) {
+            if ($realThemePath === false || $realFolderPath === false) {
+                error_log("ThemeEditorManager: Invalid paths - theme: {$themePath}, folder: {$fullFolderPath}");
+                return null;
+            }
+            
+            if (!str_starts_with($realFolderPath, $realThemePath)) {
+                error_log("ThemeEditorManager: Folder path is outside theme directory");
+                return null;
+            }
+            
+            if (!is_dir($realFolderPath) || !is_readable($realFolderPath)) {
+                error_log("ThemeEditorManager: Folder does not exist or is not readable: {$realFolderPath}");
                 return null;
             }
             
             // Створюємо тимчасовий файл для архіву
-            $zipPath = sys_get_temp_dir() . '/theme_folder_' . uniqid() . '.zip';
+            $tempDir = sys_get_temp_dir();
+            if (!is_writable($tempDir)) {
+                error_log("ThemeEditorManager: Temporary directory is not writable: {$tempDir}");
+                return null;
+            }
             
+            $zipPath = rtrim($tempDir, '/\\') . DIRECTORY_SEPARATOR . 'theme_folder_' . uniqid() . '.zip';
+            
+            // Створюємо ZIP архів
             $zip = new ZipArchive();
-            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            $result = $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+            
+            if ($result !== true) {
+                $errorMsg = $zip->getStatusString() ?: "Unknown error (code: {$result})";
+                error_log("ThemeEditorManager: Failed to create ZIP archive at {$zipPath}: {$errorMsg}");
                 return null;
             }
             
             // Додаємо всі файли з папки до архіву
             $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($fullFolderPath, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::SELF_FIRST
+                new RecursiveDirectoryIterator($realFolderPath, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::LEAVES_ONLY
             );
             
+            $basePathLength = strlen($realFolderPath) + 1;
+            $fileCount = 0;
+            
             foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    $relativePath = str_replace($fullFolderPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                if ($file->isFile() && $file->isReadable()) {
+                    $filePath = $file->getPathname();
+                    // Отримуємо відносний шлях від папки
+                    $relativePath = substr($filePath, $basePathLength);
+                    // Нормалізуємо для ZIP (використовуємо прямі слеші)
                     $relativePath = str_replace('\\', '/', $relativePath);
-                    $zip->addFile($file->getPathname(), $relativePath);
+                    
+                    if (!$zip->addFile($filePath, $relativePath)) {
+                        error_log("ThemeEditorManager: Failed to add file to archive: {$filePath}");
+                    } else {
+                        $fileCount++;
+                    }
                 }
             }
             
-            $zip->close();
+            // Якщо не додано жодного файлу, повертаємо помилку
+            if ($fileCount === 0) {
+                $zip->close();
+                @unlink($zipPath);
+                error_log("ThemeEditorManager: No files were added to the archive");
+                return null;
+            }
+            
+            // Закриваємо архів
+            if (!$zip->close()) {
+                $errorMsg = $zip->getStatusString() ?: "Unknown error";
+                error_log("ThemeEditorManager: Failed to close ZIP archive: {$errorMsg}");
+                @unlink($zipPath);
+                return null;
+            }
+            
+            // Перевіряємо, що файл архіву створено і доступний
+            if (!file_exists($zipPath) || !is_readable($zipPath)) {
+                error_log("ThemeEditorManager: ZIP archive file was not created or is not readable: {$zipPath}");
+                return null;
+            }
             
             return $zipPath;
         } catch (Exception $e) {
-            error_log("Error creating folder zip: " . $e->getMessage());
+            error_log("ThemeEditorManager: Exception in createFolderZip: " . $e->getMessage());
+            error_log("ThemeEditorManager: Stack trace: " . $e->getTraceAsString());
             return null;
         }
     }

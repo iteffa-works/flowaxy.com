@@ -458,23 +458,40 @@ class ThemeEditorPage extends AdminPage {
             return;
         }
         
-        $zipPath = $this->editorManager->createFolderZip($folderPath, $themePath);
-        
-        if ($zipPath === null || !file_exists($zipPath)) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити архів'], 500);
+        try {
+            $zipPath = $this->editorManager->createFolderZip($folderPath, $themePath);
+            
+            if ($zipPath === null || !file_exists($zipPath)) {
+                error_log("ThemeEditorPage: Failed to create ZIP archive. Theme: {$themeSlug}, Folder: {$folderPath}");
+                $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити архів. Перевірте права доступу та логи сервера.'], 500);
+                return;
+            }
+            
+            // Відправляємо ZIP файл
+            $folderName = basename($folderPath) ?: 'folder';
+            $folderName = preg_replace('/[^a-zA-Z0-9\-_\.]/', '_', $folderName); // Безпечне ім'я файлу
+            
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="' . $folderName . '.zip"');
+            header('Content-Length: ' . filesize($zipPath));
+            header('Cache-Control: no-cache, must-revalidate');
+            header('Pragma: no-cache');
+            
+            // Вимикаємо буферизацію для великих файлів
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            readfile($zipPath);
+            
+            // Видаляємо тимчасовий файл
+            @unlink($zipPath);
+            exit;
+        } catch (Exception $e) {
+            error_log("ThemeEditorPage: Exception in ajaxDownloadFolder: " . $e->getMessage());
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка створення архіву: ' . $e->getMessage()], 500);
             return;
         }
-        
-        // Відправляємо ZIP файл
-        $folderName = basename($folderPath) ?: 'folder';
-        header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="' . $folderName . '.zip"');
-        header('Content-Length: ' . filesize($zipPath));
-        readfile($zipPath);
-        
-        // Видаляємо тимчасовий файл
-        @unlink($zipPath);
-        exit;
     }
     
     /**
