@@ -7,7 +7,7 @@ let originalContent = '';
 let isModified = false;
 let editorSettings = {
     enableSyntaxHighlighting: true,
-    showEmptyFolders: false
+    showEmptyFolders: true
 };
 let settingsSetupDone = false; // Флаг, что обработчики настроек уже установлены
 
@@ -158,9 +158,9 @@ function updateEditorStatus() {
         return;
     }
     
-    if (isModified) {
-        statusEl.textContent = 'Є незбережені зміни';
-        statusEl.className = 'text-warning small';
+        if (isModified) {
+            statusEl.textContent = 'Є незбережені зміни';
+            statusEl.className = 'text-warning small';
         // Меняем точку на предупреждение (желтая)
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-warning me-2';
@@ -169,9 +169,9 @@ function updateEditorStatus() {
         if (cancelBtn) {
             cancelBtn.style.display = '';
         }
-    } else {
-        statusEl.textContent = 'Готово до редагування';
-        statusEl.className = 'text-muted small';
+        } else {
+            statusEl.textContent = 'Готово до редагування';
+            statusEl.className = 'text-muted small';
         // Меняем точку на успех (зеленая)
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-success me-2';
@@ -204,7 +204,7 @@ function saveFile() {
     const requestFn = typeof AjaxHelper !== 'undefined' 
         ? AjaxHelper.post(url, { action: 'save_file', theme: theme, file: file, content: content })
         : fetch(url, {
-            method: 'POST',
+        method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: new URLSearchParams({ 
                 action: 'save_file', 
@@ -216,20 +216,20 @@ function saveFile() {
         }).then(r => r.json());
     
     requestFn
-        .then(data => {
-            if (data.success) {
-                originalContent = content;
-                isModified = false;
-                updateEditorStatus();
-                showNotification('Файл успішно збережено', 'success');
-            } else {
-                showNotification(data.error || 'Помилка збереження', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Помилка збереження файлу', 'danger');
-        });
+    .then(data => {
+        if (data.success) {
+            originalContent = content;
+            isModified = false;
+            updateEditorStatus();
+            showNotification('Файл успішно збережено', 'success');
+        } else {
+            showNotification(data.error || 'Помилка збереження', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Помилка збереження файлу', 'danger');
+    });
 }
 
 /**
@@ -251,14 +251,14 @@ function resetEditor() {
         'Ви впевнені, що хочете скасувати всі зміни? Внесені зміни будуть втрачені.',
         function() {
             // Восстанавливаем оригинальное содержимое
-            codeEditor.setValue(originalContent);
+        codeEditor.setValue(originalContent);
             // Обновляем флаг изменений
-            isModified = false;
+        isModified = false;
             // Обновляем статус редактора (скроет кнопку "Скасувати" и изменит иконку)
-            updateEditorStatus();
+        updateEditorStatus();
             // Показываем уведомление
             showNotification('Зміни скасовано', 'info');
-        }
+    }
     );
 }
 
@@ -397,17 +397,17 @@ function submitInlineCreateFile(button, folderPath) {
             content: ''
         })
         : fetch(url, {
-            method: 'POST',
+        method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: formData
+        body: formData
         }).then(r => r.json());
     
     requestFn
-        .then(data => {
-            if (data.success) {
-                showNotification('Файл успішно створено', 'success');
-                form.remove();
-                
+    .then(data => {
+        if (data.success) {
+            showNotification('Файл успішно створено', 'success');
+            form.remove();
+            
                 // Обновляем дерево файлов через AJAX
                 refreshFileTree();
                 
@@ -566,16 +566,16 @@ function submitInlineCreateDirectory(button, folderPath) {
             directory: fullPath
         })
         : fetch(url, {
-            method: 'POST',
+        method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: formData
+        body: formData
         }).then(r => r.json());
     
     requestFn
-        .then(data => {
-            if (data.success) {
-                showNotification('Папку успішно створено', 'success');
-                form.remove();
+    .then(data => {
+        if (data.success) {
+            showNotification('Папку успішно створено', 'success');
+            form.remove();
                 // Обновляем дерево файлов через AJAX
                 refreshFileTree();
         } else {
@@ -627,7 +627,7 @@ function deleteCurrentFile(event, filePath) {
                     file: filePath
                 })
                 : fetch(url, {
-                    method: 'POST',
+        method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     body: new URLSearchParams({
                         action: 'delete_file',
@@ -638,9 +638,9 @@ function deleteCurrentFile(event, filePath) {
                 }).then(r => r.json());
             
             requestFn
-                .then(data => {
-                if (data.success) {
-                    showNotification('Файл успішно видалено', 'success');
+    .then(data => {
+        if (data.success) {
+            showNotification('Файл успішно видалено', 'success');
                     
                     // Закрываем редактор, если удален открытый файл
                     const textarea = document.getElementById('theme-file-editor');
@@ -673,14 +673,14 @@ function deleteCurrentFile(event, filePath) {
                     
                     // Обновляем дерево файлов через AJAX
                     refreshFileTree();
-                } else {
-                    showNotification(data.error || 'Помилка видалення', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Помилка видалення файлу', 'danger');
-            });
+        } else {
+            showNotification(data.error || 'Помилка видалення', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Помилка видалення файлу', 'danger');
+    });
         }
     );
 }
@@ -791,10 +791,10 @@ function initFileTree() {
                 // Проверяем, что клик по файлу
                 const fileLink = e.target.closest('.file-tree-item');
                 if (fileLink) {
-                    e.preventDefault();
+            e.preventDefault();
                     e.stopPropagation();
                     const filePath = fileLink.getAttribute('data-file');
-                    if (filePath) {
+            if (filePath) {
                         loadFile(e, filePath);
                     }
                 }
@@ -1087,8 +1087,8 @@ function loadFileInEditor(filePath) {
     const requestFn = typeof AjaxHelper !== 'undefined' 
         ? AjaxHelper.post(url, { action: 'get_file', theme: theme, file: filePath })
         : fetch(url, {
-            method: 'POST',
-            headers: { 
+        method: 'POST',
+        headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
@@ -1110,7 +1110,7 @@ function loadFileInEditor(filePath) {
         });
     
     return requestFn
-        .then(data => {
+    .then(data => {
         if (data.success && data.content !== undefined) {
             // Обновляем активный файл в дереве
             document.querySelectorAll('.file-tree-item-wrapper').forEach(item => {
@@ -1222,9 +1222,9 @@ function loadFileInEditor(filePath) {
             const fileTitle = document.querySelector('.editor-file-title');
             if (fileTitle) {
                 fileTitle.innerHTML = '';
-                const newIcon = document.createElement('i');
+                    const newIcon = document.createElement('i');
                 newIcon.className = 'fas fa-edit me-2';
-                fileTitle.appendChild(newIcon);
+                    fileTitle.appendChild(newIcon);
                 fileTitle.appendChild(document.createTextNode(filePath));
             }
             
@@ -1565,9 +1565,9 @@ function autoSaveEditorSettings() {
             });
     } else {
         // Fallback на старый способ
-        const formData = new FormData();
+    const formData = new FormData();
         formData.append('action', 'save_editor_settings');
-        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
         formData.append('show_empty_folders', newShowEmptyFolders ? '1' : '0');
         formData.append('enable_syntax_highlighting', newHighlighting ? '1' : '0');
         formData.append('show_line_numbers', (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0');
@@ -1580,12 +1580,12 @@ function autoSaveEditorSettings() {
         formData.append('auto_save_interval', (document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval'))?.value || '60');
         
         fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        })
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
         .then(response => {
             // Проверяем, что ответ является JSON
             const contentType = response.headers.get('content-type');
@@ -1596,7 +1596,7 @@ function autoSaveEditorSettings() {
             }
             return response.json();
         })
-            .then(data => {
+    .then(data => {
                 isSaving = false;
                 
                 if (data.success) {
@@ -1616,10 +1616,10 @@ function autoSaveEditorSettings() {
                     document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
                     showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
                 }
-            })
-            .catch(error => {
+    })
+    .catch(error => {
                 isSaving = false;
-                console.error('Error:', error);
+        console.error('Error:', error);
                 document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
                 document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
                 showNotification('Помилка збереження налаштувань', 'danger');
@@ -2284,7 +2284,7 @@ function startFilesUpload() {
                         statusIcon.className = 'editor-status-dot text-success me-2';
                     }
                     // Скрываем прогресс бар через 3 секунды и возвращаем статус FTP
-                    setTimeout(() => {
+            setTimeout(() => {
                         if (footerProgressBar) {
                             footerProgressBar.style.display = 'none';
                         }
@@ -2301,7 +2301,7 @@ function startFilesUpload() {
                             progressContainer.style.display = 'none';
                         }, 2000);
                     }
-                } else {
+        } else {
                     if (statusText) {
                         statusText.textContent = `Завантажено ${uploaded - errors} з ${selectedFiles.length} файлів. Помилок: ${errors}`;
                     }
@@ -2459,14 +2459,14 @@ function setupAutoSaveEditorSettingsInline() {
                             // showNotification('Налаштування збережено', 'success');
                         } else {
                             isSaving = false; // Сбрасываем флаг при ошибке
-                            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-                        }
-                    })
-                    .catch(error => {
+            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+        }
+    })
+    .catch(error => {
                         isSaving = false;
-                        console.error('Error:', error);
-                        showNotification('Помилка збереження налаштувань', 'danger');
-                    });
+        console.error('Error:', error);
+        showNotification('Помилка збереження налаштувань', 'danger');
+    });
             } else {
                 // Если AjaxHelper недоступен, сбрасываем флаг
                 isSaving = false;

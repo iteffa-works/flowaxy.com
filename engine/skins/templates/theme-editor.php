@@ -245,7 +245,7 @@ if (!empty($message)) {
                                         <strong>Показувати пусті папки</strong>
                                         <p class="text-muted small mb-0">Відображати порожні папки в дереві файлів</p>
                                     </label>
-                                    <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders" <?= (($editorSettings['show_empty_folders'] ?? '0') === '1') ? 'checked' : '' ?>>
+                                    <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders" <?= (($editorSettings['show_empty_folders'] ?? '1') === '1') ? 'checked' : '' ?>>
                                 </div>
                                 <div class="form-check form-switch">
                                     <label class="form-check-label" for="enableSyntaxHighlightingInline">

@@ -139,7 +139,7 @@ class ThemeEditorPage extends AdminPage {
         
         // Завантажуємо налаштування редактора
         $editorSettings = $this->loadEditorSettings();
-        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '0') === '1';
+        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '1') === '1';
         $enableSyntaxHighlighting = ($editorSettings['enable_syntax_highlighting'] ?? '1') === '1';
         
         // Отримуємо список файлів теми
@@ -484,7 +484,7 @@ class ThemeEditorPage extends AdminPage {
         $settingsFile = dirname(__DIR__, 2) . '/data/theme-editor.ini';
         
         $settings = [
-            'show_empty_folders' => '0',
+            'show_empty_folders' => '1',
             'enable_syntax_highlighting' => '1',
             'show_line_numbers' => '1',
             'font_family' => "'Consolas', monospace",
@@ -738,7 +738,7 @@ class ThemeEditorPage extends AdminPage {
         $settingsFile = dirname(__DIR__, 2) . '/data/theme-editor.ini';
         
         $settings = [
-            'show_empty_folders' => '0',
+            'show_empty_folders' => '1',
             'enable_syntax_highlighting' => '1',
             'show_line_numbers' => '1',
             'font_family' => "'Consolas', monospace",
@@ -791,7 +791,7 @@ class ThemeEditorPage extends AdminPage {
         
         // Завантажуємо налаштування редактора
         $editorSettings = $this->loadEditorSettings();
-        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '0') === '1';
+        $showEmptyFolders = ($editorSettings['show_empty_folders'] ?? '1') === '1';
         
         // Отримуємо список файлів теми
         $themeFiles = $this->editorManager->getThemeFiles($themePath);
