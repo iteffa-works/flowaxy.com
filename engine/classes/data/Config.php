@@ -9,6 +9,10 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../files/Directory.php';
+
+use Engine\Classes\Files\Directory;
+
 class Config {
     private static ?self $instance = null;
     private string $configDir;

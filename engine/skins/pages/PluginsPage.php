@@ -6,6 +6,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/AdminPage.php';
+require_once __DIR__ . '/../../classes/files/Directory.php';
+
+use Engine\Classes\Files\Directory;
 
 class PluginsPage extends AdminPage {
     

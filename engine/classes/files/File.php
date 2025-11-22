@@ -96,7 +96,8 @@ class File implements FileInterface {
             throw new Exception("Не вдалося записати файл: {$this->filePath}");
         }
         
-        @chmod($this->filePath, 0644);
+        // Пытаемся установить права доступа, но не критично, если не получится
+        $this->setPermissions(0644);
         return true;
     }
     
@@ -118,7 +119,8 @@ class File implements FileInterface {
             throw new Exception("Не вдалося скопіювати файл з '{$this->filePath}' в '{$destinationPath}'");
         }
         
-        @chmod($destinationPath, 0644);
+        // Пытаемся установить права доступа, но не критично, если не получится
+        $this->setPermissionsOnPath($destinationPath, 0644);
         return true;
     }
     
@@ -278,7 +280,16 @@ class File implements FileInterface {
      * @return bool
      */
     public function chmod(int $mode): bool {
-        return $this->exists() && @chmod($this->filePath, $mode);
+        if (!$this->exists()) {
+            return false;
+        }
+        
+        // Тиха установка прав доступа без логирования ошибок
+        $oldErrorReporting = error_reporting(0);
+        $result = @chmod($this->filePath, $mode);
+        error_reporting($oldErrorReporting);
+        
+        return $result !== false;
     }
     
     /**
@@ -299,6 +310,43 @@ class File implements FileInterface {
      */
     public function append(string $content): bool {
         return $this->write($content, true);
+    }
+    
+    /**
+     * Тиха установка прав доступа без логирования ошибок
+     * 
+     * @param int $mode Права доступу (наприклад, 0644)
+     * @return void
+     */
+    private function setPermissions(int $mode): void {
+        if (!$this->exists()) {
+            return;
+        }
+        
+        // Пытаемся установить права, но игнорируем ошибки
+        // На некоторых системах (Windows, WSL) chmod может не работать
+        $oldErrorReporting = error_reporting(0);
+        @chmod($this->filePath, $mode);
+        error_reporting($oldErrorReporting);
+    }
+    
+    /**
+     * Тиха установка прав доступа для указанного пути
+     * 
+     * @param string $path Шлях до файла
+     * @param int $mode Права доступу (наприклад, 0644)
+     * @return void
+     */
+    private function setPermissionsOnPath(string $path, int $mode): void {
+        if (!file_exists($path)) {
+            return;
+        }
+        
+        // Пытаемся установить права, но игнорируем ошибки
+        // На некоторых системах (Windows, WSL) chmod может не работать
+        $oldErrorReporting = error_reporting(0);
+        @chmod($path, $mode);
+        error_reporting($oldErrorReporting);
     }
     
     /**

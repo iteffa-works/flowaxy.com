@@ -9,8 +9,10 @@
 
 declare(strict_types=1);
 
-if (!class_exists('Directory', false)) {
-    class Directory {
+// Используем namespace для избежания конфликта с встроенным PHP классом Directory
+namespace Engine\Classes\Files;
+
+class Directory {
         private string $path;
         
         /**
@@ -85,7 +87,7 @@ if (!class_exists('Directory', false)) {
             }
             
             if (!@mkdir($this->path, $mode, $recursive)) {
-                throw new Exception("Не вдалося створити директорію: {$this->path}");
+                throw new \Exception("Не вдалося створити директорію: {$this->path}");
             }
             
             return true;
@@ -107,7 +109,7 @@ if (!class_exists('Directory', false)) {
                 return $this->removeRecursive($this->path);
             } else {
                 if (!@rmdir($this->path)) {
-                    throw new Exception("Не вдалося видалити директорію: {$this->path}");
+                    throw new \Exception("Не вдалося видалити директорію: {$this->path}");
                 }
                 return true;
             }
@@ -149,7 +151,7 @@ if (!class_exists('Directory', false)) {
          */
         public function copy(string $destinationPath, bool $overwrite = true): bool {
             if (!$this->exists()) {
-                throw new Exception("Вихідна директорія не існує: {$this->path}");
+                throw new \Exception("Вихідна директорія не існує: {$this->path}");
             }
             
             $destinationPath = rtrim($destinationPath, '/\\') . DIRECTORY_SEPARATOR;
@@ -157,7 +159,7 @@ if (!class_exists('Directory', false)) {
             // Створюємо директорію призначення
             if (!is_dir($destinationPath)) {
                 if (!@mkdir($destinationPath, 0755, true)) {
-                    throw new Exception("Не вдалося створити директорію призначення: {$destinationPath}");
+                    throw new \Exception("Не вдалося створити директорію призначення: {$destinationPath}");
                 }
             }
             
@@ -222,9 +224,9 @@ if (!class_exists('Directory', false)) {
             $files = [];
             
             if ($recursive) {
-                $iterator = new RecursiveIteratorIterator(
-                    new RecursiveDirectoryIterator($this->path, RecursiveDirectoryIterator::SKIP_DOTS),
-                    RecursiveIteratorIterator::SELF_FIRST
+                $iterator = new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($this->path, \RecursiveDirectoryIterator::SKIP_DOTS),
+                    \RecursiveIteratorIterator::SELF_FIRST
                 );
                 
                 foreach ($iterator as $file) {
@@ -271,9 +273,9 @@ if (!class_exists('Directory', false)) {
             $directories = [];
             
             if ($recursive) {
-                $iterator = new RecursiveIteratorIterator(
-                    new RecursiveDirectoryIterator($this->path, RecursiveDirectoryIterator::SKIP_DOTS),
-                    RecursiveIteratorIterator::SELF_FIRST
+                $iterator = new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($this->path, \RecursiveDirectoryIterator::SKIP_DOTS),
+                    \RecursiveIteratorIterator::SELF_FIRST
                 );
                 
                 foreach ($iterator as $file) {
@@ -383,7 +385,7 @@ if (!class_exists('Directory', false)) {
             $dir = new self($path);
             try {
                 return $dir->create($mode, $recursive);
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 error_log("Directory::make помилка: " . $e->getMessage());
                 return false;
             }
@@ -400,7 +402,7 @@ if (!class_exists('Directory', false)) {
             $dir = new self($path);
             try {
                 return $dir->delete($recursive);
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 error_log("Directory::remove помилка: " . $e->getMessage());
                 return false;
             }
@@ -418,7 +420,7 @@ if (!class_exists('Directory', false)) {
             $dir = new self($sourcePath);
             try {
                 return $dir->copy($destinationPath, $overwrite);
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 error_log("Directory::copyDirectory помилка: " . $e->getMessage());
                 return false;
             }
@@ -434,4 +436,3 @@ if (!class_exists('Directory', false)) {
             return is_dir($path);
         }
     }
-}

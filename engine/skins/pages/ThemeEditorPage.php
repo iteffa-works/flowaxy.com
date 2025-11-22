@@ -10,6 +10,8 @@ require_once __DIR__ . '/../../classes/managers/ThemeEditorManager.php';
 require_once __DIR__ . '/../../classes/files/File.php';
 require_once __DIR__ . '/../../classes/files/Directory.php';
 require_once __DIR__ . '/../../classes/files/Ini.php';
+
+use Engine\Classes\Files\Directory;
 require_once __DIR__ . '/../../classes/files/Zip.php';
 require_once __DIR__ . '/../../classes/data/Logger.php';
 require_once __DIR__ . '/../../classes/validators/Validator.php';
@@ -619,28 +621,14 @@ class ThemeEditorPage extends AdminPage {
         
         try {
             // Використовуємо клас Directory для перевірки
-            // Переконуємося, що клас завантажений та має всі необхідні методи
-            if (!class_exists('Directory')) {
-                require_once __DIR__ . '/../../classes/files/Directory.php';
+            $dir = new Directory($themePath);
+            if (!$dir->exists() || !$dir->isReadable()) {
+                return $folders;
             }
             
-            // Перевіряємо, що клас має метод exists()
-            if (!method_exists('Directory', 'exists')) {
-                Logger::getInstance()->logError("Directory class doesn't have exists() method. Using fallback.");
-                // Використовуємо стандартні PHP функції як fallback
-                if (!is_dir($themePath) || !is_readable($themePath)) {
-                    return $folders;
-                }
-            } else {
-                $dir = new Directory($themePath);
-                if (!$dir->exists() || !$dir->isReadable()) {
-                    return $folders;
-                }
-            }
-            
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($themePath, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::SELF_FIRST
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($themePath, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
             );
             
             foreach ($iterator as $item) {
@@ -828,7 +816,7 @@ class ThemeEditorPage extends AdminPage {
         
         try {
             // Створюємо директорію, якщо потрібно
-            $dir = new Directory($settingsDir);
+            $dir = new \Engine\Classes\Files\Directory($settingsDir);
             if (!$dir->exists()) {
                 $dir->create(0755, true);
             }

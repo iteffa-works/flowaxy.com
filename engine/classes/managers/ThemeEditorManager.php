@@ -9,9 +9,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../files/File.php';
-// Directory завантажується через autoloader, не потрібно require_once
+require_once __DIR__ . '/../files/Directory.php';
 require_once __DIR__ . '/../files/Zip.php';
 require_once __DIR__ . '/../files/Ini.php';
+
+use Engine\Classes\Files\Directory;
 require_once __DIR__ . '/../files/Upload.php';
 require_once __DIR__ . '/../data/Logger.php';
 require_once __DIR__ . '/../data/Cache.php';

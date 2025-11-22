@@ -16,6 +16,7 @@ class Database implements DatabaseInterface {
     private static ?self $instance = null;
     private ?PDO $connection = null;
     private bool $isConnected = false;
+    private bool $connectionLogged = false; // Флаг для предотвращения двойного логирования
     private int $connectionAttempts = 0;
     private int $maxConnectionAttempts = 3;
     private int $connectionTimeout = 3;
@@ -271,18 +272,21 @@ class Database implements DatabaseInterface {
             $this->connection->exec("SET SESSION time_zone = '+00:00'");
             $this->connection->exec("SET SESSION sql_auto_is_null = 0");
             
-            // Логуємо підключення
-            $this->logQuery('Підключення до MySQL сервера', [], $connectionTime, false);
-            
-            // Отримуємо версію MySQL
-            $version = $this->connection->query("SELECT VERSION() AS version")->fetch(PDO::FETCH_ASSOC);
-            if ($version && isset($version['version'])) {
-                $this->logInfo('База даних підключена', [
-                    'host' => $dbHost,
-                    'database' => $dbName,
-                    'mysql_version' => $version['version'],
-                    'connection_time' => round($connectionTime, 4)
-                ]);
+            // Логуємо підключення тільки один раз
+            if (!$this->connectionLogged) {
+                $this->logQuery('Підключення до MySQL сервера', [], $connectionTime, false);
+                
+                // Отримуємо версію MySQL
+                $version = $this->connection->query("SELECT VERSION() AS version")->fetch(PDO::FETCH_ASSOC);
+                if ($version && isset($version['version'])) {
+                    $this->logInfo('База даних підключена', [
+                        'host' => $dbHost,
+                        'database' => $dbName,
+                        'mysql_version' => $version['version'],
+                        'connection_time' => round($connectionTime, 4)
+                    ]);
+                }
+                $this->connectionLogged = true;
             }
             
         } catch (PDOException $e) {

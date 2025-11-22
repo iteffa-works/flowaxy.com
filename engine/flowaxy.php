@@ -132,7 +132,7 @@ spl_autoload_register(function (string $className): void {
             'BaseModule' => 'base', 'BasePlugin' => 'base',
             'Ini' => 'files', 'Json' => 'files', 'Zip' => 'files', 'File' => 'files',
             'Xml' => 'files', 'Csv' => 'files', 'Yaml' => 'files', 'Image' => 'files',
-            'Directory' => 'files', 'Upload' => 'files', 'MimeType' => 'files',
+            'Upload' => 'files', 'MimeType' => 'files',
             'Cache' => 'data', 'Database' => 'data', 'Logger' => 'data', 'Config' => 'data', 'SystemConfig' => 'data',
             'UrlHelper' => 'helpers', 'DatabaseHelper' => 'helpers', 'SecurityHelper' => 'helpers',
             'ScssCompiler' => 'compilers', 'Validator' => 'validators',
