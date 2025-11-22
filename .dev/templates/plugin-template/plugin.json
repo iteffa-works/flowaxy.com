@@ -1,0 +1,13 @@
+{
+    "name": "Plugin Name",
+    "slug": "plugin-name",
+    "version": "1.0.0",
+    "description": "Опис плагіна",
+    "author": "Your Name",
+    "author_url": "https://example.com",
+    "requires": "8.4.0",
+    "tested": "8.4.0",
+    "license": "MIT",
+    "text_domain": "plugin-name"
+}
+

@@ -2,6 +2,13 @@
 /**
  * Шаблон страницы настроек сайта
  */
+
+// Перевірка прав доступу на редагування
+$session = sessionManager();
+$userId = (int)$session->get('admin_user_id');
+$hasEditAccess = ($userId === 1) || (function_exists('current_user_can') && current_user_can('admin.settings.edit'));
+$readonlyAttr = $hasEditAccess ? '' : 'readonly disabled';
+$readonlyClass = $hasEditAccess ? '' : 'bg-light';
 ?>
 
 <!-- Уведомления -->
@@ -13,7 +20,14 @@ if (!empty($message)) {
 }
 ?>
 
-<form method="POST" class="settings-form">
+<?php if (!$hasEditAccess): ?>
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    У вас є право тільки на перегляд налаштувань. Для зміни налаштувань потрібне право "Зміна налаштувань".
+</div>
+<?php endif; ?>
+
+<form method="POST" class="settings-form" <?= !$hasEditAccess ? 'onsubmit="return false;"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= SecurityHelper::csrfToken() ?>">
     <input type="hidden" name="save_settings" value="1">
     
@@ -31,16 +45,17 @@ if (!empty($message)) {
                         <div class="col-md-6">
                             <label for="adminEmail" class="form-label fw-medium small">Email адміністратора</label>
                             <input type="email" 
-                                   class="form-control" 
+                                   class="form-control <?= $readonlyClass ?>" 
                                    id="adminEmail" 
                                    name="settings[admin_email]" 
                                    value="<?= htmlspecialchars($settings['admin_email'] ?? '') ?>"
-                                   placeholder="admin@example.com">
+                                   placeholder="admin@example.com"
+                                   <?= $readonlyAttr ?>>
                             <div class="form-text small">Email адреса для системних повідомлень</div>
                         </div>
                         <div class="col-md-6">
                             <label for="siteProtocol" class="form-label fw-medium small">Протокол сайту</label>
-                            <select class="form-select" id="siteProtocol" name="settings[site_protocol]">
+                            <select class="form-select <?= $readonlyClass ?>" id="siteProtocol" name="settings[site_protocol]" <?= $readonlyAttr ?>>
                                 <option value="auto" <?= ($settings['site_protocol'] ?? 'auto') === 'auto' ? 'selected' : '' ?>>Автоматично (визначається автоматично)</option>
                                 <option value="https" <?= ($settings['site_protocol'] ?? '') === 'https' ? 'selected' : '' ?>>HTTPS (захищений)</option>
                                 <option value="http" <?= ($settings['site_protocol'] ?? '') === 'http' ? 'selected' : '' ?>>HTTP (незахищений)</option>
@@ -49,7 +64,7 @@ if (!empty($message)) {
                         </div>
                         <div class="col-md-6">
                             <label for="timezone" class="form-label fw-medium small">Часовий пояс</label>
-                            <select class="form-select" id="timezone" name="settings[timezone]">
+                            <select class="form-select <?= $readonlyClass ?>" id="timezone" name="settings[timezone]" <?= $readonlyAttr ?>>
                                 <option value="Europe/Kyiv" <?= ($settings['timezone'] ?? 'Europe/Kyiv') === 'Europe/Kyiv' || ($settings['timezone'] ?? '') === 'Europe/Kiev' ? 'selected' : '' ?>>Київ (UTC+2)</option>
                                 <option value="Europe/Moscow" <?= ($settings['timezone'] ?? '') === 'Europe/Moscow' ? 'selected' : '' ?>>Москва (UTC+3)</option>
                                 <option value="UTC" <?= ($settings['timezone'] ?? '') === 'UTC' ? 'selected' : '' ?>>UTC</option>
@@ -81,7 +96,8 @@ if (!empty($message)) {
                                        id="cacheEnabled" 
                                        name="settings[cache_enabled]" 
                                        value="1"
-                                       <?= ($settings['cache_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
+                                       <?= ($settings['cache_enabled'] ?? '1') === '1' ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label fw-medium" for="cacheEnabled">
                                     Увімкнути кешування
                                 </label>
@@ -91,13 +107,14 @@ if (!empty($message)) {
                         <div class="col-md-6">
                             <label for="cacheDefaultTtl" class="form-label fw-medium small">Час життя кешу (секунди)</label>
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control <?= $readonlyClass ?>" 
                                    id="cacheDefaultTtl" 
                                    name="settings[cache_default_ttl]" 
                                    value="<?= htmlspecialchars($settings['cache_default_ttl'] ?? '3600') ?>"
                                    min="60"
                                    step="60"
-                                   placeholder="3600">
+                                   placeholder="3600"
+                                   <?= $readonlyAttr ?>>
                             <div class="form-text small">Стандартний час життя кешу (за замовчуванням: 3600 сек = 1 година)</div>
                         </div>
                         <div class="col-md-6">
@@ -108,7 +125,8 @@ if (!empty($message)) {
                                        id="cacheAutoCleanup" 
                                        name="settings[cache_auto_cleanup]" 
                                        value="1"
-                                       <?= ($settings['cache_auto_cleanup'] ?? '1') === '1' ? 'checked' : '' ?>>
+                                       <?= ($settings['cache_auto_cleanup'] ?? '1') === '1' ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label fw-medium" for="cacheAutoCleanup">
                                     Автоматична очистка застарілого кешу
                                 </label>
@@ -137,7 +155,8 @@ if (!empty($message)) {
                                        id="loggingEnabled" 
                                        name="settings[logging_enabled]" 
                                        value="1"
-                                       <?= ($settings['logging_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
+                                       <?= ($settings['logging_enabled'] ?? '1') === '1' ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label fw-medium" for="loggingEnabled">
                                     Увімкнути логування
                                 </label>
@@ -146,7 +165,7 @@ if (!empty($message)) {
                         </div>
                         <div class="col-md-6">
                             <label for="loggingLevel" class="form-label fw-medium small">Рівні логування</label>
-                            <select class="form-select" id="loggingLevel" name="settings[logging_levels][]" multiple size="5">
+                            <select class="form-select <?= $readonlyClass ?>" id="loggingLevel" name="settings[logging_levels][]" multiple size="5" <?= $readonlyAttr ?>>
                                 <?php 
                                 $selectedLevels = !empty($settings['logging_levels']) 
                                     ? (is_array($settings['logging_levels']) ? $settings['logging_levels'] : explode(',', $settings['logging_levels']))
@@ -164,35 +183,40 @@ if (!empty($message)) {
                             <label class="form-label fw-medium small">Типи логування</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="logToFile" name="settings[logging_types][]" value="file" 
-                                       <?= in_array('file', $settings['logging_types'] ?? ['file']) ? 'checked' : '' ?>>
+                                       <?= in_array('file', $settings['logging_types'] ?? ['file']) ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label" for="logToFile">
                                     Логування у файл
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="logToErrorLog" name="settings[logging_types][]" value="error_log"
-                                       <?= in_array('error_log', $settings['logging_types'] ?? []) ? 'checked' : '' ?>>
+                                       <?= in_array('error_log', $settings['logging_types'] ?? []) ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label" for="logToErrorLog">
                                     Логування в error_log PHP
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="logDbQueries" name="settings[logging_types][]" value="db_queries"
-                                       <?= in_array('db_queries', $settings['logging_types'] ?? []) ? 'checked' : '' ?>>
+                                       <?= in_array('db_queries', $settings['logging_types'] ?? []) ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label" for="logDbQueries">
                                     Логування SQL запитів
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="logDbErrors" name="settings[logging_types][]" value="db_errors"
-                                       <?= in_array('db_errors', $settings['logging_types'] ?? ['db_errors']) ? 'checked' : '' ?>>
+                                       <?= in_array('db_errors', $settings['logging_types'] ?? ['db_errors']) ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label" for="logDbErrors">
                                     Логування помилок БД
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="logSlowQueries" name="settings[logging_types][]" value="slow_queries"
-                                       <?= in_array('slow_queries', $settings['logging_types'] ?? ['slow_queries']) ? 'checked' : '' ?>>
+                                       <?= in_array('slow_queries', $settings['logging_types'] ?? ['slow_queries']) ? 'checked' : '' ?>
+                                       <?= $readonlyAttr ?>>
                                 <label class="form-check-label" for="logSlowQueries">
                                     Логування повільних запитів
                                 </label>
@@ -202,30 +226,32 @@ if (!empty($message)) {
                         <div class="col-md-6">
                             <label for="loggingMaxFileSize" class="form-label fw-medium small">Максимальний розмір файлу (байти)</label>
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control <?= $readonlyClass ?>" 
                                    id="loggingMaxFileSize" 
                                    name="settings[logging_max_file_size]" 
                                    value="<?= htmlspecialchars($settings['logging_max_file_size'] ?? '10485760') ?>"
                                    min="1048576"
                                    step="1048576"
-                                   placeholder="10485760">
+                                   placeholder="10485760"
+                                   <?= $readonlyAttr ?>>
                             <div class="form-text small">Максимальний розмір файлу логу (за замовчуванням: 10 MB)</div>
                         </div>
                         <div class="col-md-6">
                             <label for="loggingRetentionDays" class="form-label fw-medium small">Зберігати логи (днів)</label>
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control <?= $readonlyClass ?>" 
                                    id="loggingRetentionDays" 
                                    name="settings[logging_retention_days]" 
                                    value="<?= htmlspecialchars($settings['logging_retention_days'] ?? '30') ?>"
                                    min="1"
                                    max="365"
-                                   placeholder="30">
+                                   placeholder="30"
+                                   <?= $readonlyAttr ?>>
                             <div class="form-text small">Кількість днів зберігання логів (за замовчуванням: 30 днів)</div>
                         </div>
                         <div class="col-md-6">
                             <label for="loggingRotationType" class="form-label fw-medium small">Тип ротації</label>
-                            <select class="form-select" id="loggingRotationType" name="settings[logging_rotation_type]">
+                            <select class="form-select <?= $readonlyClass ?>" id="loggingRotationType" name="settings[logging_rotation_type]" <?= $readonlyAttr ?>>
                                 <option value="size" <?= ($settings['logging_rotation_type'] ?? 'size') === 'size' ? 'selected' : '' ?>>По розміру</option>
                                 <option value="time" <?= ($settings['logging_rotation_type'] ?? 'size') === 'time' ? 'selected' : '' ?>>По часу</option>
                                 <option value="both" <?= ($settings['logging_rotation_type'] ?? 'size') === 'both' ? 'selected' : '' ?>>По розміру та часу</option>
@@ -236,13 +262,14 @@ if (!empty($message)) {
                             <label for="loggingRotationTime" class="form-label fw-medium small">Ротація по часу</label>
                             <div class="input-group">
                                 <input type="number" 
-                                       class="form-control" 
+                                       class="form-control <?= $readonlyClass ?>" 
                                        id="loggingRotationTime" 
                                        name="settings[logging_rotation_time]" 
                                        value="<?= htmlspecialchars($settings['logging_rotation_time'] ?? '24') ?>"
                                        min="1"
-                                       placeholder="24">
-                                <select class="form-select" id="loggingRotationTimeUnit" name="settings[logging_rotation_time_unit]" style="max-width: 120px;">
+                                       placeholder="24"
+                                       <?= $readonlyAttr ?>>
+                                <select class="form-select <?= $readonlyClass ?>" id="loggingRotationTimeUnit" name="settings[logging_rotation_time_unit]" style="max-width: 120px;" <?= $readonlyAttr ?>>
                                     <option value="hours" <?= ($settings['logging_rotation_time_unit'] ?? 'hours') === 'hours' ? 'selected' : '' ?>>Годин</option>
                                     <option value="days" <?= ($settings['logging_rotation_time_unit'] ?? 'hours') === 'days' ? 'selected' : '' ?>>Днів</option>
                                 </select>
@@ -275,7 +302,7 @@ if (!empty($message)) {
         <div class="col-12">
             <div class="d-flex gap-2 justify-content-end pt-2">
                 <a href="<?= UrlHelper::admin('settings') ?>" class="btn btn-secondary">Назад</a>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" <?= !$hasEditAccess ? 'disabled' : '' ?>>
                     Зберегти налаштування
                 </button>
             </div>

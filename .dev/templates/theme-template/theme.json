@@ -1,0 +1,14 @@
+{
+    "name": "Theme Name",
+    "slug": "theme-name",
+    "version": "1.0.0",
+    "description": "Опис теми",
+    "author": "Your Name",
+    "author_url": "https://example.com",
+    "license": "MIT",
+    "supports_customization": false,
+    "supports_navigation": false,
+    "default_settings": {},
+    "available_settings": []
+}
+

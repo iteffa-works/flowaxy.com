@@ -28,6 +28,7 @@ $router->add(['GET', 'POST'], 'api-keys', 'ApiKeysPage');
 $router->add(['GET', 'POST'], 'webhooks', 'WebhooksPage');
 $router->add(['GET', 'POST'], 'roles', 'RolesPage');
 $router->add(['GET', 'POST'], 'users', 'UsersPage');
+$router->add(['GET', 'POST'], 'development', 'DevelopmentPage');
 
 // Реєструємо маршрут кастомізатора тільки якщо активна тема підтримує кастомізацію
 require_once __DIR__ . '/menu-items.php';
