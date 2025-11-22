@@ -220,7 +220,7 @@ class Config {
                 try {
                     $json = new Json($filePath);
                     $json->load(true);
-                    $this->loadedConfigs[$configName] = $json->get([]);
+                    $this->loadedConfigs[$configName] = $json->getAll([]);
                 } catch (Exception $e) {
                     error_log("Config load error for '{$configName}': " . $e->getMessage());
                     $this->loadedConfigs[$configName] = [];
