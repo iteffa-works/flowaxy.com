@@ -24,15 +24,23 @@ function migration_add_session_token_to_users(PDO $db): bool {
             // Додаємо поле session_token
             $db->exec("ALTER TABLE users ADD COLUMN session_token VARCHAR(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Токен сесії для захисту від одночасного входу' AFTER role_ids");
             
-            // Додаємо індекс для швидкого пошуку
-            $db->exec("ALTER TABLE users ADD INDEX idx_session_token (session_token)");
+            // Додаємо індекс для швидкого пошуку (якщо його ще немає)
+            try {
+                $indexStmt = $db->query("SHOW INDEX FROM users WHERE Key_name = 'idx_session_token'");
+                $indexExists = $indexStmt->fetch() !== false;
+                if (!$indexExists) {
+                    $db->exec("ALTER TABLE users ADD INDEX idx_session_token (session_token)");
+                }
+            } catch (Exception $e) {
+                // Індекс може не додатися, якщо вже існує - це нормально
+            }
             
             error_log("Migration: Added session_token field to users table");
             return true;
-        } else {
-            error_log("Migration: session_token field already exists in users table");
-            return true;
         }
+        
+        // Поле вже існує - це нормально, міграція вже була виконана
+        return true;
     } catch (Exception $e) {
         error_log("Migration error: " . $e->getMessage());
         return false;
