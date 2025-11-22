@@ -431,7 +431,7 @@ class PluginManager extends BaseModule {
             if ($json->getFilePath() && file_exists($json->getFilePath())) {
                 try {
                     $json->load(true);
-                    $config = $json->get([]);
+                    $config = $json->getAll([]);
                     
                     if (is_array($config) && !empty($config)) {
                         if (empty($config['slug'])) {
@@ -532,7 +532,7 @@ class PluginManager extends BaseModule {
             $json = new Json($configFile);
             try {
                 $json->load(true);
-                $config = $json->get([]);
+                $config = $json->getAll([]);
                 
                 if (!is_array($config) || empty($config)) {
                     error_log("Invalid JSON in plugin.json: {$configFile}");
