@@ -1105,6 +1105,8 @@
     gap: 4px;
     flex: 1;
     min-width: 0;
+    pointer-events: auto;
+    user-select: none;
 }
 
 .editor-settings-container .form-check-label strong {
@@ -1156,12 +1158,19 @@
     align-self: center;
     margin-top: 0;
     order: 2;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
-.editor-settings-container .form-check-label {
+.editor-settings-container .settings-section-grid > .form-check .form-check-label {
     order: 1;
     flex: 1;
     margin-bottom: 0;
+    pointer-events: auto; /* Allow label to trigger checkbox click */
+    cursor: pointer;
 }
 
 .editor-settings-container .form-check-input:checked {

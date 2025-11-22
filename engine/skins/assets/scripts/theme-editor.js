@@ -9,6 +9,7 @@ let editorSettings = {
     enableSyntaxHighlighting: true,
     showEmptyFolders: false
 };
+let settingsSetupDone = false; // Флаг, что обработчики настроек уже установлены
 
 // Функция инициализации CodeMirror
 function initCodeMirror() {
@@ -2341,80 +2342,48 @@ function startFilesUpload() {
  * Загрузка настроек для inline режима
  */
 function loadEditorSettingsInline() {
-    const formData = new FormData();
-    formData.append('action', 'get_editor_settings');
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-    
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.settings) {
-            const settings = data.settings;
-            
-            // Обновляем глобальные настройки
-            editorSettings.showEmptyFolders = settings.show_empty_folders === '1';
-            editorSettings.enableSyntaxHighlighting = settings.enable_syntax_highlighting === '1';
-            
-            // Устанавливаем значения всех полей
-            const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
-            const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
-            const showLineNumbers = document.getElementById('showLineNumbersInline');
-            const fontFamily = document.getElementById('editorFontFamilyInline');
-            const fontSize = document.getElementById('editorFontSizeInline');
-            const editorTheme = document.getElementById('editorThemeInline');
-            const indentSize = document.getElementById('editorIndentSizeInline');
-            const wordWrap = document.getElementById('wordWrapInline');
-            const autoSave = document.getElementById('autoSaveInline');
-            const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
-            
-            if (showEmptyCheckbox) showEmptyCheckbox.checked = editorSettings.showEmptyFolders;
-            if (syntaxCheckbox) syntaxCheckbox.checked = editorSettings.enableSyntaxHighlighting;
-            if (showLineNumbers) showLineNumbers.checked = settings.show_line_numbers === '1';
-            if (fontFamily) fontFamily.value = settings.font_family || "'Consolas', monospace";
-            if (fontSize) fontSize.value = settings.font_size || '14';
-            if (editorTheme) editorTheme.value = settings.editor_theme || 'monokai';
-            if (indentSize) indentSize.value = settings.indent_size || '4';
-            if (wordWrap) wordWrap.checked = settings.word_wrap === '1';
-            if (autoSave) {
-                autoSave.checked = settings.auto_save === '1';
-                if (autoSaveInterval) {
-                    autoSaveInterval.disabled = !autoSave.checked;
-                    autoSaveInterval.value = settings.auto_save_interval || '60';
-                }
-            }
-            
-            // Обработчик для включения/выключения поля интервала автозбереження
-            if (autoSave && autoSaveInterval) {
-                autoSave.addEventListener('change', function() {
-                    autoSaveInterval.disabled = !this.checked;
-                });
-            }
-            
-            // Применяем настройки к редактору, если он уже инициализирован
-            if (codeEditor) {
-                applyEditorSettingsToCodeMirror();
-            }
+    // Если обработчики уже установлены, настройки уже загружены - не загружаем повторно
+    if (settingsSetupDone) {
+        // Просто применяем текущие значения к редактору
+        if (codeEditor) {
+            applyEditorSettingsToCodeMirror();
         }
-        
-        // Настраиваем автоматическое сохранение при изменении
-        setupAutoSaveEditorSettingsInline();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка завантаження налаштувань', 'danger');
-    });
+        return;
+    }
+    
+    // Настройки уже установлены в HTML при рендеринге страницы из PHP
+    // Не нужно их перезагружать с сервера - это может перезаписать пользовательские изменения
+    // Просто синхронизируем глобальные настройки с HTML и настраиваем обработчики
+    
+    const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
+    const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
+    
+    // Синхронизируем глобальные настройки с HTML значениями
+    if (showEmptyCheckbox) {
+        editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
+    }
+    if (syntaxCheckbox) {
+        editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
+    }
+    
+    // Применяем настройки к редактору, если он уже инициализирован
+    if (codeEditor) {
+        applyEditorSettingsToCodeMirror();
+    }
+    
+    // Настраиваем автоматическое сохранение при изменении
+    setupAutoSaveEditorSettingsInline();
 }
 
 /**
  * Автоматическое сохранение настроек в inline режиме
  */
 function setupAutoSaveEditorSettingsInline() {
+    // Если обработчики уже установлены, не добавляем их снова
+    if (settingsSetupDone) {
+        return;
+    }
+    
     // Получаем все элементы настроек
     const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
     const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
@@ -2439,8 +2408,6 @@ function setupAutoSaveEditorSettingsInline() {
     
     // Функция для сохранения всех настроек
     const saveAllSettings = function() {
-        if (isSaving) return;
-        
         // Применяем настройки к редактору сразу (без сохранения)
         applySettingsToEditor();
         
@@ -2451,6 +2418,12 @@ function setupAutoSaveEditorSettingsInline() {
         
         // Запускаем сохранение с задержкой (debounce 300ms)
         saveSettingsTimeout = setTimeout(function() {
+            // Проверяем флаг только перед отправкой запроса
+            if (isSaving) {
+                console.log('Сохранение уже выполняется, пропускаем');
+                return;
+            }
+            
             const url = window.location.href.split('?')[0];
             const formData = {
                 action: 'save_editor_settings',
@@ -2482,7 +2455,11 @@ function setupAutoSaveEditorSettingsInline() {
                                 refreshFileTree();
                             }
                             
-                            showNotification('Налаштування збережено', 'success');
+                            // Не показываем уведомление при каждом изменении, только при ошибках
+                            // showNotification('Налаштування збережено', 'success');
+                        } else {
+                            isSaving = false; // Сбрасываем флаг при ошибке
+                            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
                         }
                     })
                     .catch(error => {
@@ -2490,11 +2467,22 @@ function setupAutoSaveEditorSettingsInline() {
                         console.error('Error:', error);
                         showNotification('Помилка збереження налаштувань', 'danger');
                     });
+            } else {
+                // Если AjaxHelper недоступен, сбрасываем флаг
+                isSaving = false;
             }
         }, 300);
     };
     
-    // Добавляем обработчики для всех полей
+    // Обработчик для autoSave с дополнительной логикой
+    const autoSaveHandler = function() {
+        if (autoSaveInterval) {
+            autoSaveInterval.disabled = !this.checked;
+        }
+        saveAllSettings();
+    };
+    
+    // Добавляем обработчики только один раз (проверка в начале функции)
     if (showEmptyCheckbox) {
         showEmptyCheckbox.addEventListener('change', saveAllSettings);
     }
@@ -2522,16 +2510,14 @@ function setupAutoSaveEditorSettingsInline() {
         wordWrap.addEventListener('change', saveAllSettings);
     }
     if (autoSave) {
-        autoSave.addEventListener('change', function() {
-            if (autoSaveInterval) {
-                autoSaveInterval.disabled = !this.checked;
-            }
-            saveAllSettings();
-        });
+        autoSave.addEventListener('change', autoSaveHandler);
     }
     if (autoSaveInterval) {
         autoSaveInterval.addEventListener('input', applySettingsToEditor);
         autoSaveInterval.addEventListener('change', saveAllSettings);
     }
+    
+    // Помечаем, что обработчики установлены
+    settingsSetupDone = true;
 }
 

@@ -241,32 +241,32 @@ if (!empty($message)) {
                             <h6 class="settings-section-title">Відображення</h6>
                             <div class="settings-section-grid">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders" <?= (($editorSettings['show_empty_folders'] ?? '0') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="showEmptyFoldersInline">
                                         <strong>Показувати пусті папки</strong>
                                         <p class="text-muted small mb-0">Відображати порожні папки в дереві файлів</p>
                                     </label>
+                                    <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders" <?= (($editorSettings['show_empty_folders'] ?? '0') === '1') ? 'checked' : '' ?>>
                                 </div>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="enableSyntaxHighlightingInline" name="enable_syntax_highlighting" <?= (($editorSettings['enable_syntax_highlighting'] ?? '1') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="enableSyntaxHighlightingInline">
                                         <strong>Увімкнути підсвітку коду</strong>
                                         <p class="text-muted small mb-0">Підсвітка синтаксису коду в редакторі</p>
                                     </label>
+                                    <input class="form-check-input" type="checkbox" id="enableSyntaxHighlightingInline" name="enable_syntax_highlighting" <?= (($editorSettings['enable_syntax_highlighting'] ?? '1') === '1') ? 'checked' : '' ?>>
                                 </div>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="showLineNumbersInline" name="show_line_numbers" <?= (($editorSettings['show_line_numbers'] ?? '1') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="showLineNumbersInline">
                                         <strong>Показувати номери рядків</strong>
                                         <p class="text-muted small mb-0">Відображати номери рядків у редакторі</p>
                                     </label>
+                                    <input class="form-check-input" type="checkbox" id="showLineNumbersInline" name="show_line_numbers" <?= (($editorSettings['show_line_numbers'] ?? '1') === '1') ? 'checked' : '' ?>>
                                 </div>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="wordWrapInline" name="word_wrap" <?= (($editorSettings['word_wrap'] ?? '1') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="wordWrapInline">
                                         <strong>Перенос рядків</strong>
                                         <p class="text-muted small mb-0">Автоматичний перенос довгих рядків</p>
                                     </label>
+                                    <input class="form-check-input" type="checkbox" id="wordWrapInline" name="word_wrap" <?= (($editorSettings['word_wrap'] ?? '1') === '1') ? 'checked' : '' ?>>
                                 </div>
                             </div>
                         </div>
@@ -342,11 +342,11 @@ if (!empty($message)) {
                             <h6 class="settings-section-title">Додатково</h6>
                             <div class="settings-section-grid">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="autoSaveInline" name="auto_save" <?= (($editorSettings['auto_save'] ?? '0') === '1') ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="autoSaveInline">
                                         <strong>Автозбереження</strong>
                                         <p class="text-muted small mb-0">Автоматично зберігати зміни через певний час</p>
                                     </label>
+                                    <input class="form-check-input" type="checkbox" id="autoSaveInline" name="auto_save" <?= (($editorSettings['auto_save'] ?? '0') === '1') ? 'checked' : '' ?>>
                                 </div>
                                 <div>
                                     <label class="form-label" for="autoSaveIntervalInline">
