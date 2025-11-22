@@ -53,8 +53,15 @@
                     config.body.append('csrf_token', csrfToken);
                 }
             } else if (typeof config.body === 'object' && !(config.body instanceof URLSearchParams)) {
-                config.body = JSON.stringify(config.body);
-                config.headers['Content-Type'] = 'application/json';
+                // Преобразуем объект в URLSearchParams для совместимости с сервером
+                const params = new URLSearchParams();
+                for (const key in config.body) {
+                    if (config.body.hasOwnProperty(key)) {
+                        params.append(key, config.body[key]);
+                    }
+                }
+                config.body = params;
+                config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
             }
             
             // Виконуємо запит

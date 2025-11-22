@@ -480,8 +480,18 @@ class AdminPage {
             ob_end_clean();
         }
         
+        // Убеждаемся, что заголовки еще не отправлены
+        if (headers_sent($file, $line)) {
+            error_log("sendJsonResponse() вызван после отправки заголовков в {$file}:{$line}");
+            http_response_code(500);
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['success' => false, 'error' => 'Headers already sent'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
         Response::jsonResponse($data, $statusCode);
-        // exit вызывается внутри Response::jsonResponse()
+        // exit вызывается внутри Response::jsonResponse(), но для надежности вызываем еще раз
+        exit;
     }
     
     /**

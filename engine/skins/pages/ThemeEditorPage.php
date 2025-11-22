@@ -54,37 +54,56 @@ class ThemeEditorPage extends AdminPage {
         }
         
         // Обробка AJAX запитів
-        if ($request->isAjax()) {
+        // Проверяем как через Request::isAjax(), так и напрямую через заголовок
+        $xRequestedWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+        $isAjax = $request->isAjax() || 
+                  (!empty($xRequestedWith) && 
+                   strtolower($xRequestedWith) === 'xmlhttprequest');
+        
+        if ($isAjax) {
             $action = Request::post('action', '');
             
-            switch ($action) {
-                case 'save_file':
-                    $this->ajaxSaveFile();
-                    return;
-                case 'get_file':
-                    $this->ajaxGetFile();
-                    return;
-                case 'create_file':
-                    $this->ajaxCreateFile();
-                    return;
-                case 'delete_file':
-                    $this->ajaxDeleteFile();
-                    return;
-                case 'create_directory':
-                    $this->ajaxCreateDirectory();
-                    return;
-                case 'upload_file':
-                    $this->ajaxUploadFile();
-                    return;
-                case 'save_editor_settings':
-                    $this->ajaxSaveEditorSettings();
-                    return;
-                case 'get_editor_settings':
-                    $this->ajaxGetEditorSettings();
-                    return;
-                case 'get_file_tree':
-                    $this->ajaxGetFileTree();
-                    return;
+            // Если action не найден в POST, пробуем GET
+            if (empty($action)) {
+                $action = $request->query('action', '');
+            }
+            
+            // Если action пустой, не обрабатываем как AJAX
+            if (empty($action)) {
+                // Это не AJAX запрос с action, продолжаем обычную обработку
+            } else {
+                switch ($action) {
+                    case 'save_file':
+                        $this->ajaxSaveFile();
+                        exit;
+                    case 'get_file':
+                        $this->ajaxGetFile();
+                        exit;
+                    case 'create_file':
+                        $this->ajaxCreateFile();
+                        exit;
+                    case 'delete_file':
+                        $this->ajaxDeleteFile();
+                        exit;
+                    case 'create_directory':
+                        $this->ajaxCreateDirectory();
+                        exit;
+                    case 'upload_file':
+                        $this->ajaxUploadFile();
+                        exit;
+                    case 'save_editor_settings':
+                        $this->ajaxSaveEditorSettings();
+                        exit;
+                    case 'get_editor_settings':
+                        $this->ajaxGetEditorSettings();
+                        exit;
+                    case 'get_file_tree':
+                        $this->ajaxGetFileTree();
+                        exit;
+                }
+                // Если мы дошли сюда, action не найден
+                $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія: ' . htmlspecialchars($action)], 404);
+                exit;
             }
         }
         
@@ -202,6 +221,13 @@ class ThemeEditorPage extends AdminPage {
      * AJAX: Отримання вмісту файлу
      */
     private function ajaxGetFile(): void {
+        // Убеждаемся, что это AJAX запрос
+        if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || 
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Это не AJAX запрос'], 400);
+            return;
+        }
+        
         $request = Request::getInstance();
         // Пробуем получить из POST, если нет - из GET
         $themeSlug = SecurityHelper::sanitizeInput(Request::post('theme', $request->query('theme', '')));

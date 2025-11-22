@@ -56,7 +56,6 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
             <div class="file-tree-item-wrapper <?= $isActive ? 'active' : '' ?>" data-file-path="<?= htmlspecialchars($item['path']) ?>">
                 <a href="#" 
                    class="file-tree-item"
-                   onclick="loadFile(event, '<?= htmlspecialchars($item['path']) ?>'); return false;"
                    data-file="<?= htmlspecialchars($item['path']) ?>">
                     <i class="fas fa-file-code file-icon"></i>
                     <span class="file-name"><?= htmlspecialchars($item['name']) ?></span>

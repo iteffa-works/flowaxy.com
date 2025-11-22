@@ -727,33 +727,27 @@ function initFileTree() {
         }
     }
     
-    // Обработка кликов по файлам
-    document.querySelectorAll('.file-tree-item').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const filePath = this.getAttribute('data-file');
-            if (filePath) {
-                // Получаем тему из URL или из data-атрибута
-                let theme = new URLSearchParams(window.location.search).get('theme') || '';
-                if (!theme) {
-                    const textarea = document.getElementById('theme-file-editor');
-                    if (textarea) {
-                        theme = textarea.getAttribute('data-theme') || '';
+    // Обработка кликов по файлам - используем делегирование событий вместо добавления обработчиков к каждому элементу
+    // Удаляем старые обработчики, если они есть
+    const fileTree = document.querySelector('.file-tree');
+    if (fileTree) {
+        // Используем делегирование событий - один обработчик на все дерево
+        if (!fileTree.dataset.delegateHandler) {
+            fileTree.addEventListener('click', function(e) {
+                // Проверяем, что клик по файлу
+                const fileLink = e.target.closest('.file-tree-item');
+                if (fileLink) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const filePath = fileLink.getAttribute('data-file');
+                    if (filePath) {
+                        loadFile(e, filePath);
                     }
                 }
-                
-                loadFileInEditor(filePath);
-                
-                // Обновляем URL без перезагрузки
-                const url = new URL(window.location.href);
-                if (theme) {
-                    url.searchParams.set('theme', theme);
-                }
-                url.searchParams.set('file', filePath);
-                window.history.pushState({}, '', url);
-            }
-        });
-    });
+            });
+            fileTree.dataset.delegateHandler = 'true';
+        }
+    }
     
     // Обработка кликов по папкам
     document.querySelectorAll('.file-tree-folder-header').forEach(header => {
@@ -1037,11 +1031,24 @@ function getFileIcon(extension) {
 /**
  * Загрузка файла (обработчик клика по файлу)
  */
+let isLoadingFile = false;
 function loadFile(event, filePath) {
+    if (!filePath) {
+        return;
+    }
+    
+    // Защита от множественных вызовов
+    if (isLoadingFile) {
+        return;
+    }
+    
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
+    
+    // Устанавливаем флаг загрузки
+    isLoadingFile = true;
     
     // Обновляем активный файл в дереве
     document.querySelectorAll('.file-tree-item-wrapper').forEach(wrapper => {
@@ -1054,7 +1061,10 @@ function loadFile(event, filePath) {
     }
     
     // Загружаем файл в редактор
-    loadFileInEditor(filePath);
+    loadFileInEditor(filePath).finally(() => {
+        // Снимаем флаг загрузки после завершения
+        isLoadingFile = false;
+    });
 }
 
 /**
@@ -1073,7 +1083,7 @@ function loadFileInEditor(filePath) {
     
     if (!theme) {
         showNotification('Тему не вказано', 'danger');
-        return;
+        return Promise.reject(new Error('Тему не вказано'));
     }
     
     // Используем AjaxHelper для загрузки файла
@@ -1092,9 +1102,18 @@ function loadFileInEditor(filePath) {
                 file: filePath,
                 csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
             })
-        }).then(r => r.json());
+        }).then(response => {
+            // Проверяем, что ответ является JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 200));
+                });
+            }
+            return response.json();
+        });
     
-    requestFn
+    return requestFn
         .then(data => {
         if (data.success && data.content !== undefined) {
             // Обновляем активный файл в дереве
@@ -1216,40 +1235,16 @@ function loadFileInEditor(filePath) {
             window.history.pushState({ path: url.href }, '', url.href);
         } else {
             showNotification(data.error || 'Помилка завантаження файлу', 'danger');
+            throw new Error(data.error || 'Помилка завантаження файлу');
         }
     })
     .catch(error => {
         console.error('Error:', error);
         showNotification('Помилка завантаження файлу', 'danger');
+        throw error;
     });
 }
 
-/**
- * Загрузка файла (обработчик клика по файлу)
- */
-function loadFile(event, filePath) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-    
-    // Обновляем активный файл в дереве
-    document.querySelectorAll('.file-tree-item-wrapper').forEach(wrapper => {
-        wrapper.classList.remove('active');
-    });
-    
-    const clickedWrapper = event?.target.closest('.file-tree-item-wrapper');
-    if (clickedWrapper) {
-        clickedWrapper.classList.add('active');
-    }
-    
-    // Загружаем файл в редактор
-    loadFileInEditor(filePath);
-}
-
-/**
- * Обновление дерева файлов
- */
 /**
  * Обновление дерева файлов через AJAX
  */
@@ -1332,8 +1327,7 @@ function updateFileTree(treeArray, theme) {
                 }
             });
             
-            // Инициализируем обработчики
-            initFileTree();
+            // Обработчики уже установлены через делегирование событий, не нужно вызывать initFileTree() снова
         }
     }
 }
@@ -1381,7 +1375,6 @@ function renderFileTreeFromArray(treeArray, theme, level = 1) {
             html += `<div class="file-tree-item-wrapper" data-file-path="${escapeHtml(item.path)}">
                 <a href="#" 
                    class="file-tree-item"
-                   onclick="loadFile(event, '${escapeHtml(item.path)}'); return false;"
                    data-file="${escapeHtml(item.path)}">
                     <i class="fas fa-file-code file-icon"></i>
                     <span class="file-name">${escapeHtml(item.name)}</span>
@@ -1461,7 +1454,10 @@ function openEditorSettings() {
         // Показываем модальное окно даже при ошибке
         const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
         modal.show();
-        setupAutoSaveEditorSettings();
+        // Настраиваем обработчики только один раз
+        if (!document.getElementById('showEmptyFolders')?.dataset.listener) {
+            setupAutoSaveEditorSettings();
+        }
     });
 }
 
@@ -1476,13 +1472,14 @@ function setupAutoSaveEditorSettings() {
         return;
     }
     
-    // Удаляем старые обработчики, если они есть (удаляем атрибут data-listener)
-    if (showEmptyFolders.dataset.listener) {
-        showEmptyFolders.removeEventListener('change', autoSaveEditorSettings);
+    // Проверяем, не настроены ли уже обработчики
+    if (showEmptyFolders.dataset.listener === 'true' && enableSyntaxHighlighting.dataset.listener === 'true') {
+        return; // Обработчики уже установлены
     }
-    if (enableSyntaxHighlighting.dataset.listener) {
-        enableSyntaxHighlighting.removeEventListener('change', autoSaveEditorSettings);
-    }
+    
+    // Удаляем старые обработчики, если они есть
+    showEmptyFolders.removeEventListener('change', autoSaveEditorSettings);
+    enableSyntaxHighlighting.removeEventListener('change', autoSaveEditorSettings);
     
     // Добавляем обработчики изменения
     showEmptyFolders.addEventListener('change', autoSaveEditorSettings);
@@ -1495,52 +1492,76 @@ function setupAutoSaveEditorSettings() {
 /**
  * Автоматическое сохранение настроек редактора
  */
+let autoSaveTimeout = null;
+let isSaving = false;
+
 function autoSaveEditorSettings() {
-    const newHighlighting = document.getElementById('enableSyntaxHighlighting').checked;
-    const newShowEmptyFolders = document.getElementById('showEmptyFolders').checked;
+    // Отменяем предыдущий запрос, если он еще не выполнен (debounce)
+    if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+    }
     
-    // Сохраняем старые значения для проверки изменений
-    const oldHighlighting = editorSettings.enableSyntaxHighlighting;
-    const oldShowEmptyFolders = editorSettings.showEmptyFolders;
+    // Если уже выполняется сохранение, не запускаем новый запрос
+    if (isSaving) {
+        return;
+    }
     
-    // Если используется AjaxHelper, используем его
-    if (typeof AjaxHelper !== 'undefined') {
-        AjaxHelper.post(window.location.href, {
-            action: 'save_editor_settings',
-            show_empty_folders: newShowEmptyFolders ? '1' : '0',
-            enable_syntax_highlighting: newHighlighting ? '1' : '0'
-        })
-        .then(data => {
-            if (data.success) {
-                // Обновляем глобальные настройки
-                editorSettings.showEmptyFolders = newShowEmptyFolders;
-                editorSettings.enableSyntaxHighlighting = newHighlighting;
+    // Запускаем сохранение с задержкой (debounce 300ms)
+    autoSaveTimeout = setTimeout(() => {
+        const newHighlighting = document.getElementById('enableSyntaxHighlighting').checked;
+        const newShowEmptyFolders = document.getElementById('showEmptyFolders').checked;
+        
+        // Сохраняем старые значения для проверки изменений
+        const oldHighlighting = editorSettings.enableSyntaxHighlighting;
+        const oldShowEmptyFolders = editorSettings.showEmptyFolders;
+        
+        // Получаем URL без параметров
+        const url = window.location.href.split('?')[0];
+        
+        // Устанавливаем флаг, что идет сохранение
+        isSaving = true;
+        
+        // Если используется AjaxHelper, используем его
+        if (typeof AjaxHelper !== 'undefined') {
+            AjaxHelper.post(url, {
+                action: 'save_editor_settings',
+                show_empty_folders: newShowEmptyFolders ? '1' : '0',
+                enable_syntax_highlighting: newHighlighting ? '1' : '0'
+            })
+            .then(data => {
+                isSaving = false;
                 
-                // Динамически обновляем подсветку кода без перезагрузки
-                if (codeEditor && oldHighlighting !== newHighlighting) {
-                    updateCodeMirrorHighlighting(newHighlighting);
+                if (data.success) {
+                    // Обновляем глобальные настройки
+                    editorSettings.showEmptyFolders = newShowEmptyFolders;
+                    editorSettings.enableSyntaxHighlighting = newHighlighting;
+                    
+                    // Динамически обновляем подсветку кода без перезагрузки
+                    if (codeEditor && oldHighlighting !== newHighlighting) {
+                        updateCodeMirrorHighlighting(newHighlighting);
+                    }
+                    
+                    // Обновляем дерево файлов, если изменилась настройка показа пустых папок
+                    if (oldShowEmptyFolders !== newShowEmptyFolders) {
+                        refreshFileTree();
+                    }
+                    
+                    showNotification('Налаштування збережено', 'success');
+                } else {
+                    // Восстанавливаем значения чекбоксов при ошибке
+                    document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
+                    document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+                    showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
                 }
-                
-                // Обновляем дерево файлов, если изменилась настройка показа пустых папок
-                if (oldShowEmptyFolders !== newShowEmptyFolders) {
-                    refreshFileTree();
-                }
-                
-                showNotification('Налаштування збережено', 'success');
-            } else {
+            })
+            .catch(error => {
+                isSaving = false;
+                console.error('Error:', error);
                 // Восстанавливаем значения чекбоксов при ошибке
                 document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
                 document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
-                showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // Восстанавливаем значения чекбоксов при ошибке
-            document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
-            document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
-            showNotification('Помилка збереження налаштувань', 'danger');
-        });
+                showNotification('Помилка збереження налаштувань', 'danger');
+            });
     } else {
         // Fallback на старый способ
         const formData = new FormData();
@@ -1549,41 +1570,54 @@ function autoSaveEditorSettings() {
         formData.append('show_empty_folders', newShowEmptyFolders ? '1' : '0');
         formData.append('enable_syntax_highlighting', newHighlighting ? '1' : '0');
         
-        fetch(window.location.href, {
+        fetch(url, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                editorSettings.showEmptyFolders = newShowEmptyFolders;
-                editorSettings.enableSyntaxHighlighting = newHighlighting;
+        .then(response => {
+            // Проверяем, что ответ является JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 100));
+                });
+            }
+            return response.json();
+        })
+            .then(data => {
+                isSaving = false;
                 
-                if (codeEditor && oldHighlighting !== newHighlighting) {
-                    updateCodeMirrorHighlighting(newHighlighting);
+                if (data.success) {
+                    editorSettings.showEmptyFolders = newShowEmptyFolders;
+                    editorSettings.enableSyntaxHighlighting = newHighlighting;
+                    
+                    if (codeEditor && oldHighlighting !== newHighlighting) {
+                        updateCodeMirrorHighlighting(newHighlighting);
+                    }
+                    
+                    if (oldShowEmptyFolders !== newShowEmptyFolders) {
+                        refreshFileTree();
+                    }
+                    
+                    showNotification('Налаштування збережено', 'success');
+                } else {
+                    document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
+                    document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+                    showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
                 }
-                
-                if (oldShowEmptyFolders !== newShowEmptyFolders) {
-                    refreshFileTree();
-                }
-                
-                showNotification('Налаштування збережено', 'success');
-            } else {
+            })
+            .catch(error => {
+                isSaving = false;
+                console.error('Error:', error);
                 document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
                 document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
-                showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
-            document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
-            showNotification('Помилка збереження налаштувань', 'danger');
-        });
-    }
+                showNotification('Помилка збереження налаштувань', 'danger');
+            });
+        }
+    }, 300); // debounce 300ms
 }
 
 /**
