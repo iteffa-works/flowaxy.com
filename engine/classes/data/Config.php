@@ -265,7 +265,7 @@ class Config {
         
         if ($extension === '.json') {
             try {
-                return Json::write($filePath, $data);
+                return Json::writeFile($filePath, $data);
             } catch (Exception $e) {
                 error_log("Config save error for '{$configName}': " . $e->getMessage());
                 return false;
