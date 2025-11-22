@@ -136,89 +136,58 @@
 /* Древовидная структура файлов */
 .file-tree {
     font-size: 0.8125rem;
-}
-
-/* Кнопки создания файлов/папок */
-.file-tree-actions {
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e1e5e9;
-    margin-bottom: 12px;
+    padding: 2px 0;
+    user-select: none;
 }
 
 /* Обертка для элемента файла */
 .file-tree-item-wrapper {
     display: flex;
     align-items: center;
-    margin-bottom: 2px;
-    border-radius: 6px;
+    margin: 0;
+    border-radius: 0;
     position: relative;
-    min-height: 32px;
-}
-
-.file-tree-item-wrapper.active {
-    background-color: #e7f3ff;
+    min-height: 24px;
 }
 
 .file-tree-item {
     display: flex;
     align-items: center;
     flex: 1;
-    padding: 6px 10px;
-    color: #495057;
+    padding: 2px 4px 2px 20px;
+    color: #212529;
     text-decoration: none;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    min-height: 32px;
-    position: relative;
-}
-
-.file-tree-item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: transparent;
-    border-radius: 0 3px 3px 0;
-    transition: background 0.2s ease;
+    border-radius: 0;
+    transition: background-color 0.1s ease;
+    min-height: 24px;
+    width: 100%;
 }
 
 .file-tree-item:hover {
-    background-color: #f1f3f5;
-    color: #0073aa;
-    padding-left: 12px;
-}
-
-.file-tree-item:hover::before {
-    background: #0073aa;
+    background-color: #e8f4f8;
+    color: #212529;
 }
 
 .file-tree-item-wrapper.active .file-tree-item {
-    background-color: #e7f3ff;
-    color: #0056b3;
-    font-weight: 500;
-    padding-left: 12px;
-}
-
-.file-tree-item-wrapper.active .file-tree-item::before {
-    background: #0056b3;
+    background-color: #cce5ff;
+    color: #0066cc;
+    font-weight: 400;
 }
 
 .file-tree-item .file-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: #6c757d;
 }
 
 .file-tree-item-wrapper.active .file-tree-item .file-icon {
-    color: #0056b3;
+    color: #0066cc;
 }
 
 .file-tree-item .file-name {
@@ -226,16 +195,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
 }
 
 /* Контекстное меню для папок и файлов */
 .file-tree-context-menu {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     margin-left: auto;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.15s ease;
 }
 
 .file-tree-folder-header:hover .file-tree-context-menu,
@@ -247,120 +217,102 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     padding: 0;
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    color: #495057;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: #6c757d;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     flex-shrink: 0;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
 }
 
 .context-menu-btn:hover {
-    background: #0073aa;
-    border-color: #0073aa;
-    color: #fff;
+    background: #e0e0e0;
+    color: #212529;
 }
 
 .context-menu-btn-danger {
-    color: #dc3545;
-    border-color: #f5c6cb;
+    color: #6c757d;
 }
 
 .context-menu-btn-danger:hover {
-    background: #dc3545;
-    border-color: #dc3545;
-    color: #fff;
+    background: #ffebee;
+    color: #c62828;
 }
 
 .context-menu-btn i {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
 }
 
 /* Корневая папка темы */
 .file-tree-root .file-tree-folder-header {
-    font-weight: 700;
-    font-size: 0.875rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
     text-transform: none;
     letter-spacing: 0;
-    color: #1a202c;
-    background: #f8f9fa;
-    border: 1px solid #e1e5e9;
-    margin-bottom: 8px;
+    color: #212529;
+    background: transparent;
+    border: none;
+    margin-bottom: 0;
+    padding: 2px 4px;
 }
 
 .file-tree-root .file-tree-folder-header:hover {
-    background: #e9ecef;
-    border-color: #ced4da;
+    background: #e8f4f8;
 }
 
 .file-tree-root .file-tree-folder-content {
     padding-left: 0;
+    margin-left: 12px;
 }
 
 /* Папки */
 .file-tree-folder {
-    margin-top: 6px;
+    margin: 0;
 }
 
 .file-tree-folder-header {
     display: flex;
     align-items: center;
-    padding: 8px 10px;
-    color: #495057;
-    font-weight: 600;
+    padding: 2px 4px 2px 4px;
+    color: #212529;
+    font-weight: 400;
     font-size: 0.8125rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    text-transform: none;
+    letter-spacing: 0;
     cursor: pointer;
     user-select: none;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    position: relative;
-    min-height: 32px;
-    gap: 8px;
-}
-
-.file-tree-folder-header::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: transparent;
-    border-radius: 0 3px 3px 0;
-    transition: background 0.2s ease;
+    border-radius: 0;
+    transition: background-color 0.1s ease;
+    min-height: 24px;
+    gap: 4px;
+    width: 100%;
 }
 
 .file-tree-folder-header:hover {
-    background-color: #f1f3f5;
-    color: #0073aa;
-    padding-left: 12px;
-}
-
-.file-tree-folder-header:hover::before {
-    background: #0073aa;
+    background-color: #e8f4f8;
+    color: #212529;
 }
 
 .file-tree-folder-header .folder-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
+    width: 12px;
+    height: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease;
+    transition: transform 0.15s ease;
     color: #6c757d;
-    font-size: 0.75rem;
+    font-size: 0.625rem;
+    flex-shrink: 0;
+    margin-right: 2px;
 }
 
 .file-tree-folder-header:hover .folder-icon {
-    color: #0073aa;
+    color: #495057;
 }
 
 .file-tree-folder-header.expanded .folder-icon {
@@ -368,28 +320,28 @@
 }
 
 .file-tree-folder-header .file-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 8px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: #ffa500;
+    margin-right: 4px;
 }
 
 .file-tree-folder-header .file-name {
     flex: 1;
     font-size: 0.8125rem;
+    line-height: 1.4;
 }
 
 .file-tree-folder-content {
-    margin-left: 20px;
-    margin-top: 4px;
+    margin-left: 12px;
+    margin-top: 0;
     display: none;
-    border-left: 2px solid #e9ecef;
-    padding-left: 8px;
+    padding-left: 0;
 }
 
 .file-tree-folder-content.expanded {

@@ -49,3 +49,4 @@ $siteName = settingsManager()->get('site_name', 'Flowaxy CMS');
     <script src="<?= htmlspecialchars("{$themeUrl}assets/js/main.js") ?>"></script>
 </body>
 </html>
+
