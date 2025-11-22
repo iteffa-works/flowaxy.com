@@ -3,14 +3,26 @@
  * Шаблон страницы редактора темы
  */
 
+// Функция для проверки, нужно ли раскрывать папку (содержит ли она выбранный файл)
+function shouldExpandFolder($folder, $selectedFile) {
+    if (empty($selectedFile)) {
+        return false;
+    }
+    
+    // Проверяем, начинается ли путь к выбранному файлу с пути папки
+    $folderPath = rtrim($folder['path'], '/') . '/';
+    return str_starts_with($selectedFile, $folderPath);
+}
+
 // Функция для рекурсивного отображения дерева файлов
 function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
     foreach ($tree as $item) {
         if ($item['type'] === 'folder') {
             $hasChildren = !empty($item['children']);
-            $isExpanded = $hasChildren && $level === 0; // По умолчанию раскрываем первый уровень
+            // Раскрываем папку, если она содержит выбранный файл или это первый уровень
+            $isExpanded = $hasChildren && ($level === 0 || shouldExpandFolder($item, $selectedFile));
             ?>
-            <div class="file-tree-folder">
+            <div class="file-tree-folder" data-folder-path="<?= htmlspecialchars($item['path']) ?>">
                 <div class="file-tree-folder-header <?= $isExpanded ? 'expanded' : '' ?>" data-folder-path="<?= htmlspecialchars($item['path']) ?>">
                     <i class="fas fa-chevron-right folder-icon"></i>
                     <i class="fas fa-folder file-icon"></i>
@@ -27,7 +39,7 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
             $isActive = ($selectedFile === $item['path']);
             $fileUrl = UrlHelper::admin('theme-editor?theme=' . urlencode($theme['slug']) . '&file=' . urlencode($item['path']));
             ?>
-            <div class="file-tree-item-wrapper <?= $isActive ? 'active' : '' ?>">
+            <div class="file-tree-item-wrapper <?= $isActive ? 'active' : '' ?>" data-file-path="<?= htmlspecialchars($item['path']) ?>">
                 <a href="<?= $fileUrl ?>" 
                    class="file-tree-item"
                    data-file="<?= htmlspecialchars($item['path']) ?>">

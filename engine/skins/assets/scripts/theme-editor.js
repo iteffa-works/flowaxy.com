@@ -306,9 +306,49 @@ function showNotification(message, type) {
 }
 
 /**
+ * Автоматическое раскрытие папок до выбранного файла
+ */
+function expandPathToFile(filePath) {
+    if (!filePath) return;
+    
+    // Получаем все папки
+    const folders = document.querySelectorAll('.file-tree-folder');
+    
+    folders.forEach(folder => {
+        const folderPath = folder.getAttribute('data-folder-path');
+        if (!folderPath) return;
+        
+        // Нормализуем пути для сравнения
+        const folderPathNormalized = folderPath.endsWith('/') ? folderPath : folderPath + '/';
+        const filePathNormalized = filePath;
+        
+        // Проверяем, начинается ли путь к файлу с пути папки
+        if (filePathNormalized.startsWith(folderPathNormalized)) {
+            const header = folder.querySelector('.file-tree-folder-header');
+            const content = folder.querySelector('.file-tree-folder-content');
+            
+            if (header && content) {
+                header.classList.add('expanded');
+                content.classList.add('expanded');
+            }
+        }
+    });
+}
+
+/**
  * Инициализация древовидной структуры файлов
  */
 function initFileTree() {
+    // Автоматически раскрываем путь к выбранному файлу
+    const activeFile = document.querySelector('.file-tree-item-wrapper.active');
+    if (activeFile) {
+        const filePath = activeFile.getAttribute('data-file-path') || 
+                        activeFile.querySelector('.file-tree-item')?.getAttribute('data-file');
+        if (filePath) {
+            expandPathToFile(filePath);
+        }
+    }
+    
     // Обработка кликов по папкам
     document.querySelectorAll('.file-tree-folder-header').forEach(header => {
         header.addEventListener('click', function() {
