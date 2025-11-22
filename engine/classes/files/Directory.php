@@ -9,15 +9,16 @@
 
 declare(strict_types=1);
 
-class Directory {
-    private string $path;
-    
-    /**
-     * Конструктор
-     * 
-     * @param string|null $path Шлях до директорії
-     */
-    public function __construct(?string $path = null) {
+if (!class_exists('Directory')) {
+    class Directory {
+        private string $path;
+        
+        /**
+         * Конструктор
+         * 
+         * @param string|null $path Шлях до директорії
+         */
+        public function __construct(?string $path = null) {
         if ($path !== null) {
             $this->setPath($path);
         }
@@ -79,358 +80,359 @@ class Directory {
      * @throws Exception Якщо не вдалося створити
      */
     public function create(int $mode = 0755, bool $recursive = true): bool {
-        if ($this->exists()) {
-            return true; // Директорія вже існує
-        }
-        
-        if (!@mkdir($this->path, $mode, $recursive)) {
-            throw new Exception("Не вдалося створити директорію: {$this->path}");
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Видалення директорії
-     * 
-     * @param bool $recursive Видаляти чи вміст рекурсивно
-     * @return bool
-     * @throws Exception Якщо не вдалося видалити
-     */
-    public function delete(bool $recursive = true): bool {
-        if (!$this->exists()) {
-            return true; // Директорія вже не існує
-        }
-        
-        if ($recursive) {
-            return $this->removeRecursive($this->path);
-        } else {
-            if (!@rmdir($this->path)) {
-                throw new Exception("Не вдалося видалити директорію: {$this->path}");
+            if ($this->exists()) {
+                return true; // Директорія вже існує
             }
+            
+            if (!@mkdir($this->path, $mode, $recursive)) {
+                throw new Exception("Не вдалося створити директорію: {$this->path}");
+            }
+            
             return true;
         }
-    }
-    
-    /**
-     * Рекурсивне видалення директорії
-     * 
-     * @param string $dir Шлях до директорії
-     * @return bool
-     */
-    private function removeRecursive(string $dir): bool {
-        if (!is_dir($dir)) {
-            return false;
-        }
         
-        $files = array_diff(scandir($dir), ['.', '..']);
-        
-        foreach ($files as $file) {
-            $filePath = $dir . DIRECTORY_SEPARATOR . $file;
+        /**
+         * Видалення директорії
+         * 
+         * @param bool $recursive Видаляти чи вміст рекурсивно
+         * @return bool
+         * @throws Exception Якщо не вдалося видалити
+         */
+        public function delete(bool $recursive = true): bool {
+            if (!$this->exists()) {
+                return true; // Директорія вже не існує
+            }
             
-            if (is_dir($filePath)) {
-                $this->removeRecursive($filePath);
+            if ($recursive) {
+                return $this->removeRecursive($this->path);
             } else {
-                @unlink($filePath);
+                if (!@rmdir($this->path)) {
+                    throw new Exception("Не вдалося видалити директорію: {$this->path}");
+                }
+                return true;
             }
         }
         
-        return @rmdir($dir);
-    }
-    
-    /**
-     * Копіювання директорії
-     * 
-     * @param string $destinationPath Шлях призначення
-     * @param bool $overwrite Перезаписувати чи існуючі файли
-     * @return bool
-     * @throws Exception Якщо не вдалося скопіювати
-     */
-    public function copy(string $destinationPath, bool $overwrite = true): bool {
-        if (!$this->exists()) {
-            throw new Exception("Вихідна директорія не існує: {$this->path}");
-        }
-        
-        $destinationPath = rtrim($destinationPath, '/\\') . DIRECTORY_SEPARATOR;
-        
-        // Створюємо директорію призначення
-        if (!is_dir($destinationPath)) {
-            if (!@mkdir($destinationPath, 0755, true)) {
-                throw new Exception("Не вдалося створити директорію призначення: {$destinationPath}");
+        /**
+         * Рекурсивне видалення директорії
+         * 
+         * @param string $dir Шлях до директорії
+         * @return bool
+         */
+        private function removeRecursive(string $dir): bool {
+            if (!is_dir($dir)) {
+                return false;
             }
+            
+            $files = array_diff(scandir($dir), ['.', '..']);
+            
+            foreach ($files as $file) {
+                $filePath = $dir . DIRECTORY_SEPARATOR . $file;
+                
+                if (is_dir($filePath)) {
+                    $this->removeRecursive($filePath);
+                } else {
+                    @unlink($filePath);
+                }
+            }
+            
+            return @rmdir($dir);
         }
         
-        return $this->copyRecursive($this->path, $destinationPath, $overwrite);
-    }
-    
-    /**
-     * Рекурсивне копіювання
-     * 
-     * @param string $source Вихідний шлях
-     * @param string $destination Шлях призначення
-     * @param bool $overwrite Перезаписувати чи
-     * @return bool
-     */
-    private function copyRecursive(string $source, string $destination, bool $overwrite): bool {
-        if (!is_dir($source)) {
-            return false;
+        /**
+         * Копіювання директорії
+         * 
+         * @param string $destinationPath Шлях призначення
+         * @param bool $overwrite Перезаписувати чи існуючі файли
+         * @return bool
+         * @throws Exception Якщо не вдалося скопіювати
+         */
+        public function copy(string $destinationPath, bool $overwrite = true): bool {
+            if (!$this->exists()) {
+                throw new Exception("Вихідна директорія не існує: {$this->path}");
+            }
+            
+            $destinationPath = rtrim($destinationPath, '/\\') . DIRECTORY_SEPARATOR;
+            
+            // Створюємо директорію призначення
+            if (!is_dir($destinationPath)) {
+                if (!@mkdir($destinationPath, 0755, true)) {
+                    throw new Exception("Не вдалося створити директорію призначення: {$destinationPath}");
+                }
+            }
+            
+            return $this->copyRecursive($this->path, $destinationPath, $overwrite);
         }
         
-        if (!is_dir($destination)) {
-            if (!@mkdir($destination, 0755, true)) {
+        /**
+         * Рекурсивне копіювання
+         * 
+         * @param string $source Вихідний шлях
+         * @param string $destination Шлях призначення
+         * @param bool $overwrite Перезаписувати чи
+         * @return bool
+         */
+        private function copyRecursive(string $source, string $destination, bool $overwrite): bool {
+            if (!is_dir($source)) {
+                return false;
+            }
+            
+            if (!is_dir($destination)) {
+                if (!@mkdir($destination, 0755, true)) {
+                    return false;
+                }
+            }
+            
+            $files = array_diff(scandir($source), ['.', '..']);
+            
+            foreach ($files as $file) {
+                $sourcePath = $source . $file;
+                $destinationPath = $destination . $file;
+                
+                if (is_dir($sourcePath)) {
+                    if (!$this->copyRecursive($sourcePath . DIRECTORY_SEPARATOR, $destinationPath . DIRECTORY_SEPARATOR, $overwrite)) {
+                        return false;
+                    }
+                } else {
+                    if (!$overwrite && file_exists($destinationPath)) {
+                        continue;
+                    }
+                    
+                    if (!@copy($sourcePath, $destinationPath)) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
+        /**
+         * Отримання списку файлів у директорії
+         * 
+         * @param bool $recursive Рекурсивно
+         * @param string|null $pattern Паттерн для фільтрації (наприклад, '*.php')
+         * @return array
+         */
+        public function getFiles(bool $recursive = false, ?string $pattern = null): array {
+            if (!$this->exists()) {
+                return [];
+            }
+            
+            $files = [];
+            
+            if ($recursive) {
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($this->path, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST
+                );
+                
+                foreach ($iterator as $file) {
+                    if ($file->isFile()) {
+                        $filePath = $file->getRealPath();
+                        
+                        if ($pattern === null || fnmatch($pattern, $file->getFilename())) {
+                            $files[] = $filePath;
+                        }
+                    }
+                }
+            } else {
+                $items = scandir($this->path);
+                
+                foreach ($items as $item) {
+                    if ($item === '.' || $item === '..') {
+                        continue;
+                    }
+                    
+                    $filePath = $this->path . $item;
+                    
+                    if (is_file($filePath)) {
+                        if ($pattern === null || fnmatch($pattern, $item)) {
+                            $files[] = $filePath;
+                        }
+                    }
+                }
+            }
+            
+            return $files;
+        }
+        
+        /**
+         * Отримання списку директорій
+         * 
+         * @param bool $recursive Рекурсивно
+         * @return array
+         */
+        public function getDirectories(bool $recursive = false): array {
+            if (!$this->exists()) {
+                return [];
+            }
+            
+            $directories = [];
+            
+            if ($recursive) {
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($this->path, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST
+                );
+                
+                foreach ($iterator as $file) {
+                    if ($file->isDir()) {
+                        $directories[] = $file->getRealPath() . DIRECTORY_SEPARATOR;
+                    }
+                }
+            } else {
+                $items = scandir($this->path);
+                
+                foreach ($items as $item) {
+                    if ($item === '.' || $item === '..') {
+                        continue;
+                    }
+                    
+                    $itemPath = $this->path . $item;
+                    
+                    if (is_dir($itemPath)) {
+                        $directories[] = $itemPath . DIRECTORY_SEPARATOR;
+                    }
+                }
+            }
+            
+            return $directories;
+        }
+        
+        /**
+         * Отримання розміру директорії
+         * 
+         * @param bool $format Форматувати чи розмір (KB, MB тощо)
+         * @return int|string
+         */
+        public function getSize(bool $format = false) {
+            if (!$this->exists()) {
+                return $format ? '0 B' : 0;
+            }
+            
+            $size = 0;
+            $files = $this->getFiles(true);
+            
+            foreach ($files as $file) {
+                if (file_exists($file)) {
+                    $size += filesize($file);
+                }
+            }
+            
+            if ($format) {
+                return $this->formatSize($size);
+            }
+            
+            return $size;
+        }
+        
+        /**
+         * Форматування розміру
+         * 
+         * @param int $bytes Розмір у байтах
+         * @return string
+         */
+        private function formatSize(int $bytes): string {
+            $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            $bytes = max($bytes, 0);
+            $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+            $pow = min($pow, count($units) - 1);
+            
+            $bytes /= (1 << (10 * $pow));
+            
+            return round($bytes, 2) . ' ' . $units[$pow];
+        }
+        
+        /**
+         * Очищення директорії (видалення всіх файлів та піддиректорій)
+         * 
+         * @return bool
+         */
+        public function clean(): bool {
+            if (!$this->exists()) {
+                return true;
+            }
+            
+            return $this->delete(true) && $this->create();
+        }
+        
+        /**
+         * Встановлення прав доступу до директорії
+         * 
+         * @param int $mode Права доступу
+         * @return bool
+         */
+        public function chmod(int $mode): bool {
+            if (!$this->exists()) {
+                return false;
+            }
+            
+            return @chmod($this->path, $mode);
+        }
+        
+        /**
+         * Статичний метод: Створення директорії
+         * 
+         * @param string $path Шлях до директорії
+         * @param int $mode Права доступу
+         * @param bool $recursive Рекурсивно
+         * @return bool
+         */
+        public static function make(string $path, int $mode = 0755, bool $recursive = true): bool {
+            $dir = new self($path);
+            try {
+                return $dir->create($mode, $recursive);
+            } catch (Exception $e) {
+                error_log("Directory::make помилка: " . $e->getMessage());
                 return false;
             }
         }
         
-        $files = array_diff(scandir($source), ['.', '..']);
-        
-        foreach ($files as $file) {
-            $sourcePath = $source . $file;
-            $destinationPath = $destination . $file;
-            
-            if (is_dir($sourcePath)) {
-                if (!$this->copyRecursive($sourcePath . DIRECTORY_SEPARATOR, $destinationPath . DIRECTORY_SEPARATOR, $overwrite)) {
-                    return false;
-                }
-            } else {
-                if (!$overwrite && file_exists($destinationPath)) {
-                    continue;
-                }
-                
-                if (!@copy($sourcePath, $destinationPath)) {
-                    return false;
-                }
+        /**
+         * Статичний метод: Видалення директорії
+         * 
+         * @param string $path Шлях до директорії
+         * @param bool $recursive Рекурсивно
+         * @return bool
+         */
+        public static function remove(string $path, bool $recursive = true): bool {
+            $dir = new self($path);
+            try {
+                return $dir->delete($recursive);
+            } catch (Exception $e) {
+                error_log("Directory::remove помилка: " . $e->getMessage());
+                return false;
             }
         }
         
-        return true;
-    }
-    
-    /**
-     * Отримання списку файлів у директорії
-     * 
-     * @param bool $recursive Рекурсивно
-     * @param string|null $pattern Паттерн для фільтрації (наприклад, '*.php')
-     * @return array
-     */
-    public function getFiles(bool $recursive = false, ?string $pattern = null): array {
-        if (!$this->exists()) {
-            return [];
-        }
-        
-        $files = [];
-        
-        if ($recursive) {
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($this->path, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::SELF_FIRST
-            );
-            
-            foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    $filePath = $file->getRealPath();
-                    
-                    if ($pattern === null || fnmatch($pattern, $file->getFilename())) {
-                        $files[] = $filePath;
-                    }
-                }
-            }
-        } else {
-            $items = scandir($this->path);
-            
-            foreach ($items as $item) {
-                if ($item === '.' || $item === '..') {
-                    continue;
-                }
-                
-                $filePath = $this->path . $item;
-                
-                if (is_file($filePath)) {
-                    if ($pattern === null || fnmatch($pattern, $item)) {
-                        $files[] = $filePath;
-                    }
-                }
+        /**
+         * Статичний метод: Копіювання директорії
+         * 
+         * @param string $sourcePath Вихідний шлях
+         * @param string $destinationPath Шлях призначення
+         * @param bool $overwrite Перезаписувати чи
+         * @return bool
+         */
+        public static function copyDirectory(string $sourcePath, string $destinationPath, bool $overwrite = true): bool {
+            $dir = new self($sourcePath);
+            try {
+                return $dir->copy($destinationPath, $overwrite);
+            } catch (Exception $e) {
+                error_log("Directory::copyDirectory помилка: " . $e->getMessage());
+                return false;
             }
         }
         
-        return $files;
-    }
-    
-    /**
-     * Отримання списку директорій
-     * 
-     * @param bool $recursive Рекурсивно
-     * @return array
-     */
-    public function getDirectories(bool $recursive = false): array {
-        if (!$this->exists()) {
-            return [];
+        /**
+         * Статичний метод: Перевірка існування директорії
+         * 
+         * @param string $path Шлях до директорії
+         * @return bool
+         */
+        public static function directoryExists(string $path): bool {
+            return is_dir($path);
         }
-        
-        $directories = [];
-        
-        if ($recursive) {
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($this->path, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::SELF_FIRST
-            );
-            
-            foreach ($iterator as $file) {
-                if ($file->isDir()) {
-                    $directories[] = $file->getRealPath() . DIRECTORY_SEPARATOR;
-                }
-            }
-        } else {
-            $items = scandir($this->path);
-            
-            foreach ($items as $item) {
-                if ($item === '.' || $item === '..') {
-                    continue;
-                }
-                
-                $itemPath = $this->path . $item;
-                
-                if (is_dir($itemPath)) {
-                    $directories[] = $itemPath . DIRECTORY_SEPARATOR;
-                }
-            }
-        }
-        
-        return $directories;
-    }
-    
-    /**
-     * Отримання розміру директорії
-     * 
-     * @param bool $format Форматувати чи розмір (KB, MB тощо)
-     * @return int|string
-     */
-    public function getSize(bool $format = false) {
-        if (!$this->exists()) {
-            return $format ? '0 B' : 0;
-        }
-        
-        $size = 0;
-        $files = $this->getFiles(true);
-        
-        foreach ($files as $file) {
-            if (file_exists($file)) {
-                $size += filesize($file);
-            }
-        }
-        
-        if ($format) {
-            return $this->formatSize($size);
-        }
-        
-        return $size;
-    }
-    
-    /**
-     * Форматування розміру
-     * 
-     * @param int $bytes Розмір у байтах
-     * @return string
-     */
-    private function formatSize(int $bytes): string {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        
-        $bytes /= (1 << (10 * $pow));
-        
-        return round($bytes, 2) . ' ' . $units[$pow];
-    }
-    
-    /**
-     * Очищення директорії (видалення всіх файлів та піддиректорій)
-     * 
-     * @return bool
-     */
-    public function clean(): bool {
-        if (!$this->exists()) {
-            return true;
-        }
-        
-        return $this->delete(true) && $this->create();
-    }
-    
-    /**
-     * Встановлення прав доступу до директорії
-     * 
-     * @param int $mode Права доступу
-     * @return bool
-     */
-    public function chmod(int $mode): bool {
-        if (!$this->exists()) {
-            return false;
-        }
-        
-        return @chmod($this->path, $mode);
-    }
-    
-    /**
-     * Статичний метод: Створення директорії
-     * 
-     * @param string $path Шлях до директорії
-     * @param int $mode Права доступу
-     * @param bool $recursive Рекурсивно
-     * @return bool
-     */
-    public static function make(string $path, int $mode = 0755, bool $recursive = true): bool {
-        $dir = new self($path);
-        try {
-            return $dir->create($mode, $recursive);
-        } catch (Exception $e) {
-            error_log("Directory::make помилка: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Статичний метод: Видалення директорії
-     * 
-     * @param string $path Шлях до директорії
-     * @param bool $recursive Рекурсивно
-     * @return bool
-     */
-    public static function remove(string $path, bool $recursive = true): bool {
-        $dir = new self($path);
-        try {
-            return $dir->delete($recursive);
-        } catch (Exception $e) {
-            error_log("Directory::remove помилка: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Статичний метод: Копіювання директорії
-     * 
-     * @param string $sourcePath Вихідний шлях
-     * @param string $destinationPath Шлях призначення
-     * @param bool $overwrite Перезаписувати чи
-     * @return bool
-     */
-    public static function copyDirectory(string $sourcePath, string $destinationPath, bool $overwrite = true): bool {
-        $dir = new self($sourcePath);
-        try {
-            return $dir->copy($destinationPath, $overwrite);
-        } catch (Exception $e) {
-            error_log("Directory::copyDirectory помилка: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Статичний метод: Перевірка існування директорії
-     * 
-     * @param string $path Шлях до директорії
-     * @return bool
-     */
-    public static function directoryExists(string $path): bool {
-        return is_dir($path);
     }
 }
 

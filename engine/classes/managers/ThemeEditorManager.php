@@ -9,7 +9,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../files/File.php';
-require_once __DIR__ . '/../files/Directory.php';
+// Directory завантажується через autoloader, не потрібно require_once
 require_once __DIR__ . '/../files/Zip.php';
 require_once __DIR__ . '/../files/Ini.php';
 require_once __DIR__ . '/../files/Upload.php';

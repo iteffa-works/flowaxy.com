@@ -8,7 +8,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/AdminPage.php';
 require_once __DIR__ . '/../../classes/managers/ThemeEditorManager.php';
 require_once __DIR__ . '/../../classes/files/File.php';
-require_once __DIR__ . '/../../classes/files/Directory.php';
+// Directory завантажується через autoloader, не потрібно require_once
 require_once __DIR__ . '/../../classes/files/Ini.php';
 require_once __DIR__ . '/../../classes/files/Zip.php';
 require_once __DIR__ . '/../../classes/data/Logger.php';
