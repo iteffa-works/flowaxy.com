@@ -104,6 +104,15 @@ class LoginPage {
             return;
         }
         
+        // Проверяем соединение с БД
+        if ($this->db === null) {
+            $this->db = DatabaseHelper::getConnection();
+            if ($this->db === null) {
+                $this->error = 'Помилка підключення до бази даних. Спробуйте пізніше.';
+                return;
+            }
+        }
+        
         try {
             $stmt = $this->db->prepare("SELECT id, username, password, session_token, last_activity, is_active FROM users WHERE username = ?");
             $stmt->execute([$username]);
@@ -113,29 +122,17 @@ class LoginPage {
                 // Проверяем, активен ли пользователь
                 $isActive = isset($user['is_active']) ? (int)$user['is_active'] : 1;
                 if ($isActive === 0) {
-                    // Пользователь неактивен - проверяем, не истекла ли сессия
-                    $sessionLifetime = 7200; // По умолчанию 2 часа
-                    if (class_exists('SystemConfig')) {
-                        $systemConfig = SystemConfig::getInstance();
-                        $sessionLifetime = $systemConfig->getSessionLifetime();
-                    }
-                    
-                    // Если есть last_activity, проверяем, не истекла ли сессия
-                    if (!empty($user['last_activity'])) {
-                        $lastActivity = strtotime($user['last_activity']);
-                        $currentTime = time();
-                        $timeDiff = $currentTime - $lastActivity;
-                        
-                        if ($timeDiff <= $sessionLifetime) {
-                            // Сессия еще валидна - блокируем вход
-                            $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
-                            return;
+                    // Если пользователь неактивен (is_active = 0), автоматически очищаем сессию и разрешаем вход
+                    // Это означает, что сессия была принудительно деактивирована
+                    if ((!empty($user['session_token']) || !empty($user['last_activity'])) && $this->db !== null) {
+                        try {
+                            $stmt = $this->db->prepare("UPDATE users SET session_token = NULL, last_activity = NULL WHERE id = ?");
+                            $stmt->execute([$user['id']]);
+                        } catch (Exception $e) {
+                            error_log("LoginPage: Error clearing session for inactive user: " . $e->getMessage());
                         }
-                    } else if (!empty($user['session_token'])) {
-                        // Если есть токен, но нет last_activity - блокируем вход
-                        $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
-                        return;
                     }
+                    // Разрешаем вход после очистки сессии
                 } else if (!empty($user['session_token'])) {
                     // Пользователь активен, но есть токен - проверяем валидность сессии
                     $sessionLifetime = 7200;
@@ -153,11 +150,28 @@ class LoginPage {
                             // Сессия еще валидна - блокируем вход
                             $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
                             return;
+                        } else {
+                            // Сессия истекла - автоматически очищаем её и разрешаем вход
+                            if ($this->db !== null) {
+                                try {
+                                    $stmt = $this->db->prepare("UPDATE users SET is_active = 0, session_token = NULL, last_activity = NULL WHERE id = ?");
+                                    $stmt->execute([$user['id']]);
+                                } catch (Exception $e) {
+                                    error_log("LoginPage: Error clearing expired session: " . $e->getMessage());
+                                }
+                            }
                         }
                     } else {
-                        // Есть токен, но нет last_activity - блокируем вход
-                        $this->error = 'Ваш аккаунт вже використовується з іншого пристрою або браузера. Будь ласка, спочатку вийдіть з системи або дочекайтеся закінчення сесії.';
-                        return;
+                        // Есть токен, но нет last_activity - сессия некорректная, очищаем её
+                        if ($this->db !== null) {
+                            try {
+                                $stmt = $this->db->prepare("UPDATE users SET is_active = 0, session_token = NULL, last_activity = NULL WHERE id = ?");
+                                $stmt->execute([$user['id']]);
+                            } catch (Exception $e) {
+                                error_log("LoginPage: Error clearing invalid session: " . $e->getMessage());
+                            }
+                        }
+                        // Разрешаем вход после очистки
                     }
                 }
                 

@@ -202,8 +202,15 @@ class PluginManager extends BaseModule {
     
     /**
      * Отримання шляху до файлу плагіна
+     * Спочатку пробуємо init.php, потім старий формат {ClassName}.php для зворотної сумісності
      */
     private function getPluginPath(string $pluginSlug): string {
+        $initPath = $this->pluginsDir . $pluginSlug . '/init.php';
+        if (file_exists($initPath)) {
+            return $initPath;
+        }
+        
+        // Зворотна сумісність: старий формат {ClassName}.php
         $className = $this->getPluginClassName($pluginSlug);
         return $this->pluginsDir . $pluginSlug . '/' . $className . '.php';
     }

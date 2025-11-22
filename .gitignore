@@ -27,8 +27,8 @@ storage/logs/*
 storage/temp/*
 storage/sessions/*
 
-plugins
-themes
+# plugins
+# themes
 
 # IDE
 .idea/
