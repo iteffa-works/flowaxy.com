@@ -1,0 +1,14 @@
+{
+    "name": "Example Theme",
+    "slug": "example",
+    "version": "1.0.0",
+    "description": "Шаблон теми для Flowaxy CMS",
+    "author": "Your Name",
+    "author_url": "https://example.com",
+    "license": "MIT",
+    "is_default": true,
+    "supports_customization": false,
+    "supports_navigation": false,
+    "default_settings": {},
+    "available_settings": []
+}
