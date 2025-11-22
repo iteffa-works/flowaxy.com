@@ -140,7 +140,9 @@ function updateEditorStatus() {
  */
 function saveFile() {
     if (!codeEditor) {
-        alert('Редактор не ініціалізовано');
+        if (typeof showNotification !== 'undefined') {
+            showNotification('Редактор не ініціалізовано', 'warning');
+        }
         return;
     }
     
@@ -186,11 +188,22 @@ function saveFile() {
 function resetEditor() {
     if (!codeEditor) return;
     
-    if (isModified && confirm('Скасувати всі зміни?')) {
-        codeEditor.setValue(originalContent);
-        isModified = false;
-        updateEditorStatus();
+    if (isModified) {
+        showConfirmDialog(
+            'Скасувати зміни',
+            'Ви впевнені, що хочете скасувати всі зміни? Внесені зміни будуть втрачені.',
+            function() {
+                codeEditor.setValue(originalContent);
+                isModified = false;
+                updateEditorStatus();
+            }
+        );
+        return;
     }
+    
+    codeEditor.setValue(originalContent);
+    isModified = false;
+    updateEditorStatus();
 }
 
 /**
@@ -524,52 +537,95 @@ function deleteCurrentFile(event, filePath) {
     event.preventDefault();
     event.stopPropagation();
     
-    if (!confirm('Ви впевнені, що хочете видалити цей файл? Цю дію неможливо скасувати.')) {
-        return;
-    }
-    
     const textarea = document.getElementById('theme-file-editor');
     const theme = textarea.getAttribute('data-theme');
     
-    const formData = new FormData();
-    formData.append('action', 'delete_file');
-    formData.append('theme', theme);
-    formData.append('file', filePath);
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-    
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Файл успішно видалено', 'success');
-            setTimeout(() => {
-                window.location.href = window.location.href.split('&file=')[0];
-            }, 500);
-        } else {
-            showNotification(data.error || 'Помилка видалення', 'danger');
+    showConfirmDialog(
+        'Видалити файл',
+        'Ви впевнені, що хочете видалити цей файл? Цю дію неможливо скасувати.',
+        function() {
+            const formData = new FormData();
+            formData.append('action', 'delete_file');
+            formData.append('theme', theme);
+            formData.append('file', filePath);
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Файл успішно видалено', 'success');
+                    setTimeout(() => {
+                        window.location.href = window.location.href.split('&file=')[0];
+                    }, 500);
+                } else {
+                    showNotification(data.error || 'Помилка видалення', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Помилка видалення файлу', 'danger');
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка видалення файлу', 'danger');
-    });
+    );
 }
 
 /**
  * Показать уведомление
  */
-function showNotification(message, type) {
-    if (typeof showAlert === 'function') {
-        showAlert(message, type);
-    } else {
-        alert(message);
+// showNotification теперь глобальная функция из notifications.php
+
+/**
+ * Кастомное модальное окно подтверждения
+ */
+function showConfirmDialog(title, message, onConfirm, confirmText = 'Підтвердити', cancelText = 'Скасувати') {
+    const modal = document.getElementById('confirmDialogModal');
+    if (!modal) {
+        // Если модальное окно не найдено, используем стандартный confirm
+        if (confirm(message)) {
+            onConfirm();
+        }
+        return;
     }
+    
+    const titleEl = document.getElementById('confirmDialogTitle');
+    const messageEl = document.getElementById('confirmDialogMessage');
+    const confirmBtn = document.getElementById('confirmDialogButton');
+    
+    if (titleEl) {
+        titleEl.innerHTML = '<i class="fas fa-exclamation-triangle text-warning me-2"></i>' + title;
+    }
+    if (messageEl) {
+        messageEl.textContent = message;
+    }
+    if (confirmBtn) {
+        confirmBtn.textContent = confirmText;
+        
+        // Удаляем старые обработчики
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        // Добавляем новый обработчик
+        newConfirmBtn.addEventListener('click', function() {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            }
+            if (typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        });
+    }
+    
+    // Показываем модальное окно
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
 }
 
 /**

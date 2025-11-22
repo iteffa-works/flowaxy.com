@@ -231,6 +231,27 @@ if (!empty($message)) {
     </div>
 </div>
 
+<!-- Модальное окно подтверждения -->
+<div class="modal fade" id="confirmDialogModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDialogTitle">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Підтвердження
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmDialogMessage" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-danger" id="confirmDialogButton">Підтвердити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Модальное окно загрузки файла -->
 <div class="modal fade" id="uploadFileModal" tabindex="-1">
     <div class="modal-dialog">

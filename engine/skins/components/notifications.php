@@ -11,7 +11,8 @@
 .notifications-container {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 10000;
     display: flex;
     flex-direction: column;
@@ -186,8 +187,9 @@
 @media (max-width: 768px) {
     .notifications-container {
         bottom: 10px;
-        right: 10px;
         left: 10px;
+        right: 10px;
+        transform: none;
         max-width: none;
     }
     
