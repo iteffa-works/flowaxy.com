@@ -1884,11 +1884,19 @@ function showEditorSettings() {
     // Показываем хедер и футер (они остаются как в редакторе, без изменений)
     // Хедер и футер остаются видимыми с их оригинальным содержимым (текущий файл, статус, кнопки)
     
-    // Показываем хедер (если он был скрыт), НЕ изменяем его содержимое
+    // Показываем хедер и обновляем заголовок для режима настроек
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // НЕ изменяем заголовок - оставляем как в редакторе (с текущим файлом, если открыт)
-        // Если файл не открыт, заголовок останется пустым - это нормально
+        // Обновляем заголовок на "Налаштування редактора"
+        const fileTitle = editorHeader.querySelector('.editor-file-title');
+        if (fileTitle) {
+            fileTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Налаштування редактора';
+        }
+        // Скрываем информацию о файле (PHP 481 B)
+        const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
+        if (fileInfo) {
+            fileInfo.style.display = 'none';
+        }
     }
     
     // Показываем футер - он должен быть всегда виден
@@ -1901,11 +1909,12 @@ function showEditorSettings() {
         if (footerButtons) {
             footerButtons.style.display = 'flex';
         }
+        // Обновляем статус для режима настроек
         const statusText = editorFooter.querySelector('#editor-status');
         if (statusText) {
             statusText.style.display = 'block';
             statusText.style.visibility = 'visible';
-            // НЕ изменяем текст статуса - оставляем "Готово до редагування"
+            statusText.textContent = 'Готово до редагування';
         }
         const statusIcon = editorFooter.querySelector('#editor-status-icon');
         if (statusIcon) {

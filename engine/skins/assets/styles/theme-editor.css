@@ -1058,50 +1058,88 @@
 
 /* Настройки редактора */
 .editor-settings-container {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 60px 30px;
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-y: auto;
 }
 
 .editor-settings-container h5 {
     color: #1a202c;
     font-weight: 600;
-    margin-bottom: 32px;
+    font-size: 1.5rem;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.editor-settings-container h5 i {
+    color: #6c757d;
+    margin-right: 12px;
 }
 
 .editor-settings-container .form-check-label {
     font-size: 0.9375rem;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .editor-settings-container .form-check-label strong {
     display: block;
-    margin-bottom: 4px;
     color: #1a202c;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 .editor-settings-container .form-check-label p {
     margin: 0;
     color: #6c757d;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
 }
 
 .editor-settings-container .form-check {
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    margin-bottom: 16px;
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: 20px;
     border: 1px solid #e9ecef;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
 }
 
 .editor-settings-container .form-check:hover {
-    background: #fff;
+    background: #f8f9fa;
     border-color: #dee2e6;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+
+.editor-settings-container .form-check-input {
+    margin-top: 4px;
+    width: 48px;
+    height: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.editor-settings-container .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.editor-settings-container .form-check-input:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
