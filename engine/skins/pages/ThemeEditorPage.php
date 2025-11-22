@@ -76,6 +76,12 @@ class ThemeEditorPage extends AdminPage {
                 case 'upload_file':
                     $this->ajaxUploadFile();
                     return;
+                case 'save_editor_settings':
+                    $this->ajaxSaveEditorSettings();
+                    return;
+                case 'get_editor_settings':
+                    $this->ajaxGetEditorSettings();
+                    return;
             }
         }
         
@@ -498,6 +504,68 @@ class ThemeEditorPage extends AdminPage {
                 $this->sortFileTree($item['children']);
             }
         }
+    }
+    
+    /**
+     * AJAX: Сохранение настроек редактора
+     */
+    private function ajaxSaveEditorSettings(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $showEmptyFolders = Request::post('show_empty_folders', '0') === '1' ? '1' : '0';
+        $enableSyntaxHighlighting = Request::post('enable_syntax_highlighting', '1') === '1' ? '1' : '0';
+        
+        $settingsDir = dirname(__DIR__, 2) . '/data';
+        if (!is_dir($settingsDir)) {
+            if (!mkdir($settingsDir, 0755, true)) {
+                $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити директорію для налаштувань'], 500);
+                return;
+            }
+        }
+        
+        $settingsFile = $settingsDir . '/theme-editor.ini';
+        
+        $iniContent = "; Налаштування редактора теми\n";
+        $iniContent .= "; Автоматично згенеровано\n\n";
+        $iniContent .= "show_empty_folders = " . $showEmptyFolders . "\n";
+        $iniContent .= "enable_syntax_highlighting = " . $enableSyntaxHighlighting . "\n";
+        
+        if (file_put_contents($settingsFile, $iniContent) === false) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося зберегти налаштування'], 500);
+            return;
+        }
+        
+        $this->sendJsonResponse([
+            'success' => true,
+            'message' => 'Налаштування успішно збережено'
+        ], 200);
+    }
+    
+    /**
+     * AJAX: Получение настроек редактора
+     */
+    private function ajaxGetEditorSettings(): void {
+        $settingsFile = dirname(__DIR__, 2) . '/data/theme-editor.ini';
+        
+        $settings = [
+            'show_empty_folders' => '0',
+            'enable_syntax_highlighting' => '1'
+        ];
+        
+        if (file_exists($settingsFile)) {
+            $parsed = parse_ini_file($settingsFile);
+            if ($parsed !== false) {
+                $settings = array_merge($settings, $parsed);
+            }
+        }
+        
+        $this->sendJsonResponse([
+            'success' => true,
+            'settings' => $settings
+        ], 200);
     }
 }
 

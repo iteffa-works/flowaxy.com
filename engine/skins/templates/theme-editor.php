@@ -95,9 +95,19 @@ if (!empty($message)) {
         <!-- Боковая панель с файлами -->
         <div class="theme-editor-sidebar">
             <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-folder-open me-2"></i>Файли теми
-                </h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-folder me-2"></i>ФАЙЛИ ТЕМИ
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary theme-files-btn" onclick="refreshFileTree()" title="Оновити">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary theme-files-btn" onclick="openEditorSettings()" title="Налаштування">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <?php if (empty($fileTree)): ?>
@@ -181,6 +191,43 @@ if (!empty($message)) {
                     <h5>Оберіть файл для редагування</h5>
                     <p>Виберіть файл зі списку зліва, щоб почати редагування</p>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно настроек редактора -->
+<div class="modal fade" id="editorSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Налаштування редактора</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editorSettingsForm">
+                    <?= SecurityHelper::csrfField() ?>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showEmptyFolders" name="show_empty_folders">
+                            <label class="form-check-label" for="showEmptyFolders">
+                                Показувати пусті папки
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enableSyntaxHighlighting" name="enable_syntax_highlighting" checked>
+                            <label class="form-check-label" for="enableSyntaxHighlighting">
+                                Увімкнути підсвітку коду
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditorSettings()">Зберегти</button>
             </div>
         </div>
     </div>

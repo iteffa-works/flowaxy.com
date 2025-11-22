@@ -306,14 +306,10 @@ function submitInlineCreateFile(button, folderPath) {
             showNotification('Файл успішно створено', 'success');
             form.remove();
             
-            // Добавляем файл в дерево и открываем в редакторе
-            addFileToTree(data.path, folderPath);
-            loadFileInEditor(data.path);
-            
-            // Обновляем URL без перезагрузки
+            // Перезагружаем страницу для обновления дерева файлов
             const url = new URL(window.location.href);
             url.searchParams.set('file', data.path);
-            window.history.pushState({}, '', url);
+            window.location.href = url.toString();
         } else {
             showNotification(data.error || 'Помилка створення', 'danger');
             button.disabled = false;
@@ -466,9 +462,10 @@ function submitInlineCreateDirectory(button, folderPath) {
         if (data.success) {
             showNotification('Папку успішно створено', 'success');
             form.remove();
+            // Перезагружаем страницу для обновления дерева
             setTimeout(() => {
                 window.location.reload();
-            }, 300);
+            }, 200);
         } else {
             showNotification(data.error || 'Помилка створення', 'danger');
             button.disabled = false;
@@ -1039,6 +1036,85 @@ function loadFileInEditor(filePath) {
     .catch(error => {
         console.error('Error:', error);
         showNotification('Помилка завантаження файлу', 'danger');
+    });
+}
+
+/**
+ * Обновление дерева файлов
+ */
+function refreshFileTree() {
+    window.location.reload();
+}
+
+/**
+ * Открытие настроек редактора
+ */
+function openEditorSettings() {
+    // Загружаем текущие настройки
+    const formData = new FormData();
+    formData.append('action', 'get_editor_settings');
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.settings) {
+            // Устанавливаем значения чекбоксов
+            document.getElementById('showEmptyFolders').checked = data.settings.show_empty_folders === '1';
+            document.getElementById('enableSyntaxHighlighting').checked = data.settings.enable_syntax_highlighting === '1';
+        }
+        
+        // Показываем модальное окно
+        const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Показываем модальное окно даже при ошибке
+        const modal = new bootstrap.Modal(document.getElementById('editorSettingsModal'));
+        modal.show();
+    });
+}
+
+/**
+ * Сохранение настроек редактора
+ */
+function saveEditorSettings() {
+    const form = document.getElementById('editorSettingsForm');
+    const formData = new FormData(form);
+    formData.append('action', 'save_editor_settings');
+    formData.append('show_empty_folders', document.getElementById('showEmptyFolders').checked ? '1' : '0');
+    formData.append('enable_syntax_highlighting', document.getElementById('enableSyntaxHighlighting').checked ? '1' : '0');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Налаштування успішно збережено', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editorSettingsModal')).hide();
+            // Перезагружаем страницу для применения настроек
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+        } else {
+            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Помилка збереження налаштувань', 'danger');
     });
 }
 

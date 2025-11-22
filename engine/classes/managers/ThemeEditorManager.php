@@ -31,7 +31,15 @@ class ThemeEditorManager {
     /**
      * Отримання списку файлів теми
      */
-    public function getThemeFiles(string $themePath, array $allowedExtensions = ['php', 'css', 'js', 'json', 'html', 'htm', 'txt', 'md', 'xml', 'yaml', 'yml']): array {
+    public function getThemeFiles(string $themePath, array $allowedExtensions = null): array {
+        // Если расширения не указаны, используем все типы файлов
+        if ($allowedExtensions === null) {
+            $allowedExtensions = ['php', 'css', 'js', 'json', 'html', 'htm', 'txt', 'md', 'xml', 'yaml', 'yml', 
+                                  'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp',
+                                  'mp4', 'webm', 'ogg', 'mp3', 'wav', 'flac',
+                                  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar', 'tar', 'gz',
+                                  'woff', 'woff2', 'ttf', 'eot', 'otf'];
+        }
         $files = [];
         
         if (!is_dir($themePath) || !is_readable($themePath)) {
