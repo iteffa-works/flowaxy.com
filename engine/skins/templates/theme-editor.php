@@ -147,7 +147,7 @@ if (!empty($message)) {
             <div class="card-footer theme-editor-sidebar-footer">
                 <div class="sidebar-footer-content">
                     <span class="sidebar-footer-text">
-                        <a href="#" class="sidebar-footer-link">Theme Editor</a> <span class="sidebar-footer-separator">•</span> v1.0 Dev
+                        <a href="#" class="sidebar-footer-link">Theme Editor</a> <span class="sidebar-footer-separator">•</span> v1.0.0 Dev
                     </span>
                 </div>
             </div>
