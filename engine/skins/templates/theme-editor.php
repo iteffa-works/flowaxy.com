@@ -237,9 +237,9 @@ if (!empty($message)) {
                         <?= SecurityHelper::csrfField() ?>
                         
                         <!-- Настройки отображения -->
-                        <div class="settings-section mb-4">
-                            <h6 class="settings-section-title mb-3">Відображення</h6>
-                            <div class="mb-4">
+                        <div class="settings-section">
+                            <h6 class="settings-section-title">Відображення</h6>
+                            <div class="settings-section-grid">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="showEmptyFoldersInline" name="show_empty_folders">
                                     <label class="form-check-label" for="showEmptyFoldersInline">
@@ -247,8 +247,6 @@ if (!empty($message)) {
                                         <p class="text-muted small mb-0">Відображати порожні папки в дереві файлів</p>
                                     </label>
                                 </div>
-                            </div>
-                            <div class="mb-4">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="enableSyntaxHighlightingInline" name="enable_syntax_highlighting" checked>
                                     <label class="form-check-label" for="enableSyntaxHighlightingInline">
@@ -256,8 +254,6 @@ if (!empty($message)) {
                                         <p class="text-muted small mb-0">Підсвітка синтаксису коду в редакторі</p>
                                     </label>
                                 </div>
-                            </div>
-                            <div class="mb-4">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="showLineNumbersInline" name="show_line_numbers" checked>
                                     <label class="form-check-label" for="showLineNumbersInline">
@@ -265,56 +261,6 @@ if (!empty($message)) {
                                         <p class="text-muted small mb-0">Відображати номери рядків у редакторі</p>
                                     </label>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Настройки редактора -->
-                        <div class="settings-section mb-4">
-                            <h6 class="settings-section-title mb-3">Редактор</h6>
-                            <div class="mb-4">
-                                <label class="form-label" for="editorFontFamilyInline">
-                                    <strong>Шрифт</strong>
-                                    <p class="text-muted small mb-2">Виберіть шрифт для редактора</p>
-                                </label>
-                                <select class="form-select" id="editorFontFamilyInline" name="font_family">
-                                    <option value="'Courier New', monospace">Courier New</option>
-                                    <option value="'Consolas', monospace" selected>Consolas</option>
-                                    <option value="'Monaco', monospace">Monaco</option>
-                                    <option value="'Menlo', monospace">Menlo</option>
-                                    <option value="'Fira Code', monospace">Fira Code</option>
-                                    <option value="'Source Code Pro', monospace">Source Code Pro</option>
-                                    <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-                                </select>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label" for="editorFontSizeInline">
-                                    <strong>Розмір шрифту</strong>
-                                    <p class="text-muted small mb-2">Розмір шрифту в пікселях (12-24px)</p>
-                                </label>
-                                <input type="number" class="form-control" id="editorFontSizeInline" name="font_size" min="12" max="24" value="14" step="1">
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label" for="editorThemeInline">
-                                    <strong>Тема редактора</strong>
-                                    <p class="text-muted small mb-2">Кольорова схема редактора</p>
-                                </label>
-                                <select class="form-select" id="editorThemeInline" name="editor_theme">
-                                    <option value="monokai" selected>Monokai (темна)</option>
-                                    <option value="default">Default (світла)</option>
-                                    <option value="dracula">Dracula</option>
-                                    <option value="material">Material</option>
-                                    <option value="solarized-dark">Solarized Dark</option>
-                                    <option value="solarized-light">Solarized Light</option>
-                                </select>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label" for="editorIndentSizeInline">
-                                    <strong>Розмір відступу</strong>
-                                    <p class="text-muted small mb-2">Кількість пробілів для відступу (2-8)</p>
-                                </label>
-                                <input type="number" class="form-control" id="editorIndentSizeInline" name="indent_size" min="2" max="8" value="4" step="1">
-                            </div>
-                            <div class="mb-4">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="wordWrapInline" name="word_wrap" checked>
                                     <label class="form-check-label" for="wordWrapInline">
@@ -325,10 +271,60 @@ if (!empty($message)) {
                             </div>
                         </div>
                         
+                        <!-- Настройки редактора -->
+                        <div class="settings-section">
+                            <h6 class="settings-section-title">Редактор</h6>
+                            <div class="settings-section-grid">
+                                <div>
+                                    <label class="form-label" for="editorFontFamilyInline">
+                                        <strong>Шрифт</strong>
+                                        <p class="text-muted small mb-0">Виберіть шрифт для редактора</p>
+                                    </label>
+                                    <select class="form-select" id="editorFontFamilyInline" name="font_family">
+                                        <option value="'Courier New', monospace">Courier New</option>
+                                        <option value="'Consolas', monospace" selected>Consolas</option>
+                                        <option value="'Monaco', monospace">Monaco</option>
+                                        <option value="'Menlo', monospace">Menlo</option>
+                                        <option value="'Fira Code', monospace">Fira Code</option>
+                                        <option value="'Source Code Pro', monospace">Source Code Pro</option>
+                                        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="editorFontSizeInline">
+                                        <strong>Розмір шрифту</strong>
+                                        <p class="text-muted small mb-0">Розмір шрифту в пікселях (12-24px)</p>
+                                    </label>
+                                    <input type="number" class="form-control" id="editorFontSizeInline" name="font_size" min="12" max="24" value="14" step="1">
+                                </div>
+                                <div>
+                                    <label class="form-label" for="editorThemeInline">
+                                        <strong>Тема редактора</strong>
+                                        <p class="text-muted small mb-0">Кольорова схема редактора</p>
+                                    </label>
+                                    <select class="form-select" id="editorThemeInline" name="editor_theme">
+                                        <option value="monokai" selected>Monokai (темна)</option>
+                                        <option value="default">Default (світла)</option>
+                                        <option value="dracula">Dracula</option>
+                                        <option value="material">Material</option>
+                                        <option value="solarized-dark">Solarized Dark</option>
+                                        <option value="solarized-light">Solarized Light</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="editorIndentSizeInline">
+                                        <strong>Розмір відступу</strong>
+                                        <p class="text-muted small mb-0">Кількість пробілів для відступу (2-8)</p>
+                                    </label>
+                                    <input type="number" class="form-control" id="editorIndentSizeInline" name="indent_size" min="2" max="8" value="4" step="1">
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Дополнительные настройки -->
-                        <div class="settings-section mb-4">
-                            <h6 class="settings-section-title mb-3">Додатково</h6>
-                            <div class="mb-4">
+                        <div class="settings-section">
+                            <h6 class="settings-section-title">Додатково</h6>
+                            <div class="settings-section-grid">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="autoSaveInline" name="auto_save">
                                     <label class="form-check-label" for="autoSaveInline">
@@ -336,13 +332,13 @@ if (!empty($message)) {
                                         <p class="text-muted small mb-0">Автоматично зберігати зміни через певний час</p>
                                     </label>
                                 </div>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label" for="autoSaveIntervalInline">
-                                    <strong>Інтервал автозбереження</strong>
-                                    <p class="text-muted small mb-2">Час у секундах між автозбереженнями (30-300)</p>
-                                </label>
-                                <input type="number" class="form-control" id="autoSaveIntervalInline" name="auto_save_interval" min="30" max="300" value="60" step="10" disabled>
+                                <div>
+                                    <label class="form-label" for="autoSaveIntervalInline">
+                                        <strong>Інтервал автозбереження</strong>
+                                        <p class="text-muted small mb-0">Час у секундах між автозбереженнями (30-300)</p>
+                                    </label>
+                                    <input type="number" class="form-control" id="autoSaveIntervalInline" name="auto_save_interval" min="30" max="300" value="60" step="10" disabled>
+                                </div>
                             </div>
                         </div>
                     </form>
