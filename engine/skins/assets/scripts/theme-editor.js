@@ -1941,7 +1941,7 @@ function autoSaveEditorSettings() {
             show_empty_folders: newShowEmptyFolders ? '1' : '0',
             enable_syntax_highlighting: newHighlighting ? '1' : '0',
             show_line_numbers: (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0',
-            font_family: (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Consolas', monospace",
+            font_family: (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Courier New', monospace",
             font_size: (document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize'))?.value || '14',
             editor_theme: (document.getElementById('editorThemeInline') || document.getElementById('editorTheme'))?.value || 'monokai',
             indent_size: (document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize'))?.value || '4',
@@ -2051,7 +2051,7 @@ function applyEditorSettingsToCodeMirror() {
     }
     
     if (fontFamily) {
-        const fontValue = fontFamily.value || "'Consolas', monospace";
+        const fontValue = fontFamily.value || "'Courier New', monospace";
         // Встановлюємо шрифт через CodeMirror wrapper
         const wrapper = codeEditor.getWrapperElement();
         if (wrapper) {
@@ -2180,7 +2180,7 @@ function saveEditorSettingsFromFooter() {
         show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
         enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
         show_line_numbers: showLineNumbers?.checked ? '1' : '0',
-        font_family: fontFamily?.value || "'Consolas', monospace",
+        font_family: fontFamily?.value || "'Courier New', monospace",
         font_size: fontSize?.value || '14',
         editor_theme: editorTheme?.value || 'monokai',
         indent_size: indentSize?.value || '4',
@@ -2884,7 +2884,7 @@ function setupAutoSaveEditorSettingsInline() {
                 show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
                 enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
                 show_line_numbers: showLineNumbers?.checked ? '1' : '0',
-                font_family: fontFamily?.value || "'Consolas', monospace",
+                font_family: fontFamily?.value || "'Courier New', monospace",
                 font_size: fontSize?.value || '14',
                 editor_theme: editorTheme?.value || 'monokai',
                 indent_size: indentSize?.value || '4',
