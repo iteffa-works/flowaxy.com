@@ -38,8 +38,8 @@ class ThemeEditorPage extends AdminPage {
         
         $this->editorManager = ThemeEditorManager::getInstance();
         
-        // Додаємо Google Fonts для шрифтів редактора
-        $this->additionalCSS[] = 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap';
+        // Додаємо Google Fonts для шрифтів редактора (тільки JetBrains Mono)
+        $this->additionalCSS[] = 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap';
         
         // Додаємо CSS та JS для редактора
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
