@@ -1,7 +1,9 @@
 /**
- * JavaScript для редактора темы
+ * JavaScript для редактора теми
+ * Оптимізована версія з утилітними функціями та українською локалізацією
  */
 
+// Глобальні змінні
 let codeEditor = null;
 let originalContent = '';
 let isModified = false;
@@ -9,27 +11,142 @@ let editorSettings = {
     enableSyntaxHighlighting: true,
     showEmptyFolders: true
 };
-let settingsSetupDone = false; // Флаг, что обработчики настроек уже установлены
+let settingsSetupDone = false; // Прапорець, що обробники налаштувань вже встановлені
 
-// Функция инициализации CodeMirror
+// ============================================================================
+// УТИЛІТНІ ФУНКЦІЇ
+// ============================================================================
+
+/**
+ * Універсальна функція для виконання AJAX запитів
+ * @param {string} action - Дія для виконання
+ * @param {Object} formData - Дані для відправки
+ * @returns {Promise} Promise з відповіддю сервера
+ */
+function makeAjaxRequest(action, formData = {}) {
+    const url = window.location.href.split('?')[0];
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    
+    const requestData = {
+        action: action,
+        ...formData,
+        csrf_token: csrfToken
+    };
+    
+    if (typeof AjaxHelper !== 'undefined') {
+        return AjaxHelper.post(url, requestData);
+    } else {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams(requestData)
+        }).then(response => {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error('Сервер повернув не-JSON відповідь: ' + text.substring(0, 100));
+            });
+        });
+    }
+}
+
+/**
+ * Пошук елемента файлу або папки в дереві файлів
+ * @param {string} path - Шлях до файлу або папки
+ * @param {boolean} isFolder - Чи це папка
+ * @returns {HTMLElement|null} Знайдений елемент або null
+ */
+function findTreeElement(path, isFolder = false) {
+    const fileTree = document.querySelector('.file-tree');
+    if (!fileTree) return null;
+    
+    if (isFolder) {
+        let element = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
+        if (!element) {
+            const folders = fileTree.querySelectorAll('.file-tree-folder');
+            for (let folder of folders) {
+                if (folder.getAttribute('data-folder-path') === path) {
+                    element = folder;
+                    break;
+                }
+            }
+        }
+        return element;
+    } else {
+        let element = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
+        if (!element) {
+            const fileWrappers = fileTree.querySelectorAll('.file-tree-item-wrapper');
+            for (let wrapper of fileWrappers) {
+                if (wrapper.getAttribute('data-file-path') === path) {
+                    element = wrapper;
+                    break;
+                }
+            }
+        }
+        if (!element) {
+            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
+            for (let link of fileLinks) {
+                if (link.getAttribute('data-file') === path) {
+                    element = link.closest('.file-tree-item-wrapper');
+                    break;
+                }
+            }
+        }
+        return element;
+    }
+}
+
+/**
+ * Отримання теми з DOM або URL
+ * @returns {string} Slug теми
+ */
+function getThemeFromPage() {
+    const textarea = document.getElementById('theme-file-editor');
+    if (textarea) {
+        const theme = textarea.getAttribute('data-theme');
+        if (theme) return theme;
+    }
+    return new URLSearchParams(window.location.search).get('theme') || '';
+}
+
+/**
+ * Показ елемента в дереві файлів
+ * @param {string} path - Шлях до елемента
+ * @param {boolean} isFolder - Чи це папка
+ */
+function showTreeElement(path, isFolder = false) {
+    const element = findTreeElement(path, isFolder);
+    if (element) {
+        element.style.display = '';
+    }
+}
+
+/**
+ * Ініціалізація CodeMirror редактора
+ */
 function initCodeMirror() {
-    // Проверяем наличие CodeMirror
+    // Перевіряємо наявність CodeMirror
     if (typeof CodeMirror === 'undefined') {
         console.error('CodeMirror не завантажено! Перевірте підключення скриптів.');
-        // Повторная попытка через небольшую задержку
+        // Повторна спроба через невелику затримку
         setTimeout(initCodeMirror, 100);
         return;
     }
     
-    // Инициализация CodeMirror
+    // Ініціалізація CodeMirror
     const textarea = document.getElementById('theme-file-editor');
     if (!textarea) {
         return;
     }
     
-    // Проверяем, включена ли подсветка синтаксиса
+    // Перевіряємо, чи увімкнена підсвітка синтаксису
     const enableSyntaxHighlighting = textarea.getAttribute('data-syntax-highlighting') !== '0';
-    // Обновляем глобальную настройку
+    // Оновлюємо глобальну настройку
     editorSettings.enableSyntaxHighlighting = enableSyntaxHighlighting;
     
     const extension = textarea.getAttribute('data-extension');
@@ -49,13 +166,13 @@ function initCodeMirror() {
             gutters: enableSyntaxHighlighting ? ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'] : ['CodeMirror-linenumbers']
         });
         
-        // Скрываем textarea после успешной инициализации
+        // Приховуємо textarea після успішної ініціалізації
         textarea.style.display = 'none';
         
         originalContent = codeEditor.getValue();
         isModified = false;
         
-        // Инициализируем статус при загрузке
+        // Ініціалізуємо статус при завантаженні
         updateEditorStatus();
         
         codeEditor.on('change', function() {
@@ -63,7 +180,7 @@ function initCodeMirror() {
             updateEditorStatus();
         });
         
-        // Обновляем размер редактора при изменении размера окна
+        // Оновлюємо розмір редактора при зміні розміру вікна
         let resizeTimeout;
         window.addEventListener('resize', function() {
             if (codeEditor) {
@@ -74,34 +191,35 @@ function initCodeMirror() {
             }
         });
         
-        // Применяем настройки после инициализации
+        // Застосовуємо налаштування після ініціалізації
         setTimeout(function() {
             applyEditorSettingsToCodeMirror();
         }, 100);
     } catch (error) {
         console.error('Помилка ініціалізації CodeMirror:', error);
-        // Показываем textarea если CodeMirror не инициализировался
+        // Показуємо textarea якщо CodeMirror не ініціалізувався
         textarea.style.display = 'block';
     }
 }
 
+// Ініціалізація при завантаженні сторінки
 document.addEventListener('DOMContentLoaded', function() {
-    // Загружаем настройки редактора
+    // Завантажуємо налаштування редактора
     loadEditorSettings();
     
-    // Инициализация CodeMirror
+    // Ініціалізація CodeMirror
     initCodeMirror();
     
-    // Инициализация древовидной структуры файлов
+    // Ініціалізація древовидної структури файлів
     initFileTree();
     
-    // Проверяем, есть ли открытый файл при загрузке страницы
+    // Перевіряємо, чи є відкритий файл при завантаженні сторінки
     const urlParams = new URLSearchParams(window.location.search);
     const file = urlParams.get('file');
     const folder = urlParams.get('folder');
     const mode = urlParams.get('mode');
     
-    // Если файл открыт, показываем футер
+    // Якщо файл відкритий, показуємо футер
     if (file && !folder && !mode) {
         const editorFooter = document.getElementById('editor-footer');
         const editorHeader = document.getElementById('editor-header');
@@ -118,14 +236,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Проверяем наличие параметров в URL для автоматического показа режимов
+    // Перевіряємо наявність параметрів в URL для автоматичного показу режимів
     if (folder) {
-        // Небольшая задержка чтобы дерево файлов успело инициализироваться
+        // Невелика затримка щоб дерево файлів встигло ініціалізуватися
         setTimeout(function() {
             showUploadFiles(folder);
         }, 300);
     } else if (mode === 'settings') {
-        // Небольшая задержка чтобы дерево файлов успело инициализироваться
+        // Невелика затримка щоб дерево файлів встигло ініціалізуватися
         setTimeout(function() {
             showEditorSettings();
         }, 300);
@@ -133,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Загрузка настроек редактора
+ * Завантаження налаштувань редактора
  */
 function loadEditorSettings() {
     const textarea = document.getElementById('theme-file-editor');
@@ -141,12 +259,12 @@ function loadEditorSettings() {
         editorSettings.enableSyntaxHighlighting = textarea.getAttribute('data-syntax-highlighting') !== '0';
     }
     
-    // Также загружаем из настроек при открытии модального окна
-    // настройки будут обновлены в openEditorSettings()
+    // Також завантажуємо з налаштувань при відкритті модального вікна
+    // налаштування будуть оновлені в openEditorSettings()
 }
 
 /**
- * Получение режима CodeMirror по расширению файла
+ * Отримання режиму CodeMirror за розширенням файлу
  */
 function getCodeMirrorMode(extension) {
     const modes = {
@@ -166,7 +284,7 @@ function getCodeMirrorMode(extension) {
 }
 
 /**
- * Обновление статуса редактора
+ * Оновлення статусу редактора
  */
 function updateEditorStatus() {
     const statusEl = document.getElementById('editor-status');
@@ -177,25 +295,25 @@ function updateEditorStatus() {
         return;
     }
     
-        if (isModified) {
-            statusEl.textContent = 'Є незбережені зміни';
-            statusEl.className = 'text-warning small';
-        // Меняем точку на предупреждение (желтая)
+    if (isModified) {
+        statusEl.textContent = 'Є незбережені зміни';
+        statusEl.className = 'text-warning small';
+        // Змінюємо точку на попередження (жовта)
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-warning me-2';
         }
-        // Показываем кнопку "Скасувати"
+        // Показуємо кнопку "Скасувати"
         if (cancelBtn) {
             cancelBtn.style.display = '';
         }
-        } else {
-            statusEl.textContent = 'Готово до редагування';
-            statusEl.className = 'text-muted small';
-        // Меняем точку на успех (зеленая)
+    } else {
+        statusEl.textContent = 'Готово до редагування';
+        statusEl.className = 'text-muted small';
+        // Змінюємо точку на успіх (зелена)
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-success me-2';
         }
-        // Скрываем кнопку "Скасувати"
+        // Приховуємо кнопку "Скасувати"
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
@@ -203,7 +321,7 @@ function updateEditorStatus() {
 }
 
 /**
- * Сохранение файла
+ * Збереження файлу
  */
 function saveFile() {
     if (!codeEditor) {
@@ -218,78 +336,62 @@ function saveFile() {
     const file = textarea.getAttribute('data-file');
     const content = codeEditor.getValue();
     
-    // Используем AjaxHelper если доступен
-    const url = window.location.href.split('?')[0];
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, { action: 'save_file', theme: theme, file: file, content: content })
-        : fetch(url, {
-        method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: new URLSearchParams({ 
-                action: 'save_file', 
-                theme: theme, 
-                file: file, 
-                content: content,
-                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
-            })
-        }).then(r => r.json());
-    
-    requestFn
-    .then(data => {
-        if (data.success) {
-            originalContent = content;
-            isModified = false;
-            updateEditorStatus();
-            showNotification('Файл успішно збережено', 'success');
-        } else {
-            showNotification(data.error || 'Помилка збереження', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка збереження файлу', 'danger');
-    });
+    makeAjaxRequest('save_file', { theme: theme, file: file, content: content })
+        .then(data => {
+            if (data.success) {
+                originalContent = content;
+                isModified = false;
+                updateEditorStatus();
+                showNotification('Файл успішно збережено', 'success');
+            } else {
+                showNotification(data.error || 'Помилка збереження', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            showNotification('Помилка збереження файлу', 'danger');
+        });
 }
 
 /**
- * Сброс изменений в редакторе
+ * Скидання змін в редакторі
  */
 function resetEditor() {
     if (!codeEditor) {
         return;
     }
     
-    // Если изменений нет, ничего не делаем
+    // Якщо змін немає, нічого не робимо
     if (!isModified) {
         return;
     }
     
-    // Если есть изменения, спрашиваем подтверждение
+    // Якщо є зміни, питаємо підтвердження
     showConfirmDialog(
         'Скасувати зміни',
         'Ви впевнені, що хочете скасувати всі зміни? Внесені зміни будуть втрачені.',
         function() {
-            // Восстанавливаем оригинальное содержимое
-        codeEditor.setValue(originalContent);
-            // Обновляем флаг изменений
-        isModified = false;
-            // Обновляем статус редактора (скроет кнопку "Скасувати" и изменит иконку)
-        updateEditorStatus();
-            // Показываем уведомление
+            // Відновлюємо оригінальний вміст
+            codeEditor.setValue(originalContent);
+            // Оновлюємо прапорець змін
+            isModified = false;
+            // Оновлюємо статус редактора (приховає кнопку "Скасувати" та змінить іконку)
+            updateEditorStatus();
+            // Показуємо повідомлення
             showNotification('Зміни скасовано', 'info');
-    }
+        }
     );
 }
 
 /**
- * Создание нового файла
+ * Створення нового файлу
  */
 function createNewFile() {
     createNewFileInFolder(null, '');
 }
 
 /**
- * Создание нового файла в конкретной папке
+ * Створення нового файлу в конкретній папці
  */
 function createNewFileInFolder(event, folderPath) {
     if (event) {
@@ -341,10 +443,10 @@ function createNewFileInFolder(event, folderPath) {
         return;
     }
     
-    // Удаляем существующие инлайн-формы
+    // Видаляємо існуючі інлайн-форми
     document.querySelectorAll('.file-tree-inline-form').forEach(form => form.remove());
     
-    // Создаем инлайн-форму
+    // Створюємо інлайн-форму
     const inlineForm = document.createElement('div');
     inlineForm.className = 'file-tree-inline-form';
     inlineForm.innerHTML = `
@@ -360,7 +462,7 @@ function createNewFileInFolder(event, folderPath) {
         </button>
     `;
     
-    // Добавляем обработчик Enter
+    // Додаємо обробник Enter
     const input = inlineForm.querySelector('.file-tree-inline-input');
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -370,13 +472,13 @@ function createNewFileInFolder(event, folderPath) {
         }
     });
     
-    // Вставляем форму в начало папки
+    // Вставляємо форму на початок папки
     targetFolder.insertBefore(inlineForm, targetFolder.firstChild);
     input.focus();
 }
 
 /**
- * Отправка инлайн-формы создания файла
+ * Відправка інлайн-форми створення файлу
  */
 function submitInlineCreateFile(button, folderPath) {
     const form = button.closest('.file-tree-inline-form');
@@ -402,65 +504,56 @@ function submitInlineCreateFile(button, folderPath) {
     formData.append('file', fullPath);
     formData.append('content', '');
     
-    // Блокируем кнопку
+    // Блокуємо кнопку
     button.disabled = true;
     input.disabled = true;
     
-    // Используем AjaxHelper если доступен
-    const url = window.location.href.split('?')[0];
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, {
-            action: 'create_file',
-            theme: new URLSearchParams(window.location.search).get('theme') || '',
-            file: fullPath,
-            content: ''
-        })
-        : fetch(url, {
-        method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: formData
-        }).then(r => r.json());
-    
-    requestFn
-    .then(data => {
-        if (data.success) {
-            showNotification('Файл успішно створено', 'success');
-            form.remove();
-            
-                // Обновляем дерево файлов через AJAX
+    // Використовуємо утилітну функцію для AJAX запиту
+    const theme = new URLSearchParams(window.location.search).get('theme') || '';
+    makeAjaxRequest('create_file', {
+        theme: theme,
+        file: fullPath,
+        content: ''
+    })
+        .then(data => {
+            if (data.success) {
+                showNotification('Файл успішно створено', 'success');
+                form.remove();
+                
+                // Оновлюємо дерево файлів через AJAX
                 refreshFileTree();
                 
-                // Открываем созданный файл в редакторе
+                // Відкриваємо створений файл в редакторі
                 if (data.path) {
                     setTimeout(() => {
                         loadFileInEditor(data.path);
                     }, 300);
                 }
-        } else {
-            showNotification(data.error || 'Помилка створення', 'danger');
+            } else {
+                showNotification(data.error || 'Помилка створення', 'danger');
+                button.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            showNotification('Помилка створення файлу', 'danger');
             button.disabled = false;
             input.disabled = false;
             input.focus();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка створення файлу', 'danger');
-        button.disabled = false;
-        input.disabled = false;
-        input.focus();
-    });
+        });
 }
 
 /**
- * Создание новой папки
+ * Створення нової папки
  */
 function createNewDirectory() {
     createNewDirectoryInFolder(null, '');
 }
 
 /**
- * Создание новой папки в конкретной папке
+ * Створення нової папки в конкретній папці
  */
 function createNewDirectoryInFolder(event, folderPath) {
     if (event) {
@@ -547,7 +640,7 @@ function createNewDirectoryInFolder(event, folderPath) {
 }
 
 /**
- * Отправка инлайн-формы создания папки
+ * Відправка інлайн-форми створення папки
  */
 function submitInlineCreateDirectory(button, folderPath) {
     const form = button.closest('.file-tree-inline-form');
@@ -560,61 +653,46 @@ function submitInlineCreateDirectory(button, folderPath) {
         return;
     }
     
-    const formData = new FormData();
-    formData.append('action', 'create_directory');
-    formData.append('theme', new URLSearchParams(window.location.search).get('theme') || '');
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-    
-    // Формируем полный путь к папке
+    // Формуємо повний шлях до папки
     let fullPath = directoryName;
     if (folderPath) {
         fullPath = folderPath + '/' + directoryName;
     }
-    formData.append('directory', fullPath);
     
-    // Блокируем кнопку
+    // Блокуємо кнопку
     button.disabled = true;
     input.disabled = true;
     
-    // Используем AjaxHelper если доступен
-    const url = window.location.href.split('?')[0];
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, {
-            action: 'create_directory',
-            theme: new URLSearchParams(window.location.search).get('theme') || '',
-            directory: fullPath
-        })
-        : fetch(url, {
-        method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: formData
-        }).then(r => r.json());
-    
-    requestFn
-    .then(data => {
-        if (data.success) {
-            showNotification('Папку успішно створено', 'success');
-            form.remove();
-                // Обновляем дерево файлов через AJAX
+    // Використовуємо утилітну функцію для AJAX запиту
+    const theme = new URLSearchParams(window.location.search).get('theme') || '';
+    makeAjaxRequest('create_directory', {
+        theme: theme,
+        directory: fullPath
+    })
+        .then(data => {
+            if (data.success) {
+                showNotification('Папку успішно створено', 'success');
+                form.remove();
+                // Оновлюємо дерево файлів через AJAX
                 refreshFileTree();
-        } else {
-            showNotification(data.error || 'Помилка створення', 'danger');
+            } else {
+                showNotification(data.error || 'Помилка створення', 'danger');
+                button.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            showNotification('Помилка створення папки', 'danger');
             button.disabled = false;
             input.disabled = false;
             input.focus();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка створення папки', 'danger');
-        button.disabled = false;
-        input.disabled = false;
-        input.focus();
-    });
+        });
 }
 
 /**
- * Отмена инлайн-формы
+ * Скасування інлайн-форми
  */
 function cancelInlineForm(button) {
     const form = button.closest('.file-tree-inline-form');
@@ -624,11 +702,8 @@ function cancelInlineForm(button) {
 }
 
 /**
- * Удаление текущего файла
- */
-/**
- * Удаление папки
- * Функция должна быть доступна глобально для использования в onclick
+ * Видалення папки
+ * Функція повинна бути доступна глобально для використання в onclick
  */
 function deleteCurrentFolder(event, folderPath) {
     if (event) {
@@ -641,44 +716,22 @@ function deleteCurrentFolder(event, folderPath) {
         return;
     }
     
-    // Логируем для отладки
-    console.log('deleteCurrentFolder called with path:', folderPath);
-    
     if (!confirm('Ви впевнені, що хочете видалити цю папку?\n\nВсі файли та підпапки всередині також будуть видалені.\n\nЦю дію неможливо скасувати!')) {
         return;
     }
     
-    const textarea = document.getElementById('theme-file-editor');
-    const theme = textarea ? textarea.getAttribute('data-theme') : new URLSearchParams(window.location.search).get('theme') || '';
+    const theme = getThemeFromPage();
     
     if (!theme) {
         showNotification('Тему не вказано', 'danger');
         return;
     }
     
-    const url = window.location.href.split('?')[0];
-    const formData = {
-        action: 'delete_directory',
+    // Використовуємо утилітну функцію для AJAX запиту
+    makeAjaxRequest('delete_directory', {
         theme: theme,
         folder: folderPath
-    };
-    
-    // Используем AjaxHelper если доступен
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, formData)
-        : fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                ...formData,
-                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
-            })
-        }).then(r => r.json());
-    
-    requestFn
+    })
         .then(data => {
             if (data.success) {
                 showNotification(data.message || 'Папку успішно видалено', 'success');
@@ -688,13 +741,13 @@ function deleteCurrentFolder(event, folderPath) {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Помилка:', error);
             showNotification('Помилка видалення папки', 'danger');
         });
 }
 
 /**
- * Переименование файла или папки
+ * Перейменування файлу або папки
  */
 function renameFileOrFolder(event, path, isFolder = false) {
     if (event) {
@@ -702,83 +755,29 @@ function renameFileOrFolder(event, path, isFolder = false) {
         event.stopPropagation();
     }
     
-    // Проверяем, не пытаемся ли переименовать корневую папку
+    // Перевіряємо, чи не намагаємося перейменувати кореневу папку
     if (isFolder && (!path || path === '')) {
         showNotification('Неможливо перейменувати кореневу папку теми', 'danger');
         return;
     }
     
-    // Получаем текущее имя
+    // Отримуємо поточну назву
     const currentName = path.split('/').pop() || path;
     
-    // Находим элемент в дереве файлов для замены на inline форму
+    // Знаходимо елемент в дереві файлів для заміни на inline форму
     const fileTree = document.querySelector('.file-tree');
     if (!fileTree) {
         showNotification('Дерево файлів не знайдено', 'danger');
         return;
     }
     
-    // Находим элемент файла/папки в дереве
-    let targetElement = null;
-    
-    if (isFolder) {
-        // Для папок используем data-folder-path
-        targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
-        // Если не найден, ищем через все папки
-        if (!targetElement) {
-            const folders = fileTree.querySelectorAll('.file-tree-folder');
-            for (let folder of folders) {
-                const folderPath = folder.getAttribute('data-folder-path');
-                if (folderPath === path) {
-                    targetElement = folder;
-                    break;
-                }
-            }
-        }
-    } else {
-        // Для файлов используем data-file-path или data-file
-        targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
-        // Если не найден, ищем через все обертки файлов
-        if (!targetElement) {
-            const fileWrappers = fileTree.querySelectorAll('.file-tree-item-wrapper');
-            for (let wrapper of fileWrappers) {
-                const filePath = wrapper.getAttribute('data-file-path');
-                if (filePath === path) {
-                    targetElement = wrapper;
-                    break;
-                }
-            }
-        }
-        // Если все еще не найден, ищем по data-file внутри .file-tree-item
-        if (!targetElement) {
-            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
-            for (let link of fileLinks) {
-                const filePath = link.getAttribute('data-file');
-                if (filePath === path) {
-                    targetElement = link.closest('.file-tree-item-wrapper');
-                    break;
-                }
-            }
-        }
-    }
+    // Використовуємо утилітну функцію для пошуку елемента
+    let targetElement = findTreeElement(path, isFolder);
     
     if (!targetElement) {
-        // Пробуем еще раз через небольшую задержку (на случай, если дерево еще обновляется)
+        // Пробуємо ще раз через невелику затримку (на випадок, якщо дерево ще оновлюється)
         setTimeout(() => {
-            if (isFolder) {
-                targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
-            } else {
-                targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
-                if (!targetElement) {
-                    const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
-                    for (let link of fileLinks) {
-                        if (link.getAttribute('data-file') === path) {
-                            targetElement = link.closest('.file-tree-item-wrapper');
-                            break;
-                        }
-                    }
-                }
-            }
+            targetElement = findTreeElement(path, isFolder);
             if (!targetElement) {
                 showNotification('Елемент не знайдено в дереві. Спробуйте оновити дерево файлів.', 'warning');
             } else {
@@ -788,18 +787,18 @@ function renameFileOrFolder(event, path, isFolder = false) {
         return;
     }
     
-    // Создаем inline форму редактирования
+    // Створюємо inline форму редагування
     createInlineRenameForm(targetElement, path, currentName, isFolder);
 }
 
 /**
- * Создание inline формы для переименования файла/папки
+ * Створення inline форми для перейменування файлу/папки
  */
 function createInlineRenameForm(targetElement, path, currentName, isFolder) {
-    // Скрываем оригинальный элемент
+    // Приховуємо оригінальний елемент
     targetElement.style.display = 'none';
     
-    // Создаем форму редактирования
+    // Створюємо форму редагування
     const inlineForm = document.createElement('div');
     inlineForm.className = 'file-tree-inline-form';
     inlineForm.innerHTML = `
@@ -812,7 +811,7 @@ function createInlineRenameForm(targetElement, path, currentName, isFolder) {
         </button>
     `;
     
-    // Добавляем обработчик Enter
+    // Додаємо обробник Enter
     const input = inlineForm.querySelector('.file-tree-inline-input');
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -822,47 +821,34 @@ function createInlineRenameForm(targetElement, path, currentName, isFolder) {
         }
     });
     
-    // Вставляем форму после оригинального элемента
+    // Вставляємо форму після оригінального елемента
     targetElement.parentNode.insertBefore(inlineForm, targetElement.nextSibling);
     input.focus();
-    input.select(); // Выделяем текст для удобного редактирования
+    input.select(); // Виділяємо текст для зручного редагування
 }
 
 /**
- * Отмена переименования
+ * Скасування перейменування
  */
 function cancelInlineRename(button, path) {
     const form = button.closest('.file-tree-inline-form');
     if (!form) return;
     
-    // Находим и показываем оригинальный элемент
-    const fileTree = document.querySelector('.file-tree');
-    if (fileTree) {
-        // Пробуем найти элемент по data-атрибутам
-        let targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
-        if (!targetElement) {
-            targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
-        }
-        if (!targetElement) {
-            // Пробуем найти через .file-tree-item
-            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
-            for (let link of fileLinks) {
-                if (link.getAttribute('data-file') === path) {
-                    targetElement = link.closest('.file-tree-item-wrapper');
-                    break;
-                }
-            }
-        }
-        if (targetElement) {
-            targetElement.style.display = '';
-        }
+    // Використовуємо утилітну функцію для пошуку та показу елемента
+    // Пробуємо знайти як папку, потім як файл
+    let targetElement = findTreeElement(path, true);
+    if (!targetElement) {
+        targetElement = findTreeElement(path, false);
+    }
+    if (targetElement) {
+        targetElement.style.display = '';
     }
     
     form.remove();
 }
 
 /**
- * Отправка inline формы переименования
+ * Відправка inline форми перейменування
  */
 function submitInlineRename(button, oldPath, isFolder) {
     const form = button.closest('.file-tree-inline-form');
@@ -881,8 +867,7 @@ function submitInlineRename(button, oldPath, isFolder) {
         return;
     }
     
-    const textarea = document.getElementById('theme-file-editor');
-    const theme = textarea ? textarea.getAttribute('data-theme') : new URLSearchParams(window.location.search).get('theme') || '';
+    const theme = getThemeFromPage();
     
     if (!theme) {
         showNotification('Тему не вказано', 'danger');
@@ -890,45 +875,28 @@ function submitInlineRename(button, oldPath, isFolder) {
         return;
     }
     
-    const url = window.location.href.split('?')[0];
     const action = isFolder ? 'rename_directory' : 'rename_file';
-    const formData = {
-        action: action,
-        theme: theme,
-        old_path: oldPath,
-        new_name: newName
-    };
     
-    // Блокируем кнопку и input
+    // Блокуємо кнопку та input
     button.disabled = true;
     input.disabled = true;
     
-    // Используем AjaxHelper если доступен
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, formData)
-        : fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                ...formData,
-                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
-            })
-        }).then(r => r.json());
-    
-    requestFn
+    // Використовуємо утилітну функцію для AJAX запиту
+    makeAjaxRequest(action, {
+        theme: theme,
+        old_path: oldPath,
+        new_name: newName
+    })
         .then(data => {
-            form.remove(); // Удаляем форму в любом случае
+            form.remove(); // Видаляємо форму в будь-якому випадку
             
             if (data.success) {
                 showNotification(data.message || (isFolder ? 'Папку успішно перейменовано' : 'Файл успішно перейменовано'), 'success');
                 
-                // Обновляем дерево файлов - это покажет переименованный файл
+                // Оновлюємо дерево файлів - це покаже перейменований файл
                 refreshFileTree();
                 
-                // Если переименован открытый файл, обновляем его в редакторе
+                // Якщо перейменовано відкритий файл, оновлюємо його в редакторі
                 if (!isFolder && data.new_path) {
                     const textarea = document.getElementById('theme-file-editor');
                     const currentFile = textarea ? textarea.getAttribute('data-file') : '';
@@ -939,65 +907,28 @@ function submitInlineRename(button, oldPath, isFolder) {
                     }
                 }
             } else {
-                showNotification(data.error || (isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу'), 'danger');
-                // Показываем оригинальный элемент снова
-                const fileTree = document.querySelector('.file-tree');
-                if (fileTree) {
-                    let targetElement = null;
-                    if (isFolder) {
-                        targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(oldPath)}"]`);
-                    } else {
-                        targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(oldPath)}"]`);
-                        if (!targetElement) {
-                            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
-                            for (let link of fileLinks) {
-                                if (link.getAttribute('data-file') === oldPath) {
-                                    targetElement = link.closest('.file-tree-item-wrapper');
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (targetElement) {
-                        targetElement.style.display = '';
-                    }
-                }
+                showNotification(data.error || (isFolder ? 'Помилка перейменування папки' : 'Помилка перейменування файлу'), 'danger');
+                // Показуємо оригінальний елемент знову, використовуючи утилітну функцію
+                showTreeElement(oldPath, isFolder);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Помилка:', error);
             form.remove();
-            showNotification(isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу', 'danger');
-            // Показываем оригинальный элемент снова
-            const fileTree = document.querySelector('.file-tree');
-            if (fileTree) {
-                let targetElement = null;
-                if (isFolder) {
-                    targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(oldPath)}"]`);
-                } else {
-                    targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(oldPath)}"]`);
-                    if (!targetElement) {
-                        const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
-                        for (let link of fileLinks) {
-                            if (link.getAttribute('data-file') === oldPath) {
-                                targetElement = link.closest('.file-tree-item-wrapper');
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (targetElement) {
-                    targetElement.style.display = '';
-                }
-            }
+            showNotification(isFolder ? 'Помилка перейменування папки' : 'Помилка перейменування файлу', 'danger');
+            // Показуємо оригінальний елемент знову, використовуючи утилітну функцію
+            showTreeElement(oldPath, isFolder);
         });
 }
 
+/**
+ * Видалення поточного файлу
+ */
 function deleteCurrentFile(event, filePath) {
     event.preventDefault();
     event.stopPropagation();
     
-    // Проверяем, не пытаемся ли удалить критический файл
+    // Перевіряємо, чи не намагаємося видалити критичний файл
     const criticalFiles = ['index.php', 'theme.json'];
     const fileName = filePath.split('/').pop() || filePath;
     if (criticalFiles.includes(fileName)) {
@@ -1005,92 +936,76 @@ function deleteCurrentFile(event, filePath) {
         return;
     }
     
-    const textarea = document.getElementById('theme-file-editor');
-    const theme = textarea.getAttribute('data-theme');
+    const theme = getThemeFromPage();
     
     showConfirmDialog(
         'Видалити файл',
         'Ви впевнені, що хочете видалити цей файл? Цю дію неможливо скасувати.',
         function() {
-            // Используем AjaxHelper если доступен
-            const url = window.location.href.split('?')[0];
-            const requestFn = typeof AjaxHelper !== 'undefined' 
-                ? AjaxHelper.post(url, {
-                    action: 'delete_file',
-                    theme: theme,
-                    file: filePath
-                })
-                : fetch(url, {
-        method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    body: new URLSearchParams({
-                        action: 'delete_file',
-                        theme: theme,
-                        file: filePath,
-                        csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
-                    })
-                }).then(r => r.json());
-            
-            requestFn
-    .then(data => {
-        if (data.success) {
-            showNotification('Файл успішно видалено', 'success');
-                    
-                    // Закрываем редактор, если удален открытый файл
-                    const textarea = document.getElementById('theme-file-editor');
-                    const currentFile = textarea ? textarea.getAttribute('data-file') : '';
-                    if (currentFile === filePath) {
-                        // Скрываем редактор, показываем placeholder
-                        const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
-                        const editorHeader = document.getElementById('editor-header');
-                        const editorBody = document.getElementById('editor-body');
-                        const editorFooter = document.getElementById('editor-footer');
+            // Використовуємо утилітну функцію для AJAX запиту
+            makeAjaxRequest('delete_file', {
+                theme: theme,
+                file: filePath
+            })
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Файл успішно видалено', 'success');
                         
-                        if (editorPlaceholder) {
-                            editorPlaceholder.style.display = 'flex';
-                        }
-                        if (editorHeader) {
-                            editorHeader.style.display = 'none';
-                        }
-                        if (editorBody) {
-                            editorBody.style.display = 'none';
-                        }
-                        if (editorFooter) {
-                            editorFooter.style.display = 'none';
+                        // Закриваємо редактор, якщо видалено відкритий файл
+                        const textarea = document.getElementById('theme-file-editor');
+                        const currentFile = textarea ? textarea.getAttribute('data-file') : '';
+                        if (currentFile === filePath) {
+                            // Приховуємо редактор, показуємо placeholder
+                            const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
+                            const editorHeader = document.getElementById('editor-header');
+                            const editorBody = document.getElementById('editor-body');
+                            const editorFooter = document.getElementById('editor-footer');
+                            
+                            if (editorPlaceholder) {
+                                editorPlaceholder.style.display = 'flex';
+                            }
+                            if (editorHeader) {
+                                editorHeader.style.display = 'none';
+                            }
+                            if (editorBody) {
+                                editorBody.style.display = 'none';
+                            }
+                            if (editorFooter) {
+                                editorFooter.style.display = 'none';
+                            }
+                            
+                            // Оновлюємо URL без перезавантаження
+                            const url = new URL(window.location.href);
+                            url.searchParams.delete('file');
+                            window.history.pushState({ path: url.href }, '', url.href);
                         }
                         
-                        // Обновляем URL без перезагрузки
-                        const url = new URL(window.location.href);
-                        url.searchParams.delete('file');
-                        window.history.pushState({ path: url.href }, '', url.href);
+                        // Оновлюємо дерево файлів через AJAX
+                        refreshFileTree();
+                    } else {
+                        showNotification(data.error || 'Помилка видалення', 'danger');
                     }
-                    
-                    // Обновляем дерево файлов через AJAX
-                    refreshFileTree();
-        } else {
-            showNotification(data.error || 'Помилка видалення', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка видалення файлу', 'danger');
-    });
+                })
+                .catch(error => {
+                    console.error('Помилка:', error);
+                    showNotification('Помилка видалення файлу', 'danger');
+                });
         }
     );
 }
 
 /**
- * Показать уведомление
+ * Показати повідомлення
  */
-// showNotification теперь глобальная функция из notifications.php
+// showNotification тепер глобальна функція з notifications.php
 
 /**
- * Кастомное модальное окно подтверждения
+ * Кастомне модальне вікно підтвердження
  */
 function showConfirmDialog(title, message, onConfirm, confirmText = 'Підтвердити', cancelText = 'Скасувати') {
     const modal = document.getElementById('confirmDialogModal');
     if (!modal) {
-        // Если модальное окно не найдено, используем стандартный confirm
+        // Якщо модальне вікно не знайдено, використовуємо стандартний confirm
         if (confirm(message)) {
             onConfirm();
         }
@@ -1110,11 +1025,11 @@ function showConfirmDialog(title, message, onConfirm, confirmText = 'Підтв�
     if (confirmBtn) {
         confirmBtn.textContent = confirmText;
         
-        // Удаляем старые обработчики
+        // Видаляємо старі обробники
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
         
-        // Добавляем новый обработчик
+        // Додаємо новий обробник
         newConfirmBtn.addEventListener('click', function() {
             const bsModal = bootstrap.Modal.getInstance(modal);
             if (bsModal) {
@@ -1126,29 +1041,29 @@ function showConfirmDialog(title, message, onConfirm, confirmText = 'Підтв�
         });
     }
     
-    // Показываем модальное окно
+    // Показуємо модальне вікно
     const bsModal = new bootstrap.Modal(modal);
     bsModal.show();
 }
 
 /**
- * Автоматическое раскрытие папок до выбранного файла
+ * Автоматичне розкриття папок до вибраного файлу
  */
 function expandPathToFile(filePath) {
     if (!filePath) return;
     
-    // Получаем все папки
+    // Отримуємо всі папки
     const folders = document.querySelectorAll('.file-tree-folder');
     
     folders.forEach(folder => {
         const folderPath = folder.getAttribute('data-folder-path');
         if (!folderPath) return;
         
-        // Нормализуем пути для сравнения
+        // Нормалізуємо шляхи для порівняння
         const folderPathNormalized = folderPath.endsWith('/') ? folderPath : folderPath + '/';
         const filePathNormalized = filePath;
         
-        // Проверяем, начинается ли путь к файлу с пути папки
+        // Перевіряємо, чи починається шлях до файлу зі шляху папки
         if (filePathNormalized.startsWith(folderPathNormalized)) {
             const header = folder.querySelector('.file-tree-folder-header');
             const content = folder.querySelector('.file-tree-folder-content');
@@ -1162,10 +1077,10 @@ function expandPathToFile(filePath) {
 }
 
 /**
- * Инициализация древовидной структуры файлов
+ * Ініціалізація древовидної структури файлів
  */
 function initFileTree() {
-    // Автоматически раскрываем путь к выбранному файлу
+    // Автоматично розкриваємо шлях до вибраного файлу
     const activeFile = document.querySelector('.file-tree-item-wrapper.active');
     if (activeFile) {
         const filePath = activeFile.getAttribute('data-file-path') || 
@@ -1175,8 +1090,8 @@ function initFileTree() {
         }
     }
     
-    // Обработка кликов по файлам и папкам - используем делегирование событий
-    // Это позволяет работать с динамически обновляемыми элементами
+    // Обробка кліків по файлам та папкам - використовуємо делегування подій
+    // Це дозволяє працювати з динамічно оновлюваними елементами
     const fileTree = document.querySelector('.file-tree');
     if (fileTree && !fileTree.dataset.delegateHandler) {
         fileTree.addEventListener('click', function(e) {
@@ -1244,7 +1159,7 @@ function initFileTree() {
     }
 }
 
-// Предупреждение при уходе со страницы с несохраненными изменениями
+// Попередження при виході зі сторінки з незбереженими змінами
 window.addEventListener('beforeunload', function(e) {
     if (isModified) {
         e.preventDefault();
@@ -1253,7 +1168,7 @@ window.addEventListener('beforeunload', function(e) {
 });
 
 /**
- * Загрузка файла в папку (открывает встроенный режим загрузки)
+ * Завантаження файлу в папку (відкриває вбудований режим завантаження)
  */
 function uploadFileToFolder(event, folderPath) {
     if (event) {
@@ -1261,13 +1176,12 @@ function uploadFileToFolder(event, folderPath) {
         event.stopPropagation();
     }
     
-    // Открываем встроенный режим загрузки вместо модального окна
+    // Відкриваємо вбудований режим завантаження замість модального вікна
     showUploadFiles(folderPath || '');
 }
 
-
 /**
- * Скачивание файла
+ * Скачування файлу
  */
 function downloadFile(event, filePath) {
     if (event) {
@@ -1281,7 +1195,7 @@ function downloadFile(event, filePath) {
 }
 
 /**
- * Скачивание папки (ZIP)
+ * Скачування папки (ZIP)
  */
 function downloadFolder(event, folderPath) {
     if (event) {
@@ -1478,215 +1392,181 @@ function loadFile(event, filePath) {
 }
 
 /**
- * Загрузка файла в редактор через AJAX
+ * Завантаження файлу в редактор через AJAX
  */
 function loadFileInEditor(filePath) {
-    // Проверяем, является ли файл log.txt (системный файл)
+    // Перевіряємо, чи є файл log.txt (системний файл)
     const fileName = filePath.split('/').pop() || filePath;
     if (fileName.toLowerCase() === 'log.txt' || fileName.toLowerCase().endsWith('.log.txt')) {
         showNotification('⚠️ Увага: Це системний файл логів. Редагування може призвести до втрати даних про помилки системи.', 'warning');
     }
     
-    let theme = new URLSearchParams(window.location.search).get('theme') || '';
-    
-    // Если тема не указана в URL, пробуем получить из data-атрибута textarea
-    if (!theme) {
-        const textarea = document.getElementById('theme-file-editor');
-        if (textarea) {
-            theme = textarea.getAttribute('data-theme') || '';
-        }
-    }
+    const theme = getThemeFromPage();
     
     if (!theme) {
         showNotification('Тему не вказано', 'danger');
         return Promise.reject(new Error('Тему не вказано'));
     }
     
-    // Используем AjaxHelper для загрузки файла
-    const url = window.location.href.split('?')[0];
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, { action: 'get_file', theme: theme, file: filePath })
-        : fetch(url, {
-        method: 'POST',
-        headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({ 
-                action: 'get_file', 
-                theme: theme, 
-                file: filePath,
-                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
-            })
-        }).then(response => {
-            // Проверяем, что ответ является JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                return response.text().then(text => {
-                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 200));
+    // Використовуємо утилітну функцію для завантаження файлу
+    return makeAjaxRequest('get_file', { theme: theme, file: filePath })
+        .then(data => {
+            if (data.success && data.content !== undefined) {
+                // Оновлюємо активний файл в дереві
+                document.querySelectorAll('.file-tree-item-wrapper').forEach(item => {
+                    item.classList.remove('active');
                 });
-            }
-            return response.json();
-        });
-    
-    return requestFn
-    .then(data => {
-        if (data.success && data.content !== undefined) {
-            // Обновляем активный файл в дереве
-            document.querySelectorAll('.file-tree-item-wrapper').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            let fileWrapper = document.querySelector(`[data-file-path="${filePath}"]`);
-            if (fileWrapper) {
-                fileWrapper.classList.add('active');
-            }
-            
-            // Скрываем встроенные режимы (загрузка файлов, настройки)
-            hideEmbeddedModes();
-            
-            // Показываем редактор, скрываем placeholder
-            const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
-            const editorHeader = document.getElementById('editor-header');
-            const editorBody = document.getElementById('editor-body');
-            const editorFooter = document.getElementById('editor-footer');
-            
-            if (editorPlaceholder) {
-                editorPlaceholder.style.display = 'none';
-            }
-            if (editorHeader) {
-                editorHeader.style.display = 'block';
-            }
-            if (editorBody) {
-                editorBody.style.display = 'block';
-            }
-            if (editorFooter) {
-                editorFooter.style.setProperty('display', 'flex', 'important');
-                // Восстанавливаем кнопки в футере
-                const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
-                if (footerButtons) footerButtons.style.display = 'flex';
-                const statusText = editorFooter.querySelector('#editor-status');
-                if (statusText) statusText.style.display = 'block';
-                const statusIcon = editorFooter.querySelector('#editor-status-icon');
-                if (statusIcon) statusIcon.style.display = 'inline-block';
-                // Восстанавливаем заголовок файла в хедере
-                const fileTitle = editorHeader?.querySelector('.editor-file-title');
-                if (fileTitle && filePath) {
-                    const extension = filePath.split('.').pop() || '';
-                    fileTitle.innerHTML = '<i class="fas fa-edit me-2"></i>' + escapeHtml(filePath);
+                
+                let fileWrapper = document.querySelector(`[data-file-path="${filePath}"]`);
+                if (fileWrapper) {
+                    fileWrapper.classList.add('active');
                 }
-                // Восстанавливаем информацию о файле в хедере
-                const fileInfo = editorHeader?.querySelector('.d-flex.justify-content-between > div:last-child');
-                if (fileInfo) fileInfo.style.display = 'block';
-                // Восстанавливаем оригинальную кнопку "Зберегти"
-                const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
-                if (saveBtn) {
-                    // Восстанавливаем оригинальные значения если были изменены
-                    if (saveBtn.getAttribute('data-original-onclick')) {
-                        saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
-                        saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
-                        saveBtn.removeAttribute('data-original-onclick');
-                        saveBtn.removeAttribute('data-original-html');
-                    } else if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
-                        // Если нет сохраненных значений, восстанавливаем вручную
-                        saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
-                        saveBtn.setAttribute('onclick', 'saveFile()');
-                    }
-                    if (saveBtn.style.display === 'none') {
-                        saveBtn.style.display = '';
-                    }
+                
+                // Приховуємо вбудовані режими (завантаження файлів, налаштування)
+                hideEmbeddedModes();
+                
+                // Показуємо редактор, приховуємо placeholder
+                const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
+                const editorHeader = document.getElementById('editor-header');
+                const editorBody = document.getElementById('editor-body');
+                const editorFooter = document.getElementById('editor-footer');
+                
+                if (editorPlaceholder) {
+                    editorPlaceholder.style.display = 'none';
                 }
-            }
-            
-            // Убеждаемся, что textarea существует и обновлен
-            let textareaEl = document.getElementById('theme-file-editor');
-            if (!textareaEl) {
-                // Создаем textarea если его нет
+                if (editorHeader) {
+                    editorHeader.style.display = 'block';
+                }
                 if (editorBody) {
-                    textareaEl = document.createElement('textarea');
-                    textareaEl.id = 'theme-file-editor';
-                    editorBody.appendChild(textareaEl);
+                    editorBody.style.display = 'block';
                 }
-            }
-            
-            if (textareaEl) {
-                // Обновляем атрибуты textarea
-                const extension = filePath.split('.').pop() || '';
-                textareaEl.setAttribute('data-theme', theme);
-                textareaEl.setAttribute('data-file', filePath);
-                textareaEl.setAttribute('data-extension', extension);
-                textareaEl.setAttribute('data-syntax-highlighting', editorSettings.enableSyntaxHighlighting ? '1' : '0');
-                textareaEl.value = data.content;
-            }
-            
-            // Загружаем содержимое в редактор
-            if (codeEditor) {
-                // Если редактор уже инициализирован, обновляем его
-                codeEditor.setValue(data.content);
-                originalContent = data.content;
-                isModified = false;
-                
-                // Убеждаемся, что статус и кнопки обновлены
-                updateEditorStatus();
-                
-                // Применяем все настройки к редактору
-                applyEditorSettingsToCodeMirror();
-            } else {
-                // Если редактор еще не инициализирован, инициализируем его
-                if (typeof CodeMirror !== 'undefined' && textareaEl) {
-                    initCodeMirror();
+                if (editorFooter) {
+                    editorFooter.style.setProperty('display', 'flex', 'important');
+                    // Відновлюємо кнопки в футері
+                    const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
+                    if (footerButtons) footerButtons.style.display = 'flex';
+                    const statusText = editorFooter.querySelector('#editor-status');
+                    if (statusText) statusText.style.display = 'block';
+                    const statusIcon = editorFooter.querySelector('#editor-status-icon');
+                    if (statusIcon) statusIcon.style.display = 'inline-block';
+                    // Відновлюємо заголовок файлу в хедері
+                    const fileTitle = editorHeader?.querySelector('.editor-file-title');
+                    if (fileTitle && filePath) {
+                        const extension = filePath.split('.').pop() || '';
+                        fileTitle.innerHTML = '<i class="fas fa-edit me-2"></i>' + escapeHtml(filePath);
+                    }
+                    // Відновлюємо інформацію про файл в хедері
+                    const fileInfo = editorHeader?.querySelector('.d-flex.justify-content-between > div:last-child');
+                    if (fileInfo) fileInfo.style.display = 'block';
+                    // Відновлюємо оригінальну кнопку "Зберегти"
+                    const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
+                    if (saveBtn) {
+                        // Відновлюємо оригінальні значення якщо були змінені
+                        if (saveBtn.getAttribute('data-original-onclick')) {
+                            saveBtn.setAttribute('onclick', saveBtn.getAttribute('data-original-onclick'));
+                            saveBtn.innerHTML = saveBtn.getAttribute('data-original-html');
+                            saveBtn.removeAttribute('data-original-onclick');
+                            saveBtn.removeAttribute('data-original-html');
+                        } else if (saveBtn.getAttribute('onclick') === 'startFilesUpload()') {
+                            // Якщо немає збережених значень, відновлюємо вручну
+                            saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
+                            saveBtn.setAttribute('onclick', 'saveFile()');
+                        }
+                        if (saveBtn.style.display === 'none') {
+                            saveBtn.style.display = '';
+                        }
+                    }
                 }
-            }
-            
-            // Обновляем заголовок файла
-            const fileTitle = document.querySelector('.editor-file-title');
-            if (fileTitle) {
-                fileTitle.innerHTML = '';
+                
+                // Переконуємося, що textarea існує та оновлений
+                let textareaEl = document.getElementById('theme-file-editor');
+                if (!textareaEl) {
+                    // Створюємо textarea якщо його немає
+                    if (editorBody) {
+                        textareaEl = document.createElement('textarea');
+                        textareaEl.id = 'theme-file-editor';
+                        editorBody.appendChild(textareaEl);
+                    }
+                }
+                
+                if (textareaEl) {
+                    // Оновлюємо атрибути textarea
+                    const extension = filePath.split('.').pop() || '';
+                    textareaEl.setAttribute('data-theme', theme);
+                    textareaEl.setAttribute('data-file', filePath);
+                    textareaEl.setAttribute('data-extension', extension);
+                    textareaEl.setAttribute('data-syntax-highlighting', editorSettings.enableSyntaxHighlighting ? '1' : '0');
+                    textareaEl.value = data.content;
+                }
+                
+                // Завантажуємо вміст в редактор
+                if (codeEditor) {
+                    // Якщо редактор вже ініціалізовано, оновлюємо його
+                    codeEditor.setValue(data.content);
+                    originalContent = data.content;
+                    isModified = false;
+                    
+                    // Переконуємося, що статус та кнопки оновлені
+                    updateEditorStatus();
+                    
+                    // Застосовуємо всі налаштування до редактора
+                    applyEditorSettingsToCodeMirror();
+                } else {
+                    // Якщо редактор ще не ініціалізовано, ініціалізуємо його
+                    if (typeof CodeMirror !== 'undefined' && textareaEl) {
+                        initCodeMirror();
+                    }
+                }
+                
+                // Оновлюємо заголовок файлу
+                const fileTitle = document.querySelector('.editor-file-title');
+                if (fileTitle) {
+                    fileTitle.innerHTML = '';
                     const newIcon = document.createElement('i');
-                newIcon.className = 'fas fa-edit me-2';
+                    newIcon.className = 'fas fa-edit me-2';
                     fileTitle.appendChild(newIcon);
-                fileTitle.appendChild(document.createTextNode(filePath));
-            }
-            
-            // Обновляем расширение и размер
-            const extensionEl = document.getElementById('editor-extension');
-            if (extensionEl) {
-                extensionEl.textContent = filePath.split('.').pop()?.toUpperCase() || '';
-            }
-            
-            // Обновляем размер файла если доступен
-            if (data.size !== undefined) {
-                const sizeEl = document.getElementById('editor-size');
-                if (sizeEl) {
-                    sizeEl.textContent = formatBytes(data.size);
+                    fileTitle.appendChild(document.createTextNode(filePath));
                 }
+                
+                // Оновлюємо розширення та розмір
+                const extensionEl = document.getElementById('editor-extension');
+                if (extensionEl) {
+                    extensionEl.textContent = filePath.split('.').pop()?.toUpperCase() || '';
+                }
+                
+                // Оновлюємо розмір файлу якщо доступний
+                if (data.size !== undefined) {
+                    const sizeEl = document.getElementById('editor-size');
+                    if (sizeEl) {
+                        sizeEl.textContent = formatBytes(data.size);
+                    }
+                }
+                
+                // Прокручуємо до активного файлу
+                if (fileWrapper) {
+                    fileWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                
+                // Розкриваємо шлях до файлу
+                expandPathToFile(filePath);
+                
+                // Оновлюємо URL без перезавантаження
+                const url = new URL(window.location.href);
+                url.searchParams.set('file', filePath);
+                // Видаляємо параметри folder та mode, оскільки ми відкриваємо файл
+                url.searchParams.delete('folder');
+                url.searchParams.delete('mode');
+                window.history.pushState({ path: url.href }, '', url.href);
+            } else {
+                showNotification(data.error || 'Помилка завантаження файлу', 'danger');
+                throw new Error(data.error || 'Помилка завантаження файлу');
             }
-            
-            // Прокручиваем к активному файлу
-            if (fileWrapper) {
-                fileWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-            
-            // Раскрываем путь к файлу
-            expandPathToFile(filePath);
-            
-            // Обновляем URL без перезагрузки
-            const url = new URL(window.location.href);
-            url.searchParams.set('file', filePath);
-            // Удаляем параметры folder и mode, так как мы открываем файл
-            url.searchParams.delete('folder');
-            url.searchParams.delete('mode');
-            window.history.pushState({ path: url.href }, '', url.href);
-        } else {
-            showNotification(data.error || 'Помилка завантаження файлу', 'danger');
-            throw new Error(data.error || 'Помилка завантаження файлу');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка завантаження файлу', 'danger');
-        throw error;
-    });
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            showNotification('Помилка завантаження файлу', 'danger');
+            throw error;
+        });
 }
 
 /**
@@ -1701,37 +1581,28 @@ function refreshFileTree() {
         return;
     }
     
-    // Получаем текущее значение настройки показа пустых папок из чекбокса
+    // Отримуємо поточне значення налаштування показу пустих папок з чекбокса
     const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline') || document.getElementById('showEmptyFolders');
     const showEmptyFolders = showEmptyCheckbox ? (showEmptyCheckbox.checked ? '1' : '0') : (editorSettings.showEmptyFolders ? '1' : '0');
     
-    // Используем AjaxHelper если доступен
-    const url = window.location.href.split('?')[0];
-    const requestFn = typeof AjaxHelper !== 'undefined' 
-        ? AjaxHelper.post(url, { action: 'get_file_tree', theme: theme, show_empty_folders: showEmptyFolders })
-        : fetch(url, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: new URLSearchParams({ action: 'get_file_tree', theme: theme, show_empty_folders: showEmptyFolders, csrf_token: document.querySelector('input[name="csrf_token"]')?.value || '' })
-        }).then(r => r.json());
-    
-    requestFn
+    // Використовуємо утилітну функцію для AJAX запиту
+    makeAjaxRequest('get_file_tree', { theme: theme, show_empty_folders: showEmptyFolders })
         .then(data => {
             if (data.success && data.tree) {
-                // Обновляем дерево файлов (передаем объект темы)
+                // Оновлюємо дерево файлів (передаємо об'єкт теми)
                 updateFileTree(data.tree, data.theme || theme);
             } else {
                 showNotification(data.error || 'Помилка оновлення дерева', 'danger');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Помилка:', error);
             showNotification('Помилка оновлення дерева файлів', 'danger');
         });
 }
 
 /**
- * Обновление дерева файлов в DOM
+ * Оновлення дерева файлів в DOM
  */
 function updateFileTree(treeArray, theme) {
     const treeContainer = document.querySelector('.file-tree');
@@ -1739,10 +1610,10 @@ function updateFileTree(treeArray, theme) {
         return;
     }
     
-    // Рендерим новое дерево
+    // Рендеримо нове дерево
     const treeHtml = renderFileTreeFromArray(treeArray, theme);
     
-    // Сохраняем состояние раскрытия папок
+    // Зберігаємо стан розкриття папок
     const expandedFolders = [];
     document.querySelectorAll('.file-tree-folder-header.expanded').forEach(header => {
         const path = header.getAttribute('data-folder-path');
@@ -1751,14 +1622,14 @@ function updateFileTree(treeArray, theme) {
         }
     });
     
-    // Заменяем содержимое
+    // Замінюємо вміст
     const rootFolder = treeContainer.querySelector('.file-tree-root');
     if (rootFolder) {
         const rootContent = rootFolder.querySelector('.file-tree-folder-content');
         if (rootContent) {
             rootContent.innerHTML = treeHtml;
             
-            // Восстанавливаем раскрытие папок
+            // Відновлюємо розкриття папок
             expandedFolders.forEach(path => {
                 const folder = document.querySelector(`[data-folder-path="${path}"]`);
                 if (folder) {
@@ -1775,23 +1646,23 @@ function updateFileTree(treeArray, theme) {
                 }
             });
             
-            // Обработчики уже установлены через делегирование событий, не нужно вызывать initFileTree() снова
+            // Обробники вже встановлені через делегування подій, не потрібно викликати initFileTree() знову
         }
     }
 }
 
 /**
- * Рендеринг дерева файлов из массива
+ * Рендеринг дерева файлів з масиву
  */
 function renderFileTreeFromArray(treeArray, theme, level = 1) {
     let html = '';
     
-    // Получаем slug темы
+    // Отримуємо slug теми
     const themeSlug = theme && typeof theme === 'object' ? theme.slug : theme || '';
     
     treeArray.forEach(item => {
         if (item.type === 'folder') {
-            // Проверяем, является ли папка корневой (пустой путь)
+            // Перевіряємо, чи є папка кореневою (порожній шлях)
             const isRootFolder = !item.path || item.path === '';
             
             html += `<div class="file-tree-folder" data-folder-path="${escapeHtml(item.path)}">
@@ -1855,7 +1726,7 @@ function renderFileTreeFromArray(treeArray, theme, level = 1) {
 }
 
 /**
- * Экранирование HTML
+ * Екранування HTML
  */
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -1864,7 +1735,7 @@ function escapeHtml(text) {
 }
 
 /**
- * Форматирование размера в байтах
+ * Форматування розміру в байтах
  */
 function formatBytes(bytes) {
     if (bytes === 0) return '0 B';
@@ -1875,14 +1746,14 @@ function formatBytes(bytes) {
 }
 
 /**
- * Открытие настроек редактора (переключение на встроенный режим настроек)
+ * Відкриття налаштувань редактора (перемикання на вбудований режим налаштувань)
  */
 function openEditorSettings() {
     showEditorSettings();
 }
 
 /**
- * Настройка автоматического сохранения настроек редактора
+ * Налаштування автоматичного збереження налаштувань редактора
  */
 function setupAutoSaveEditorSettings() {
     const showEmptyFolders = document.getElementById('showEmptyFolders');
@@ -1892,16 +1763,16 @@ function setupAutoSaveEditorSettings() {
         return;
     }
     
-    // Проверяем, не настроены ли уже обработчики
+    // Перевіряємо, чи не налаштовані вже обробники
     if (showEmptyFolders.dataset.listener === 'true' && enableSyntaxHighlighting.dataset.listener === 'true') {
-        return; // Обработчики уже установлены
+        return; // Обробники вже встановлені
     }
     
-    // Удаляем старые обработчики, если они есть
+    // Видаляємо старі обробники, якщо вони є
     showEmptyFolders.removeEventListener('change', autoSaveEditorSettings);
     enableSyntaxHighlighting.removeEventListener('change', autoSaveEditorSettings);
     
-    // Добавляем обработчики изменения
+    // Додаємо обробники зміни
     showEmptyFolders.addEventListener('change', autoSaveEditorSettings);
     showEmptyFolders.dataset.listener = 'true';
     
@@ -1910,25 +1781,25 @@ function setupAutoSaveEditorSettings() {
 }
 
 /**
- * Автоматическое сохранение настроек редактора
+ * Автоматичне збереження налаштувань редактора
  */
-let autoSaveTimeout = null;
-let isSaving = false;
+let autoSaveTimeout = null; // Глобальна змінна для debounce таймера
+let isSaving = false; // Глобальна змінна для запобігання множинних збережень
 
 function autoSaveEditorSettings() {
-    // Отменяем предыдущий запрос, если он еще не выполнен (debounce)
+    // Скасовуємо попередній запит, якщо він ще не виконано (debounce)
     if (autoSaveTimeout) {
         clearTimeout(autoSaveTimeout);
     }
     
-    // Если уже выполняется сохранение, не запускаем новый запрос
+    // Якщо вже виконується збереження, не запускаємо новий запит
     if (isSaving) {
         return;
     }
     
-    // Запускаем сохранение с задержкой (debounce 300ms)
+    // Запускаємо збереження з затримкою (debounce 300ms)
     autoSaveTimeout = setTimeout(() => {
-        // Проверяем inline версию настроек, если есть, иначе модальную
+        // Перевіряємо inline версію налаштувань, якщо є, інакше модальну
         const highlightingEl = document.getElementById('enableSyntaxHighlightingInline') || document.getElementById('enableSyntaxHighlighting');
         const showEmptyEl = document.getElementById('showEmptyFoldersInline') || document.getElementById('showEmptyFolders');
         
@@ -1939,133 +1810,73 @@ function autoSaveEditorSettings() {
         const newHighlighting = highlightingEl.checked;
         const newShowEmptyFolders = showEmptyEl.checked;
         
-        // Сохраняем старые значения для проверки изменений
+        // Зберігаємо старі значення для перевірки змін
         const oldHighlighting = editorSettings.enableSyntaxHighlighting;
         const oldShowEmptyFolders = editorSettings.showEmptyFolders;
         
-        // Получаем URL без параметров
+        // Отримуємо URL без параметрів
         const url = window.location.href.split('?')[0];
         
-        // Устанавливаем флаг, что идет сохранение
+        // Встановлюємо прапорець, що йде збереження
         isSaving = true;
         
-        // Если используется AjaxHelper, используем его
-        if (typeof AjaxHelper !== 'undefined') {
-            // Собираем все настройки
-            const formData = {
-                action: 'save_editor_settings',
-                show_empty_folders: newShowEmptyFolders ? '1' : '0',
-                enable_syntax_highlighting: newHighlighting ? '1' : '0',
-                show_line_numbers: (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0',
-                font_family: (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Consolas', monospace",
-                font_size: (document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize'))?.value || '14',
-                editor_theme: (document.getElementById('editorThemeInline') || document.getElementById('editorTheme'))?.value || 'monokai',
-                indent_size: (document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize'))?.value || '4',
-                word_wrap: (document.getElementById('wordWrapInline') || document.getElementById('wordWrap'))?.checked ? '1' : '0',
-                auto_save: (document.getElementById('autoSaveInline') || document.getElementById('autoSave'))?.checked ? '1' : '0',
-                auto_save_interval: (document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval'))?.value || '60'
-            };
-            
-            AjaxHelper.post(url, formData)
+        // Збираємо всі налаштування
+        const formData = {
+            show_empty_folders: newShowEmptyFolders ? '1' : '0',
+            enable_syntax_highlighting: newHighlighting ? '1' : '0',
+            show_line_numbers: (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0',
+            font_family: (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Consolas', monospace",
+            font_size: (document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize'))?.value || '14',
+            editor_theme: (document.getElementById('editorThemeInline') || document.getElementById('editorTheme'))?.value || 'monokai',
+            indent_size: (document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize'))?.value || '4',
+            word_wrap: (document.getElementById('wordWrapInline') || document.getElementById('wordWrap'))?.checked ? '1' : '0',
+            auto_save: (document.getElementById('autoSaveInline') || document.getElementById('autoSave'))?.checked ? '1' : '0',
+            auto_save_interval: (document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval'))?.value || '60'
+        };
+        
+        // Використовуємо утилітну функцію для AJAX запиту
+        makeAjaxRequest('save_editor_settings', formData)
             .then(data => {
                 isSaving = false;
                 
                 if (data.success) {
-                    // Обновляем глобальные настройки
+                    // Оновлюємо глобальні налаштування
                     editorSettings.showEmptyFolders = newShowEmptyFolders;
                     editorSettings.enableSyntaxHighlighting = newHighlighting;
                     
-                    // Применяем все настройки к редактору
+                    // Застосовуємо всі налаштування до редактора
                     applyEditorSettingsToCodeMirror();
                     
-                    // Обновляем дерево файлов, если изменилась настройка показа пустых папок
+                    // Оновлюємо дерево файлів, якщо змінилася налаштування показу пустих папок
                     if (oldShowEmptyFolders !== newShowEmptyFolders) {
                         refreshFileTree();
                     }
                     
                     showNotification('Налаштування збережено', 'success');
                 } else {
-                    // Восстанавливаем значения чекбоксов при ошибке
-                    document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
-                    document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+                    // Відновлюємо значення чекбоксів при помилці
+                    const highlightingEl = document.getElementById('enableSyntaxHighlightingInline') || document.getElementById('enableSyntaxHighlighting');
+                    const showEmptyEl = document.getElementById('showEmptyFoldersInline') || document.getElementById('showEmptyFolders');
+                    if (highlightingEl) highlightingEl.checked = oldHighlighting;
+                    if (showEmptyEl) showEmptyEl.checked = oldShowEmptyFolders;
                     showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
                 }
             })
             .catch(error => {
                 isSaving = false;
-                console.error('Error:', error);
-                // Восстанавливаем значения чекбоксов при ошибке
-                document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
-                document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
+                console.error('Помилка:', error);
+                // Відновлюємо значення чекбоксів при помилці
+                const highlightingEl = document.getElementById('enableSyntaxHighlightingInline') || document.getElementById('enableSyntaxHighlighting');
+                const showEmptyEl = document.getElementById('showEmptyFoldersInline') || document.getElementById('showEmptyFolders');
+                if (highlightingEl) highlightingEl.checked = oldHighlighting;
+                if (showEmptyEl) showEmptyEl.checked = oldShowEmptyFolders;
                 showNotification('Помилка збереження налаштувань', 'danger');
             });
-    } else {
-        // Fallback на старый способ
-    const formData = new FormData();
-        formData.append('action', 'save_editor_settings');
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-        formData.append('show_empty_folders', newShowEmptyFolders ? '1' : '0');
-        formData.append('enable_syntax_highlighting', newHighlighting ? '1' : '0');
-        formData.append('show_line_numbers', (document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers'))?.checked ? '1' : '0');
-        formData.append('font_family', (document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily'))?.value || "'Consolas', monospace");
-        formData.append('font_size', (document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize'))?.value || '14');
-        formData.append('editor_theme', (document.getElementById('editorThemeInline') || document.getElementById('editorTheme'))?.value || 'monokai');
-        formData.append('indent_size', (document.getElementById('editorIndentSizeInline') || document.getElementById('editorIndentSize'))?.value || '4');
-        formData.append('word_wrap', (document.getElementById('wordWrapInline') || document.getElementById('wordWrap'))?.checked ? '1' : '0');
-        formData.append('auto_save', (document.getElementById('autoSaveInline') || document.getElementById('autoSave'))?.checked ? '1' : '0');
-        formData.append('auto_save_interval', (document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval'))?.value || '60');
-        
-        fetch(url, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-        .then(response => {
-            // Проверяем, что ответ является JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                return response.text().then(text => {
-                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 100));
-                });
-            }
-            return response.json();
-        })
-    .then(data => {
-                isSaving = false;
-                
-                if (data.success) {
-                    editorSettings.showEmptyFolders = newShowEmptyFolders;
-                    editorSettings.enableSyntaxHighlighting = newHighlighting;
-                    
-                    // Применяем все настройки к редактору
-                    applyEditorSettingsToCodeMirror();
-                    
-                    if (oldShowEmptyFolders !== newShowEmptyFolders) {
-                        refreshFileTree();
-                    }
-                    
-                    showNotification('Налаштування збережено', 'success');
-                } else {
-                    document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
-                    document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
-                    showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-                }
-    })
-    .catch(error => {
-                isSaving = false;
-        console.error('Error:', error);
-                document.getElementById('enableSyntaxHighlighting').checked = oldHighlighting;
-                document.getElementById('showEmptyFolders').checked = oldShowEmptyFolders;
-                showNotification('Помилка збереження налаштувань', 'danger');
-            });
-        }
     }, 300); // debounce 300ms
 }
 
 /**
- * Динамическое обновление подсветки синтаксиса в CodeMirror
+ * Динамічне оновлення підсвітки синтаксису в CodeMirror
  */
 function updateCodeMirrorHighlighting(enable) {
     if (!codeEditor) {
@@ -2080,7 +1891,7 @@ function updateCodeMirrorHighlighting(enable) {
     const extension = textarea.getAttribute('data-extension');
     
     if (enable) {
-        // Включаем подсветку
+        // Увімкнюємо підсвітку
         const mode = getCodeMirrorMode(extension);
         codeEditor.setOption('mode', mode);
         codeEditor.setOption('theme', 'monokai');
@@ -2089,7 +1900,7 @@ function updateCodeMirrorHighlighting(enable) {
         codeEditor.setOption('foldGutter', true);
         codeEditor.setOption('gutters', ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']);
     } else {
-        // Выключаем подсветку
+        // Вимкнюємо підсвітку
         codeEditor.setOption('mode', null);
         codeEditor.setOption('theme', 'default');
         codeEditor.setOption('matchBrackets', false);
@@ -2102,14 +1913,14 @@ function updateCodeMirrorHighlighting(enable) {
 }
 
 /**
- * Применение всех настроек редактора к CodeMirror
+ * Застосування всіх налаштувань редактора до CodeMirror
  */
 function applyEditorSettingsToCodeMirror() {
     if (!codeEditor) {
         return;
     }
     
-    // Получаем текущие настройки из формы
+    // Отримуємо поточні налаштування з форми
     const showLineNumbers = document.getElementById('showLineNumbersInline') || document.getElementById('showLineNumbers');
     const fontFamily = document.getElementById('editorFontFamilyInline') || document.getElementById('editorFontFamily');
     const fontSize = document.getElementById('editorFontSizeInline') || document.getElementById('editorFontSize');
@@ -2118,7 +1929,7 @@ function applyEditorSettingsToCodeMirror() {
     const wordWrap = document.getElementById('wordWrapInline') || document.getElementById('wordWrap');
     const syntaxHighlighting = document.getElementById('enableSyntaxHighlightingInline') || document.getElementById('enableSyntaxHighlighting');
     
-    // Применяем настройки
+    // Застосовуємо налаштування
     if (showLineNumbers) {
         codeEditor.setOption('lineNumbers', showLineNumbers.checked);
     }
@@ -2148,7 +1959,7 @@ function applyEditorSettingsToCodeMirror() {
         codeEditor.setOption('lineWrapping', wordWrap.checked);
     }
     
-    // Обновляем подсветку синтаксиса
+    // Оновлюємо підсвітку синтаксису
     if (syntaxHighlighting) {
         const textarea = document.getElementById('theme-file-editor');
         if (textarea) {
@@ -2166,43 +1977,46 @@ function applyEditorSettingsToCodeMirror() {
 }
 
 /**
- * Сохранение настроек редактора
+ * Збереження налаштувань редактора
  */
 function saveEditorSettings() {
     const form = document.getElementById('editorSettingsForm');
-    const formData = new FormData(form);
-    formData.append('action', 'save_editor_settings');
-    formData.append('show_empty_folders', document.getElementById('showEmptyFolders').checked ? '1' : '0');
-    formData.append('enable_syntax_highlighting', document.getElementById('enableSyntaxHighlighting').checked ? '1' : '0');
+    if (!form) return;
     
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
+    const formData = new FormData(form);
+    formData.append('show_empty_folders', document.getElementById('showEmptyFolders')?.checked ? '1' : '0');
+    formData.append('enable_syntax_highlighting', document.getElementById('enableSyntaxHighlighting')?.checked ? '1' : '0');
+    
+    // Використовуємо утилітну функцію для AJAX запиту
+    const url = window.location.href.split('?')[0];
+    makeAjaxRequest('save_editor_settings', {
+        show_empty_folders: formData.get('show_empty_folders'),
+        enable_syntax_highlighting: formData.get('enable_syntax_highlighting')
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Налаштування успішно збережено', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('editorSettingsModal')).hide();
-            // Настройки уже применены через autoSaveEditorSettings, ничего не делаем
-        } else {
-            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Помилка збереження налаштувань', 'danger');
-    });
+        .then(data => {
+            if (data.success) {
+                showNotification('Налаштування успішно збережено', 'success');
+                const modal = document.getElementById('editorSettingsModal');
+                if (modal) {
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) bsModal.hide();
+                }
+                // Налаштування вже застосовані через autoSaveEditorSettings, нічого не робимо
+            } else {
+                showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            showNotification('Помилка збереження налаштувань', 'danger');
+        });
 }
 
 /**
- * Сохранение настроек редактора из футера (для режима настроек)
+ * Збереження налаштувань редактора з футера (для режиму налаштувань)
  */
 function saveEditorSettingsFromFooter() {
-    // Получаем все элементы настроек
+    // Отримуємо всі елементи налаштувань
     const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
     const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
     const showLineNumbers = document.getElementById('showLineNumbersInline');
@@ -2214,13 +2028,11 @@ function saveEditorSettingsFromFooter() {
     const autoSave = document.getElementById('autoSaveInline');
     const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
     
-    // Сохраняем старое значение для проверки изменений
+    // Зберігаємо старе значення для перевірки змін
     const oldShowEmptyFolders = editorSettings.showEmptyFolders;
     
-    // Формируем данные для отправки
-    const url = window.location.href.split('?')[0];
+    // Формуємо дані для відправки
     const formData = {
-        action: 'save_editor_settings',
         show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
         enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
         show_line_numbers: showLineNumbers?.checked ? '1' : '0',
@@ -2233,53 +2045,50 @@ function saveEditorSettingsFromFooter() {
         auto_save_interval: autoSaveInterval?.value || '60'
     };
     
-    if (typeof AjaxHelper !== 'undefined') {
-        isSaving = true;
-        AjaxHelper.post(url, formData)
-            .then(data => {
-                isSaving = false;
-                if (data.success) {
-                    // Обновляем глобальные настройки
-                    if (showEmptyCheckbox) editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
-                    if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
-                    
-                    // Применяем настройки к редактору
-                    applyEditorSettingsToCodeMirror();
-                    
-                    // Обновляем дерево файлов, если изменилась настройка показа пустых папок
-                    if (showEmptyCheckbox && oldShowEmptyFolders !== showEmptyCheckbox.checked) {
-                        refreshFileTree();
-                    }
-                    
-                    // Обновляем статус в футере
-                    const statusText = document.getElementById('editor-status');
-                    if (statusText) {
-                        statusText.textContent = 'Налаштування збережено';
-                        statusText.className = 'text-success small';
-                        // Через 2 секунды возвращаем обычный статус
-                        setTimeout(function() {
-                            statusText.textContent = 'Налаштування готові';
-                            statusText.className = 'text-muted small';
-                        }, 2000);
-                    }
-                    
-                    showNotification('Налаштування збережено', 'success');
-                } else {
-                    showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+    isSaving = true;
+    // Використовуємо утилітну функцію для AJAX запиту
+    makeAjaxRequest('save_editor_settings', formData)
+        .then(data => {
+            isSaving = false;
+            if (data.success) {
+                // Оновлюємо глобальні налаштування
+                if (showEmptyCheckbox) editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
+                if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
+                
+                // Застосовуємо налаштування до редактора
+                applyEditorSettingsToCodeMirror();
+                
+                // Оновлюємо дерево файлів, якщо змінилася налаштування показу пустих папок
+                if (showEmptyCheckbox && oldShowEmptyFolders !== showEmptyCheckbox.checked) {
+                    refreshFileTree();
                 }
-            })
-            .catch(error => {
-                isSaving = false;
-                console.error('Error:', error);
-                showNotification('Помилка збереження налаштувань', 'danger');
-            });
-    } else {
-        showNotification('Помилка: AjaxHelper не доступний', 'danger');
-    }
+                
+                // Оновлюємо статус в футері
+                const statusText = document.getElementById('editor-status');
+                if (statusText) {
+                    statusText.textContent = 'Налаштування збережено';
+                    statusText.className = 'text-success small';
+                    // Через 2 секунди повертаємо звичайний статус
+                    setTimeout(function() {
+                        statusText.textContent = 'Налаштування готові';
+                        statusText.className = 'text-muted small';
+                    }, 2000);
+                }
+                
+                showNotification('Налаштування збережено', 'success');
+            } else {
+                showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+            }
+        })
+        .catch(error => {
+            isSaving = false;
+            console.error('Помилка:', error);
+            showNotification('Помилка збереження налаштувань', 'danger');
+        });
 }
 
 /**
- * Скрыть встроенные режимы (загрузка файлов, настройки) и показать редактор
+ * Приховати вбудовані режими (завантаження файлів, налаштування) та показати редактор
  */
 function hideEmbeddedModes() {
     const uploadContent = document.getElementById('upload-mode-content');
@@ -2294,50 +2103,50 @@ function hideEmbeddedModes() {
 }
 
 /**
- * Показать режим загрузки файлов (встраивается вместо редактора)
- * Вызывается из контекстного меню папок
+ * Показати режим завантаження файлів (вбудовується замість редактора)
+ * Викликається з контекстного меню папок
  */
 function showUploadFiles(targetFolder = '') {
-    // Заменяем ТОЛЬКО тело редактора (черное окно с кодом) на режим загрузки
-    // Хедер и футер остаются как в редакторе, без изменений
+    // Замінюємо ТІЛЬКИ тіло редактора (чорне вікно з кодом) на режим завантаження
+    // Хедер та футер залишаються як в редакторі, без змін
     
     const editorBody = document.getElementById('editor-body');
     const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
     const uploadContent = document.getElementById('upload-mode-content');
     const settingsContent = document.getElementById('settings-mode-content');
     
-    // Скрываем тело редактора и placeholder
+    // Приховуємо тіло редактора та placeholder
     if (editorBody) editorBody.style.display = 'none';
     if (editorPlaceholder) editorPlaceholder.style.display = 'none';
     if (settingsContent) settingsContent.style.display = 'none';
     
-    // Показываем хедер и футер (если они были скрыты), но НЕ изменяем их содержимое
+    // Показуємо хедер та футер (якщо вони були приховані), але НЕ змінюємо їх вміст
     const editorHeader = document.getElementById('editor-header');
     const editorFooter = document.getElementById('editor-footer');
     
-    // Показываем хедер, но НЕ изменяем его содержимое - оставляем как для редактирования файла
+    // Показуємо хедер, але НЕ змінюємо його вміст - залишаємо як для редагування файлу
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // НЕ изменяем заголовок - оставляем пустым или с текущим файлом
-        // Информация о файле остается как есть
+        // НЕ змінюємо заголовок - залишаємо порожнім або з поточним файлом
+        // Інформація про файл залишається як є
     }
     
-    // Показываем футер и обновляем для режима загрузки
+    // Показуємо футер та оновлюємо для режиму завантаження
     if (editorFooter) {
-        // Явно показываем футер, переопределяя inline стиль display: none
+        // Явно показуємо футер, перевизначаючи inline стиль display: none
         editorFooter.style.setProperty('display', 'block', 'important');
         editorFooter.style.setProperty('visibility', 'visible', 'important');
-        // Показываем все элементы футера
+        // Показуємо всі елементи футера
         const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
         if (footerButtons) {
             footerButtons.style.display = 'flex';
         }
-        // Обновляем статус на "FTP сервер: подключен"
+        // Оновлюємо статус на "FTP сервер: підключено"
         const statusText = editorFooter.querySelector('#editor-status');
         if (statusText) {
             statusText.style.display = 'block';
             statusText.style.visibility = 'visible';
-            statusText.textContent = 'FTP сервер: подключен';
+            statusText.textContent = 'FTP сервер: підключено';
         }
         const statusIcon = editorFooter.querySelector('#editor-status-icon');
         if (statusIcon) {
@@ -2345,7 +2154,7 @@ function showUploadFiles(targetFolder = '') {
             statusIcon.style.visibility = 'visible';
             statusIcon.className = 'editor-status-dot text-success me-2';
         }
-        // В режиме загрузки скрываем кнопки редактирования
+        // В режимі завантаження приховуємо кнопки редагування
         const cancelBtn = document.getElementById('cancel-btn');
         const editorSaveBtn = document.getElementById('editor-save-btn');
         if (cancelBtn) {
@@ -2355,38 +2164,38 @@ function showUploadFiles(targetFolder = '') {
             editorSaveBtn.style.display = 'none';
         }
         
-        // Кнопки загрузки будут показаны автоматически при добавлении файлов в updateUploadFilesList()
+        // Кнопки завантаження будуть показані автоматично при додаванні файлів в updateUploadFilesList()
         const uploadClearBtn = document.getElementById('upload-clear-btn');
         const uploadSubmitBtn = document.getElementById('upload-submit-btn');
         if (uploadClearBtn) {
-            uploadClearBtn.style.display = 'none'; // Скрываем пока нет файлов
+            uploadClearBtn.style.display = 'none'; // Приховуємо поки немає файлів
         }
         if (uploadSubmitBtn) {
-            uploadSubmitBtn.style.display = 'none'; // Скрываем пока нет файлов
+            uploadSubmitBtn.style.display = 'none'; // Приховуємо поки немає файлів
         }
-        // Скрываем прогресс бар в футере (пока что)
+        // Приховуємо прогрес бар в футері (поки що)
         const footerProgressBar = editorFooter.querySelector('#footer-upload-progress');
         if (footerProgressBar) {
             footerProgressBar.style.display = 'none';
         }
     }
     
-    // Показываем режим загрузки (заменяет тело редактора - черное окно с кодом)
+    // Показуємо режим завантаження (замінює тіло редактора - чорне вікно з кодом)
     if (uploadContent) {
         uploadContent.style.display = 'block';
-        // Инициализируем dropzone при первом показе
+        // Ініціалізуємо dropzone при першому показі
         if (!uploadContent.dataset.initialized) {
             initUploadDropzone();
             loadFoldersForUpload();
             uploadContent.dataset.initialized = 'true';
         }
-        // Устанавливаем целевую папку если указана
+        // Встановлюємо цільову папку якщо вказана
         const select = document.getElementById('upload-target-folder');
         
         if (select) {
             select.value = targetFolder || '';
             
-            // Обновляем заголовок с путем
+            // Оновлюємо заголовок зі шляхом
             const fileTitle = editorHeader?.querySelector('.editor-file-title');
             if (fileTitle) {
                 const uploadPath = targetFolder || 'Коренева папка теми';
@@ -2394,8 +2203,8 @@ function showUploadFiles(targetFolder = '') {
             }
         }
         
-        // Обновляем URL с параметром folder
-        const theme = new URLSearchParams(window.location.search).get('theme') || '';
+        // Оновлюємо URL з параметром folder
+        const theme = getThemeFromPage();
         const url = new URL(window.location.href);
         url.searchParams.set('theme', theme);
         if (targetFolder) {
@@ -2403,37 +2212,37 @@ function showUploadFiles(targetFolder = '') {
         } else {
             url.searchParams.delete('folder');
         }
-        // Удаляем параметры file и mode, так как мы в режиме загрузки
+        // Видаляємо параметри file та mode, оскільки ми в режимі завантаження
         url.searchParams.delete('file');
         url.searchParams.delete('mode');
         window.history.pushState({ path: url.href }, '', url.href);
         
-        // Удаляем обработчик изменения целевой папки, так как папка фиксирована
-        // (она определяется при клике на иконку загрузки в папке)
+        // Видаляємо обробник зміни цільової папки, оскільки папка фіксована
+        // (вона визначається при кліку на іконку завантаження в папці)
     }
 }
 
 /**
- * Показать режим настроек (встраивается вместо редактора)
+ * Показати режим налаштувань (вбудовується замість редактора)
  */
 function showEditorSettings() {
-    // Скрываем тело редактора и показываем режим настроек
+    // Приховуємо тіло редактора та показуємо режим налаштувань
     const editorBody = document.getElementById('editor-body');
     const editorPlaceholder = document.querySelector('.editor-placeholder-wrapper');
     const uploadContent = document.getElementById('upload-mode-content');
     const settingsContent = document.getElementById('settings-mode-content');
     
-    // Скрываем тело редактора и placeholder
+    // Приховуємо тіло редактора та placeholder
     if (editorBody) editorBody.style.display = 'none';
     if (editorPlaceholder) editorPlaceholder.style.display = 'none';
     if (uploadContent) uploadContent.style.display = 'none';
     
-    // Показываем хедер и футер (они должны быть видимы, как в редакторе)
+    // Показуємо хедер та футер (вони повинні бути видимі, як в редакторі)
     const editorHeader = document.getElementById('editor-header');
     const editorFooter = document.getElementById('editor-footer');
     
-    // Обновляем URL - добавляем параметр mode=settings
-    const theme = new URLSearchParams(window.location.search).get('theme') || '';
+    // Оновлюємо URL - додаємо параметр mode=settings
+    const theme = getThemeFromPage();
     const url = new URL(window.location.href);
     url.searchParams.set('theme', theme);
     url.searchParams.set('mode', 'settings');
@@ -2441,35 +2250,35 @@ function showEditorSettings() {
     url.searchParams.delete('folder');
     window.history.pushState({ path: url.href }, '', url.href);
     
-    // Показываем хедер и футер (они остаются как в редакторе, без изменений)
-    // Хедер и футер остаются видимыми с их оригинальным содержимым (текущий файл, статус, кнопки)
+    // Показуємо хедер та футер (вони залишаються як в редакторі, без змін)
+    // Хедер та футер залишаються видимими з їх оригінальним вмістом (поточний файл, статус, кнопки)
     
-    // Показываем хедер и изменяем заголовок на "Налаштування редактора"
+    // Показуємо хедер та змінюємо заголовок на "Налаштування редактора"
     if (editorHeader) {
         editorHeader.style.display = 'block';
-        // Изменяем заголовок на "Налаштування редактора"
+        // Змінюємо заголовок на "Налаштування редактора"
         const fileTitle = editorHeader.querySelector('.editor-file-title');
         if (fileTitle) {
             fileTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Налаштування редактора';
         }
-        // Скрываем информацию о файле (PHP 481 B)
+        // Приховуємо інформацію про файл (PHP 481 B)
         const fileInfo = editorHeader.querySelector('.d-flex.justify-content-between > div:last-child');
         if (fileInfo) {
             fileInfo.style.display = 'none';
         }
     }
     
-    // Показываем футер - он должен быть всегда виден
+    // Показуємо футер - він повинен бути завжди видимий
     if (editorFooter) {
-        // Явно показываем футер, переопределяя inline стиль display: none
+        // Явно показуємо футер, перевизначаючи inline стиль display: none
         editorFooter.style.setProperty('display', 'block', 'important');
         editorFooter.style.setProperty('visibility', 'visible', 'important');
-        // Показываем все элементы футера, НЕ изменяем их содержимое
+        // Показуємо всі елементи футера, НЕ змінюємо їх вміст
         const footerButtons = editorFooter.querySelector('.d-flex.gap-2');
         if (footerButtons) {
             footerButtons.style.display = 'flex';
         }
-        // Обновляем статус для режима настроек
+        // Оновлюємо статус для режиму налаштувань
         const statusText = editorFooter.querySelector('#editor-status');
         if (statusText) {
             statusText.style.display = 'block';
@@ -2481,35 +2290,35 @@ function showEditorSettings() {
             statusIcon.style.display = 'inline-block';
             statusIcon.style.visibility = 'visible';
         }
-        // Скрываем кнопку "Скасувати"
+        // Приховуємо кнопку "Скасувати"
         const cancelBtn = document.getElementById('cancel-btn');
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
-        // Изменяем кнопку "Зберегти" для сохранения настроек
+        // Змінюємо кнопку "Зберегти" для збереження налаштувань
         const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
         if (saveBtn) {
-            // Сохраняем оригинальные значения если они еще не сохранены
+            // Зберігаємо оригінальні значення якщо вони ще не збережені
             if (!saveBtn.getAttribute('data-original-onclick')) {
                 saveBtn.setAttribute('data-original-onclick', saveBtn.getAttribute('onclick') || 'saveFile()');
                 saveBtn.setAttribute('data-original-html', saveBtn.innerHTML);
             }
-            // Устанавливаем обработчик для сохранения настроек
+            // Встановлюємо обробник для збереження налаштувань
             saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Зберегти';
             saveBtn.setAttribute('onclick', 'saveEditorSettingsFromFooter()');
-            // Оставляем кнопку видимой
+            // Залишаємо кнопку видимою
             saveBtn.style.display = '';
         }
     }
     
-    // Показываем режим настроек (заменяет тело редактора)
+    // Показуємо режим налаштувань (замінює тіло редактора)
     if (settingsContent) {
         settingsContent.style.display = 'block';
-        // Загружаем настройки
+        // Завантажуємо налаштування
         loadEditorSettingsInline();
     }
     
-    // Убеждаемся, что футер виден после небольшой задержки
+    // Переконуємося, що футер видимий після невеликої затримки
     setTimeout(function() {
         const footer = document.getElementById('editor-footer');
         if (footer) {
@@ -2520,13 +2329,13 @@ function showEditorSettings() {
 }
 
 /**
- * Инициализация drag & drop для загрузки файлов
+ * Ініціалізація drag & drop для завантаження файлів
  */
 function initUploadDropzone() {
     const dropzone = document.getElementById('upload-dropzone');
     if (!dropzone) return;
     
-    // Убираем старые обработчики
+    // Видаляємо старі обробники
     const newDropzone = dropzone.cloneNode(true);
     dropzone.parentNode.replaceChild(newDropzone, dropzone);
     
@@ -2555,14 +2364,14 @@ function initUploadDropzone() {
 }
 
 /**
- * Обработка выбранных файлов
+ * Обробка вибраних файлів
  */
-let selectedFiles = [];
+let selectedFiles = []; // Глобальна змінна для списку файлів до завантаження
 
 function handleFileSelection(files) {
     const filesArray = Array.from(files);
     
-    // Добавляем файлы в список (избегаем дубликатов)
+    // Додаємо файли в список (уникаємо дублікатів)
     filesArray.forEach(file => {
         const existingIndex = selectedFiles.findIndex(f => f.name === file.name && f.size === file.size);
         if (existingIndex === -1) {
@@ -2574,7 +2383,7 @@ function handleFileSelection(files) {
 }
 
 /**
- * Обновление списка файлов для загрузки
+ * Оновлення списку файлів для завантаження
  */
 function updateUploadFilesList() {
     const filesList = document.getElementById('upload-files-list');
@@ -2585,11 +2394,11 @@ function updateUploadFilesList() {
     
     if (selectedFiles.length === 0) {
         filesList.style.display = 'none';
-        // Показываем dropzone когда нет файлов
+        // Показуємо dropzone коли немає файлів
         if (dropzone) {
             dropzone.style.display = 'flex';
         }
-        // Скрываем кнопки загрузки когда нет файлов
+        // Приховуємо кнопки завантаження коли немає файлів
         const uploadClearBtn = document.getElementById('upload-clear-btn');
         const uploadSubmitBtn = document.getElementById('upload-submit-btn');
         if (uploadClearBtn) uploadClearBtn.style.display = 'none';
@@ -2597,7 +2406,7 @@ function updateUploadFilesList() {
         return;
     }
     
-    // Скрываем dropzone и показываем список файлов
+    // Приховуємо dropzone та показуємо список файлів
     if (dropzone) {
         dropzone.style.display = 'none';
     }
@@ -2626,28 +2435,28 @@ function updateUploadFilesList() {
         `;
     }).join('');
     
-    // Показываем/скрываем кнопки в футере в зависимости от наличия файлов
+    // Показуємо/приховуємо кнопки в футері залежно від наявності файлів
     const uploadClearBtn = document.getElementById('upload-clear-btn');
     const uploadSubmitBtn = document.getElementById('upload-submit-btn');
     const editorSaveBtn = document.getElementById('editor-save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
     
     if (selectedFiles.length > 0) {
-        // Есть файлы - показываем кнопки загрузки, скрываем кнопки редактирования
+        // Є файли - показуємо кнопки завантаження, приховуємо кнопки редагування
         if (uploadClearBtn) uploadClearBtn.style.display = '';
         if (uploadSubmitBtn) uploadSubmitBtn.style.display = '';
         if (editorSaveBtn) editorSaveBtn.style.display = 'none';
         if (cancelBtn) cancelBtn.style.display = 'none';
     } else {
-        // Нет файлов - скрываем кнопки загрузки, показываем кнопки редактирования (если нужно)
+        // Немає файлів - приховуємо кнопки завантаження, показуємо кнопки редагування (якщо потрібно)
         if (uploadClearBtn) uploadClearBtn.style.display = 'none';
         if (uploadSubmitBtn) uploadSubmitBtn.style.display = 'none';
-        // Не меняем отображение кнопок редактирования здесь, они управляются отдельно
+        // Не змінюємо відображення кнопок редагування тут, вони керуються окремо
     }
 }
 
 /**
- * Удаление файла из списка загрузки
+ * Видалення файлу зі списку завантаження
  */
 function removeFileFromUploadList(index) {
     selectedFiles.splice(index, 1);
@@ -2655,7 +2464,7 @@ function removeFileFromUploadList(index) {
 }
 
 /**
- * Очистка списка загрузки
+ * Очищення списку завантаження
  */
 function clearUploadList() {
     selectedFiles = [];
@@ -2665,7 +2474,7 @@ function clearUploadList() {
         fileInput.value = '';
     }
     
-    // После очистки списка скрываем кнопки загрузки
+    // Після очищення списку приховуємо кнопки завантаження
     const uploadClearBtn = document.getElementById('upload-clear-btn');
     const uploadSubmitBtn = document.getElementById('upload-submit-btn');
     if (uploadClearBtn) uploadClearBtn.style.display = 'none';
@@ -2673,22 +2482,21 @@ function clearUploadList() {
 }
 
 /**
- * Загрузка списка папок для выбора цели загрузки
+ * Завантаження списку папок для вибору цілі завантаження
  */
 function loadFoldersForUpload() {
-    const textarea = document.getElementById('theme-file-editor');
-    const theme = textarea ? textarea.getAttribute('data-theme') : '';
+    const theme = getThemeFromPage();
     if (!theme) return;
     
     const select = document.getElementById('upload-target-folder');
     if (!select) return;
     
-    // Очищаем существующие опции (кроме первой)
+    // Очищаємо існуючі опції (крім першої)
     while (select.children.length > 1) {
         select.removeChild(select.lastChild);
     }
     
-    // Собираем все папки из дерева файлов
+    // Збираємо всі папки з дерева файлів
     const folders = document.querySelectorAll('.file-tree-folder[data-folder-path]');
     folders.forEach(folder => {
         const path = folder.getAttribute('data-folder-path');
@@ -2697,14 +2505,14 @@ function loadFoldersForUpload() {
             const name = header ? header.textContent.trim().replace(/^.*?\s/, '') : path;
             const option = document.createElement('option');
             option.value = path;
-            option.textContent = name || 'Корень';
+            option.textContent = name || 'Корінь';
             select.appendChild(option);
         }
     });
 }
 
 /**
- * Начало загрузки файлов
+ * Початок завантаження файлів
  */
 function startFilesUpload() {
     if (selectedFiles.length === 0) {
@@ -2712,23 +2520,22 @@ function startFilesUpload() {
         return;
     }
     
-    const textarea = document.getElementById('theme-file-editor');
-    const theme = textarea ? textarea.getAttribute('data-theme') : '';
+    const theme = getThemeFromPage();
     if (!theme) {
         showNotification('Тему не вказано', 'danger');
         return;
     }
     
-    const targetFolder = document.getElementById('upload-target-folder').value || '';
+    const targetFolder = document.getElementById('upload-target-folder')?.value || '';
     
-    // Элементы футера для прогресса
+    // Елементи футера для прогресу
     const editorFooter = document.getElementById('editor-footer');
     const footerProgressBar = document.getElementById('footer-upload-progress');
     const footerProgressBarInner = document.getElementById('footer-upload-progress-bar');
     const statusText = document.getElementById('editor-status');
     const statusIcon = document.getElementById('editor-status-icon');
     
-    // Показываем прогресс в футере
+    // Показуємо прогрес в футері
     if (footerProgressBar && footerProgressBarInner && statusText) {
         footerProgressBar.style.display = 'block';
         footerProgressBarInner.style.width = '0%';
@@ -2741,7 +2548,7 @@ function startFilesUpload() {
     let uploaded = 0;
     let errors = 0;
     
-    // Загружаем файлы по одному
+    // Завантажуємо файли по одному
     selectedFiles.forEach((file, index) => {
         const formData = new FormData();
         formData.append('action', 'upload_file');
@@ -2762,7 +2569,7 @@ function startFilesUpload() {
             uploaded++;
             const progress = (uploaded / selectedFiles.length) * 100;
             
-            // Обновляем прогресс бар в футере
+            // Оновлюємо прогрес бар в футері
             if (footerProgressBarInner) {
                 footerProgressBarInner.style.width = progress + '%';
             }
@@ -2774,30 +2581,30 @@ function startFilesUpload() {
                 errors++;
             }
             
-            // Когда все файлы загружены
+            // Коли всі файли завантажені
             if (uploaded === selectedFiles.length) {
                 if (errors === 0) {
-                    // Обновляем статус на "Успешно все файли загружены"
+                    // Оновлюємо статус на "Успішно всі файли завантажені"
                     if (statusText) {
-                        statusText.textContent = 'Успешно все файли загружены';
+                        statusText.textContent = 'Успішно всі файли завантажені';
                     }
                     if (statusIcon) {
                         statusIcon.className = 'editor-status-dot text-success me-2';
                     }
-                    // Скрываем прогресс бар через 3 секунды и возвращаем статус FTP
-            setTimeout(() => {
+                    // Приховуємо прогрес бар через 3 секунди та повертаємо статус FTP
+                    setTimeout(() => {
                         if (footerProgressBar) {
                             footerProgressBar.style.display = 'none';
                         }
                         if (statusText) {
-                            statusText.textContent = 'FTP сервер: подключен';
+                            statusText.textContent = 'FTP сервер: підключено';
                         }
                     }, 3000);
                     
                     showNotification(`Успішно завантажено ${uploaded} файлів`, 'success');
                     clearUploadList();
                     refreshFileTree();
-        } else {
+                } else {
                     if (statusText) {
                         statusText.textContent = `Завантажено ${uploaded - errors} з ${selectedFiles.length} файлів. Помилок: ${errors}`;
                     }
@@ -2831,26 +2638,26 @@ function startFilesUpload() {
 }
 
 /**
- * Загрузка настроек для inline режима
+ * Завантаження налаштувань для inline режиму
  */
 function loadEditorSettingsInline() {
-    // Если обработчики уже установлены, настройки уже загружены - не загружаем повторно
+    // Якщо обробники вже встановлені, налаштування вже завантажені - не завантажуємо повторно
     if (settingsSetupDone) {
-        // Просто применяем текущие значения к редактору
+        // Просто застосовуємо поточні значення до редактора
         if (codeEditor) {
             applyEditorSettingsToCodeMirror();
         }
         return;
     }
     
-    // Настройки уже установлены в HTML при рендеринге страницы из PHP
-    // Не нужно их перезагружать с сервера - это может перезаписать пользовательские изменения
-    // Просто синхронизируем глобальные настройки с HTML и настраиваем обработчики
+    // Налаштування вже встановлені в HTML при рендерингу сторінки з PHP
+    // Не потрібно їх перезавантажувати з сервера - це може перезаписати користувацькі зміни
+    // Просто синхронізуємо глобальні налаштування з HTML та налаштовуємо обробники
     
     const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
     const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
     
-    // Синхронизируем глобальные настройки с HTML значениями
+    // Синхронізуємо глобальні налаштування з HTML значеннями
     if (showEmptyCheckbox) {
         editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
     }
@@ -2858,25 +2665,25 @@ function loadEditorSettingsInline() {
         editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
     }
     
-    // Применяем настройки к редактору, если он уже инициализирован
+    // Застосовуємо налаштування до редактора, якщо він вже ініціалізовано
     if (codeEditor) {
         applyEditorSettingsToCodeMirror();
     }
     
-    // Настраиваем автоматическое сохранение при изменении
+    // Налаштовуємо автоматичне збереження при зміні
     setupAutoSaveEditorSettingsInline();
 }
 
 /**
- * Автоматическое сохранение настроек в inline режиме
+ * Автоматичне збереження налаштувань в inline режимі
  */
 function setupAutoSaveEditorSettingsInline() {
-    // Если обработчики уже установлены, не добавляем их снова
+    // Якщо обробники вже встановлені, не додаємо їх знову
     if (settingsSetupDone) {
         return;
     }
     
-    // Получаем все элементы настроек
+    // Отримуємо всі елементи налаштувань
     const showEmptyCheckbox = document.getElementById('showEmptyFoldersInline');
     const syntaxCheckbox = document.getElementById('enableSyntaxHighlightingInline');
     const showLineNumbers = document.getElementById('showLineNumbersInline');
@@ -2888,50 +2695,48 @@ function setupAutoSaveEditorSettingsInline() {
     const autoSave = document.getElementById('autoSaveInline');
     const autoSaveInterval = document.getElementById('autoSaveIntervalInline');
     
-    // Debounce для сохранения настроек
+    // Debounce для збереження налаштувань
     let saveSettingsTimeout = null;
     
-    // Функция для применения настроек к редактору (без сохранения)
+    // Функція для застосування налаштувань до редактора (без збереження)
     const applySettingsToEditor = function() {
         if (codeEditor) {
             applyEditorSettingsToCodeMirror();
         }
     };
     
-    // Функция для сохранения всех настроек
+    // Функція для збереження всіх налаштувань
     const saveAllSettings = function() {
-        // Сохраняем старое значение ДО применения изменений
+        // Зберігаємо старе значення ДО застосування змін
         const oldShowEmptyFolders = editorSettings.showEmptyFolders;
         
-        // Применяем настройки к редактору сразу (без сохранения)
+        // Застосовуємо налаштування до редактора одразу (без збереження)
         applySettingsToEditor();
         
-        // Обновляем глобальные настройки сразу для проверки изменений
+        // Оновлюємо глобальні налаштування одразу для перевірки змін
         if (showEmptyCheckbox) {
             editorSettings.showEmptyFolders = showEmptyCheckbox.checked;
         }
         
-        // Обновляем дерево файлов сразу, если изменилась настройка показа пустых папок
+        // Оновлюємо дерево файлів одразу, якщо змінилася налаштування показу пустих папок
         if (showEmptyCheckbox && oldShowEmptyFolders !== showEmptyCheckbox.checked) {
             refreshFileTree();
         }
         
-        // Отменяем предыдущий таймер
+        // Скасовуємо попередній таймер
         if (saveSettingsTimeout) {
             clearTimeout(saveSettingsTimeout);
         }
         
-        // Запускаем сохранение с задержкой (debounce 300ms)
+        // Запускаємо збереження з затримкою (debounce 300ms)
         saveSettingsTimeout = setTimeout(function() {
-            // Проверяем флаг только перед отправкой запроса
+            // Перевіряємо прапорець тільки перед відправкою запиту
             if (isSaving) {
-                console.log('Сохранение уже выполняется, пропускаем');
+                console.log('Збереження вже виконується, пропускаємо');
                 return;
             }
             
-            const url = window.location.href.split('?')[0];
             const formData = {
-                action: 'save_editor_settings',
                 show_empty_folders: showEmptyCheckbox?.checked ? '1' : '0',
                 enable_syntax_highlighting: syntaxCheckbox?.checked ? '1' : '0',
                 show_line_numbers: showLineNumbers?.checked ? '1' : '0',
@@ -2945,48 +2750,44 @@ function setupAutoSaveEditorSettingsInline() {
             };
             
             isSaving = true;
-            if (typeof AjaxHelper !== 'undefined') {
-                AjaxHelper.post(url, formData)
-                    .then(data => {
-                        isSaving = false;
-                        if (data.success) {
-                            // Обновляем глобальные настройки (если еще не обновлены)
-                            if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
-                            
-                            // Не показываем уведомление при каждом изменении, только при ошибках
-                            // showNotification('Налаштування збережено', 'success');
-                        } else {
-                            isSaving = false; // Сбрасываем флаг при ошибке
-                            // Восстанавливаем старое значение при ошибке
-                            if (showEmptyCheckbox) {
-                                editorSettings.showEmptyFolders = oldShowEmptyFolders;
-                                showEmptyCheckbox.checked = oldShowEmptyFolders;
-                                // Обновляем дерево обратно
-                                refreshFileTree();
-                            }
-                            showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
-                        }
-                    })
-                    .catch(error => {
-                        isSaving = false;
-                        console.error('Error:', error);
-                        // Восстанавливаем старое значение при ошибке
+            // Використовуємо утилітну функцію для AJAX запиту
+            makeAjaxRequest('save_editor_settings', formData)
+                .then(data => {
+                    isSaving = false;
+                    if (data.success) {
+                        // Оновлюємо глобальні налаштування (якщо ще не оновлені)
+                        if (syntaxCheckbox) editorSettings.enableSyntaxHighlighting = syntaxCheckbox.checked;
+                        
+                        // Не показуємо повідомлення при кожній зміні, тільки при помилках
+                        // showNotification('Налаштування збережено', 'success');
+                    } else {
+                        isSaving = false; // Скидаємо прапорець при помилці
+                        // Відновлюємо старе значення при помилці
                         if (showEmptyCheckbox) {
                             editorSettings.showEmptyFolders = oldShowEmptyFolders;
                             showEmptyCheckbox.checked = oldShowEmptyFolders;
-                            // Обновляем дерево обратно
+                            // Оновлюємо дерево назад
                             refreshFileTree();
                         }
-                        showNotification('Помилка збереження налаштувань', 'danger');
-                    });
-            } else {
-                // Если AjaxHelper недоступен, сбрасываем флаг
-                isSaving = false;
-            }
+                        showNotification(data.error || 'Помилка збереження налаштувань', 'danger');
+                    }
+                })
+                .catch(error => {
+                    isSaving = false;
+                    console.error('Помилка:', error);
+                    // Відновлюємо старе значення при помилці
+                    if (showEmptyCheckbox) {
+                        editorSettings.showEmptyFolders = oldShowEmptyFolders;
+                        showEmptyCheckbox.checked = oldShowEmptyFolders;
+                        // Оновлюємо дерево назад
+                        refreshFileTree();
+                    }
+                    showNotification('Помилка збереження налаштувань', 'danger');
+                });
         }, 300);
     };
     
-    // Обработчик для autoSave с дополнительной логикой
+    // Обробник для autoSave з додатковою логікою
     const autoSaveHandler = function() {
         if (autoSaveInterval) {
             autoSaveInterval.disabled = !this.checked;
@@ -2994,7 +2795,7 @@ function setupAutoSaveEditorSettingsInline() {
         saveAllSettings();
     };
     
-    // Добавляем обработчики только один раз (проверка в начале функции)
+    // Додаємо обробники тільки один раз (перевірка на початку функції)
     if (showEmptyCheckbox) {
         showEmptyCheckbox.addEventListener('change', saveAllSettings);
     }
@@ -3029,7 +2830,7 @@ function setupAutoSaveEditorSettingsInline() {
         autoSaveInterval.addEventListener('change', saveAllSettings);
     }
     
-    // Помечаем, что обработчики установлены
+    // Позначаємо, що обробники встановлені
     settingsSetupDone = true;
 }
 

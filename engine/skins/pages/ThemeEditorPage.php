@@ -74,14 +74,14 @@ class ThemeEditorPage extends AdminPage {
         if ($this->isAjaxRequest()) {
             $action = $request->postValue('action', '');
             
-            // Если action не найден в POST, пробуем GET
+            // Якщо action не знайдено в POST, пробуємо GET
             if (empty($action)) {
                 $action = $request->query('action', '');
             }
             
-            // Если action пустой, не обрабатываем как AJAX
+            // Якщо action порожній, не обробляємо як AJAX
             if (empty($action)) {
-                // Это не AJAX запрос с action, продолжаем обычную обработку
+                // Це не AJAX запит з action, продовжуємо звичайну обробку
             } else {
                 switch ($action) {
                     case 'save_file':
@@ -121,7 +121,7 @@ class ThemeEditorPage extends AdminPage {
                         $this->ajaxGetFileTree();
                         exit;
                 }
-                // Если мы дошли сюда, action не найден
+                // Якщо ми дійшли сюди, action не знайдено
                 $this->sendJsonResponse(['success' => false, 'error' => 'Невідома дія: ' . Security::clean($action)], 404);
                 exit;
             }

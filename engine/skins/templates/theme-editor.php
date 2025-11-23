@@ -3,23 +3,23 @@
  * Шаблон страницы редактора темы
  */
 
-// Функция для проверки, нужно ли раскрывать папку (содержит ли она выбранный файл)
+// Функція для перевірки, чи потрібно розкривати папку (чи містить вона вибраний файл)
 function shouldExpandFolder($folder, $selectedFile) {
     if (empty($selectedFile)) {
         return false;
     }
     
-    // Проверяем, начинается ли путь к выбранному файлу с пути папки
+    // Перевіряємо, чи починається шлях до вибраного файлу зі шляху папки
     $folderPath = rtrim($folder['path'], '/') . '/';
     return str_starts_with($selectedFile, $folderPath);
 }
 
-// Функция для рекурсивного отображения дерева файлов
+// Функція для рекурсивного відображення дерева файлів
 function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
     foreach ($tree as $item) {
         if ($item['type'] === 'folder') {
             $hasChildren = !empty($item['children']);
-            // Раскрываем папку, если она содержит выбранный файл или это первый уровень
+            // Розкриваємо папку, якщо вона містить вибраний файл або це перший рівень
             $isExpanded = $hasChildren && ($level === 0 || shouldExpandFolder($item, $selectedFile));
             ?>
             <div class="file-tree-folder" data-folder-path="<?= htmlspecialchars($item['path']) ?>">
@@ -200,7 +200,7 @@ if (!empty($message)) {
                 </div>
             </div>
             
-            <!-- Режим: Загрузка файлов (встраивается вместо редактора) -->
+            <!-- Режим: Завантаження файлів (вбудовується замість редактора) -->
             <div class="card-body editor-embedded-mode" id="upload-mode-content" style="display: none;">
                 <div class="upload-files-container">
                     <div class="upload-dropzone" id="upload-dropzone">
@@ -216,11 +216,11 @@ if (!empty($message)) {
                         </div>
                     </div>
                     
-                    <!-- Список выбранных файлов -->
+                    <!-- Список вибраних файлів -->
                     <div id="upload-files-list" class="upload-files-list" style="display: none;">
                         <h6 class="mb-3">Вибрані файли для завантаження:</h6>
                         <div id="upload-files-items" style="flex: 1; overflow-y: auto; min-height: 0; margin-bottom: 16px;"></div>
-                        <!-- Скрытый селект для целевой папки (используется только программно) -->
+                        <!-- Прихований селект для цільової папки (використовується тільки програмно) -->
                         <select class="form-select d-none" id="upload-target-folder">
                             <option value="">Коренева папка теми</option>
                         </select>
@@ -228,13 +228,13 @@ if (!empty($message)) {
                 </div>
             </div>
             
-            <!-- Режим: Настройки (встраивается вместо редактора) -->
+            <!-- Режим: Налаштування (вбудовується замість редактора) -->
             <div class="card-body editor-embedded-mode" id="settings-mode-content" style="display: none;">
                 <div class="editor-settings-container">
                     <form id="editorSettingsFormInline">
                         <?= SecurityHelper::csrfField() ?>
                         
-                        <!-- Настройки отображения -->
+                        <!-- Налаштування відображення -->
                         <div class="settings-section">
                             <h6 class="settings-section-title">Відображення</h6>
                             <div class="settings-section-grid">
@@ -269,7 +269,7 @@ if (!empty($message)) {
                             </div>
                         </div>
                         
-                        <!-- Настройки редактора -->
+                        <!-- Налаштування редактора -->
                         <div class="settings-section">
                             <h6 class="settings-section-title">Редактор</h6>
                             <div class="settings-section-grid">
@@ -335,7 +335,7 @@ if (!empty($message)) {
                             </div>
                         </div>
                         
-                        <!-- Дополнительные настройки -->
+                        <!-- Додаткові налаштування -->
                         <div class="settings-section">
                             <h6 class="settings-section-title">Додатково</h6>
                             <div class="settings-section-grid">
@@ -359,13 +359,13 @@ if (!empty($message)) {
                 </div>
             </div>
             
-            <!-- Футер (всегда последний элемент) -->
+            <!-- Футер (завжди останній елемент) -->
             <div class="card-footer" id="editor-footer" style="<?= ($selectedFile && $fileContent !== null) ? 'display: flex;' : 'display: none;' ?>">
                 <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
                     <div class="d-flex align-items-center flex-grow-1" style="min-width: 0;">
                         <span id="editor-status-icon" class="editor-status-dot text-success me-2"></span>
                         <span class="text-muted small" id="editor-status">Готово до редагування</span>
-                        <!-- Прогресс бар загрузки файлов (скрыт по умолчанию) -->
+                        <!-- Прогрес бар завантаження файлів (приховано за замовчуванням) -->
                         <div id="footer-upload-progress" class="ms-3 flex-grow-1" style="display: none; max-width: 300px;">
                             <div class="progress" style="height: 8px;">
                                 <div class="progress-bar progress-bar-striped progress-bar-animated" 
@@ -377,7 +377,7 @@ if (!empty($message)) {
                         </div>
                     </div>
                     <div class="d-flex gap-2 align-items-center flex-shrink-0">
-                        <!-- Кнопки для режима редактирования -->
+                        <!-- Кнопки для режиму редагування -->
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-btn" onclick="resetEditor()" style="display: none;">
                             <i class="fas fa-undo me-1"></i>Скасувати
                         </button>
@@ -385,7 +385,7 @@ if (!empty($message)) {
                             <i class="fas fa-save me-1"></i>Зберегти
                         </button>
                         
-                        <!-- Кнопки для режима загрузки (показываются когда есть файлы в списке) -->
+                        <!-- Кнопки для режиму завантаження (показуються коли є файли в списку) -->
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="upload-clear-btn" onclick="clearUploadList()" style="display: none;">
                             <i class="fas fa-times me-1"></i>Очистити список
                         </button>
@@ -399,7 +399,7 @@ if (!empty($message)) {
     </div>
 </div>
 
-<!-- Модальное окно настроек редактора -->
+<!-- Модальне вікно налаштувань редактора -->
 <div class="modal fade" id="editorSettingsModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -434,7 +434,7 @@ if (!empty($message)) {
     </div>
 </div>
 
-<!-- Модальное окно подтверждения -->
+<!-- Модальне вікно підтвердження -->
 <div class="modal fade" id="confirmDialogModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
