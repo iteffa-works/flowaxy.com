@@ -539,34 +539,17 @@ class ThemeEditorPage extends AdminPage {
         $themeSlug = isset($_GET['theme']) ? Validator::sanitizeString($_GET['theme']) : '';
         $filePath = isset($_GET['file']) ? Validator::sanitizeString($_GET['file']) : '';
         
-        // Логування для діагностики (тимчасове)
-        if (class_exists('Logger')) {
-            Logger::getInstance()->logWarning('ThemeEditorPage: ajaxDownloadFile called', [
-                'theme' => $themeSlug,
-                'file' => $filePath,
-                'get_params' => $_GET
-            ]);
-        }
-        
         if (empty($themeSlug) || empty($filePath)) {
-            // Детальне повідомлення про помилку для діагностики
-            $debugInfo = [
-                'theme' => $themeSlug,
-                'file' => $filePath,
-                'get_params' => $_GET,
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
-                'query_string' => $_SERVER['QUERY_STRING'] ?? ''
-            ];
-            
             if (class_exists('Logger')) {
-                Logger::getInstance()->logError('ThemeEditorPage: Missing theme or file parameter', $debugInfo);
+                Logger::getInstance()->logError('ThemeEditorPage: Missing theme or file parameter', [
+                    'theme' => $themeSlug,
+                    'file' => $filePath,
+                    'get_params' => $_GET
+                ]);
             }
             
             http_response_code(400);
-            echo 'Помилка: Не вказано тему або файл.<br>';
-            echo 'Theme: ' . htmlspecialchars($themeSlug) . '<br>';
-            echo 'File: ' . htmlspecialchars($filePath) . '<br>';
-            echo 'GET params: ' . print_r($_GET, true);
+            echo 'Помилка: Не вказано тему або файл';
             exit;
         }
         
@@ -640,34 +623,17 @@ class ThemeEditorPage extends AdminPage {
         $themeSlug = isset($_GET['theme']) ? Validator::sanitizeString($_GET['theme']) : '';
         $folderPath = isset($_GET['folder']) ? Validator::sanitizeString($_GET['folder']) : '';
         
-        // Логування для діагностики (тимчасове)
-        if (class_exists('Logger')) {
-            Logger::getInstance()->logWarning('ThemeEditorPage: ajaxDownloadFolder called', [
-                'theme' => $themeSlug,
-                'folder' => $folderPath,
-                'get_params' => $_GET
-            ]);
-        }
-        
         if (empty($themeSlug) || empty($folderPath)) {
-            // Детальне повідомлення про помилку для діагностики
-            $debugInfo = [
-                'theme' => $themeSlug,
-                'folder' => $folderPath,
-                'get_params' => $_GET,
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
-                'query_string' => $_SERVER['QUERY_STRING'] ?? ''
-            ];
-            
             if (class_exists('Logger')) {
-                Logger::getInstance()->logError('ThemeEditorPage: Missing theme or folder parameter', $debugInfo);
+                Logger::getInstance()->logError('ThemeEditorPage: Missing theme or folder parameter', [
+                    'theme' => $themeSlug,
+                    'folder' => $folderPath,
+                    'get_params' => $_GET
+                ]);
             }
             
             http_response_code(400);
-            echo 'Помилка: Не вказано тему або папку.<br>';
-            echo 'Theme: ' . htmlspecialchars($themeSlug) . '<br>';
-            echo 'Folder: ' . htmlspecialchars($folderPath) . '<br>';
-            echo 'GET params: ' . print_r($_GET, true);
+            echo 'Помилка: Не вказано тему або папку';
             exit;
         }
         
