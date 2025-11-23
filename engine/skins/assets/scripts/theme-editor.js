@@ -720,18 +720,71 @@ function renameFileOrFolder(event, path, isFolder = false) {
     
     // Находим элемент файла/папки в дереве
     let targetElement = null;
-    const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
     
-    for (let item of allItems) {
-        const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
-        if (itemPath === path) {
-            targetElement = item;
-            break;
+    if (isFolder) {
+        // Для папок используем data-folder-path
+        targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
+        // Если не найден, ищем через все папки
+        if (!targetElement) {
+            const folders = fileTree.querySelectorAll('.file-tree-folder');
+            for (let folder of folders) {
+                const folderPath = folder.getAttribute('data-folder-path');
+                if (folderPath === path) {
+                    targetElement = folder;
+                    break;
+                }
+            }
+        }
+    } else {
+        // Для файлов используем data-file-path или data-file
+        targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
+        // Если не найден, ищем через все обертки файлов
+        if (!targetElement) {
+            const fileWrappers = fileTree.querySelectorAll('.file-tree-item-wrapper');
+            for (let wrapper of fileWrappers) {
+                const filePath = wrapper.getAttribute('data-file-path');
+                if (filePath === path) {
+                    targetElement = wrapper;
+                    break;
+                }
+            }
+        }
+        // Если все еще не найден, ищем по data-file внутри .file-tree-item
+        if (!targetElement) {
+            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
+            for (let link of fileLinks) {
+                const filePath = link.getAttribute('data-file');
+                if (filePath === path) {
+                    targetElement = link.closest('.file-tree-item-wrapper');
+                    break;
+                }
+            }
         }
     }
     
     if (!targetElement) {
-        showNotification('Елемент не знайдено в дереві', 'danger');
+        // Пробуем еще раз через небольшую задержку (на случай, если дерево еще обновляется)
+        setTimeout(() => {
+            if (isFolder) {
+                targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
+            } else {
+                targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
+                if (!targetElement) {
+                    const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
+                    for (let link of fileLinks) {
+                        if (link.getAttribute('data-file') === path) {
+                            targetElement = link.closest('.file-tree-item-wrapper');
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!targetElement) {
+                showNotification('Елемент не знайдено в дереві. Спробуйте оновити дерево файлів.', 'warning');
+            } else {
+                createInlineRenameForm(targetElement, path, currentName, isFolder);
+            }
+        }, 300);
         return;
     }
     
@@ -784,12 +837,24 @@ function cancelInlineRename(button, path) {
     
     // Находим и показываем оригинальный элемент
     const fileTree = document.querySelector('.file-tree');
-    const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
-    for (let item of allItems) {
-        const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
-        if (itemPath === path) {
-            item.style.display = '';
-            break;
+    if (fileTree) {
+        // Пробуем найти элемент по data-атрибутам
+        let targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(path)}"]`);
+        if (!targetElement) {
+            targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(path)}"]`);
+        }
+        if (!targetElement) {
+            // Пробуем найти через .file-tree-item
+            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
+            for (let link of fileLinks) {
+                if (link.getAttribute('data-file') === path) {
+                    targetElement = link.closest('.file-tree-item-wrapper');
+                    break;
+                }
+            }
+        }
+        if (targetElement) {
+            targetElement.style.display = '';
         }
     }
     
@@ -877,12 +942,24 @@ function submitInlineRename(button, oldPath, isFolder) {
                 showNotification(data.error || (isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу'), 'danger');
                 // Показываем оригинальный элемент снова
                 const fileTree = document.querySelector('.file-tree');
-                const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
-                for (let item of allItems) {
-                    const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
-                    if (itemPath === oldPath) {
-                        item.style.display = '';
-                        break;
+                if (fileTree) {
+                    let targetElement = null;
+                    if (isFolder) {
+                        targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(oldPath)}"]`);
+                    } else {
+                        targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(oldPath)}"]`);
+                        if (!targetElement) {
+                            const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
+                            for (let link of fileLinks) {
+                                if (link.getAttribute('data-file') === oldPath) {
+                                    targetElement = link.closest('.file-tree-item-wrapper');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (targetElement) {
+                        targetElement.style.display = '';
                     }
                 }
             }
@@ -893,12 +970,24 @@ function submitInlineRename(button, oldPath, isFolder) {
             showNotification(isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу', 'danger');
             // Показываем оригинальный элемент снова
             const fileTree = document.querySelector('.file-tree');
-            const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
-            for (let item of allItems) {
-                const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
-                if (itemPath === oldPath) {
-                    item.style.display = '';
-                    break;
+            if (fileTree) {
+                let targetElement = null;
+                if (isFolder) {
+                    targetElement = fileTree.querySelector(`[data-folder-path="${escapeHtml(oldPath)}"]`);
+                } else {
+                    targetElement = fileTree.querySelector(`[data-file-path="${escapeHtml(oldPath)}"]`);
+                    if (!targetElement) {
+                        const fileLinks = fileTree.querySelectorAll('.file-tree-item[data-file]');
+                        for (let link of fileLinks) {
+                            if (link.getAttribute('data-file') === oldPath) {
+                                targetElement = link.closest('.file-tree-item-wrapper');
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (targetElement) {
+                    targetElement.style.display = '';
                 }
             }
         });
