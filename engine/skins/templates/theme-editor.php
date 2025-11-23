@@ -206,26 +206,10 @@ if (!empty($message)) {
                     <div id="upload-files-list" class="upload-files-list" style="display: none;">
                         <h6 class="mb-3">Вибрані файли для завантаження:</h6>
                         <div id="upload-files-items" style="flex: 1; overflow-y: auto; min-height: 0; margin-bottom: 16px;"></div>
-                        <div class="mt-3">
-                            <label class="form-label">Виберіть цільову папку:</label>
-                            <select class="form-select" id="upload-target-folder">
-                                <option value="">Коренева папка теми</option>
-                            </select>
-                        </div>
-                        <div class="mt-3 d-flex gap-2">
-                            <button type="button" class="btn btn-primary" onclick="startFilesUpload()">
-                                <i class="fas fa-upload me-2"></i>Завантажити файли
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="clearUploadList()">
-                                <i class="fas fa-times me-2"></i>Очистити список
-                            </button>
-                        </div>
-                        <div id="upload-progress-container" class="mt-3" style="display: none;">
-                            <div class="progress">
-                                <div class="progress-bar" id="upload-progress-bar" role="progressbar" style="width: 0%"></div>
-                            </div>
-                            <p class="text-muted small mt-2 mb-0" id="upload-progress-text">Готується до завантаження...</p>
-                        </div>
+                        <!-- Скрытый селект для целевой папки (используется только программно) -->
+                        <select class="form-select d-none" id="upload-target-folder">
+                            <option value="">Коренева папка теми</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -379,11 +363,20 @@ if (!empty($message)) {
                         </div>
                     </div>
                     <div class="d-flex gap-2 align-items-center flex-shrink-0">
+                        <!-- Кнопки для режима редактирования -->
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-btn" onclick="resetEditor()" style="display: none;">
                             <i class="fas fa-undo me-1"></i>Скасувати
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="saveFile()">
+                        <button type="button" class="btn btn-primary btn-sm" id="editor-save-btn" onclick="saveFile()">
                             <i class="fas fa-save me-1"></i>Зберегти
+                        </button>
+                        
+                        <!-- Кнопки для режима загрузки (показываются когда есть файлы в списке) -->
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="upload-clear-btn" onclick="clearUploadList()" style="display: none;">
+                            <i class="fas fa-times me-1"></i>Очистити список
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="upload-submit-btn" onclick="startFilesUpload()" style="display: none;">
+                            <i class="fas fa-upload me-1"></i>Завантажити
                         </button>
                     </div>
                 </div>

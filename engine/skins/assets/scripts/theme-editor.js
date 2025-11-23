@@ -1932,23 +1932,24 @@ function showUploadFiles(targetFolder = '') {
             statusIcon.style.visibility = 'visible';
             statusIcon.className = 'editor-status-dot text-success me-2';
         }
-        // Скрываем кнопку "Скасувати"
+        // В режиме загрузки скрываем кнопки редактирования
         const cancelBtn = document.getElementById('cancel-btn');
+        const editorSaveBtn = document.getElementById('editor-save-btn');
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
-        // Обновляем кнопку "Зберегти" на "Завантажити"
-        const saveBtn = editorFooter.querySelector('button.btn-primary.btn-sm');
-        if (saveBtn) {
-            // Сохраняем оригинальную кнопку если еще не сохранена
-            if (!saveBtn.getAttribute('data-original-onclick')) {
-                saveBtn.setAttribute('data-original-onclick', saveBtn.getAttribute('onclick') || 'saveFile()');
-                saveBtn.setAttribute('data-original-html', saveBtn.innerHTML);
-            }
-            // Изменяем на "Завантажити"
-            saveBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Завантажити';
-            saveBtn.setAttribute('onclick', 'startFilesUpload()');
-            saveBtn.style.display = '';
+        if (editorSaveBtn) {
+            editorSaveBtn.style.display = 'none';
+        }
+        
+        // Кнопки загрузки будут показаны автоматически при добавлении файлов в updateUploadFilesList()
+        const uploadClearBtn = document.getElementById('upload-clear-btn');
+        const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+        if (uploadClearBtn) {
+            uploadClearBtn.style.display = 'none'; // Скрываем пока нет файлов
+        }
+        if (uploadSubmitBtn) {
+            uploadSubmitBtn.style.display = 'none'; // Скрываем пока нет файлов
         }
         // Скрываем прогресс бар в футере (пока что)
         const footerProgressBar = editorFooter.querySelector('#footer-upload-progress');
@@ -1967,16 +1968,16 @@ function showUploadFiles(targetFolder = '') {
             uploadContent.dataset.initialized = 'true';
         }
         // Устанавливаем целевую папку если указана
-        if (targetFolder) {
-            const select = document.getElementById('upload-target-folder');
-            if (select) {
-                select.value = targetFolder;
-                // Обновляем заголовок с путем
-                const fileTitle = editorHeader?.querySelector('.editor-file-title');
-                if (fileTitle) {
-                    const uploadPath = targetFolder || 'Коренева папка теми';
-                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
-                }
+        const select = document.getElementById('upload-target-folder');
+        
+        if (select) {
+            select.value = targetFolder || '';
+            
+            // Обновляем заголовок с путем
+            const fileTitle = editorHeader?.querySelector('.editor-file-title');
+            if (fileTitle) {
+                const uploadPath = targetFolder || 'Коренева папка теми';
+                fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
             }
         }
         
@@ -1994,34 +1995,8 @@ function showUploadFiles(targetFolder = '') {
         url.searchParams.delete('mode');
         window.history.pushState({ path: url.href }, '', url.href);
         
-        // Обновляем заголовок при изменении целевой папки
-        const select = document.getElementById('upload-target-folder');
-        if (select) {
-            // Убираем старые обработчики чтобы избежать дублирования
-            const newSelect = select.cloneNode(true);
-            select.parentNode.replaceChild(newSelect, select);
-            
-            newSelect.addEventListener('change', function() {
-                const fileTitle = editorHeader?.querySelector('.editor-file-title');
-                if (fileTitle) {
-                    const uploadPath = this.value || 'Коренева папка теми';
-                    fileTitle.innerHTML = '<i class="fas fa-upload me-2"></i>Завантажити файли <span class="text-muted mx-2">|</span> <span class="text-muted">' + uploadPath + '</span>';
-                }
-                
-                // Обновляем URL с выбранной папкой
-                const theme = new URLSearchParams(window.location.search).get('theme') || '';
-                const url = new URL(window.location.href);
-                url.searchParams.set('theme', theme);
-                if (this.value) {
-                    url.searchParams.set('folder', this.value);
-                } else {
-                    url.searchParams.delete('folder');
-                }
-                url.searchParams.delete('file');
-                url.searchParams.delete('mode');
-                window.history.pushState({ path: url.href }, '', url.href);
-            });
-        }
+        // Удаляем обработчик изменения целевой папки, так как папка фиксирована
+        // (она определяется при клике на иконку загрузки в папке)
     }
 }
 
@@ -2201,6 +2176,11 @@ function updateUploadFilesList() {
         if (dropzone) {
             dropzone.style.display = 'flex';
         }
+        // Скрываем кнопки загрузки когда нет файлов
+        const uploadClearBtn = document.getElementById('upload-clear-btn');
+        const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+        if (uploadClearBtn) uploadClearBtn.style.display = 'none';
+        if (uploadSubmitBtn) uploadSubmitBtn.style.display = 'none';
         return;
     }
     
@@ -2232,6 +2212,25 @@ function updateUploadFilesList() {
             </div>
         `;
     }).join('');
+    
+    // Показываем/скрываем кнопки в футере в зависимости от наличия файлов
+    const uploadClearBtn = document.getElementById('upload-clear-btn');
+    const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+    const editorSaveBtn = document.getElementById('editor-save-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    
+    if (selectedFiles.length > 0) {
+        // Есть файлы - показываем кнопки загрузки, скрываем кнопки редактирования
+        if (uploadClearBtn) uploadClearBtn.style.display = '';
+        if (uploadSubmitBtn) uploadSubmitBtn.style.display = '';
+        if (editorSaveBtn) editorSaveBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+    } else {
+        // Нет файлов - скрываем кнопки загрузки, показываем кнопки редактирования (если нужно)
+        if (uploadClearBtn) uploadClearBtn.style.display = 'none';
+        if (uploadSubmitBtn) uploadSubmitBtn.style.display = 'none';
+        // Не меняем отображение кнопок редактирования здесь, они управляются отдельно
+    }
 }
 
 /**
@@ -2252,6 +2251,12 @@ function clearUploadList() {
     if (fileInput) {
         fileInput.value = '';
     }
+    
+    // После очистки списка скрываем кнопки загрузки
+    const uploadClearBtn = document.getElementById('upload-clear-btn');
+    const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+    if (uploadClearBtn) uploadClearBtn.style.display = 'none';
+    if (uploadSubmitBtn) uploadSubmitBtn.style.display = 'none';
 }
 
 /**
@@ -2302,9 +2307,6 @@ function startFilesUpload() {
     }
     
     const targetFolder = document.getElementById('upload-target-folder').value || '';
-    const progressContainer = document.getElementById('upload-progress-container');
-    const progressBar = document.getElementById('upload-progress-bar');
-    const progressText = document.getElementById('upload-progress-text');
     
     // Элементы футера для прогресса
     const editorFooter = document.getElementById('editor-footer');
@@ -2321,12 +2323,6 @@ function startFilesUpload() {
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-warning me-2';
         }
-    }
-    
-    if (progressContainer && progressBar && progressText) {
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressText.textContent = 'Готується до завантаження...';
     }
     
     let uploaded = 0;
@@ -2361,14 +2357,6 @@ function startFilesUpload() {
                 statusText.textContent = `Завантаження: ${uploaded} з ${selectedFiles.length} файлів`;
             }
             
-            // Обновляем прогресс в основном контейнере
-            if (progressBar) {
-                progressBar.style.width = progress + '%';
-            }
-            if (progressText) {
-                progressText.textContent = `Завантажено ${uploaded} з ${selectedFiles.length} файлів`;
-            }
-            
             if (!data.success) {
                 errors++;
             }
@@ -2396,11 +2384,6 @@ function startFilesUpload() {
                     showNotification(`Успішно завантажено ${uploaded} файлів`, 'success');
                     clearUploadList();
                     refreshFileTree();
-                    if (progressContainer) {
-                        setTimeout(() => {
-                            progressContainer.style.display = 'none';
-                        }, 2000);
-                    }
         } else {
                     if (statusText) {
                         statusText.textContent = `Завантажено ${uploaded - errors} з ${selectedFiles.length} файлів. Помилок: ${errors}`;
@@ -2425,10 +2408,6 @@ function startFilesUpload() {
             }
             if (statusIcon) {
                 statusIcon.className = 'editor-status-dot text-danger me-2';
-            }
-            
-            if (progressBar) {
-                progressBar.style.width = progress + '%';
             }
             
             if (uploaded === selectedFiles.length) {
