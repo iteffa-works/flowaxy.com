@@ -276,6 +276,58 @@ class ThemeEditorManager {
     }
     
     /**
+     * Видалення директорії
+     */
+    public function deleteDirectory(string $dirPath, string $themePath): array {
+        $realThemePath = realpath($themePath);
+        if ($realThemePath === false) {
+            return ['success' => false, 'error' => 'Невірний шлях до теми'];
+        }
+        
+        // Нормалізуємо шлях
+        $dirPath = str_replace('\\', '/', $dirPath);
+        $dirPath = ltrim($dirPath, '/');
+        
+        // Забороняємо видалення кореневої папки теми
+        if (empty($dirPath)) {
+            return ['success' => false, 'error' => 'Неможливо видалити кореневу папку теми'];
+        }
+        
+        $fullPath = $realThemePath . '/' . $dirPath;
+        
+        // Перевіряємо, що директорія знаходиться в теми
+        $dir = new Directory($fullPath);
+        $file = new File($fullPath);
+        if (!$file->isPathSafe($realThemePath)) {
+            return ['success' => false, 'error' => 'Невірний шлях до директорії'];
+        }
+        
+        // Перевіряємо, чи директорія існує
+        if (!is_dir($fullPath)) {
+            return ['success' => false, 'error' => 'Директорія не існує'];
+        }
+        
+        try {
+            // Використовуємо клас Directory для видалення
+            $dir = new Directory($fullPath);
+            $dir->delete(true); // true = рекурсивне видалення
+            
+            return [
+                'success' => true,
+                'message' => 'Директорію успішно видалено'
+            ];
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Failed to delete directory', [
+                    'error' => $e->getMessage(),
+                    'dirPath' => $dirPath
+                ]);
+            }
+            return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
      * Створення директорії
      */
     public function createDirectory(string $dirPath, string $themePath): array {

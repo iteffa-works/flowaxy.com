@@ -40,6 +40,11 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                         <button type="button" class="context-menu-btn" onclick="downloadFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Скачати папку">
                             <i class="fas fa-download"></i>
                         </button>
+                        <?php if (!empty($item['path'])): ?>
+                        <button type="button" class="context-menu-btn context-menu-btn-danger" onclick="deleteCurrentFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Видалити папку">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php if ($hasChildren): ?>

@@ -626,6 +626,73 @@ function cancelInlineForm(button) {
 /**
  * Удаление текущего файла
  */
+/**
+ * Удаление папки
+ * Функция должна быть доступна глобально для использования в onclick
+ */
+function deleteCurrentFolder(event, folderPath) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    if (!folderPath || folderPath === '') {
+        showNotification('Неможливо видалити кореневу папку теми', 'danger');
+        return;
+    }
+    
+    // Логируем для отладки
+    console.log('deleteCurrentFolder called with path:', folderPath);
+    
+    if (!confirm('Ви впевнені, що хочете видалити цю папку?\n\nВсі файли та підпапки всередині також будуть видалені.\n\nЦю дію неможливо скасувати!')) {
+        return;
+    }
+    
+    const textarea = document.getElementById('theme-file-editor');
+    const theme = textarea ? textarea.getAttribute('data-theme') : new URLSearchParams(window.location.search).get('theme') || '';
+    
+    if (!theme) {
+        showNotification('Тему не вказано', 'danger');
+        return;
+    }
+    
+    const url = window.location.href.split('?')[0];
+    const formData = {
+        action: 'delete_directory',
+        theme: theme,
+        folder: folderPath
+    };
+    
+    // Используем AjaxHelper если доступен
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, formData)
+        : fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                ...formData,
+                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
+            })
+        }).then(r => r.json());
+    
+    requestFn
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message || 'Папку успішно видалено', 'success');
+                refreshFileTree();
+            } else {
+                showNotification(data.error || 'Помилка видалення папки', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Помилка видалення папки', 'danger');
+        });
+}
+
 function deleteCurrentFile(event, filePath) {
     event.preventDefault();
     event.stopPropagation();
@@ -805,6 +872,17 @@ function initFileTree() {
     const fileTree = document.querySelector('.file-tree');
     if (fileTree && !fileTree.dataset.delegateHandler) {
         fileTree.addEventListener('click', function(e) {
+            // Проверяем, не кликнули ли на кнопку контекстного меню (включая кнопку удаления)
+            const contextMenuBtn = e.target.closest('.context-menu-btn');
+            if (contextMenuBtn) {
+                // Если есть onclick атрибут, позволяем ему обработать событие
+                const onclickAttr = contextMenuBtn.getAttribute('onclick');
+                if (onclickAttr) {
+                    // Не обрабатываем событие дальше, позволяем onclick выполниться
+                    return;
+                }
+            }
+            
             // Сначала проверяем клик по папке
             const folderHeader = e.target.closest('.file-tree-folder-header');
             if (folderHeader) {
@@ -1095,6 +1173,12 @@ function loadFile(event, filePath) {
  * Загрузка файла в редактор через AJAX
  */
 function loadFileInEditor(filePath) {
+    // Проверяем, является ли файл log.txt (системный файл)
+    const fileName = filePath.split('/').pop() || filePath;
+    if (fileName.toLowerCase() === 'log.txt' || fileName.toLowerCase().endsWith('.log.txt')) {
+        showNotification('⚠️ Увага: Це системний файл логів. Редагування може призвести до втрати даних про помилки системи.', 'warning');
+    }
+    
     let theme = new URLSearchParams(window.location.search).get('theme') || '';
     
     // Если тема не указана в URL, пробуем получить из data-атрибута textarea
@@ -1399,6 +1483,9 @@ function renderFileTreeFromArray(treeArray, theme, level = 1) {
     
     treeArray.forEach(item => {
         if (item.type === 'folder') {
+            // Проверяем, является ли папка корневой (пустой путь)
+            const isRootFolder = !item.path || item.path === '';
+            
             html += `<div class="file-tree-folder" data-folder-path="${escapeHtml(item.path)}">
                 <div class="file-tree-folder-header" data-folder-path="${escapeHtml(item.path)}">
                     <i class="fas fa-chevron-right folder-icon"></i>
@@ -1416,7 +1503,10 @@ function renderFileTreeFromArray(treeArray, theme, level = 1) {
                         </button>
                         <button type="button" class="context-menu-btn" onclick="downloadFolder(event, '${escapeHtml(item.path)}')" title="Скачати папку">
                             <i class="fas fa-download"></i>
-                        </button>
+                        </button>${!isRootFolder ? `
+                        <button type="button" class="context-menu-btn context-menu-btn-danger" onclick="deleteCurrentFolder(event, '${escapeHtml(item.path)}')" title="Видалити папку">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
                     </div>
                 </div>`;
             

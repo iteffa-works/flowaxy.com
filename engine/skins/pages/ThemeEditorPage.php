@@ -95,6 +95,9 @@ class ThemeEditorPage extends AdminPage {
                         exit;
                     case 'delete_file':
                         $this->ajaxDeleteFile();
+                        break;
+                    case 'delete_directory':
+                        $this->ajaxDeleteDirectory();
                         exit;
                     case 'create_directory':
                         $this->ajaxCreateDirectory();
@@ -224,6 +227,44 @@ class ThemeEditorPage extends AdminPage {
         
         $fullPath = $themePath . $filePath;
         $result = $this->editorManager->saveFile($fullPath, $content, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Видалення директорії
+     */
+    private function ajaxDeleteDirectory(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $folderPath = Validator::sanitizeString($request->postValue('folder', ''));
+        
+        if (empty($themeSlug)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему'], 400);
+            return;
+        }
+        
+        if (empty($folderPath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано папку для видалення'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $result = $this->editorManager->deleteDirectory($folderPath, $themePath);
         
         if ($result['success']) {
             $this->sendJsonResponse($result, 200);
