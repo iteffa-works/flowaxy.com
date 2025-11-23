@@ -311,13 +311,10 @@ if (!empty($message)) {
                                     <select class="form-select" id="editorThemeInline" name="editor_theme">
                                         <?php
                                         $editorTheme = $editorSettings['editor_theme'] ?? 'monokai';
+                                        // Тільки теми, які доступні на CDN для CodeMirror 5.65.2
                                         $themeOptions = [
                                             'monokai' => 'Monokai (темна)',
-                                            'default' => 'Default (світла)',
-                                            'dracula' => 'Dracula',
-                                            'material' => 'Material',
-                                            'solarized-dark' => 'Solarized Dark',
-                                            'solarized-light' => 'Solarized Light'
+                                            'default' => 'Default (світла)'
                                         ];
                                         foreach ($themeOptions as $value => $label):
                                         ?>

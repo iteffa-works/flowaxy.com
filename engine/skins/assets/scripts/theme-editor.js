@@ -192,6 +192,9 @@ function initCodeMirror() {
         // Ініціалізуємо статус при завантаженні
         updateEditorStatus();
         
+        // Застосовуємо налаштування редактора (шрифт, розмір тощо)
+        applyEditorSettingsToCodeMirror();
+        
         codeEditor.on('change', function() {
             isModified = codeEditor.getValue() !== originalContent;
             updateEditorStatus();
@@ -1589,6 +1592,18 @@ function loadFileInEditor(filePath) {
                 // Завантажуємо вміст в редактор
                 if (codeEditor) {
                     // Якщо редактор вже ініціалізовано, оновлюємо його
+                    // Спочатку встановлюємо режим для нового файлу
+                    if (textareaEl) {
+                        const extension = textareaEl.getAttribute('data-extension');
+                        const enableSyntaxHighlighting = textareaEl.getAttribute('data-syntax-highlighting') !== '0';
+                        if (enableSyntaxHighlighting && extension) {
+                            const mode = getCodeMirrorMode(extension);
+                            codeEditor.setOption('mode', mode);
+                        } else {
+                            codeEditor.setOption('mode', null);
+                        }
+                    }
+                    
                     codeEditor.setValue(data.content);
                     originalContent = data.content;
                     isModified = false;
@@ -1598,6 +1613,21 @@ function loadFileInEditor(filePath) {
                     
                     // Застосовуємо всі налаштування до редактора
                     applyEditorSettingsToCodeMirror();
+                    
+                    // Додатково встановлюємо режим для забезпечення підсвітки
+                    if (textareaEl) {
+                        const extension = textareaEl.getAttribute('data-extension');
+                        const enableSyntaxHighlighting = textareaEl.getAttribute('data-syntax-highlighting') !== '0';
+                        if (enableSyntaxHighlighting && extension) {
+                            const mode = getCodeMirrorMode(extension);
+                            if (mode && codeEditor.getOption('mode') !== mode) {
+                                codeEditor.setOption('mode', mode);
+                            }
+                        }
+                    }
+                    
+                    // Оновлюємо редактор для застосування змін
+                    codeEditor.refresh();
                 } else {
                     // Якщо редактор ще не ініціалізовано, ініціалізуємо його
                     if (typeof CodeMirror !== 'undefined' && textareaEl) {
@@ -2022,7 +2052,35 @@ function applyEditorSettingsToCodeMirror() {
     
     if (fontFamily) {
         const fontValue = fontFamily.value || "'Consolas', monospace";
-        codeEditor.getWrapperElement().style.fontFamily = fontValue;
+        // Встановлюємо шрифт через CodeMirror wrapper
+        const wrapper = codeEditor.getWrapperElement();
+        if (wrapper) {
+            wrapper.style.fontFamily = fontValue;
+            // Також встановлюємо на сам елемент CodeMirror
+            const editorElement = wrapper.querySelector('.CodeMirror');
+            if (editorElement) {
+                editorElement.style.fontFamily = fontValue;
+            }
+            // Створюємо або оновлюємо style елемент для забезпечення правильного застосування шрифту
+            let styleId = 'codemirror-font-family';
+            let styleElement = document.getElementById(styleId);
+            if (!styleElement) {
+                styleElement = document.createElement('style');
+                styleElement.id = styleId;
+                document.head.appendChild(styleElement);
+            }
+            styleElement.textContent = `
+                .CodeMirror,
+                .CodeMirror-wrapper,
+                .CodeMirror-code,
+                .CodeMirror-line,
+                .CodeMirror-line > span,
+                .CodeMirror-line > span > span,
+                .CodeMirror-lines {
+                    font-family: ${fontValue} !important;
+                }
+            `;
+        }
     }
     
     if (fontSize) {

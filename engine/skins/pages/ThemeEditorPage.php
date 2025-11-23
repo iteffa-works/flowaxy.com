@@ -38,8 +38,12 @@ class ThemeEditorPage extends AdminPage {
         
         $this->editorManager = ThemeEditorManager::getInstance();
         
+        // Додаємо Google Fonts для шрифтів редактора
+        $this->additionalCSS[] = 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap';
+        
         // Додаємо CSS та JS для редактора
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
+        // Підключаємо теми CodeMirror (тема 'default' вже включена в основний файл)
         $this->additionalCSS[] = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css';
             // Використовуємо Hash для створення версії файлу (замість time() для кешування)
             $cssVersion = class_exists('Hash') ? substr(Hash::md5((string)filemtime(__DIR__ . '/../assets/styles/theme-editor.css')), 0, 8) : time();
