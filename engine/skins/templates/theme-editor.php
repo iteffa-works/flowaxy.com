@@ -280,14 +280,10 @@ if (!empty($message)) {
                                     </label>
                                     <select class="form-select" id="editorFontFamilyInline" name="font_family">
                                         <?php
-                                        $fontFamily = $editorSettings['font_family'] ?? "'Consolas', monospace";
+                                        $fontFamily = $editorSettings['font_family'] ?? "'Courier New', monospace";
                                         $fontOptions = [
                                             "'Courier New', monospace" => 'Courier New',
-                                            "'Consolas', monospace" => 'Consolas',
-                                            "'Monaco', monospace" => 'Monaco',
                                             "'Menlo', monospace" => 'Menlo',
-                                            "'Fira Code', monospace" => 'Fira Code',
-                                            "'Source Code Pro', monospace" => 'Source Code Pro',
                                             "'JetBrains Mono', monospace" => 'JetBrains Mono'
                                         ];
                                         foreach ($fontOptions as $value => $label):
