@@ -60,7 +60,7 @@ class ThemeEditorPage extends AdminPage {
         $request = $this->request();
         
         // Обробка GET запитів для скачування
-        $getAction = $request->query('action', '');
+        $getAction = $_GET['action'] ?? $request->query('action', '');
         if ($getAction === 'download_file') {
             $this->ajaxDownloadFile();
             return;
@@ -535,19 +535,46 @@ class ThemeEditorPage extends AdminPage {
      * AJAX: Скачування файлу
      */
     private function ajaxDownloadFile(): void {
-        $request = $this->request();
-        $themeSlug = Validator::sanitizeString($request->query('theme', ''));
-        $filePath = Validator::sanitizeString($request->query('file', ''));
+        // Отримуємо параметри з GET запиту напряму з $_GET
+        $themeSlug = isset($_GET['theme']) ? Validator::sanitizeString($_GET['theme']) : '';
+        $filePath = isset($_GET['file']) ? Validator::sanitizeString($_GET['file']) : '';
+        
+        // Логування для діагностики (тимчасове)
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logWarning('ThemeEditorPage: ajaxDownloadFile called', [
+                'theme' => $themeSlug,
+                'file' => $filePath,
+                'get_params' => $_GET
+            ]);
+        }
         
         if (empty($themeSlug) || empty($filePath)) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або файл'], 400);
-            return;
+            // Детальне повідомлення про помилку для діагностики
+            $debugInfo = [
+                'theme' => $themeSlug,
+                'file' => $filePath,
+                'get_params' => $_GET,
+                'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
+                'query_string' => $_SERVER['QUERY_STRING'] ?? ''
+            ];
+            
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorPage: Missing theme or file parameter', $debugInfo);
+            }
+            
+            http_response_code(400);
+            echo 'Помилка: Не вказано тему або файл.<br>';
+            echo 'Theme: ' . htmlspecialchars($themeSlug) . '<br>';
+            echo 'File: ' . htmlspecialchars($filePath) . '<br>';
+            echo 'GET params: ' . print_r($_GET, true);
+            exit;
         }
         
         $themePath = themeManager()->getThemePath($themeSlug);
         if (empty($themePath)) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
-            return;
+            http_response_code(404);
+            echo 'Помилка: Тему не знайдено';
+            exit;
         }
         
         $fullPath = $themePath . $filePath;
@@ -558,9 +585,11 @@ class ThemeEditorPage extends AdminPage {
             
             // Перевірка безпеки шляху через клас File
             $realThemePath = realpath($themePath);
-            if ($realThemePath === false || !$file->exists() || !$file->isFile() || !$file->isPathSafe($realThemePath)) {
-                $this->sendJsonResponse(['success' => false, 'error' => 'Файл не знайдено'], 404);
-                return;
+            // Метод exists() вже перевіряє is_file(), тому додаткова перевірка не потрібна
+            if ($realThemePath === false || !$file->exists() || !$file->isPathSafe($realThemePath)) {
+                http_response_code(404);
+                echo 'Помилка: Файл не знайдено';
+                exit;
             }
             
             // Відправляємо файл через Response клас
@@ -571,7 +600,7 @@ class ThemeEditorPage extends AdminPage {
                 // Якщо не вдалося визначити через finfo, використовуємо MimeType клас
                 $mimeType = MimeType::get($file->getPath());
             }
-            $contentType = $mimeType;
+            $contentType = $mimeType ?: 'application/octet-stream';
             
             // Вимикаємо буферизацію перед відправкою файлу
             while (ob_get_level() > 0) {
@@ -596,11 +625,10 @@ class ThemeEditorPage extends AdminPage {
                     'theme' => $themeSlug,
                     'file' => $filePath
                 ]);
-            } else {
-                error_log("ThemeEditorPage: Error downloading file: " . $e->getMessage());
             }
-            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка завантаження файлу'], 500);
-            return;
+            http_response_code(500);
+            echo 'Помилка: ' . Security::clean($e->getMessage());
+            exit;
         }
     }
     
@@ -608,19 +636,46 @@ class ThemeEditorPage extends AdminPage {
      * AJAX: Скачування папки (ZIP архів)
      */
     private function ajaxDownloadFolder(): void {
-        $request = $this->request();
-        $themeSlug = Validator::sanitizeString($request->query('theme', ''));
-        $folderPath = Validator::sanitizeString($request->query('folder', ''));
+        // Отримуємо параметри з GET запиту напряму з $_GET
+        $themeSlug = isset($_GET['theme']) ? Validator::sanitizeString($_GET['theme']) : '';
+        $folderPath = isset($_GET['folder']) ? Validator::sanitizeString($_GET['folder']) : '';
+        
+        // Логування для діагностики (тимчасове)
+        if (class_exists('Logger')) {
+            Logger::getInstance()->logWarning('ThemeEditorPage: ajaxDownloadFolder called', [
+                'theme' => $themeSlug,
+                'folder' => $folderPath,
+                'get_params' => $_GET
+            ]);
+        }
         
         if (empty($themeSlug) || empty($folderPath)) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему або папку'], 400);
-            return;
+            // Детальне повідомлення про помилку для діагностики
+            $debugInfo = [
+                'theme' => $themeSlug,
+                'folder' => $folderPath,
+                'get_params' => $_GET,
+                'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
+                'query_string' => $_SERVER['QUERY_STRING'] ?? ''
+            ];
+            
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorPage: Missing theme or folder parameter', $debugInfo);
+            }
+            
+            http_response_code(400);
+            echo 'Помилка: Не вказано тему або папку.<br>';
+            echo 'Theme: ' . htmlspecialchars($themeSlug) . '<br>';
+            echo 'Folder: ' . htmlspecialchars($folderPath) . '<br>';
+            echo 'GET params: ' . print_r($_GET, true);
+            exit;
         }
         
         $themePath = themeManager()->getThemePath($themeSlug);
         if (empty($themePath)) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
-            return;
+            http_response_code(404);
+            echo 'Помилка: Тему не знайдено';
+            exit;
         }
         
         try {
@@ -632,11 +687,10 @@ class ThemeEditorPage extends AdminPage {
             if ($zipPath === null || !$zipFile->exists()) {
                 if (class_exists('Logger')) {
                     Logger::getInstance()->logError('ThemeEditorPage: Failed to create ZIP archive', ['theme' => $themeSlug, 'folder' => $folderPath]);
-                } else {
-                    error_log("ThemeEditorPage: Failed to create ZIP archive. Theme: {$themeSlug}, Folder: {$folderPath}");
                 }
-                $this->sendJsonResponse(['success' => false, 'error' => 'Не вдалося створити архів. Перевірте права доступу та логи сервера.'], 500);
-                return;
+                http_response_code(500);
+                echo 'Помилка: Не вдалося створити архів. Перевірте права доступу та логи сервера.';
+                exit;
             }
             
             // Відправляємо ZIP файл
@@ -677,11 +731,10 @@ class ThemeEditorPage extends AdminPage {
                     'theme' => $themeSlug,
                     'folder' => $folderPath
                 ]);
-            } else {
-                error_log("ThemeEditorPage: Exception in ajaxDownloadFolder: " . $e->getMessage());
             }
-            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка створення архіву: ' . $e->getMessage()], 500);
-            return;
+            http_response_code(500);
+            echo 'Помилка: ' . Security::clean($e->getMessage());
+            exit;
         }
     }
     
@@ -895,7 +948,8 @@ class ThemeEditorPage extends AdminPage {
                 return 1;
             }
             
-            return strcmp($a, $b);
+            // Перетворюємо ключі на рядки для порівняння
+            return strcmp((string)$a, (string)$b);
         });
         
         foreach ($tree as &$item) {

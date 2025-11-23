@@ -64,7 +64,7 @@ class ThemeEditorManager {
             );
             
             foreach ($iterator as $file) {
-                if ($file->isFile()) {
+                if ($file->isFile()) { // $file тут - це SplFileInfo об'єкт з RecursiveDirectoryIterator
                     $extension = strtolower($file->getExtension());
                     $fileName = $file->getFilename();
                     
@@ -214,14 +214,16 @@ class ThemeEditorManager {
         $filePath = ltrim($filePath, '/');
         $fullPath = $realThemePath . '/' . $filePath;
         
-        // Перевіряємо, що файл знаходиться в директорії теми
-        $realFullPath = realpath(dirname($fullPath));
-        if ($realFullPath === false || !str_starts_with($realFullPath, $realThemePath)) {
+        // Перевіряємо базову безпеку шляху через простe рядкове порівняння
+        // (не використовуємо realpath, оскільки директорія може не існувати)
+        $normalizedThemePath = str_replace('\\', '/', $realThemePath);
+        $normalizedFullPath = str_replace('\\', '/', $fullPath);
+        if (!str_starts_with($normalizedFullPath, $normalizedThemePath)) {
             return ['success' => false, 'error' => 'Невірний шлях до файлу'];
         }
         
         // Перевіряємо, чи файл вже існує
-        if (file_exists($fullPath)) {
+        if (file_exists($fullPath) && is_file($fullPath)) {
             return ['success' => false, 'error' => 'Файл вже існує'];
         }
         
@@ -232,7 +234,19 @@ class ThemeEditorManager {
             if (!$dir->exists()) {
                 $dir->create(0755, true);
             }
+            // Перевіряємо безпеку директорії після створення
+            $dirFile = new File($fileDir);
+            if (!$dirFile->isPathSafe($realThemePath)) {
+                return ['success' => false, 'error' => 'Невірний шлях до директорії'];
+            }
         } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Failed to create directory', [
+                    'error' => $e->getMessage(),
+                    'directory' => $fileDir,
+                    'themePath' => $realThemePath
+                ]);
+            }
             return ['success' => false, 'error' => 'Неможливо створити директорію: ' . $e->getMessage()];
         }
         
@@ -241,12 +255,23 @@ class ThemeEditorManager {
             $file = new File($fullPath);
             $file->write($content);
             
+            // Очищуємо кеш дерева файлів
+            if (class_exists('Cache')) {
+                Cache::forget('theme_files_' . md5($realThemePath));
+            }
+            
             return [
                 'success' => true,
                 'message' => 'Файл успішно створено',
                 'path' => $filePath
             ];
         } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Failed to create file', [
+                    'error' => $e->getMessage(),
+                    'filePath' => $fullPath
+                ]);
+            }
             return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
         }
     }

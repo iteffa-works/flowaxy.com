@@ -1208,8 +1208,26 @@ function downloadFile(event, filePath) {
         event.stopPropagation();
     }
     
-    const theme = new URLSearchParams(window.location.search).get('theme') || '';
-    const url = window.location.href.split('?')[0] + '?action=download_file&theme=' + encodeURIComponent(theme) + '&file=' + encodeURIComponent(filePath);
+    // Отримуємо тему з URL або з data-theme атрибута
+    let theme = new URLSearchParams(window.location.search).get('theme') || '';
+    if (!theme) {
+        // Якщо тема не знайдена в URL, пробуємо отримати з data-theme атрибута
+        const editor = document.getElementById('theme-file-editor');
+        if (editor && editor.dataset.theme) {
+            theme = editor.dataset.theme;
+        }
+    }
+    
+    if (!theme) {
+        showNotification('Помилка: Не вдалося визначити тему', 'danger');
+        return;
+    }
+    
+    // Формуємо URL для завантаження файлу
+    const baseUrl = window.location.href.split('?')[0];
+    const url = baseUrl + '?action=download_file&theme=' + encodeURIComponent(theme) + '&file=' + encodeURIComponent(filePath);
+    
+    // Відкриваємо URL для завантаження файлу
     window.location.href = url;
 }
 
@@ -1222,8 +1240,26 @@ function downloadFolder(event, folderPath) {
         event.stopPropagation();
     }
     
-    const theme = new URLSearchParams(window.location.search).get('theme') || '';
-    const url = window.location.href.split('?')[0] + '?action=download_folder&theme=' + encodeURIComponent(theme) + '&folder=' + encodeURIComponent(folderPath);
+    // Отримуємо тему з URL або з data-theme атрибута
+    let theme = new URLSearchParams(window.location.search).get('theme') || '';
+    if (!theme) {
+        // Якщо тема не знайдена в URL, пробуємо отримати з data-theme атрибута
+        const editor = document.getElementById('theme-file-editor');
+        if (editor && editor.dataset.theme) {
+            theme = editor.dataset.theme;
+        }
+    }
+    
+    if (!theme) {
+        showNotification('Помилка: Не вдалося визначити тему', 'danger');
+        return;
+    }
+    
+    // Формуємо URL для завантаження папки
+    const baseUrl = window.location.href.split('?')[0];
+    const url = baseUrl + '?action=download_folder&theme=' + encodeURIComponent(theme) + '&folder=' + encodeURIComponent(folderPath);
+    
+    // Відкриваємо URL для завантаження папки
     window.location.href = url;
 }
 
