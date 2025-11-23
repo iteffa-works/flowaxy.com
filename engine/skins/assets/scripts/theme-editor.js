@@ -711,18 +711,109 @@ function renameFileOrFolder(event, path, isFolder = false) {
     // Получаем текущее имя
     const currentName = path.split('/').pop() || path;
     
-    // Показываем диалог для ввода нового имени
-    const newName = prompt(
-        isFolder ? `Введіть нове ім'я папки:` : `Введіть нове ім'я файлу:`,
-        currentName
-    );
-    
-    if (!newName || newName.trim() === '') {
-        return; // Пользователь отменил или оставил пустым
+    // Находим элемент в дереве файлов для замены на inline форму
+    const fileTree = document.querySelector('.file-tree');
+    if (!fileTree) {
+        showNotification('Дерево файлів не знайдено', 'danger');
+        return;
     }
     
-    if (newName.trim() === currentName) {
-        return; // Имя не изменилось
+    // Находим элемент файла/папки в дереве
+    let targetElement = null;
+    const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
+    
+    for (let item of allItems) {
+        const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
+        if (itemPath === path) {
+            targetElement = item;
+            break;
+        }
+    }
+    
+    if (!targetElement) {
+        showNotification('Елемент не знайдено в дереві', 'danger');
+        return;
+    }
+    
+    // Создаем inline форму редактирования
+    createInlineRenameForm(targetElement, path, currentName, isFolder);
+}
+
+/**
+ * Создание inline формы для переименования файла/папки
+ */
+function createInlineRenameForm(targetElement, path, currentName, isFolder) {
+    // Скрываем оригинальный элемент
+    targetElement.style.display = 'none';
+    
+    // Создаем форму редактирования
+    const inlineForm = document.createElement('div');
+    inlineForm.className = 'file-tree-inline-form';
+    inlineForm.innerHTML = `
+        <input type="text" class="file-tree-inline-input" value="${escapeHtml(currentName)}" />
+        <button type="button" class="file-tree-inline-btn file-tree-inline-btn-success" onclick="submitInlineRename(this, '${escapeHtml(path)}', ${isFolder ? 'true' : 'false'})">
+            <i class="fas fa-check"></i>
+        </button>
+        <button type="button" class="file-tree-inline-btn file-tree-inline-btn-cancel" onclick="cancelInlineRename(this, '${escapeHtml(path)}')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Добавляем обработчик Enter
+    const input = inlineForm.querySelector('.file-tree-inline-input');
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            submitInlineRename(this.nextElementSibling, path, isFolder);
+        } else if (e.key === 'Escape') {
+            cancelInlineRename(this.nextElementSibling.nextElementSibling, path);
+        }
+    });
+    
+    // Вставляем форму после оригинального элемента
+    targetElement.parentNode.insertBefore(inlineForm, targetElement.nextSibling);
+    input.focus();
+    input.select(); // Выделяем текст для удобного редактирования
+}
+
+/**
+ * Отмена переименования
+ */
+function cancelInlineRename(button, path) {
+    const form = button.closest('.file-tree-inline-form');
+    if (!form) return;
+    
+    // Находим и показываем оригинальный элемент
+    const fileTree = document.querySelector('.file-tree');
+    const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
+    for (let item of allItems) {
+        const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
+        if (itemPath === path) {
+            item.style.display = '';
+            break;
+        }
+    }
+    
+    form.remove();
+}
+
+/**
+ * Отправка inline формы переименования
+ */
+function submitInlineRename(button, oldPath, isFolder) {
+    const form = button.closest('.file-tree-inline-form');
+    const input = form.querySelector('.file-tree-inline-input');
+    const newName = input.value.trim();
+    
+    if (!newName) {
+        showNotification(isFolder ? 'Введіть назву папки' : 'Введіть назву файлу', 'warning');
+        input.focus();
+        return;
+    }
+    
+    const currentName = oldPath.split('/').pop() || oldPath;
+    if (newName === currentName) {
+        cancelInlineRename(button, oldPath);
+        return;
     }
     
     const textarea = document.getElementById('theme-file-editor');
@@ -730,6 +821,7 @@ function renameFileOrFolder(event, path, isFolder = false) {
     
     if (!theme) {
         showNotification('Тему не вказано', 'danger');
+        cancelInlineRename(button, oldPath);
         return;
     }
     
@@ -738,9 +830,13 @@ function renameFileOrFolder(event, path, isFolder = false) {
     const formData = {
         action: action,
         theme: theme,
-        old_path: path,
-        new_name: newName.trim()
+        old_path: oldPath,
+        new_name: newName
     };
+    
+    // Блокируем кнопку и input
+    button.disabled = true;
+    input.disabled = true;
     
     // Используем AjaxHelper если доступен
     const requestFn = typeof AjaxHelper !== 'undefined' 
@@ -759,18 +855,19 @@ function renameFileOrFolder(event, path, isFolder = false) {
     
     requestFn
         .then(data => {
+            form.remove(); // Удаляем форму в любом случае
+            
             if (data.success) {
                 showNotification(data.message || (isFolder ? 'Папку успішно перейменовано' : 'Файл успішно перейменовано'), 'success');
                 
-                // Обновляем дерево файлов
+                // Обновляем дерево файлов - это покажет переименованный файл
                 refreshFileTree();
                 
                 // Если переименован открытый файл, обновляем его в редакторе
-                if (!isFolder) {
+                if (!isFolder && data.new_path) {
                     const textarea = document.getElementById('theme-file-editor');
                     const currentFile = textarea ? textarea.getAttribute('data-file') : '';
-                    if (currentFile === path && data.new_path) {
-                        // Закрываем текущий файл и открываем переименованный
+                    if (currentFile === oldPath) {
                         setTimeout(() => {
                             loadFileInEditor(data.new_path);
                         }, 500);
@@ -778,17 +875,46 @@ function renameFileOrFolder(event, path, isFolder = false) {
                 }
             } else {
                 showNotification(data.error || (isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу'), 'danger');
+                // Показываем оригинальный элемент снова
+                const fileTree = document.querySelector('.file-tree');
+                const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
+                for (let item of allItems) {
+                    const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
+                    if (itemPath === oldPath) {
+                        item.style.display = '';
+                        break;
+                    }
+                }
             }
         })
         .catch(error => {
             console.error('Error:', error);
+            form.remove();
             showNotification(isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу', 'danger');
+            // Показываем оригинальный элемент снова
+            const fileTree = document.querySelector('.file-tree');
+            const allItems = fileTree.querySelectorAll('.file-item, .folder-item');
+            for (let item of allItems) {
+                const itemPath = item.getAttribute('data-path') || item.getAttribute('data-file');
+                if (itemPath === oldPath) {
+                    item.style.display = '';
+                    break;
+                }
+            }
         });
 }
 
 function deleteCurrentFile(event, filePath) {
     event.preventDefault();
     event.stopPropagation();
+    
+    // Проверяем, не пытаемся ли удалить критический файл
+    const criticalFiles = ['index.php', 'theme.json'];
+    const fileName = filePath.split('/').pop() || filePath;
+    if (criticalFiles.includes(fileName)) {
+        showNotification('Неможливо видалити критичний файл: ' + fileName, 'danger');
+        return;
+    }
     
     const textarea = document.getElementById('theme-file-editor');
     const theme = textarea.getAttribute('data-theme');

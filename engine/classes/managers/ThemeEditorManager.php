@@ -47,14 +47,10 @@ class ThemeEditorManager {
      * Отримання списку файлів теми
      */
     public function getThemeFiles(string $themePath, array $allowedExtensions = null): array {
-        // Если расширения не указаны, используем все типы файлов
-        if ($allowedExtensions === null) {
-            $allowedExtensions = ['php', 'css', 'js', 'json', 'html', 'htm', 'txt', 'md', 'xml', 'yaml', 'yml', 
-                                  'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp',
-                                  'mp4', 'webm', 'ogg', 'mp3', 'wav', 'flac',
-                                  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar', 'tar', 'gz',
-                                  'woff', 'woff2', 'ttf', 'eot', 'otf'];
-        }
+        // Если расширения не указаны (null), показываем ВСЕ файлы, включая без расширения
+        // Если передан пустой массив [], тоже показываем все файлы
+        // Если передан массив с расширениями, показываем только файлы с этими расширениями + файлы без расширения
+        $showAllFiles = ($allowedExtensions === null || empty($allowedExtensions));
         $files = [];
         
         if (!is_dir($themePath) || !is_readable($themePath)) {
@@ -70,7 +66,23 @@ class ThemeEditorManager {
             foreach ($iterator as $file) {
                 if ($file->isFile()) {
                     $extension = strtolower($file->getExtension());
-                    if (in_array($extension, $allowedExtensions, true)) {
+                    $fileName = $file->getFilename();
+                    
+                    // Показываем все файлы, если расширения не указаны или пусто
+                    // Также показываем файлы без расширения
+                    $shouldInclude = false;
+                    if ($showAllFiles) {
+                        // Показываем все файлы
+                        $shouldInclude = true;
+                    } elseif (empty($extension)) {
+                        // Файл без расширения - всегда показываем
+                        $shouldInclude = true;
+                    } else {
+                        // Проверяем, есть ли расширение в списке разрешенных
+                        $shouldInclude = in_array($extension, $allowedExtensions, true);
+                    }
+                    
+                    if ($shouldInclude) {
                         $relativePath = str_replace($themePath, '', $file->getPathname());
                         $relativePath = str_replace('\\', '/', $relativePath);
                         $relativePath = ltrim($relativePath, '/');
@@ -78,8 +90,8 @@ class ThemeEditorManager {
                         $files[] = [
                             'path' => $relativePath,
                             'fullPath' => $file->getPathname(),
-                            'name' => $file->getFilename(),
-                            'extension' => $extension,
+                            'name' => $fileName,
+                            'extension' => $extension ?: '',
                             'size' => $file->getSize(),
                             'modified' => $file->getMTime(),
                             'directory' => dirname($relativePath) ?: '.'
@@ -336,15 +348,32 @@ class ThemeEditorManager {
             return ['success' => false, 'error' => 'Невірний шлях до теми'];
         }
         
-        // Нормалізуємо шлях
+        // Нормалізуємо шлях (заменяем обратные слеши на прямые для внутренней работы)
         $oldPath = str_replace('\\', '/', $oldPath);
         $oldPath = ltrim($oldPath, '/');
-        $oldFullPath = $realThemePath . '/' . $oldPath;
+        // Нормализуем путь, заменяя '/' на DIRECTORY_SEPARATOR для файловой системы
+        $oldPathNormalized = str_replace('/', DIRECTORY_SEPARATOR, $oldPath);
+        $oldFullPath = $realThemePath . DIRECTORY_SEPARATOR . $oldPathNormalized;
         
         // Перевіряємо, що файл знаходиться в теми
+        if (!file_exists($oldFullPath)) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: File not found for rename', [
+                    'oldPath' => $oldPath,
+                    'oldFullPath' => $oldFullPath,
+                    'themePath' => $realThemePath
+                ]);
+            }
+            return ['success' => false, 'error' => 'Файл не знайдено: ' . $oldPath];
+        }
+        
+        if (is_dir($oldFullPath)) {
+            return ['success' => false, 'error' => 'Це директорія, а не файл'];
+        }
+        
         $file = new File($oldFullPath);
-        if (!$file->exists() || is_dir($oldFullPath) || !$file->isPathSafe($realThemePath)) {
-            return ['success' => false, 'error' => 'Файл не знайдено або не належить до теми'];
+        if (!$file->isPathSafe($realThemePath)) {
+            return ['success' => false, 'error' => 'Файл не належить до теми'];
         }
         
         // Валідація нового імені
@@ -372,7 +401,9 @@ class ThemeEditorManager {
         } else {
             $newPath = $parentDir . '/' . $newName;
         }
-        $newFullPath = $realThemePath . '/' . $newPath;
+        // Нормализуем путь, заменяя '/' на DIRECTORY_SEPARATOR
+        $newPathNormalized = str_replace('/', DIRECTORY_SEPARATOR, $newPath);
+        $newFullPath = $realThemePath . DIRECTORY_SEPARATOR . $newPathNormalized;
         
         // Перевіряємо, чи файл з таким ім'ям вже існує
         if (file_exists($newFullPath)) {
@@ -380,9 +411,47 @@ class ThemeEditorManager {
         }
         
         try {
-            // Використовуємо клас File для переименования
-            $file = new File($oldFullPath);
-            $file->move($newFullPath);
+            // Перевіряємо, що батьківська директорія існує для нового файлу
+            $newParentDir = dirname($newFullPath);
+            if (!is_dir($newParentDir)) {
+                return ['success' => false, 'error' => 'Батьківська директорія для нового файлу не існує'];
+            }
+            
+            // Используем прямой rename() для переименования файла
+            // Это более надежно для переименования в той же директории
+            // Очищаем кеш stat, чтобы убедиться, что файл виден
+            clearstatcache(true, $oldFullPath);
+            clearstatcache(true, $newFullPath);
+            
+            // Убеждаемся, что пути нормализованы
+            $oldFullPathNormalized = str_replace('/', DIRECTORY_SEPARATOR, $oldFullPath);
+            $newFullPathNormalized = str_replace('/', DIRECTORY_SEPARATOR, $newFullPath);
+            
+            if (!@rename($oldFullPathNormalized, $newFullPathNormalized)) {
+                $error = error_get_last();
+                $errorMsg = $error ? $error['message'] : 'Не вдалося перейменувати файл';
+                
+                // Добавляем детальную информацию для отладки
+                if (class_exists('Logger')) {
+                    Logger::getInstance()->logError('ThemeEditorManager: rename() failed', [
+                        'error' => $errorMsg,
+                        'oldFullPath' => $oldFullPath,
+                        'newFullPath' => $newFullPath,
+                        'oldPathExists' => file_exists($oldFullPath),
+                        'oldPathIsFile' => is_file($oldFullPath),
+                        'newPathExists' => file_exists($newFullPath),
+                        'oldPathWritable' => is_writable(dirname($oldFullPath)),
+                        'newParentDirWritable' => is_writable(dirname($newFullPath))
+                    ]);
+                }
+                
+                throw new Exception($errorMsg);
+            }
+            
+            // Очищаем кеш дерева файлов, чтобы переименованный файл отображался
+            if (function_exists('cache_forget')) {
+                cache_forget('theme_files_' . md5($themePath));
+            }
             
             return [
                 'success' => true,
@@ -395,7 +464,9 @@ class ThemeEditorManager {
                 Logger::getInstance()->logError('ThemeEditorManager: Failed to rename file', [
                     'error' => $e->getMessage(),
                     'oldPath' => $oldPath,
-                    'newName' => $newName
+                    'newName' => $newName,
+                    'oldFullPath' => $oldFullPath,
+                    'newFullPath' => $newFullPath
                 ]);
             }
             return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
