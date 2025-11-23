@@ -525,8 +525,23 @@ function submitInlineCreateFile(button, folderPath) {
     button.disabled = true;
     input.disabled = true;
     
+    // Отримуємо тему з URL або з data-theme атрибута
+    let theme = new URLSearchParams(window.location.search).get('theme') || '';
+    if (!theme) {
+        const editor = document.getElementById('theme-file-editor');
+        if (editor && editor.dataset.theme) {
+            theme = editor.dataset.theme;
+        }
+    }
+    
+    if (!theme) {
+        showNotification('Помилка: Не вдалося визначити тему', 'danger');
+        button.disabled = false;
+        input.disabled = false;
+        return;
+    }
+    
     // Використовуємо утилітну функцію для AJAX запиту
-    const theme = new URLSearchParams(window.location.search).get('theme') || '';
     makeAjaxRequest('create_file', {
         theme: theme,
         file: fullPath,
@@ -680,8 +695,23 @@ function submitInlineCreateDirectory(button, folderPath) {
     button.disabled = true;
     input.disabled = true;
     
+    // Отримуємо тему з URL або з data-theme атрибута
+    let theme = new URLSearchParams(window.location.search).get('theme') || '';
+    if (!theme) {
+        const editor = document.getElementById('theme-file-editor');
+        if (editor && editor.dataset.theme) {
+            theme = editor.dataset.theme;
+        }
+    }
+    
+    if (!theme) {
+        showNotification('Помилка: Не вдалося визначити тему', 'danger');
+        button.disabled = false;
+        input.disabled = false;
+        return;
+    }
+    
     // Використовуємо утилітну функцію для AJAX запиту
-    const theme = new URLSearchParams(window.location.search).get('theme') || '';
     makeAjaxRequest('create_directory', {
         theme: theme,
         directory: fullPath
@@ -980,6 +1010,8 @@ function deleteCurrentFile(event, filePath) {
                             
                             if (editorPlaceholder) {
                                 editorPlaceholder.style.display = 'flex';
+                                editorPlaceholder.style.flex = '1';
+                                editorPlaceholder.style.minHeight = '0';
                             }
                             if (editorHeader) {
                                 editorHeader.style.display = 'none';

@@ -234,11 +234,6 @@ class ThemeEditorManager {
             if (!$dir->exists()) {
                 $dir->create(0755, true);
             }
-            // Перевіряємо безпеку директорії після створення
-            $dirFile = new File($fileDir);
-            if (!$dirFile->isPathSafe($realThemePath)) {
-                return ['success' => false, 'error' => 'Невірний шлях до директорії'];
-            }
         } catch (Exception $e) {
             if (class_exists('Logger')) {
                 Logger::getInstance()->logError('ThemeEditorManager: Failed to create directory', [
@@ -256,8 +251,10 @@ class ThemeEditorManager {
             $file->write($content);
             
             // Очищуємо кеш дерева файлів
-            if (class_exists('Cache')) {
-                Cache::forget('theme_files_' . md5($realThemePath));
+            if (function_exists('cache_forget')) {
+                cache_forget('theme_files_' . md5($realThemePath));
+            } elseif (class_exists('Cache')) {
+                Cache::getInstance()->delete('theme_files_' . md5($realThemePath));
             }
             
             return [
@@ -592,10 +589,11 @@ class ThemeEditorManager {
         $dirPath = ltrim($dirPath, '/');
         $fullPath = $realThemePath . '/' . $dirPath;
         
-        // Перевіряємо, що директорія знаходиться в теми
-        $dir = new Directory($fullPath);
-        $file = new File($fullPath);
-        if (!$file->isPathSafe($realThemePath)) {
+        // Перевіряємо базову безпеку шляху через простe рядкове порівняння
+        // (не використовуємо realpath, оскільки директорія може не існувати)
+        $normalizedThemePath = str_replace('\\', '/', $realThemePath);
+        $normalizedFullPath = str_replace('\\', '/', $fullPath);
+        if (!str_starts_with($normalizedFullPath, $normalizedThemePath)) {
             return ['success' => false, 'error' => 'Невірний шлях до директорії'];
         }
         
@@ -609,12 +607,26 @@ class ThemeEditorManager {
             $dir = new Directory($fullPath);
             $dir->create(0755, true);
             
+            // Очищуємо кеш дерева файлів
+            if (function_exists('cache_forget')) {
+                cache_forget('theme_files_' . md5($realThemePath));
+            } elseif (class_exists('Cache')) {
+                Cache::getInstance()->delete('theme_files_' . md5($realThemePath));
+            }
+            
             return [
                 'success' => true,
                 'message' => 'Директорію успішно створено',
                 'path' => $dirPath
             ];
         } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Failed to create directory', [
+                    'error' => $e->getMessage(),
+                    'directory' => $fullPath,
+                    'themePath' => $realThemePath
+                ]);
+            }
             return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
         }
     }
