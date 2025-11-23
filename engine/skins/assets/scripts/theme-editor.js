@@ -800,53 +800,62 @@ function initFileTree() {
         }
     }
     
-    // Обработка кликов по файлам - используем делегирование событий вместо добавления обработчиков к каждому элементу
-    // Удаляем старые обработчики, если они есть
+    // Обработка кликов по файлам и папкам - используем делегирование событий
+    // Это позволяет работать с динамически обновляемыми элементами
     const fileTree = document.querySelector('.file-tree');
-    if (fileTree) {
-        // Используем делегирование событий - один обработчик на все дерево
-        if (!fileTree.dataset.delegateHandler) {
-            fileTree.addEventListener('click', function(e) {
-                // Проверяем, что клик по файлу
-                const fileLink = e.target.closest('.file-tree-item');
-                if (fileLink) {
-            e.preventDefault();
-                    e.stopPropagation();
-                    const filePath = fileLink.getAttribute('data-file');
-            if (filePath) {
-                        loadFile(e, filePath);
+    if (fileTree && !fileTree.dataset.delegateHandler) {
+        fileTree.addEventListener('click', function(e) {
+            // Сначала проверяем клик по папке
+            const folderHeader = e.target.closest('.file-tree-folder-header');
+            if (folderHeader) {
+                // Не раскрываем папку, если кликнули на кнопку контекстного меню
+                if (e.target.closest('.file-tree-context-menu')) {
+                    return;
+                }
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const folder = folderHeader.closest('.file-tree-folder');
+                if (!folder) return;
+                
+                const content = folder.querySelector('.file-tree-folder-content');
+                if (!content) return; // Если папка не имеет содержимого, ничего не делаем
+                
+                const isExpanded = folderHeader.classList.contains('expanded');
+                
+                if (isExpanded) {
+                    folderHeader.classList.remove('expanded');
+                    content.classList.remove('expanded');
+                    const icon = folderHeader.querySelector('.folder-icon');
+                    if (icon) {
+                        icon.className = 'fas fa-chevron-right folder-icon';
+                    }
+                } else {
+                    folderHeader.classList.add('expanded');
+                    content.classList.add('expanded');
+                    const icon = folderHeader.querySelector('.folder-icon');
+                    if (icon) {
+                        icon.className = 'fas fa-chevron-down folder-icon';
                     }
                 }
-            });
-            fileTree.dataset.delegateHandler = 'true';
-        }
-    }
-    
-    // Обработка кликов по папкам
-    document.querySelectorAll('.file-tree-folder-header').forEach(header => {
-        header.addEventListener('click', function(e) {
-            // Не раскрываем папку, если кликнули на кнопку контекстного меню
-            if (e.target.closest('.file-tree-context-menu')) {
+                return; // Не обрабатываем дальше, если клик был по папке
+            }
+            
+            // Затем проверяем клик по файлу
+            const fileLink = e.target.closest('.file-tree-item');
+            if (fileLink) {
+                e.preventDefault();
+                e.stopPropagation();
+                const filePath = fileLink.getAttribute('data-file');
+                if (filePath) {
+                    loadFile(e, filePath);
+                }
                 return;
             }
-            
-            const folder = this.closest('.file-tree-folder');
-            if (!folder) return;
-            
-            const content = folder.querySelector('.file-tree-folder-content');
-            if (!content) return; // Если папка не имеет содержимого, ничего не делаем
-            
-            const isExpanded = this.classList.contains('expanded');
-            
-            if (isExpanded) {
-                this.classList.remove('expanded');
-                content.classList.remove('expanded');
-            } else {
-                this.classList.add('expanded');
-                content.classList.add('expanded');
-            }
         });
-    });
+        fileTree.dataset.delegateHandler = 'true';
+    }
 }
 
 // Предупреждение при уходе со страницы с несохраненными изменениями
