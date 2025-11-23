@@ -321,12 +321,16 @@ class Upload {
                 return uniqid('', true) . ($extension ? '.' . $extension : '');
                 
             case 'timestamp':
-                return date('Y-m-d_H-i-s') . '_' . $nameWithoutExt . ($extension ? '.' . $extension : '');
+                // Транскрипция перед добавлением времени
+                $transliterated = class_exists('Security') ? Security::transliterate($nameWithoutExt) : $nameWithoutExt;
+                return date('Y-m-d_H-i-s') . '_' . $transliterated . ($extension ? '.' . $extension : '');
                 
             case 'original':
             default:
+                // Транскрипция русских букв в латиницу
+                $transliterated = class_exists('Security') ? Security::transliterate($nameWithoutExt) : $nameWithoutExt;
                 // Очищаем имя от небезопасных символов
-                $name = preg_replace('/[^a-zA-Z0-9._-]/', '_', $nameWithoutExt);
+                $name = preg_replace('/[^a-zA-Z0-9._-]/', '_', $transliterated);
                 return $name . ($extension ? '.' . $extension : '');
         }
     }

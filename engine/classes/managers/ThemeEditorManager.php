@@ -401,6 +401,16 @@ class ThemeEditorManager {
             // Використовуємо клас Upload для завантаження файлу
             $upload = new Upload($realTargetDir);
             
+            // Встановлюємо дозволені розширення для редактора теми
+            // Дозволяємо всі стандартні файли теми: PHP, JS, CSS, HTML, зображення, конфігураційні файли
+            $upload->setAllowedExtensions([
+                'php', 'js', 'css', 'html', 'htm', 'xml', 'json', 'yaml', 'yml', 'ini', 'txt', 'md',
+                'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff',
+                'zip', 'tar', 'gz',
+                'woff', 'woff2', 'ttf', 'eot', 'otf',
+                'htaccess', 'htpasswd'
+            ]);
+            
             // Валідуємо ім'я файлу через Validator
             $fileName = $uploadedFile['name'] ?? '';
             if (empty($fileName)) {
