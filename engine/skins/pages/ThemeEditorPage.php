@@ -99,6 +99,12 @@ class ThemeEditorPage extends AdminPage {
                     case 'delete_directory':
                         $this->ajaxDeleteDirectory();
                         exit;
+                    case 'rename_file':
+                        $this->ajaxRenameFile();
+                        exit;
+                    case 'rename_directory':
+                        $this->ajaxRenameDirectory();
+                        exit;
                     case 'create_directory':
                         $this->ajaxCreateDirectory();
                         exit;
@@ -265,6 +271,74 @@ class ThemeEditorPage extends AdminPage {
         }
         
         $result = $this->editorManager->deleteDirectory($folderPath, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Переименование файла
+     */
+    private function ajaxRenameFile(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $oldPath = Validator::sanitizeString($request->postValue('old_path', ''));
+        $newName = Validator::sanitizeString($request->postValue('new_name', ''));
+        
+        if (empty($themeSlug) || empty($oldPath) || empty($newName)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему, файл або нове ім\'я'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $result = $this->editorManager->renameFile($oldPath, $newName, $themePath);
+        
+        if ($result['success']) {
+            $this->sendJsonResponse($result, 200);
+        } else {
+            $this->sendJsonResponse($result, 400);
+        }
+    }
+    
+    /**
+     * AJAX: Переименование директорії
+     */
+    private function ajaxRenameDirectory(): void {
+        if (!$this->verifyCsrf()) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Помилка безпеки'], 403);
+            return;
+        }
+        
+        $request = $this->request();
+        $themeSlug = Validator::sanitizeString($request->postValue('theme', ''));
+        $oldPath = Validator::sanitizeString($request->postValue('old_path', ''));
+        $newName = Validator::sanitizeString($request->postValue('new_name', ''));
+        
+        if (empty($themeSlug) || empty($oldPath) || empty($newName)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Не вказано тему, папку або нове ім\'я'], 400);
+            return;
+        }
+        
+        $themePath = themeManager()->getThemePath($themeSlug);
+        if (empty($themePath)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Тему не знайдено'], 404);
+            return;
+        }
+        
+        $result = $this->editorManager->renameDirectory($oldPath, $newName, $themePath);
         
         if ($result['success']) {
             $this->sendJsonResponse($result, 200);

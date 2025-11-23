@@ -693,6 +693,99 @@ function deleteCurrentFolder(event, folderPath) {
         });
 }
 
+/**
+ * Переименование файла или папки
+ */
+function renameFileOrFolder(event, path, isFolder = false) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    // Проверяем, не пытаемся ли переименовать корневую папку
+    if (isFolder && (!path || path === '')) {
+        showNotification('Неможливо перейменувати кореневу папку теми', 'danger');
+        return;
+    }
+    
+    // Получаем текущее имя
+    const currentName = path.split('/').pop() || path;
+    
+    // Показываем диалог для ввода нового имени
+    const newName = prompt(
+        isFolder ? `Введіть нове ім'я папки:` : `Введіть нове ім'я файлу:`,
+        currentName
+    );
+    
+    if (!newName || newName.trim() === '') {
+        return; // Пользователь отменил или оставил пустым
+    }
+    
+    if (newName.trim() === currentName) {
+        return; // Имя не изменилось
+    }
+    
+    const textarea = document.getElementById('theme-file-editor');
+    const theme = textarea ? textarea.getAttribute('data-theme') : new URLSearchParams(window.location.search).get('theme') || '';
+    
+    if (!theme) {
+        showNotification('Тему не вказано', 'danger');
+        return;
+    }
+    
+    const url = window.location.href.split('?')[0];
+    const action = isFolder ? 'rename_directory' : 'rename_file';
+    const formData = {
+        action: action,
+        theme: theme,
+        old_path: path,
+        new_name: newName.trim()
+    };
+    
+    // Используем AjaxHelper если доступен
+    const requestFn = typeof AjaxHelper !== 'undefined' 
+        ? AjaxHelper.post(url, formData)
+        : fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                ...formData,
+                csrf_token: document.querySelector('input[name="csrf_token"]')?.value || ''
+            })
+        }).then(r => r.json());
+    
+    requestFn
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message || (isFolder ? 'Папку успішно перейменовано' : 'Файл успішно перейменовано'), 'success');
+                
+                // Обновляем дерево файлов
+                refreshFileTree();
+                
+                // Если переименован открытый файл, обновляем его в редакторе
+                if (!isFolder) {
+                    const textarea = document.getElementById('theme-file-editor');
+                    const currentFile = textarea ? textarea.getAttribute('data-file') : '';
+                    if (currentFile === path && data.new_path) {
+                        // Закрываем текущий файл и открываем переименованный
+                        setTimeout(() => {
+                            loadFileInEditor(data.new_path);
+                        }, 500);
+                    }
+                }
+            } else {
+                showNotification(data.error || (isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу'), 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification(isFolder ? 'Помилка переименования папки' : 'Помилка переименования файлу', 'danger');
+        });
+}
+
 function deleteCurrentFile(event, filePath) {
     event.preventDefault();
     event.stopPropagation();
@@ -1504,6 +1597,9 @@ function renderFileTreeFromArray(treeArray, theme, level = 1) {
                         <button type="button" class="context-menu-btn" onclick="downloadFolder(event, '${escapeHtml(item.path)}')" title="Скачати папку">
                             <i class="fas fa-download"></i>
                         </button>${!isRootFolder ? `
+                        <button type="button" class="context-menu-btn" onclick="renameFileOrFolder(event, '${escapeHtml(item.path)}', true)" title="Перейменувати папку">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button type="button" class="context-menu-btn context-menu-btn-danger" onclick="deleteCurrentFolder(event, '${escapeHtml(item.path)}')" title="Видалити папку">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
@@ -1528,6 +1624,9 @@ function renderFileTreeFromArray(treeArray, theme, level = 1) {
                 <div class="file-tree-context-menu">
                     <button type="button" class="context-menu-btn" onclick="downloadFile(event, '${escapeHtml(item.path)}')" title="Скачати файл">
                         <i class="fas fa-download"></i>
+                    </button>
+                    <button type="button" class="context-menu-btn" onclick="renameFileOrFolder(event, '${escapeHtml(item.path)}', false)" title="Перейменувати файл">
+                        <i class="fas fa-edit"></i>
                     </button>
                     <button type="button" class="context-menu-btn context-menu-btn-danger" onclick="deleteCurrentFile(event, '${escapeHtml(item.path)}')" title="Видалити файл">
                         <i class="fas fa-trash"></i>

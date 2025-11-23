@@ -328,6 +328,161 @@ class ThemeEditorManager {
     }
     
     /**
+     * Переименование файла
+     */
+    public function renameFile(string $oldPath, string $newName, string $themePath): array {
+        $realThemePath = realpath($themePath);
+        if ($realThemePath === false) {
+            return ['success' => false, 'error' => 'Невірний шлях до теми'];
+        }
+        
+        // Нормалізуємо шлях
+        $oldPath = str_replace('\\', '/', $oldPath);
+        $oldPath = ltrim($oldPath, '/');
+        $oldFullPath = $realThemePath . '/' . $oldPath;
+        
+        // Перевіряємо, що файл знаходиться в теми
+        $file = new File($oldFullPath);
+        if (!$file->exists() || is_dir($oldFullPath) || !$file->isPathSafe($realThemePath)) {
+            return ['success' => false, 'error' => 'Файл не знайдено або не належить до теми'];
+        }
+        
+        // Валідація нового імені
+        $newName = trim($newName);
+        if (empty($newName)) {
+            return ['success' => false, 'error' => 'Нове ім\'я файлу не може бути порожнім'];
+        }
+        
+        // Перевіряємо на небезпечні символи
+        if (preg_match('/[\/\\\?\*\|<>:"]/', $newName)) {
+            return ['success' => false, 'error' => 'Недопустимі символи в імені файлу'];
+        }
+        
+        // Забороняємо переименование критичних файлів
+        $criticalFiles = ['index.php', 'theme.json', 'functions.php'];
+        $oldFileName = basename($oldPath);
+        if (in_array($oldFileName, $criticalFiles, true)) {
+            return ['success' => false, 'error' => 'Неможливо перейменувати критичний файл'];
+        }
+        
+        // Формуємо новий шлях
+        $parentDir = dirname($oldPath);
+        if ($parentDir === '.' || $parentDir === '') {
+            $newPath = $newName;
+        } else {
+            $newPath = $parentDir . '/' . $newName;
+        }
+        $newFullPath = $realThemePath . '/' . $newPath;
+        
+        // Перевіряємо, чи файл з таким ім'ям вже існує
+        if (file_exists($newFullPath)) {
+            return ['success' => false, 'error' => 'Файл з таким ім\'ям вже існує'];
+        }
+        
+        try {
+            // Використовуємо клас File для переименования
+            $file = new File($oldFullPath);
+            $file->move($newFullPath);
+            
+            return [
+                'success' => true,
+                'message' => 'Файл успішно перейменовано',
+                'old_path' => $oldPath,
+                'new_path' => $newPath
+            ];
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Failed to rename file', [
+                    'error' => $e->getMessage(),
+                    'oldPath' => $oldPath,
+                    'newName' => $newName
+                ]);
+            }
+            return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Переименование директорії
+     */
+    public function renameDirectory(string $oldPath, string $newName, string $themePath): array {
+        $realThemePath = realpath($themePath);
+        if ($realThemePath === false) {
+            return ['success' => false, 'error' => 'Невірний шлях до теми'];
+        }
+        
+        // Нормалізуємо шлях
+        $oldPath = str_replace('\\', '/', $oldPath);
+        $oldPath = ltrim($oldPath, '/');
+        
+        // Забороняємо переименование кореневої папки теми
+        if (empty($oldPath)) {
+            return ['success' => false, 'error' => 'Неможливо перейменувати кореневу папку теми'];
+        }
+        
+        $oldFullPath = $realThemePath . '/' . $oldPath;
+        
+        // Перевіряємо, що директорія знаходиться в теми
+        $file = new File($oldFullPath);
+        if (!$file->isPathSafe($realThemePath)) {
+            return ['success' => false, 'error' => 'Невірний шлях до директорії'];
+        }
+        
+        // Перевіряємо, чи директорія існує
+        if (!is_dir($oldFullPath)) {
+            return ['success' => false, 'error' => 'Директорія не існує'];
+        }
+        
+        // Валідація нового імені
+        $newName = trim($newName);
+        if (empty($newName)) {
+            return ['success' => false, 'error' => 'Нове ім\'я папки не може бути порожнім'];
+        }
+        
+        // Перевіряємо на небезпечні символи
+        if (preg_match('/[\/\\\?\*\|<>:"]/', $newName)) {
+            return ['success' => false, 'error' => 'Недопустимі символи в імені папки'];
+        }
+        
+        // Формуємо новий шлях
+        $parentDir = dirname($oldPath);
+        if ($parentDir === '.' || $parentDir === '') {
+            $newPath = $newName;
+        } else {
+            $newPath = $parentDir . '/' . $newName;
+        }
+        $newFullPath = $realThemePath . '/' . $newPath;
+        
+        // Перевіряємо, чи папка з таким ім'ям вже існує
+        if (is_dir($newFullPath)) {
+            return ['success' => false, 'error' => 'Папка з таким ім\'ям вже існує'];
+        }
+        
+        try {
+            // Використовуємо rename для переименования директорії
+            if (!@rename($oldFullPath, $newFullPath)) {
+                throw new Exception("Не вдалося перейменувати директорію з '{$oldFullPath}' в '{$newFullPath}'");
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Директорію успішно перейменовано',
+                'old_path' => $oldPath,
+                'new_path' => $newPath
+            ];
+        } catch (Exception $e) {
+            if (class_exists('Logger')) {
+                Logger::getInstance()->logError('ThemeEditorManager: Failed to rename directory', [
+                    'error' => $e->getMessage(),
+                    'oldPath' => $oldPath,
+                    'newName' => $newName
+                ]);
+            }
+            return ['success' => false, 'error' => 'Помилка: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
      * Створення директорії
      */
     public function createDirectory(string $dirPath, string $themePath): array {

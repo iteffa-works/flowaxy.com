@@ -41,6 +41,9 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                             <i class="fas fa-download"></i>
                         </button>
                         <?php if (!empty($item['path'])): ?>
+                        <button type="button" class="context-menu-btn" onclick="renameFileOrFolder(event, '<?= htmlspecialchars($item['path']) ?>', true)" title="Перейменувати папку">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button type="button" class="context-menu-btn context-menu-btn-danger" onclick="deleteCurrentFolder(event, '<?= htmlspecialchars($item['path']) ?>')" title="Видалити папку">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -71,6 +74,12 @@ function renderFileTree($tree, $theme, $selectedFile, $level = 0) {
                             onclick="downloadFile(event, '<?= htmlspecialchars($item['path']) ?>')"
                             title="Скачати файл">
                         <i class="fas fa-download"></i>
+                    </button>
+                    <button type="button" 
+                            class="context-menu-btn" 
+                            onclick="renameFileOrFolder(event, '<?= htmlspecialchars($item['path']) ?>', false)"
+                            title="Перейменувати файл">
+                        <i class="fas fa-edit"></i>
                     </button>
                     <button type="button" 
                             class="context-menu-btn context-menu-btn-danger" 
