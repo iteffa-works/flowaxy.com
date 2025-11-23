@@ -718,7 +718,7 @@ class ThemeEditorPage extends AdminPage {
             'show_empty_folders' => '1',
             'enable_syntax_highlighting' => '1',
             'show_line_numbers' => '1',
-            'font_family' => "'Consolas', monospace",
+            'font_family' => "'Courier New', monospace",
             'font_size' => '14',
             'editor_theme' => 'monokai',
             'indent_size' => '4',
@@ -942,7 +942,7 @@ class ThemeEditorPage extends AdminPage {
         $showEmptyFolders = $request->postValue('show_empty_folders', '0') === '1' ? '1' : '0';
         $enableSyntaxHighlighting = $request->postValue('enable_syntax_highlighting', '1') === '1' ? '1' : '0';
         $showLineNumbers = $request->postValue('show_line_numbers', '1') === '1' ? '1' : '0';
-        $fontFamily = $request->postValue('font_family', "'Consolas', monospace");
+        $fontFamily = $request->postValue('font_family', "'Courier New', monospace");
         $fontSize = max(12, min(24, (int)$request->postValue('font_size', '14')));
         $editorTheme = $request->postValue('editor_theme', 'monokai');
         $indentSize = max(2, min(8, (int)$request->postValue('indent_size', '4')));
@@ -1005,7 +1005,7 @@ class ThemeEditorPage extends AdminPage {
             'show_empty_folders' => '1',
             'enable_syntax_highlighting' => '1',
             'show_line_numbers' => '1',
-            'font_family' => "'Consolas', monospace",
+            'font_family' => "'Courier New', monospace",
             'font_size' => '14',
             'editor_theme' => 'monokai',
             'indent_size' => '4',

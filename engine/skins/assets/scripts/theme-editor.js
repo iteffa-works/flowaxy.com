@@ -23,9 +23,13 @@ let originalContent = '';
 let isModified = false;
 let editorSettings = {
     enableSyntaxHighlighting: true,
-    showEmptyFolders: true
+    showEmptyFolders: true,
+    autoSave: false,
+    autoSaveInterval: 60
 };
 let settingsSetupDone = false; // Прапорець, що обробники налаштувань вже встановлені
+let autoSaveFileTimer = null; // Таймер для автозбереження файлів
+let lastAutoSaveTime = null; // Час останнього автозбереження
 
 // ============================================================================
 // УТИЛІТНІ ФУНКЦІЇ
@@ -198,7 +202,12 @@ function initCodeMirror() {
         codeEditor.on('change', function() {
             isModified = codeEditor.getValue() !== originalContent;
             updateEditorStatus();
+            // Запускаємо автозбереження, якщо увімкнено
+            startAutoSaveFile();
         });
+        
+        // Ініціалізуємо автозбереження файлів
+        initAutoSaveFile();
         
         // Оновлюємо розмір редактора при зміні розміру вікна
         let resizeTimeout;
@@ -308,6 +317,7 @@ function getCodeMirrorMode(extension) {
  */
 function updateEditorStatus() {
     const statusEl = document.getElementById('editor-status');
+    const autosaveStatusEl = document.getElementById('editor-autosave-status');
     const cancelBtn = document.getElementById('cancel-btn');
     const statusIcon = document.getElementById('editor-status-icon');
     
@@ -315,12 +325,44 @@ function updateEditorStatus() {
         return;
     }
     
+    // Перевіряємо налаштування автозбереження
+    const autoSaveCheckbox = document.getElementById('autoSaveInline') || document.getElementById('autoSave');
+    const autoSaveEnabled = autoSaveCheckbox ? autoSaveCheckbox.checked : false;
+    const autoSaveIntervalEl = document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval');
+    const autoSaveInterval = autoSaveIntervalEl ? parseInt(autoSaveIntervalEl.value || '60', 10) : 60;
+    
     if (isModified) {
         statusEl.textContent = 'Є незбережені зміни';
         statusEl.className = 'text-warning small';
         // Змінюємо точку на попередження (жовта)
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-warning me-2';
+        }
+        // Показуємо інформацію про автозбереження
+        if (autosaveStatusEl) {
+            if (autoSaveEnabled) {
+                if (isAutoSaving) {
+                    autosaveStatusEl.textContent = '• Автозбереження...';
+                    autosaveStatusEl.className = 'text-info small ms-2';
+                    autosaveStatusEl.style.display = '';
+                } else if (lastAutoSaveTime) {
+                    const secondsSince = Math.floor((Date.now() - lastAutoSaveTime) / 1000);
+                    if (secondsSince < 60) {
+                        autosaveStatusEl.textContent = `• Автозбережено ${secondsSince}с тому`;
+                    } else {
+                        const minutesSince = Math.floor(secondsSince / 60);
+                        autosaveStatusEl.textContent = `• Автозбережено ${minutesSince}хв тому`;
+                    }
+                    autosaveStatusEl.className = 'text-success small ms-2';
+                    autosaveStatusEl.style.display = '';
+                } else {
+                    autosaveStatusEl.textContent = `• Автозбереження кожні ${autoSaveInterval}с`;
+                    autosaveStatusEl.className = 'text-muted small ms-2';
+                    autosaveStatusEl.style.display = '';
+                }
+            } else {
+                autosaveStatusEl.style.display = 'none';
+            }
         }
         // Показуємо кнопку "Скасувати"
         if (cancelBtn) {
@@ -333,11 +375,155 @@ function updateEditorStatus() {
         if (statusIcon) {
             statusIcon.className = 'editor-status-dot text-success me-2';
         }
+        // Приховуємо інформацію про автозбереження
+        if (autosaveStatusEl) {
+            autosaveStatusEl.style.display = 'none';
+        }
         // Приховуємо кнопку "Скасувати"
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
     }
+}
+
+/**
+ * Ініціалізація автозбереження файлів
+ */
+function initAutoSaveFile() {
+    // Перевіряємо налаштування автозбереження
+    const autoSaveCheckbox = document.getElementById('autoSaveInline') || document.getElementById('autoSave');
+    const autoSaveIntervalEl = document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval');
+    
+    if (autoSaveCheckbox) {
+        editorSettings.autoSave = autoSaveCheckbox.checked;
+        // Додаємо обробник зміни автозбереження
+        autoSaveCheckbox.addEventListener('change', function() {
+            editorSettings.autoSave = this.checked;
+            if (this.checked) {
+                startAutoSaveFile();
+            } else {
+                stopAutoSaveFile();
+            }
+        });
+    }
+    
+    if (autoSaveIntervalEl) {
+        editorSettings.autoSaveInterval = parseInt(autoSaveIntervalEl.value || '60', 10);
+        // Додаємо обробник зміни інтервалу
+        autoSaveIntervalEl.addEventListener('change', function() {
+            editorSettings.autoSaveInterval = parseInt(this.value || '60', 10);
+            if (editorSettings.autoSave) {
+                stopAutoSaveFile();
+                startAutoSaveFile();
+            }
+        });
+    }
+    
+    // Якщо автозбереження увімкнено, запускаємо його
+    if (editorSettings.autoSave) {
+        startAutoSaveFile();
+    }
+}
+
+/**
+ * Запуск автозбереження файлів
+ */
+function startAutoSaveFile() {
+    // Зупиняємо попередній таймер, якщо є
+    stopAutoSaveFile();
+    
+    // Перевіряємо, чи увімкнено автозбереження
+    const autoSaveCheckbox = document.getElementById('autoSaveInline') || document.getElementById('autoSave');
+    if (!autoSaveCheckbox || !autoSaveCheckbox.checked) {
+        return;
+    }
+    
+    // Перевіряємо, чи є незбережені зміни
+    if (!isModified || !codeEditor) {
+        return;
+    }
+    
+    const autoSaveIntervalEl = document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval');
+    const interval = autoSaveIntervalEl ? parseInt(autoSaveIntervalEl.value || '60', 10) : 60;
+    const intervalMs = interval * 1000;
+    
+    // Запускаємо таймер автозбереження
+    autoSaveFileTimer = setTimeout(function() {
+        autoSaveFile();
+    }, intervalMs);
+}
+
+/**
+ * Зупинка автозбереження файлів
+ */
+function stopAutoSaveFile() {
+    if (autoSaveFileTimer) {
+        clearTimeout(autoSaveFileTimer);
+        autoSaveFileTimer = null;
+    }
+}
+
+/**
+ * Автоматичне збереження файлу
+ */
+function autoSaveFile() {
+    // Перевіряємо, чи увімкнено автозбереження
+    const autoSaveCheckbox = document.getElementById('autoSaveInline') || document.getElementById('autoSave');
+    if (!autoSaveCheckbox || !autoSaveCheckbox.checked) {
+        return;
+    }
+    
+    // Перевіряємо, чи є незбережені зміни
+    if (!isModified || !codeEditor || isAutoSaving) {
+        return;
+    }
+    
+    const textarea = document.getElementById('theme-file-editor');
+    if (!textarea) {
+        return;
+    }
+    
+    const theme = textarea.getAttribute('data-theme');
+    const file = textarea.getAttribute('data-file');
+    const content = codeEditor.getValue();
+    
+    if (!theme || !file) {
+        return;
+    }
+    
+    // Встановлюємо прапорець, що йде автозбереження
+    isAutoSaving = true;
+    updateEditorStatus();
+    
+    // Зберігаємо файл
+    makeAjaxRequest('save_file', { theme: theme, file: file, content: content })
+        .then(data => {
+            isAutoSaving = false;
+            
+            if (data.success) {
+                originalContent = content;
+                isModified = false;
+                lastAutoSaveTime = Date.now();
+                updateEditorStatus();
+                // Запускаємо наступне автозбереження при нових змінах
+                // (не тут, а при наступній зміні через startAutoSaveFile)
+            } else {
+                updateEditorStatus();
+                // Спробуємо знову через деякий час
+                setTimeout(function() {
+                    startAutoSaveFile();
+                }, 5000);
+            }
+        })
+        .catch(error => {
+            isAutoSaving = false;
+            updateEditorStatus();
+            console.error('Помилка автозбереження:', error);
+            // Спробуємо знову через деякий час
+            setTimeout(function() {
+                startAutoSaveFile();
+            }, 5000);
+        });
 }
 
 /**
@@ -361,8 +547,12 @@ function saveFile() {
             if (data.success) {
                 originalContent = content;
                 isModified = false;
+                lastAutoSaveTime = Date.now();
+                stopAutoSaveFile(); // Зупиняємо автозбереження після ручного збереження
                 updateEditorStatus();
                 showNotification('Файл успішно збережено', 'success');
+                // Перезапускаємо автозбереження, якщо увімкнено
+                startAutoSaveFile();
             } else {
                 showNotification(data.error || 'Помилка збереження', 'danger');
             }
@@ -373,6 +563,9 @@ function saveFile() {
         });
 }
 
+/**
+ * Скидання змін в редакторі
+ */
 /**
  * Скидання змін в редакторі
  */
@@ -391,10 +584,14 @@ function resetEditor() {
         'Скасувати зміни',
         'Ви впевнені, що хочете скасувати всі зміни? Внесені зміни будуть втрачені.',
         function() {
+            // Зупиняємо автозбереження
+            stopAutoSaveFile();
             // Відновлюємо оригінальний вміст
             codeEditor.setValue(originalContent);
             // Оновлюємо прапорець змін
             isModified = false;
+            // Очищаємо час останнього автозбереження
+            lastAutoSaveTime = null;
             // Оновлюємо статус редактора (приховає кнопку "Скасувати" та змінить іконку)
             updateEditorStatus();
             // Показуємо повідомлення
@@ -1607,6 +1804,9 @@ function loadFileInEditor(filePath) {
                     codeEditor.setValue(data.content);
                     originalContent = data.content;
                     isModified = false;
+                    // Зупиняємо автозбереження при завантаженні нового файлу
+                    stopAutoSaveFile();
+                    lastAutoSaveTime = null;
                     
                     // Переконуємося, що статус та кнопки оновлені
                     updateEditorStatus();

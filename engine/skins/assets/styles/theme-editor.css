@@ -770,6 +770,19 @@
     justify-content: center;
     line-height: 1;
     vertical-align: middle;
+    min-width: 100px; /* Однакова мінімальна ширина для всіх кнопок */
+    height: 32px; /* Однакова висота для всіх кнопок */
+}
+
+/* Стилі для кнопок футера редактора - однаковий розмір */
+.theme-editor-main .card-footer .editor-footer-btn {
+    min-width: 120px;
+    height: 32px;
+    padding: 6px 16px;
+    font-size: 0.8125rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .theme-editor-main .card-footer .btn:hover {

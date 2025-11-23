@@ -358,6 +358,7 @@ if (!empty($message)) {
                     <div class="d-flex align-items-center flex-grow-1" style="min-width: 0;">
                         <span id="editor-status-icon" class="editor-status-dot text-success me-2"></span>
                         <span class="text-muted small" id="editor-status">Готово до редагування</span>
+                        <span class="text-muted small ms-2" id="editor-autosave-status" style="display: none;"></span>
                         <!-- Прогрес бар завантаження файлів (приховано за замовчуванням) -->
                         <div id="footer-upload-progress" class="ms-3 flex-grow-1" style="display: none; max-width: 300px;">
                             <div class="progress" style="height: 8px;">
@@ -371,10 +372,10 @@ if (!empty($message)) {
                     </div>
                     <div class="d-flex gap-2 align-items-center flex-shrink-0">
                         <!-- Кнопки для режиму редагування -->
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-btn" onclick="resetEditor()" style="display: none;">
+                        <button type="button" class="btn btn-outline-secondary btn-sm editor-footer-btn" id="cancel-btn" onclick="resetEditor()" style="display: none;">
                             <i class="fas fa-undo me-1"></i>Скасувати
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="editor-save-btn" onclick="saveFile()">
+                        <button type="button" class="btn btn-primary btn-sm editor-footer-btn" id="editor-save-btn" onclick="saveFile()">
                             <i class="fas fa-save me-1"></i>Зберегти
                         </button>
                         
