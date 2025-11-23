@@ -39,7 +39,11 @@ let settingsSetupDone = false; // Прапорець, що обробники н
  */
 async function makeAjaxRequest(action, formData = {}) {
     const url = window.location.href.split('?')[0];
-    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    // Спочатку шукаємо в input, потім в meta тезі
+    let csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    if (!csrfToken) {
+        csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
     
     const requestData = {
         action: action,
