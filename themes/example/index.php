@@ -2,8 +2,18 @@
 /**
  * Головний шаблон теми
  * 
- * @package ThemeName
- * @version 1.0.0
+ * @file index.php
+ * @description 
+ * @author iTeffa
+ * @organization Flowaxy Studio - розробка програмного забезпечення
+ * @copyright © 2025 Flowaxy. Всі права захищені.
+ * @license Proprietary
+ * @version 1.0.0 Alpha
+ * @since 2025-11-23
+ * @see https://flowaxy.com
+ * 
+ * @requires Bootstrap 5.x
+ * @requires Font Awesome
  */
 
 declare(strict_types=1);
