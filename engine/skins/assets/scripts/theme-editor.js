@@ -1,6 +1,20 @@
 /**
  * JavaScript для редактора теми
  * Оптимізована версія з утилітними функціями та українською локалізацією
+ * 
+ * @file theme-editor.js
+ * @description Редактор тем з підтримкою підсвітки синтаксису, завантаження файлів та налаштувань редактора
+ * @author iTeffa
+ * @organization Flowaxy Studio - розробка програмного забезпечення
+ * @copyright © 2025 Flowaxy. Всі права захищені.
+ * @license Proprietary
+ * @version 1.0.0 Alpha
+ * @since 2025-11-23
+ * @see https://flowaxy.com
+ * 
+ * @requires CodeMirror 5.65.2
+ * @requires Bootstrap 5.x
+ * @requires Font Awesome
  */
 
 // Глобальні змінні
@@ -23,7 +37,7 @@ let settingsSetupDone = false; // Прапорець, що обробники н
  * @param {Object} formData - Дані для відправки
  * @returns {Promise} Promise з відповіддю сервера
  */
-function makeAjaxRequest(action, formData = {}) {
+async function makeAjaxRequest(action, formData = {}) {
     const url = window.location.href.split('?')[0];
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
     
@@ -34,24 +48,23 @@ function makeAjaxRequest(action, formData = {}) {
     };
     
     if (typeof AjaxHelper !== 'undefined') {
-        return AjaxHelper.post(url, requestData);
+        return await AjaxHelper.post(url, requestData);
     } else {
-        return fetch(url, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: new URLSearchParams(requestData)
-        }).then(response => {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                return response.json();
-            }
-            return response.text().then(text => {
-                throw new Error('Сервер повернув не-JSON відповідь: ' + text.substring(0, 100));
-            });
         });
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        }
+        const text = await response.text();
+        throw new Error('Сервер повернув не-JSON відповідь: ' + text.substring(0, 100));
     }
 }
 
@@ -1162,8 +1175,10 @@ function initFileTree() {
 // Попередження при виході зі сторінки з незбереженими змінами
 window.addEventListener('beforeunload', function(e) {
     if (isModified) {
+        // Сучасні браузери ігнорують кастомний текст і показують стандартне повідомлення
+        // Просто повертаємо рядок - браузер покаже стандартне діалогове вікно
         e.preventDefault();
-        e.returnValue = 'У вас є незбережені зміни. Ви впевнені, що хочете покинути сторінку?';
+        return 'У вас є незбережені зміни. Ви впевнені, що хочете покинути сторінку?';
     }
 });
 
@@ -1645,7 +1660,6 @@ function updateFileTree(treeArray, theme) {
                     }
                 }
             });
-            
             // Обробники вже встановлені через делегування подій, не потрібно викликати initFileTree() знову
         }
     }
