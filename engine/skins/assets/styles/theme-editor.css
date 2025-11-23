@@ -650,7 +650,7 @@
     max-height: 100%;
     font-size: 14px;
     border: none;
-    font-family: 'Courier New', 'Consolas', 'Monaco', 'Menlo', 'Fira Code', 'Source Code Pro', 'JetBrains Mono', monospace;
+    font-family: 'Courier New', 'Menlo', 'JetBrains Mono', monospace;
     line-height: 1.6;
     background: #1e1e1e;
     color: #d4d4d4;
