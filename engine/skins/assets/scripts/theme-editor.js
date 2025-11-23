@@ -29,7 +29,8 @@ let editorSettings = {
 };
 let settingsSetupDone = false; // Прапорець, що обробники налаштувань вже встановлені
 let autoSaveFileTimer = null; // Таймер для автозбереження файлів
-let lastAutoSaveTime = null; // Час останнього автозбереження
+let lastAutoSaveTime = null; // Час останнього автозбереження файлу
+let isAutoSaving = false; // Прапорець, що йде автозбереження файлу
 
 // ============================================================================
 // УТИЛІТНІ ФУНКЦІЇ
@@ -399,6 +400,7 @@ function initAutoSaveFile() {
         // Додаємо обробник зміни автозбереження
         autoSaveCheckbox.addEventListener('change', function() {
             editorSettings.autoSave = this.checked;
+            updateEditorStatus(); // Оновлюємо статус одразу
             if (this.checked) {
                 startAutoSaveFile();
             } else {
@@ -410,9 +412,21 @@ function initAutoSaveFile() {
     if (autoSaveIntervalEl) {
         editorSettings.autoSaveInterval = parseInt(autoSaveIntervalEl.value || '60', 10);
         // Додаємо обробник зміни інтервалу
-        autoSaveIntervalEl.addEventListener('change', function() {
+        autoSaveIntervalEl.addEventListener('input', function() {
+            // Оновлюємо одразу при введенні (input event)
             editorSettings.autoSaveInterval = parseInt(this.value || '60', 10);
-            if (editorSettings.autoSave) {
+            updateEditorStatus(); // Оновлюємо статус одразу
+            if (editorSettings.autoSave && isModified && codeEditor) {
+                stopAutoSaveFile();
+                startAutoSaveFile();
+            }
+        });
+        
+        autoSaveIntervalEl.addEventListener('change', function() {
+            // Оновлюємо також при завершенні зміни (change event)
+            editorSettings.autoSaveInterval = parseInt(this.value || '60', 10);
+            updateEditorStatus(); // Оновлюємо статус одразу
+            if (editorSettings.autoSave && isModified && codeEditor) {
                 stopAutoSaveFile();
                 startAutoSaveFile();
             }
@@ -438,17 +452,42 @@ function startAutoSaveFile() {
         return;
     }
     
+    // Перевіряємо, чи є редактор та файл відкритий
+    if (!codeEditor) {
+        return;
+    }
+    
+    // Перевіряємо, чи є відкритий файл
+    const textarea = document.getElementById('theme-file-editor');
+    if (!textarea) {
+        return;
+    }
+    
+    const theme = textarea.getAttribute('data-theme');
+    const file = textarea.getAttribute('data-file');
+    if (!theme || !file) {
+        return;
+    }
+    
     // Перевіряємо, чи є незбережені зміни
-    if (!isModified || !codeEditor) {
+    if (!isModified) {
+        return;
+    }
+    
+    // Перевіряємо, чи не йде зараз автозбереження
+    if (isAutoSaving) {
         return;
     }
     
     const autoSaveIntervalEl = document.getElementById('autoSaveIntervalInline') || document.getElementById('autoSaveInterval');
     const interval = autoSaveIntervalEl ? parseInt(autoSaveIntervalEl.value || '60', 10) : 60;
-    const intervalMs = interval * 1000;
+    const intervalMs = Math.max(1000, interval * 1000); // Мінімум 1 секунда
+    
+    console.log('Запускається таймер автозбереження через', interval, 'секунд');
     
     // Запускаємо таймер автозбереження
     autoSaveFileTimer = setTimeout(function() {
+        console.log('Таймер автозбереження спрацював');
         autoSaveFile();
     }, intervalMs);
 }
@@ -495,19 +534,32 @@ function autoSaveFile() {
     isAutoSaving = true;
     updateEditorStatus();
     
+    console.log('Автозбереження файлу:', file);
+    
     // Зберігаємо файл
     makeAjaxRequest('save_file', { theme: theme, file: file, content: content })
         .then(data => {
             isAutoSaving = false;
             
             if (data.success) {
+                console.log('Файл успішно автозбережено:', file);
                 originalContent = content;
+                const wasModified = isModified;
                 isModified = false;
                 lastAutoSaveTime = Date.now();
                 updateEditorStatus();
-                // Запускаємо наступне автозбереження при нових змінах
-                // (не тут, а при наступній зміні через startAutoSaveFile)
+                
+                // Перевіряємо, чи після автозбереження з'явилися нові зміни
+                // (користувач міг продовжити редагувати)
+                setTimeout(function() {
+                    if (codeEditor && codeEditor.getValue() !== originalContent) {
+                        isModified = true;
+                        updateEditorStatus();
+                        startAutoSaveFile(); // Запускаємо таймер для нових змін
+                    }
+                }, 100);
             } else {
+                console.error('Помилка автозбереження файлу:', data.error);
                 updateEditorStatus();
                 // Спробуємо знову через деякий час
                 setTimeout(function() {
@@ -519,10 +571,13 @@ function autoSaveFile() {
             isAutoSaving = false;
             updateEditorStatus();
             console.error('Помилка автозбереження:', error);
+            // Не показуємо повідомлення про помилку при автозбереженні, тільки в консолі
             // Спробуємо знову через деякий час
-            setTimeout(function() {
-                startAutoSaveFile();
-            }, 5000);
+            if (editorSettings.autoSave && isModified && codeEditor) {
+                setTimeout(function() {
+                    startAutoSaveFile();
+                }, 5000);
+            }
         });
 }
 
@@ -1682,6 +1737,11 @@ function loadFile(event, filePath) {
  * Завантаження файлу в редактор через AJAX
  */
 function loadFileInEditor(filePath) {
+    // Перевіряємо, чи передано шлях до файлу
+    if (!filePath || filePath.trim() === '') {
+        return Promise.reject(new Error('Шлях до файлу не вказано'));
+    }
+    
     // Перевіряємо, чи є файл log.txt (системний файл)
     const fileName = filePath.split('/').pop() || filePath;
     if (fileName.toLowerCase() === 'log.txt' || fileName.toLowerCase().endsWith('.log.txt')) {
@@ -1691,7 +1751,8 @@ function loadFileInEditor(filePath) {
     const theme = getThemeFromPage();
     
     if (!theme) {
-        showNotification('Тему не вказано', 'danger');
+        // Не показуємо помилку, якщо це не явний виклик користувача
+        console.warn('Тему не вказано при завантаженні файлу:', filePath);
         return Promise.reject(new Error('Тему не вказано'));
     }
     
@@ -1875,13 +1936,26 @@ function loadFileInEditor(filePath) {
                 url.searchParams.delete('mode');
                 window.history.pushState({ path: url.href }, '', url.href);
             } else {
-                showNotification(data.error || 'Помилка завантаження файлу', 'danger');
-                throw new Error(data.error || 'Помилка завантаження файлу');
+                // Показуємо помилку тільки якщо це не системна помилка
+                const errorMsg = data.error || 'Помилка завантаження файлу';
+                if (errorMsg !== 'Тему не вказано' && errorMsg !== 'Шлях до файлу не вказано') {
+                    showNotification(errorMsg, 'danger');
+                }
+                throw new Error(errorMsg);
             }
         })
         .catch(error => {
-            console.error('Помилка:', error);
-            showNotification('Помилка завантаження файлу', 'danger');
+            console.error('Помилка завантаження файлу:', error);
+            // Показуємо помилку тільки якщо це не системна помилка
+            // Не показуємо помилку для системних помилок (немає теми, немає файлу)
+            if (error && error.message) {
+                const errorMsg = error.message;
+                if (errorMsg !== 'Тему не вказано' && 
+                    errorMsg !== 'Шлях до файлу не вказано' && 
+                    !errorMsg.includes('reject')) {
+                    showNotification('Помилка завантаження файлу: ' + errorMsg, 'danger');
+                }
+            }
             throw error;
         });
 }
@@ -3136,6 +3210,17 @@ function setupAutoSaveEditorSettingsInline() {
         if (autoSaveInterval) {
             autoSaveInterval.disabled = !this.checked;
         }
+        // Оновлюємо глобальні налаштування одразу
+        editorSettings.autoSave = this.checked;
+        // Оновлюємо статус одразу
+        updateEditorStatus();
+        // Запускаємо або зупиняємо автозбереження одразу
+        if (this.checked) {
+            startAutoSaveFile();
+        } else {
+            stopAutoSaveFile();
+        }
+        // Зберігаємо налаштування
         saveAllSettings();
     };
     
@@ -3170,8 +3255,28 @@ function setupAutoSaveEditorSettingsInline() {
         autoSave.addEventListener('change', autoSaveHandler);
     }
     if (autoSaveInterval) {
-        autoSaveInterval.addEventListener('input', applySettingsToEditor);
-        autoSaveInterval.addEventListener('change', saveAllSettings);
+        // Оновлюємо одразу при введенні
+        autoSaveInterval.addEventListener('input', function() {
+            editorSettings.autoSaveInterval = parseInt(this.value || '60', 10);
+            updateEditorStatus(); // Оновлюємо статус одразу
+            // Перезапускаємо автозбереження, якщо воно увімкнено
+            if (editorSettings.autoSave && isModified && codeEditor) {
+                stopAutoSaveFile();
+                startAutoSaveFile();
+            }
+            applySettingsToEditor();
+        });
+        // Зберігаємо при завершенні зміни
+        autoSaveInterval.addEventListener('change', function() {
+            editorSettings.autoSaveInterval = parseInt(this.value || '60', 10);
+            updateEditorStatus(); // Оновлюємо статус одразу
+            // Перезапускаємо автозбереження, якщо воно увімкнено
+            if (editorSettings.autoSave && isModified && codeEditor) {
+                stopAutoSaveFile();
+                startAutoSaveFile();
+            }
+            saveAllSettings();
+        });
     }
     
     // Позначаємо, що обробники встановлені
